@@ -1,0 +1,251 @@
+<?php
+
+function crmEnsureLeadIntakeTables(mysqli $conn)
+{
+    $sqlRequests = "CREATE TABLE IF NOT EXISTS `crm_lead_intake_requests` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `token` VARCHAR(64) NOT NULL,
+        `admin_id` INT DEFAULT NULL,
+        `admin_name` VARCHAR(120) DEFAULT NULL,
+        `recipient_name` VARCHAR(150) DEFAULT NULL,
+        `recipient_phone` VARCHAR(30) DEFAULT NULL,
+        `recipient_email` VARCHAR(190) DEFAULT NULL,
+        `lead_source` VARCHAR(60) DEFAULT NULL,
+        `referred_by` VARCHAR(150) DEFAULT NULL,
+        `assign_to` VARCHAR(120) DEFAULT NULL,
+        `field_config` LONGTEXT,
+        `note_to_customer` TEXT,
+        `status` VARCHAR(20) NOT NULL DEFAULT 'sent',
+        `submitted_at` DATETIME DEFAULT NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `expires_at` DATETIME DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `uniq_intake_token` (`token`),
+        KEY `idx_intake_status` (`status`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    $sqlSubmissions = "CREATE TABLE IF NOT EXISTS `crm_lead_intake_submissions` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `intake_request_id` INT UNSIGNED NOT NULL,
+        `payload_json` LONGTEXT,
+        `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+        `reviewed_by_id` INT DEFAULT NULL,
+        `reviewed_by_name` VARCHAR(120) DEFAULT NULL,
+        `reviewed_at` DATETIME DEFAULT NULL,
+        `review_note` VARCHAR(255) DEFAULT NULL,
+        `lead_id` INT UNSIGNED DEFAULT NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id`),
+        KEY `idx_intake_sub_request` (`intake_request_id`),
+        KEY `idx_intake_sub_status` (`status`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if (!$conn->query($sqlRequests)) {
+        return false;
+    }
+    if (!$conn->query($sqlSubmissions)) {
+        return false;
+    }
+
+    $leadCols = [
+        'intake_submission_id' => 'INT UNSIGNED DEFAULT NULL AFTER `created_by_name`',
+    ];
+    foreach ($leadCols as $col => $ddl) {
+        $chk = $conn->query("SHOW COLUMNS FROM `crm_leads` LIKE '" . $conn->real_escape_string($col) . "'");
+        if ($chk && $chk->num_rows === 0) {
+            $conn->query("ALTER TABLE `crm_leads` ADD `" . $col . "` " . $ddl);
+        }
+    }
+
+    return true;
+}
+
+function crmGenerateIntakeToken()
+{
+    return bin2hex(random_bytes(24));
+}
+
+function crmIntakePublicBasePath()
+{
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $base = '';
+    if (preg_match('#^(.*?)/admin/#', $script, $m)) {
+        $base = $m[1];
+    } elseif (preg_match('#^(.*?)/public/#', $script, $m)) {
+        $base = $m[1];
+    }
+    return $base;
+}
+
+function crmBuildIntakePublicUrl($token)
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $scheme . '://' . $host . crmIntakePublicBasePath() . '/public/lead_intake.php?token=' . rawurlencode($token);
+}
+
+function crmBuildIntakeThanksUrl($token)
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $scheme . '://' . $host . crmIntakePublicBasePath() . '/public/lead_intake_thanks.php?token=' . rawurlencode($token);
+}
+
+function crmFormatIntakeInquiryId($submissionId, $createdAt = '')
+{
+    $id = max(0, (int) $submissionId);
+    $ts = $createdAt !== '' ? strtotime((string) $createdAt) : time();
+    if ($ts === false) {
+        $ts = time();
+    }
+    return sprintf('INQ-%s-%s-%04d', date('Y', $ts), date('md', $ts), $id);
+}
+
+function crmFormatIntakePhoneDisplay($phone)
+{
+    $phone = trim((string) $phone);
+    if ($phone === '') {
+        return '—';
+    }
+    $digits = preg_replace('/\D+/', '', $phone) ?? '';
+    if (strlen($digits) === 12 && strpos($digits, '91') === 0) {
+        return '+91 ' . substr($digits, 2, 5) . ' ' . substr($digits, 7);
+    }
+    if (strlen($digits) === 10) {
+        return '+91 ' . substr($digits, 0, 5) . ' ' . substr($digits, 5);
+    }
+    return $phone;
+}
+
+function crmFormatIntakeGuestSummary($payload)
+{
+    $adults = (int) ($payload['tp_adults'] ?? 0);
+    $children = (int) ($payload['tp_children'] ?? 0);
+    $parts = [];
+    if ($adults > 0) {
+        $parts[] = $adults . ' ' . ($adults === 1 ? 'Adult' : 'Adults');
+    }
+    if ($children > 0) {
+        $parts[] = $children . ' ' . ($children === 1 ? 'Child' : 'Children');
+    }
+    return $parts ? implode(', ', $parts) : '—';
+}
+
+function crmResolveIntakeDestinationNames(mysqli $conn, $payload)
+{
+    $raw = $payload['tp_destination'] ?? [];
+    if (!is_array($raw)) {
+        $raw = $raw !== '' && $raw !== null ? [$raw] : [];
+    }
+    $ids = [];
+    foreach ($raw as $item) {
+        $id = (int) $item;
+        if ($id > 0) {
+            $ids[] = $id;
+        }
+    }
+    $ids = array_values(array_unique($ids));
+    if (!$ids) {
+        return '—';
+    }
+    $in = implode(',', $ids);
+    $names = [];
+    $res = $conn->query("SELECT `id`, `name` FROM `destinations` WHERE `id` IN ({$in})");
+    if ($res) {
+        $map = [];
+        while ($row = $res->fetch_assoc()) {
+            $map[(int) $row['id']] = trim((string) ($row['name'] ?? ''));
+        }
+        foreach ($ids as $id) {
+            if (!empty($map[$id])) {
+                $names[] = $map[$id];
+            }
+        }
+    }
+    return $names ? implode(', ', $names) : '—';
+}
+
+function crmBuildIntakeThanksSummary(mysqli $conn, array $payload, $submissionId, $createdAt = '')
+{
+    $initial = trim((string) ($payload['customer_initial'] ?? ''));
+    $name = trim((string) ($payload['customer_name'] ?? ''));
+    $displayName = $name;
+    if ($initial !== '' && $name !== '') {
+        $displayName = rtrim($initial, '.') . '. ' . $name;
+    } elseif ($initial !== '' && $name === '') {
+        $displayName = rtrim($initial, '.') . '.';
+    }
+    if ($displayName === '') {
+        $displayName = '—';
+    }
+
+    $nights = (int) ($payload['itinerary_total_nights'] ?? 0);
+    $package = $nights > 0
+        ? ($nights . ' Night' . ($nights === 1 ? '' : 's') . ' Tour Package')
+        : 'Tour Package';
+
+    $services = $payload['services'] ?? [];
+    if (!is_array($services)) {
+        $services = [];
+    }
+    if ($nights <= 0 && !in_array('tour_package', $services, true)) {
+        $labels = [
+            'tour_package' => 'Tour Package',
+            'hotel' => 'Hotel',
+            'flight' => 'Flight',
+            'vehicle' => 'Vehicle',
+            'visa' => 'Visa',
+        ];
+        $pkgParts = [];
+        foreach ($services as $svc) {
+            $key = (string) $svc;
+            if (isset($labels[$key])) {
+                $pkgParts[] = $labels[$key];
+            }
+        }
+        if ($pkgParts) {
+            $package = implode(', ', $pkgParts);
+        }
+    }
+
+    $ts = $createdAt !== '' ? strtotime((string) $createdAt) : time();
+    if ($ts === false) {
+        $ts = time();
+    }
+
+    return [
+        'inquiry_id' => crmFormatIntakeInquiryId($submissionId, $createdAt),
+        'submitted_at_display' => date('d M Y, h:i A', $ts),
+        'destination' => crmResolveIntakeDestinationNames($conn, $payload),
+        'package' => $package,
+        'name' => $displayName,
+        'email' => trim((string) ($payload['customer_email'] ?? '')) ?: '—',
+        'phone' => crmFormatIntakePhoneDisplay($payload['customer_phone'] ?? ''),
+        'guests' => crmFormatIntakeGuestSummary($payload),
+    ];
+}
+
+function crmFetchLatestIntakeSubmissionByToken(mysqli $conn, $token)
+{
+    $token = trim((string) $token);
+    if ($token === '') {
+        return null;
+    }
+    $sql = "SELECT s.id AS submission_id, s.payload_json, s.created_at AS submitted_at,
+            r.id AS request_id, r.token, r.status AS request_status
+        FROM `crm_lead_intake_requests` r
+        INNER JOIN `crm_lead_intake_submissions` s ON s.intake_request_id = r.id
+        WHERE r.token = ?
+        ORDER BY s.id DESC
+        LIMIT 1";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('s', $token);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    $stmt->close();
+    return $row ?: null;
+}

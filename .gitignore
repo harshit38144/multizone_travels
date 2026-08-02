@@ -1,0 +1,29 @@
+﻿# Dependencies
+/vendor/
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+*.pem
+
+# Local / IDE
+.idea/
+.vscode/
+*.log
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Uploads & generated files (keep folders, ignore contents if needed)
+admin/uploads/
+uploads/
+
+# Composer / cache
+composer.lock
+
+admin/config/database.php
+
+*.zip

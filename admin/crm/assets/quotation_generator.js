@@ -1,0 +1,5005 @@
+/* Quotation Generator - form behaviour */
+(function ($) {
+    'use strict';
+
+    var DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var richEditors = ['inclusion', 'exclusion', 'payment_policy', 'cancellation_policy', 'terms_conditions', 'other_details'];
+
+    function money(n) {
+        n = parseFloat(n);
+        if (isNaN(n)) n = 0;
+        return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    }
+
+    function esc(str) {
+        return $('<div>').text(str == null ? '' : str).html();
+    }
+
+    // admin root URL (page lives at .../admin/crm/quotation_generator.php)
+    var ADMIN_BASE = location.href.replace(/[?#].*$/, '').replace(/\/crm\/[^\/]*$/, '/');
+
+    function absUrl(u) {
+        if (!u) return '';
+        if (/^(https?:)?\/\//i.test(u) || /^data:/i.test(u)) return u;
+        return ADMIN_BASE + u.replace(/^\//, '');
+    }
+
+    function fmtDayDate(baseStr, offset) {
+        if (!baseStr) return '';
+        var d = new Date(baseStr + 'T00:00:00');
+        if (isNaN(d.getTime())) return '';
+        d.setDate(d.getDate() + offset);
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var yyyy = d.getFullYear();
+        return dd + '-' + mm + '-' + yyyy + ' ' + DAY_NAMES[d.getDay()];
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Accordions                                                          */
+    /* ------------------------------------------------------------------ */
+    $(document).on('click', '.q-accordion-head', function () {
+        var $head = $(this);
+        var $body = $($head.data('target'));
+        $head.toggleClass('collapsed');
+        $body.slideToggle(150, function () {
+            if (!$body.is(':visible')) {
+                return;
+            }
+            if ($body.attr('id') === 'qItineraryBody') {
+                initItineraryEditors();
+            }
+            $body.find('textarea.q-editor').each(function () {
+                initQuotationSummernote($(this), 160);
+            });
+        });
+    });
+
+    /* ------------------------------------------------------------------ */
+    /* Flight / Train rows                                                 */
+    /* ------------------------------------------------------------------ */
+    var FLIGHT_SUPPLIERS = ['MakeMyTrip', 'ClearTrip', 'Goibibo', 'Yatra', 'EaseMyTrip', 'Direct', 'Other'];
+
+    function normalizeFlightData(data) {
+        data = data || {};
+        return {
+            from: data.from || '',
+            to: data.to || '',
+            name: data.name || '',
+            fl_tr_no: data.fl_tr_no || data.pnr || '',
+            dep_date: data.dep_date || data.date || '',
+            dep_time: data.dep_time || data.time || '',
+            arr_date: data.arr_date || '',
+            arr_time: data.arr_time || '',
+            fare: data.fare !== undefined && data.fare !== '' ? data.fare : (data.amount || ''),
+            supplier: data.supplier || '',
+            layover_time: data.layover_time || '',
+            layover_at: data.layover_at || ''
+        };
+    }
+
+    function flightSupplierOptionsHtml(selected) {
+        var selectedVal = String(selected || '').trim();
+        var html = '<option value="">Select</option>';
+        var found = false;
+        FLIGHT_SUPPLIERS.forEach(function (name) {
+            var isSelected = selectedVal.toLowerCase() === name.toLowerCase();
+            if (isSelected) {
+                found = true;
+            }
+            html += '<option value="' + esc(name) + '"' + (isSelected ? ' selected' : '') + '>' + esc(name) + '</option>';
+        });
+        if (selectedVal && !found) {
+            html += '<option value="' + esc(selectedVal) + '" selected>' + esc(selectedVal) + '</option>';
+        }
+        return html;
+    }
+
+    function renumberFlightRows() {
+        $('#qFlightRows .q-flight-row').each(function (i) {
+            var $row = $(this);
+            $row.find('.q-flight-index').text(i + 1);
+            $row.find('.q-flight-index')
+                .removeClass('is-odd is-even')
+                .addClass(i % 2 === 0 ? 'is-odd' : 'is-even');
+        });
+        refreshFlightLayovers();
+    }
+
+    function parseFlightDateTime(dateVal, timeVal) {
+        var dateStr = String(dateVal || '').trim();
+        var timeStr = String(timeVal || '').trim();
+        if (!dateStr) {
+            return null;
+        }
+        if (!timeStr) {
+            timeStr = '00:00';
+        }
+        if (timeStr.length === 5) {
+            timeStr += ':00';
+        }
+        var dt = new Date(dateStr + 'T' + timeStr);
+        if (isNaN(dt.getTime())) {
+            return null;
+        }
+        return dt;
+    }
+
+    function formatLayoverDurationLabel(ms) {
+        if (!ms || ms <= 0) {
+            return '';
+        }
+        var totalMinutes = Math.round(ms / 60000);
+        var hours = Math.floor(totalMinutes / 60);
+        var minutes = totalMinutes % 60;
+        if (hours > 0 && minutes > 0) {
+            return hours + ' hrs ' + minutes + ' min';
+        }
+        if (hours > 0) {
+            return hours + ' hrs';
+        }
+        return minutes + ' min';
+    }
+
+    function buildFlightLayoverHtml(layoverAt, layoverTime) {
+        if (!layoverAt && !layoverTime) {
+            return '';
+        }
+        return '' +
+            '<div class="q-flight-layover">' +
+            '<div class="q-flight-layover-text">' +
+            '<i class="fas fa-info-circle"></i>' +
+            '<span>Layover' + (layoverAt ? ' at ' + esc(layoverAt) : '') +
+            (layoverTime ? ' • Duration: ' + esc(layoverTime) : '') + '</span>' +
+            '</div>' +
+            '<div class="q-flight-layover-art" aria-hidden="true">' +
+            '<i class="fas fa-plane"></i><span class="q-flight-layover-path"></span><i class="fas fa-map-marker-alt"></i>' +
+            '</div>' +
+            '</div>';
+    }
+
+    function refreshFlightLayovers() {
+        var $rows = $('#qFlightRows .q-flight-row');
+        $rows.each(function (index) {
+            var $row = $(this);
+            var $layover = $row.find('.q-flight-layover');
+            if (index === 0) {
+                $row.find('.f-layover-time').val('');
+                $row.find('.f-layover-at').val('');
+                $layover.remove();
+                return;
+            }
+
+            var $prev = $rows.eq(index - 1);
+            var prevArr = parseFlightDateTime($prev.find('.f-arr-date').val(), $prev.find('.f-arr-time').val());
+            var curDep = parseFlightDateTime($row.find('.f-dep-date').val(), $row.find('.f-dep-time').val());
+            var layoverAt = String($prev.find('.f-to').val() || $row.find('.f-layover-at').val() || '').trim();
+
+            var layoverTime = '';
+            if (prevArr && curDep) {
+                layoverTime = formatLayoverDurationLabel(curDep.getTime() - prevArr.getTime());
+            }
+            if (!layoverTime) {
+                layoverTime = String($row.find('.f-layover-time').val() || '').trim();
+            }
+
+            $row.find('.f-layover-time').val(layoverTime);
+            $row.find('.f-layover-at').val(layoverAt);
+
+            var html = buildFlightLayoverHtml(layoverAt, layoverTime);
+            if (!html) {
+                $layover.remove();
+                return;
+            }
+            if ($layover.length) {
+                $layover.replaceWith(html);
+            } else {
+                $row.prepend(html);
+            }
+        });
+    }
+
+    function flightRowHtml(data) {
+        var d = normalizeFlightData(data);
+
+        return '' +
+            '<div class="q-flight-row">' +
+            '<input type="hidden" class="f-layover-time" value="' + esc(d.layover_time) + '">' +
+            '<input type="hidden" class="f-layover-at" value="' + esc(d.layover_at) + '">' +
+            buildFlightLayoverHtml(d.layover_time || d.layover_at ? d.layover_at : '', d.layover_time) +
+            '<div class="q-flight-segment-row">' +
+            '<div class="q-ft-col q-ft-col-num"><span class="q-flight-index is-odd">1</span></div>' +
+            '<div class="q-ft-col q-ft-col-from">' +
+            '<div class="q-flight-place">' +
+            '<i class="fas fa-plane q-flight-place-icon"></i>' +
+            '<input type="text" class="form-control form-control-sm f-from" value="' + esc(d.from) + '" placeholder="City (CODE)">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-swap">' +
+            '<button type="button" class="btn q-flight-swap" title="Swap From / To"><i class="fas fa-exchange-alt"></i></button>' +
+            '</div>' +
+            '<div class="q-ft-col q-ft-col-to">' +
+            '<div class="q-flight-place">' +
+            '<i class="fas fa-plane q-flight-place-icon is-arrive"></i>' +
+            '<input type="text" class="form-control form-control-sm f-to" value="' + esc(d.to) + '" placeholder="City (CODE)">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-airline">' +
+            '<div class="q-flight-airline">' +
+            '<span class="q-flight-airline-logo"><i class="fas fa-plane"></i></span>' +
+            '<input type="text" class="form-control form-control-sm f-name" value="' + esc(d.name) + '" placeholder="Airline / Train">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-no">' +
+            '<input type="text" class="form-control form-control-sm f-fl-no" value="' + esc(d.fl_tr_no) + '" placeholder="e.g. 6E-2370">' +
+            '</div>' +
+            '<div class="q-ft-col q-ft-col-date">' +
+            '<div class="q-flight-icon-field"><i class="far fa-calendar-alt"></i>' +
+            '<input type="date" class="form-control form-control-sm f-dep-date" value="' + esc(d.dep_date) + '">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-time">' +
+            '<div class="q-flight-icon-field"><i class="far fa-clock"></i>' +
+            '<input type="time" class="form-control form-control-sm f-dep-time" value="' + esc(d.dep_time) + '">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-date">' +
+            '<div class="q-flight-icon-field"><i class="far fa-calendar-alt"></i>' +
+            '<input type="date" class="form-control form-control-sm f-arr-date" value="' + esc(d.arr_date) + '">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-time">' +
+            '<div class="q-flight-icon-field"><i class="far fa-clock"></i>' +
+            '<input type="time" class="form-control form-control-sm f-arr-time" value="' + esc(d.arr_time) + '">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-fare">' +
+            '<div class="q-flight-fare"><span>₹</span>' +
+            '<input type="number" step="0.01" class="form-control form-control-sm f-fare" value="' + esc(d.fare) + '" placeholder="0">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-supplier">' +
+            '<select class="form-control form-control-sm f-supplier">' + flightSupplierOptionsHtml(d.supplier) + '</select>' +
+            '</div>' +
+            '<div class="q-ft-col q-ft-col-action">' +
+            '<button type="button" class="btn q-flight-remove q-remove" data-remove=".q-flight-row" title="Remove segment"><i class="fas fa-trash-alt"></i></button>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    }
+
+    function collectFlights() {
+        var out = [];
+        $('#qFlightRows .q-flight-row').each(function () {
+            var $r = $(this);
+            var depDate = $r.find('.f-dep-date').val();
+            var depTime = $r.find('.f-dep-time').val();
+            var arrDate = $r.find('.f-arr-date').val();
+            var arrTime = $r.find('.f-arr-time').val();
+            var flNo = $r.find('.f-fl-no').val();
+            var fare = $r.find('.f-fare').val();
+            out.push({
+                from: $r.find('.f-from').val(),
+                to: $r.find('.f-to').val(),
+                name: $r.find('.f-name').val(),
+                fl_tr_no: flNo,
+                dep_date: depDate,
+                dep_time: depTime,
+                arr_date: arrDate,
+                arr_time: arrTime,
+                fare: fare,
+                supplier: $r.find('.f-supplier').val(),
+                layover_time: $r.find('.f-layover-time').val(),
+                layover_at: $r.find('.f-layover-at').val(),
+                date: depDate,
+                time: depTime,
+                pnr: flNo,
+                amount: fare
+            });
+        });
+        return out;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Hotel rows + category options                                       */
+    /* ------------------------------------------------------------------ */
+    var qHotelSearchUrl = 'crm/ajax/search_quotation_hotels.php';
+    var qHotelCategorySeq = 1;
+    var qActiveHotelCategoryId = '';
+    var Q_MAX_HOTEL_OPTIONS = 2;
+
+    function nextHotelCategoryId() {
+        return 'opt_' + (qHotelCategorySeq++);
+    }
+
+    function defaultHotelCategoryLabel(index) {
+        return 'Option ' + (index + 1);
+    }
+
+    function bumpHotelIdSeqFromCategory(cat) {
+        cat = cat || {};
+        if (cat.id && /^opt_(\d+)$/.test(String(cat.id))) {
+            var idNum = parseInt(RegExp.$1, 10);
+            if (idNum >= qHotelCategorySeq) {
+                qHotelCategorySeq = idNum + 1;
+            }
+        }
+    }
+
+    function syncHotelIdSeqFromPanels() {
+        getHotelCategoryPanels().each(function () {
+            bumpHotelIdSeqFromCategory({ id: $(this).attr('data-cat-id') });
+        });
+    }
+
+    /** Always Option 1..N in DOM order — never tied to internal opt_* ids. */
+    function renumberHotelCategoryLabels() {
+        var $panels = getHotelCategoryPanels();
+        $panels.each(function (idx) {
+            $(this).find('.q-hotel-cat-label').val(defaultHotelCategoryLabel(idx));
+        });
+        return $panels.length;
+    }
+
+    function nextHotelCategoryLabel() {
+        return defaultHotelCategoryLabel(getHotelCategoryPanels().length);
+    }
+
+    function normalizeHotelData(data) {
+        data = data || {};
+        return {
+            city: data.city || '',
+            city_id: data.city_id || '',
+            hotel_id: data.hotel_id || '',
+            name: data.name || data.hotel_name || '',
+            room_type: data.room_type || '',
+            rooms: data.rooms !== undefined && data.rooms !== '' ? data.rooms : '',
+            meal_plan: data.meal_plan || data.meal || 'CP',
+            nights: data.nights !== undefined && data.nights !== '' ? data.nights : '',
+            checkin: data.checkin || data.check_in || '',
+            checkout: data.checkout || data.check_out || '',
+            rate: (function () {
+                var raw = data.rate !== undefined && data.rate !== '' ? data.rate : (data.amount || '');
+                if (raw === '' || raw == null) return '';
+                var n = parseFloat(raw);
+                return isNaN(n) ? '' : String(Math.round(n));
+            })()
+        };
+    }
+
+    function hotelRowHtml(data) {
+        var d = normalizeHotelData(data);
+        return '' +
+            '<div class="q-repeat-row q-hotel-row">' +
+            '<input type="hidden" class="h-city-id" value="' + esc(d.city_id) + '">' +
+            '<input type="hidden" class="h-hotel-id" value="' + esc(d.hotel_id) + '">' +
+            '<button type="button" class="btn btn-sm btn-outline-danger q-remove" data-remove=".q-hotel-row"><i class="fas fa-times"></i></button>' +
+            '<div class="q-hotel-fields mb-2">' +
+            '<div class="q-hotel-field q-hotel-combo">' +
+            '<label class="q-label">City</label>' +
+            '<input type="text" class="form-control form-control-sm h-city" value="' + esc(d.city) + '" autocomplete="off" placeholder="Type city">' +
+            '<div class="q-hotel-menu q-hotel-city-menu" style="display:none;"></div></div>' +
+            '<div class="q-hotel-field q-hotel-combo q-hotel-field-hotel">' +
+            '<label class="q-label">Hotel</label>' +
+            '<input type="text" class="form-control form-control-sm h-name" value="' + esc(d.name) + '" autocomplete="off" placeholder="Search or type hotel name">' +
+            '<div class="q-hotel-menu q-hotel-name-menu" style="display:none;"></div></div>' +
+            '<div class="q-hotel-field q-hotel-combo q-hotel-field-wide">' +
+            '<label class="q-label">Room Type</label>' +
+            '<input type="text" class="form-control form-control-sm h-room" value="' + esc(d.room_type) + '" autocomplete="off" placeholder="e.g. Deluxe Room">' +
+            '<div class="q-hotel-menu q-hotel-room-menu" style="display:none;"></div></div>' +
+            '<div class="q-hotel-field q-hotel-field-narrow">' +
+            '<label class="q-label">Rooms</label>' +
+            '<input type="number" min="0" class="form-control form-control-sm h-rooms" value="' + esc(d.rooms) + '"></div>' +
+            '<div class="q-hotel-field q-hotel-combo q-hotel-field-narrow q-hotel-field-meal">' +
+            '<label class="q-label">Meal</label>' +
+            '<input type="text" class="form-control form-control-sm h-meal" value="' + esc(d.meal_plan) + '" autocomplete="off" placeholder="CP / MAP / AP">' +
+            '<div class="q-hotel-menu q-hotel-meal-menu" style="display:none;"></div></div>' +
+            '<div class="q-hotel-field q-hotel-field-narrow">' +
+            '<label class="q-label">Nts</label>' +
+            '<input type="number" min="0" class="form-control form-control-sm h-nights" value="' + esc(d.nights) + '"></div>' +
+            '<div class="q-hotel-field">' +
+            '<label class="q-label">Check In</label>' +
+            '<input type="date" class="form-control form-control-sm h-checkin" value="' + esc(d.checkin) + '"></div>' +
+            '<div class="q-hotel-field">' +
+            '<label class="q-label">Check Out</label>' +
+            '<input type="date" class="form-control form-control-sm h-checkout" value="' + esc(d.checkout) + '"></div>' +
+            '</div>' +
+            '<div class="q-hotel-fields">' +
+            '<div class="q-hotel-field">' +
+            '<label class="q-label">Rate</label>' +
+            '<input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm h-rate" value="' + esc(d.rate) + '"></div>' +
+            '</div></div>';
+    }
+
+    function hotelCategoryPanelHtml(cat) {
+        cat = cat || {};
+        var id = cat.id || nextHotelCategoryId();
+        var label = cat.label || defaultHotelCategoryLabel(0);
+        return '' +
+            '<div class="q-hotel-category" data-cat-id="' + esc(id) + '">' +
+            '<div class="q-hotel-category-hd">' +
+            '<input type="hidden" class="q-hotel-cat-label" value="' + esc(label) + '">' +
+            '<div class="q-hotel-category-actions">' +
+            '<button type="button" class="btn btn-q-primary btn-sm q-add-hotel-in-cat"><i class="fas fa-plus mr-1"></i>Add Hotel</button>' +
+            '<button type="button" class="btn btn-outline-danger btn-sm q-remove-hotel-cat" title="Remove option"><i class="fas fa-trash-alt"></i></button>' +
+            '</div></div>' +
+            '<div class="q-hotel-rows"></div>' +
+            '</div>';
+    }
+
+    function getHotelCategoryPanels() {
+        return $('#qHotelCategories .q-hotel-category');
+    }
+
+    function refreshHotelCategoryTabs() {
+        renumberHotelCategoryLabels();
+        var $tabs = $('#qHotelCatTabs').empty();
+        var $panels = getHotelCategoryPanels();
+        var canAddOption = $panels.length < Q_MAX_HOTEL_OPTIONS;
+        $('#qAddHotelCategory')
+            .prop('disabled', !canAddOption)
+            .toggle(canAddOption)
+            .attr('title', canAddOption ? 'Add pricing option' : 'Maximum ' + Q_MAX_HOTEL_OPTIONS + ' options allowed');
+        if (!$panels.length) {
+            return;
+        }
+        var activeExists = false;
+        $panels.each(function () {
+            if (String($(this).attr('data-cat-id') || '') === String(qActiveHotelCategoryId || '')) {
+                activeExists = true;
+                return false;
+            }
+        });
+        if (!qActiveHotelCategoryId || !activeExists) {
+            qActiveHotelCategoryId = String($panels.first().attr('data-cat-id') || '');
+        }
+        $panels.each(function (idx) {
+            var $panel = $(this);
+            var id = String($panel.attr('data-cat-id') || '');
+            var label = defaultHotelCategoryLabel(idx);
+            $panel.find('.q-hotel-cat-label').val(label);
+            var $btn = $('<button type="button" class="q-hotel-cat-tab"></button>')
+                .attr('data-cat-id', id)
+                .text(label);
+            if (id === String(qActiveHotelCategoryId || '')) {
+                $btn.addClass('is-active');
+            }
+            $tabs.append($btn);
+        });
+        $panels.removeClass('is-active');
+        $panels.filter(function () {
+            return String($(this).attr('data-cat-id') || '') === String(qActiveHotelCategoryId || '');
+        }).addClass('is-active');
+        var canRemove = $panels.length > 1;
+        $panels.each(function () {
+            $(this).find('.q-remove-hotel-cat').prop('disabled', !canRemove).toggle(canRemove);
+        });
+    }
+
+    function setActiveHotelCategory(catId) {
+        qActiveHotelCategoryId = String(catId || '');
+        refreshHotelCategoryTabs();
+        renderPricingSheets();
+    }
+
+    function collectHotelsFromPanel($panel) {
+        var out = [];
+        $panel.find('.q-hotel-rows .q-hotel-row').each(function () {
+            var $r = $(this);
+            var hotelId = parseInt($r.find('.h-hotel-id').val(), 10) || 0;
+            var checkin = $r.find('.h-checkin').val();
+            var checkout = $r.find('.h-checkout').val();
+            var rate = $r.find('.h-rate').val();
+            out.push({
+                city: $r.find('.h-city').val(),
+                city_id: $r.find('.h-city-id').val(),
+                hotel_id: hotelId > 0 ? hotelId : '',
+                name: $r.find('.h-name').val(),
+                room_type: $r.find('.h-room').val(),
+                rooms: $r.find('.h-rooms').val(),
+                meal_plan: $r.find('.h-meal').val(),
+                nights: $r.find('.h-nights').val(),
+                checkin: checkin,
+                checkout: checkout,
+                check_in: checkin,
+                check_out: checkout,
+                rate: rate,
+                amount: rate,
+                is_manual: hotelId > 0 ? 0 : 1
+            });
+        });
+        return out;
+    }
+
+    function collectHotelCategories() {
+        renumberHotelCategoryLabels();
+        var categories = [];
+        getHotelCategoryPanels().each(function (idx) {
+            var $panel = $(this);
+            var id = String($panel.attr('data-cat-id') || nextHotelCategoryId());
+            var label = defaultHotelCategoryLabel(idx);
+            $panel.find('.q-hotel-cat-label').val(label);
+            categories.push({
+                id: id,
+                label: label,
+                hotels: collectHotelsFromPanel($panel)
+            });
+        });
+        if (!categories.length) {
+            categories.push({
+                id: nextHotelCategoryId(),
+                label: defaultHotelCategoryLabel(0),
+                hotels: []
+            });
+        }
+        var activeId = qActiveHotelCategoryId;
+        if (!activeId || !categories.some(function (c) { return c.id === activeId; })) {
+            activeId = categories[0].id;
+        }
+        return {
+            categories: categories,
+            active_category_id: activeId
+        };
+    }
+
+    function collectHotels() {
+        var data = collectHotelCategories();
+        var active = data.categories.find(function (c) { return c.id === data.active_category_id; });
+        return active ? (active.hotels || []) : [];
+    }
+
+    function normalizeHotelsPrefill(raw) {
+        if (Array.isArray(raw)) {
+            return {
+                categories: [{
+                    id: 'opt_1',
+                    label: defaultHotelCategoryLabel(0),
+                    hotels: raw
+                }],
+                active_category_id: 'opt_1'
+            };
+        }
+        if (raw && typeof raw === 'object' && Array.isArray(raw.categories)) {
+            var cats = raw.categories.slice(0, Q_MAX_HOTEL_OPTIONS).map(function (cat, idx) {
+                return {
+                    id: cat.id || ('opt_' + (idx + 1)),
+                    label: defaultHotelCategoryLabel(idx),
+                    hotels: Array.isArray(cat.hotels) ? cat.hotels : []
+                };
+            });
+            if (!cats.length) {
+                cats.push({ id: 'opt_1', label: defaultHotelCategoryLabel(0), hotels: [] });
+            }
+            var activeId = raw.active_category_id || cats[0].id;
+            if (!cats.some(function (c) { return c.id === activeId; })) {
+                activeId = cats[0].id;
+            }
+            return { categories: cats, active_category_id: activeId };
+        }
+        return {
+            categories: [{ id: 'opt_1', label: defaultHotelCategoryLabel(0), hotels: [] }],
+            active_category_id: 'opt_1'
+        };
+    }
+
+    function renderHotelCategories(rawHotels) {
+        var data = normalizeHotelsPrefill(rawHotels);
+        var $wrap = $('#qHotelCategories').empty();
+        qHotelCategorySeq = 1;
+        data.categories.forEach(function (cat) {
+            bumpHotelIdSeqFromCategory(cat);
+        });
+        data.categories.forEach(function (cat, idx) {
+            var $panel = $(hotelCategoryPanelHtml({
+                id: cat.id || nextHotelCategoryId(),
+                label: defaultHotelCategoryLabel(idx)
+            }));
+            bumpHotelIdSeqFromCategory({
+                id: $panel.attr('data-cat-id')
+            });
+            (cat.hotels || []).forEach(function (h) {
+                var $row = $(hotelRowHtml(h));
+                $panel.find('.q-hotel-rows').append($row);
+                if (typeof initHotelRow === 'function') {
+                    initHotelRow($row);
+                }
+            });
+            $wrap.append($panel);
+        });
+        qActiveHotelCategoryId = data.active_category_id || String($wrap.find('.q-hotel-category').first().attr('data-cat-id') || '');
+        refreshHotelCategoryTabs();
+        renderPricingSheets();
+    }
+
+    function ensureHotelCategoriesReady() {
+        if (!getHotelCategoryPanels().length) {
+            renderHotelCategories([]);
+        }
+    }
+
+    function addHotelCategory(label) {
+        ensureHotelCategoriesReady();
+        renumberHotelCategoryLabels();
+        if (getHotelCategoryPanels().length >= Q_MAX_HOTEL_OPTIONS) {
+            refreshHotelCategoryTabs();
+            return null;
+        }
+        syncHotelIdSeqFromPanels();
+        var id = nextHotelCategoryId();
+        var nextLabel = label || nextHotelCategoryLabel();
+        var $panel = $(hotelCategoryPanelHtml({
+            id: id,
+            label: nextLabel
+        }));
+        $('#qHotelCategories').append($panel);
+        qActiveHotelCategoryId = id;
+        refreshHotelCategoryTabs();
+        renderPricingSheets();
+        return $panel;
+    }
+
+    function getHotelRowCache($row) {
+        try {
+            return JSON.parse($row.attr('data-hotel-cache') || '{}') || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function setHotelRowCache($row, cache) {
+        $row.attr('data-hotel-cache', JSON.stringify(cache || {}));
+    }
+
+    function getQuotationDestinationFilter() {
+        var name = ($('[name=destination]').val() || '').trim();
+        var map = (typeof window.Q_DESTINATION_NAME_TO_ID === 'object' && window.Q_DESTINATION_NAME_TO_ID)
+            ? window.Q_DESTINATION_NAME_TO_ID
+            : {};
+        var id = 0;
+        if (name) {
+            if (map[name] != null) {
+                id = parseInt(map[name], 10) || 0;
+            }
+            if (!id && map[name.toLowerCase()] != null) {
+                id = parseInt(map[name.toLowerCase()], 10) || 0;
+            }
+            if (!id) {
+                var lower = name.toLowerCase();
+                Object.keys(map).some(function (key) {
+                    if (String(key).toLowerCase() === lower) {
+                        id = parseInt(map[key], 10) || 0;
+                        return true;
+                    }
+                    return false;
+                });
+            }
+        }
+        return { name: name, id: id };
+    }
+
+    function withDestinationParams(params) {
+        params = params || {};
+        var dest = getQuotationDestinationFilter();
+        if (dest.id > 0) {
+            params.destination_id = dest.id;
+        }
+        if (dest.name) {
+            params.destination = dest.name;
+        }
+        return params;
+    }
+
+    function hideHotelMenus($row) {
+        if ($row && $row.length) {
+            $row.find('.q-hotel-menu').hide().empty();
+        } else {
+            $('.q-hotel-menu').hide().empty();
+        }
+    }
+
+    function fetchQuotationHotelCities(q, callback) {
+        $.getJSON(qHotelSearchUrl, withDestinationParams({ mode: 'cities', q: q || '' })).done(function (res) {
+            callback((res && res.success && res.cities) ? res.cities : []);
+        }).fail(function () { callback([]); });
+    }
+
+    function fetchQuotationHotelsSearch(q, cityId, callback) {
+        var params = withDestinationParams({ mode: 'search', q: q || '' });
+        if (cityId > 0) {
+            params.city_id = cityId;
+        }
+        $.getJSON(qHotelSearchUrl, params).done(function (res) {
+            callback((res && res.success && res.hotels) ? res.hotels : []);
+        }).fail(function () { callback([]); });
+    }
+
+    function firstHotelRoomType(hotel) {
+        var rooms = (hotel && hotel.room_types) ? hotel.room_types : [];
+        for (var i = 0; i < rooms.length; i++) {
+            if (rooms[i] && rooms[i].type) {
+                return rooms[i];
+            }
+        }
+        return null;
+    }
+
+    function firstHotelMealPlan(hotel) {
+        var meals = (hotel && hotel.meal_plans) ? hotel.meal_plans : [];
+        for (var i = 0; i < meals.length; i++) {
+            if (meals[i] && meals[i].name) {
+                return meals[i];
+            }
+        }
+        return null;
+    }
+
+    function filterHotelListByQuery(items, query, getLabel) {
+        var q = String(query || '').trim().toLowerCase();
+        var list = Array.isArray(items) ? items.slice() : [];
+        if (!q) {
+            return list;
+        }
+        return list.filter(function (item) {
+            var label = String(getLabel(item) || '').toLowerCase();
+            return label.indexOf(q) >= 0;
+        });
+    }
+
+    function ensureHotelMasterDetails($row, callback) {
+        var cache = getHotelRowCache($row);
+        var hotel = cache.selectedHotel || null;
+        var hotelId = parseInt($row.find('.h-hotel-id').val(), 10) || 0;
+        if (!hotelId && hotel && hotel.id) {
+            hotelId = parseInt(hotel.id, 10) || 0;
+        }
+
+        var hasDetails = !!(hotel && ((hotel.room_types && hotel.room_types.length) || (hotel.meal_plans && hotel.meal_plans.length)));
+        if (hasDetails) {
+            callback(hotel);
+            return;
+        }
+        if (hotelId <= 0) {
+            callback(null);
+            return;
+        }
+
+        $.getJSON('crm/ajax/get_hotel.php', { id: hotelId })
+            .done(function (res) {
+                if (res && res.success && res.hotel) {
+                    var mapped = {
+                        id: res.hotel.id,
+                        city_id: res.hotel.city_id,
+                        city_name: res.hotel.city_name,
+                        hotel_name: res.hotel.hotel_name,
+                        star_category: res.hotel.star_category,
+                        room_types: res.hotel.room_types || [],
+                        meal_plans: res.hotel.meal_plans || []
+                    };
+                    cache = getHotelRowCache($row);
+                    cache.selectedHotel = mapped;
+                    setHotelRowCache($row, cache);
+                    callback(mapped);
+                    return;
+                }
+                callback(hotel);
+            })
+            .fail(function () {
+                callback(hotel);
+            });
+    }
+
+    function applyHotelMasterToRow($row, hotel, opts) {
+        if (!hotel) {
+            return;
+        }
+        opts = opts || {};
+        var preserve = !!opts.preserveFields;
+        var forceFill = !!opts.forceFill;
+
+        $row.find('.h-hotel-id').val(hotel.id || '');
+        $row.find('.h-name').val(hotel.hotel_name || '');
+        if (hotel.city_name) {
+            $row.find('.h-city').val(hotel.city_name);
+        }
+        if (hotel.city_id) {
+            $row.find('.h-city-id').val(hotel.city_id);
+        }
+
+        var room = firstHotelRoomType(hotel);
+        if (room && (forceFill || !preserve || !$.trim($row.find('.h-room').val()))) {
+            if (forceFill || !$.trim($row.find('.h-room').val())) {
+                $row.find('.h-room').val(room.type || '');
+            }
+            var price = parseFloat(room.price);
+            if (!isNaN(price) && price > 0 && (forceFill || !$.trim($row.find('.h-rate').val()))) {
+                $row.find('.h-rate').val(Math.round(price));
+            }
+        }
+
+        var meal = firstHotelMealPlan(hotel);
+        if (meal && (forceFill || !$.trim($row.find('.h-meal').val()))) {
+            $row.find('.h-meal').val(meal.name || 'CP');
+        } else if (!$.trim($row.find('.h-meal').val())) {
+            $row.find('.h-meal').val('CP');
+        }
+
+        var cache = getHotelRowCache($row);
+        cache.selectedHotel = hotel;
+        setHotelRowCache($row, cache);
+    }
+
+    function showHotelRoomSuggestions($row) {
+        var $menu = $row.find('.q-hotel-room-menu');
+        var typed = $.trim($row.find('.h-room').val());
+        var hotelId = parseInt($row.find('.h-hotel-id').val(), 10) || 0;
+
+        ensureHotelMasterDetails($row, function (hotel) {
+            $menu.empty();
+            if (!hotelId && !(hotel && hotel.id)) {
+                $menu.append('<div class="q-hotel-menu-empty">Select a hotel from Hotel Master first</div>').show();
+                return;
+            }
+            var rooms = filterHotelListByQuery(hotel && hotel.room_types ? hotel.room_types : [], typed, function (r) {
+                return r.type || '';
+            });
+            if (!rooms.length) {
+                if (typed) {
+                    $menu.append('<div class="q-hotel-menu-empty">No matching room type — keep "' + esc(typed) + '"</div>');
+                } else {
+                    $menu.append('<div class="q-hotel-menu-empty">No room types in Hotel Master for this hotel</div>');
+                }
+            } else {
+                rooms.forEach(function (r, idx) {
+                    var label = r.type || ('Room ' + (idx + 1));
+                    var sub = '';
+                    if (r.description) {
+                        sub = r.description;
+                    }
+                    if (r.price !== undefined && r.price !== null && r.price !== '') {
+                        sub += (sub ? ' · ' : '') + 'Rate ' + Math.round(parseFloat(r.price) || 0);
+                    }
+                    var $btn = $('<button type="button" class="q-hotel-menu-item q-hotel-room-pick"></button>')
+                        .attr('data-index', idx)
+                        .data('room', r);
+                    $btn.append($('<span></span>').text(label));
+                    if (sub) {
+                        $btn.append($('<span class="q-hotel-menu-sub"></span>').text(sub));
+                    }
+                    $menu.append($btn);
+                });
+            }
+            $menu.show();
+        });
+    }
+
+    function showHotelMealSuggestions($row) {
+        var $menu = $row.find('.q-hotel-meal-menu');
+        var typed = $.trim($row.find('.h-meal').val());
+        var hotelId = parseInt($row.find('.h-hotel-id').val(), 10) || 0;
+
+        ensureHotelMasterDetails($row, function (hotel) {
+            $menu.empty();
+            if (!hotelId && !(hotel && hotel.id)) {
+                $menu.append('<div class="q-hotel-menu-empty">Select a hotel from Hotel Master first</div>').show();
+                return;
+            }
+            var meals = filterHotelListByQuery(hotel && hotel.meal_plans ? hotel.meal_plans : [], typed, function (m) {
+                return m.name || '';
+            });
+            if (!meals.length) {
+                if (typed) {
+                    $menu.append('<div class="q-hotel-menu-empty">No matching meal plan — keep "' + esc(typed) + '"</div>');
+                } else {
+                    $menu.append('<div class="q-hotel-menu-empty">No meal plans in Hotel Master for this hotel</div>');
+                }
+            } else {
+                meals.forEach(function (m, idx) {
+                    var label = m.name || ('Meal ' + (idx + 1));
+                    var sub = m.description || '';
+                    if (m.price !== undefined && m.price !== null && m.price !== '') {
+                        sub += (sub ? ' · ' : '') + '$' + (parseFloat(m.price) || 0);
+                    }
+                    var $btn = $('<button type="button" class="q-hotel-menu-item q-hotel-meal-pick"></button>')
+                        .attr('data-index', idx)
+                        .data('meal', m);
+                    $btn.append($('<span></span>').text(label));
+                    if (sub) {
+                        $btn.append($('<span class="q-hotel-menu-sub"></span>').text(sub));
+                    }
+                    $menu.append($btn);
+                });
+            }
+            $menu.show();
+        });
+    }
+
+    function showHotelCitySuggestions($row) {
+        var $input = $row.find('.h-city');
+        var $menu = $row.find('.q-hotel-city-menu');
+        var typed = $.trim($input.val());
+        var dest = getQuotationDestinationFilter();
+
+        if (!dest.name) {
+            $menu.empty().append(
+                '<div class="q-hotel-menu-empty">Set Destination in Tour Information (Step 1) to see cities from Hotel Master</div>'
+            ).show();
+            return;
+        }
+
+        fetchQuotationHotelCities(typed, function (cities) {
+            $menu.empty();
+            if (!cities.length) {
+                if (typed) {
+                    $menu.append('<div class="q-hotel-menu-empty">No matching cities for ' + esc(dest.name) + ' — your typed city will be used</div>');
+                } else {
+                    $menu.append('<div class="q-hotel-menu-empty">No cities in Hotel Master for ' + esc(dest.name) + '</div>');
+                }
+            } else {
+                cities.forEach(function (c) {
+                    $menu.append($('<button type="button" class="q-hotel-menu-item q-hotel-city-pick"></button>')
+                        .attr('data-id', c.id).text(c.name));
+                });
+            }
+            $menu.show();
+        });
+    }
+
+    function showHotelNameSuggestions($row) {
+        var $menu = $row.find('.q-hotel-name-menu');
+        var typed = $.trim($row.find('.h-name').val());
+        var cityId = parseInt($row.find('.h-city-id').val(), 10) || 0;
+        var dest = getQuotationDestinationFilter();
+
+        if (!dest.name) {
+            $menu.empty().append(
+                '<div class="q-hotel-menu-empty">Set Destination in Tour Information (Step 1) to see hotels from Hotel Master</div>'
+            ).show();
+            return;
+        }
+
+        fetchQuotationHotelsSearch(typed, cityId, function (hotels) {
+            $menu.empty();
+            var cache = getHotelRowCache($row);
+            cache.hotels = hotels;
+            setHotelRowCache($row, cache);
+
+            if (!hotels.length) {
+                if (typed) {
+                    $menu.append('<div class="q-hotel-menu-empty">No match in ' + esc(dest.name) + ' Hotel Master — continue with "' + esc(typed) + '" as a new hotel</div>');
+                } else {
+                    $menu.append('<div class="q-hotel-menu-empty">Hotels for ' + esc(dest.name) + ' from Hotel Master — type to filter</div>');
+                }
+            } else {
+                hotels.forEach(function (h) {
+                    var label = h.hotel_name + (parseInt(h.is_default, 10) === 1 ? ' (Default)' : '');
+                    var sub = (h.city_name || '') + (h.star_category ? ' · ' + h.star_category : '');
+                    var $btn = $('<button type="button" class="q-hotel-menu-item q-hotel-name-pick"></button>')
+                        .attr('data-id', h.id);
+                    $btn.append($('<span></span>').text(label));
+                    if (sub) {
+                        $btn.append($('<span class="q-hotel-menu-sub"></span>').text(sub));
+                    }
+                    $menu.append($btn);
+                });
+            }
+            $menu.show();
+        });
+    }
+
+    function initHotelRow($row, callback) {
+        var hotelId = parseInt($row.find('.h-hotel-id').val(), 10) || 0;
+        if (hotelId > 0) {
+            if (callback) callback();
+            return;
+        }
+
+        var hotelName = $.trim($row.find('.h-name').val());
+        var cityId = parseInt($row.find('.h-city-id').val(), 10) || 0;
+        var cityName = $.trim($row.find('.h-city').val());
+
+        var finishMatch = function () {
+            if (!hotelName) {
+                if (callback) callback();
+                return;
+            }
+            fetchQuotationHotelsSearch(hotelName, cityId, function (hotels) {
+                var found = hotels.find(function (h) {
+                    return String(h.hotel_name || '').toLowerCase() === hotelName.toLowerCase();
+                });
+                if (found) {
+                    applyHotelMasterToRow($row, found, { preserveFields: true });
+                }
+                if (callback) callback();
+            });
+        };
+
+        if (cityId > 0) {
+            finishMatch();
+            return;
+        }
+        if (cityName) {
+            fetchQuotationHotelCities(cityName, function (cities) {
+                var exact = cities.find(function (c) {
+                    return String(c.name).toLowerCase() === cityName.toLowerCase();
+                });
+                if (exact) {
+                    $row.find('.h-city-id').val(exact.id);
+                    cityId = exact.id;
+                }
+                finishMatch();
+            });
+            return;
+        }
+        if (callback) callback();
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Summernote rich editor (local — works offline)                      */
+    /* ------------------------------------------------------------------ */
+    function quotationSummernoteToolbar() {
+        return [
+            ['style', ['style']],
+            ['font', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
+            ['fontname', ['fontname']],
+            ['color', ['color']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['insert', ['link', 'picture', 'table', 'hr']],
+            ['view', ['fullscreen', 'codeview']]
+        ];
+    }
+
+    function initQuotationSummernote($ta, height) {
+        if (!$ta || !$ta.length || !$.fn.summernote) {
+            return;
+        }
+        if ($ta.data('summernote')) {
+            return;
+        }
+        $ta.summernote({
+            height: height || 200,
+            toolbar: quotationSummernoteToolbar(),
+            dialogsInBody: true
+        });
+    }
+
+    function destroyQuotationSummernote($root) {
+        if (!$root || !$root.length || !$.fn.summernote) {
+            return;
+        }
+        $root.find('textarea').each(function () {
+            var $ta = $(this);
+            if ($.fn.summernote && $ta.data('summernote')) {
+                try {
+                    $ta.summernote('destroy');
+                } catch (e) { /* ignore */ }
+            }
+        });
+        $root.find('.note-editor').remove();
+    }
+
+    function readSummernoteHtml($ta) {
+        if (!$ta || !$ta.length) {
+            return '';
+        }
+        if ($.fn.summernote && $ta.data('summernote')) {
+            return $ta.summernote('code') || '';
+        }
+        return $ta.val() || '';
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Itinerary (auto day cards with Summernote)                          */
+    /* ------------------------------------------------------------------ */
+    var itineraryEditorIds = [];
+    var rebuildItinerarySeq = 0;
+    var nightsRebuildTimer = null;
+    var itineraryRebuildSuspended = 0;
+    var itineraryPreserveSeed = [];
+
+    function suspendItineraryRebuild() {
+        itineraryRebuildSuspended += 1;
+    }
+
+    function resumeItineraryRebuild() {
+        itineraryRebuildSuspended = Math.max(0, itineraryRebuildSuspended - 1);
+    }
+
+    function normalizeItineraryDay(day) {
+        day = day || {};
+        return {
+            title: day.title || '',
+            description: day.description || '',
+            image: day.image || day.img || day.image_url || ''
+        };
+    }
+
+    function normalizeItineraryList(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        return list.map(normalizeItineraryDay);
+    }
+
+    function mergeItineraryPreserve(existing, seed) {
+        var out = [];
+        var maxLen = Math.max(existing.length, seed.length);
+        for (var i = 0; i < maxLen; i++) {
+            var cur = normalizeItineraryDay(existing[i] || {});
+            var saved = normalizeItineraryDay(seed[i] || {});
+            out.push({
+                title: cur.title || saved.title,
+                description: cur.description || saved.description,
+                image: cur.image || saved.image
+            });
+        }
+        return out;
+    }
+
+    function refreshAllItineraryImagePreviews() {
+        $('#qItineraryDays .q-day-card').each(function () {
+            var $card = $(this);
+            updateDayImagePreview($card, $card.find('.q-day-image').val() || '');
+        });
+    }
+
+    function destroyItineraryEditors() {
+        destroyQuotationSummernote($('#qItineraryDays'));
+        itineraryEditorIds = [];
+    }
+
+    function initItineraryEditors() {
+        $('#qItineraryDays .q-day-textarea').each(function () {
+            initQuotationSummernote($(this), 200);
+        });
+    }
+
+    function snapshotItinerary() {
+        $('#qItineraryDays .q-day-textarea').each(function () {
+            var $ta = $(this);
+            if ($.fn.summernote && $ta.data('summernote')) {
+                try {
+                    $ta.val($ta.summernote('code'));
+                } catch (e) { /* ignore */ }
+            }
+        });
+
+        var data = [];
+        $('#qItineraryDays .q-day-card').each(function () {
+            var $c = $(this);
+            var html = readSummernoteHtml($c.find('.q-day-textarea'));
+            var imageVal = $c.find('.q-day-image').val() || '';
+            if (!imageVal) {
+                var previewSrc = $c.find('.q-img-preview').attr('src') || '';
+                if (previewSrc && previewSrc.indexOf('data:') !== 0) {
+                    var adminBase = ADMIN_BASE.replace(/\/+$/, '');
+                    if (previewSrc.indexOf(adminBase) === 0) {
+                        imageVal = previewSrc.substring(adminBase.length).replace(/^\/+/, '');
+                    } else if (previewSrc.indexOf('uploads/quotations/') >= 0) {
+                        imageVal = previewSrc.substring(previewSrc.indexOf('uploads/quotations/'));
+                    }
+                }
+            }
+            data.push({
+                title: $c.find('.q-day-title').val() || '',
+                description: html,
+                image: imageVal
+            });
+        });
+        itineraryPreserveSeed = normalizeItineraryList(data);
+        return data;
+    }
+
+    function rebuildItinerary(preserve) {
+        var baseDate = $('#q_tentative_date').val();
+        var nights = parseInt($('#q_nights').val(), 10);
+        if (isNaN(nights) || nights < 0) nights = 0;
+        var totalDays = nights + 1;
+
+        var existing;
+        if (Array.isArray(preserve)) {
+            existing = normalizeItineraryList(preserve);
+            itineraryPreserveSeed = existing.slice();
+        } else {
+            existing = snapshotItinerary();
+            if (itineraryPreserveSeed.length) {
+                existing = mergeItineraryPreserve(existing, itineraryPreserveSeed);
+            }
+        }
+        destroyItineraryEditors();
+        $('#qItineraryDays').empty();
+        itineraryEditorIds = [];
+
+        var $wrap = $('#qItineraryDays');
+        var rebuildToken = Date.now();
+        for (var i = 0; i < totalDays; i++) {
+            var editorId = 'q_itin_day_' + rebuildToken + '_' + i;
+            itineraryEditorIds.push(editorId);
+            var prev = existing[i] || {};
+            var dateLabel = fmtDayDate(baseDate, i);
+            var heading = (dateLabel ? dateLabel + ' - ' : '') + 'Day ' + (i + 1);
+            var imgVal = prev.image || '';
+            var $card = $(
+                '<div class="q-day-card" data-editor-id="' + editorId + '">' +
+                '<div class="q-day-head"></div>' +
+                '<div class="q-day-body">' +
+                '<div class="row">' +
+                '<div class="col-md-6">' +
+                '<div class="form-group"><label class="q-label">Title</label><input type="text" class="form-control q-day-title"></div>' +
+                '<div class="form-group mb-md-0"><label class="q-label">What to do</label>' +
+                '<textarea class="form-control q-day-textarea"></textarea></div>' +
+                '</div>' +
+                '<div class="col-md-6">' +
+                '<div class="form-group mb-0 q-day-image-col">' +
+                '<label class="q-label d-block">Image</label>' +
+                '<div class="q-day-image-actions">' +
+                '<button type="button" class="btn btn-q-primary btn-sm q-choose-image"><i class="fas fa-upload mr-1"></i>Upload</button>' +
+                '<button type="button" class="btn btn-outline-primary btn-sm q-search-day-image"><i class="fas fa-search mr-1"></i>Search online</button>' +
+                '<button type="button" class="btn btn-outline-secondary btn-sm q-clear-day-image" title="Remove image"><i class="fas fa-times"></i></button>' +
+                '</div>' +
+                '<div class="q-img-preview-wrap">' +
+                '<img class="q-img-preview" alt="Day image preview">' +
+                '<div class="q-img-preview-empty text-muted small">No image selected</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '<input type="hidden" class="q-day-image">' +
+                '</div></div>'
+            );
+            $card.find('.q-day-head').text(heading);
+            $card.find('.q-day-title').val(prev.title || '');
+            $card.find('.q-day-textarea').attr('id', editorId).val(prev.description || '');
+            $card.find('.q-day-image').val(imgVal);
+            updateDayImagePreview($card, imgVal);
+            $wrap.append($card);
+        }
+
+        rebuildItinerarySeq += 1;
+        var seq = rebuildItinerarySeq;
+        window.setTimeout(function () {
+            if (seq !== rebuildItinerarySeq) {
+                return;
+            }
+            if ($('#qItineraryBody').is(':visible')) {
+                initItineraryEditors();
+            }
+        }, 50);
+    }
+
+    function scheduleItineraryRebuild() {
+        if (itineraryRebuildSuspended > 0) {
+            return;
+        }
+        clearTimeout(nightsRebuildTimer);
+        nightsRebuildTimer = setTimeout(function () {
+            rebuildItinerary();
+        }, 200);
+    }
+
+    function setRichEditorValue(id, html) {
+        var $ta = $('#' + id);
+        if (!$ta.length || html === undefined || html === null || html === '') {
+            return;
+        }
+        if ($.fn.summernote && $ta.data('summernote')) {
+            $ta.summernote('code', html);
+        } else {
+            $ta.val(html);
+        }
+    }
+
+    function loadTermsFromMaster() {
+        var master = (typeof QUOTATION_TERMS_MASTER === 'object' && QUOTATION_TERMS_MASTER) ? QUOTATION_TERMS_MASTER : {};
+        richEditors.forEach(function (field) {
+            var html = master[field] || '';
+            var $ta = $('#qed_' + field);
+            if (!$ta.length) {
+                return;
+            }
+            if ($.fn.summernote && $ta.data('summernote')) {
+                $ta.summernote('code', html);
+            } else {
+                $ta.val(html);
+            }
+        });
+    }
+
+    function plainTextToHtml(text) {
+        text = (text || '').toString();
+        if (text.indexOf('<') >= 0) {
+            return text;
+        }
+        return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').map(function (line) {
+            return esc(line);
+        }).join('<br>');
+    }
+
+    function applyPackageItinerary(pkg) {
+        if (!pkg) {
+            return;
+        }
+
+        var nights = parseInt(pkg.duration_nights, 10);
+        if (isNaN(nights) || nights < 0) {
+            nights = 0;
+        }
+        if (Array.isArray(pkg.itinerary) && pkg.itinerary.length > 1) {
+            nights = Math.max(nights, pkg.itinerary.length - 1);
+        }
+        if (nights > 0) {
+            $('#q_nights').val(nights);
+        }
+
+        if (pkg.destination && !($('[name=destination]').val() || '').trim()) {
+            $('[name=destination]').val(pkg.destination);
+        }
+
+        if (parseFloat(pkg.sale_price) > 0 && rawNumber('.q-cost[data-key="land"]') <= 0) {
+            $('.q-cost[data-key="land"]').val(parseFloat(pkg.sale_price).toFixed(2));
+        }
+
+        if (pkg.inclusion && !readSummernoteHtml($('#qed_inclusion')).trim()) {
+            setRichEditorValue('qed_inclusion', plainTextToHtml(pkg.inclusion));
+        }
+        if (pkg.exclusion && !readSummernoteHtml($('#qed_exclusion')).trim()) {
+            setRichEditorValue('qed_exclusion', plainTextToHtml(pkg.exclusion));
+        }
+
+        $('#q_without_itinerary').prop('checked', false);
+        rebuildItinerary(pkg.itinerary || []);
+        recalcCosts();
+
+        var $head = $('#qItineraryBody').prev('.q-accordion-head');
+        var $body = $('#qItineraryBody');
+        if ($head.hasClass('collapsed')) {
+            $head.removeClass('collapsed');
+            $body.slideDown(200, function () {
+                initItineraryEditors();
+            });
+        } else {
+            window.setTimeout(initItineraryEditors, 80);
+        }
+
+        $('#qAlert').html(
+            '<div class="alert alert-success">Itinerary loaded from package <strong>' + esc(pkg.title || 'Package') + '</strong>.</div>'
+        );
+        window.scrollTo(0, 0);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Package itinerary suggest                                           */
+    /* ------------------------------------------------------------------ */
+    var packageLookupTimer = null;
+    var packageLookupSeq = 0;
+    var packageLookupCache = {};
+    var selectedPackageForItinerary = null;
+
+    function hideAllPackageMenus() {
+        $('.js-q-package-menu').hide().empty();
+    }
+
+    function renderPackageMenu($menu, items, query) {
+        $menu.empty();
+        if (!items || !items.length) {
+            $menu.append('<div class="q-lead-empty">No packages found' + (query ? ' for "' + esc(query) + '"' : '') + '</div>');
+        } else {
+            items.forEach(function (item) {
+                var $btn = $('<button type="button" class="q-lead-item"></button>');
+                $btn.append($('<span class="q-lead-item-title"></span>').text(item.label || item.title || 'Package'));
+                if (item.sub_label) {
+                    $btn.append($('<span class="q-lead-item-meta"></span>').text(item.sub_label));
+                }
+                $btn.data('package', item);
+                $menu.append($btn);
+            });
+        }
+        $menu.show();
+    }
+
+    function searchPackagesForQuotation(query, callback) {
+        var q = (query || '').trim();
+        var cacheKey = q || '__all__';
+        if (packageLookupCache[cacheKey]) {
+            callback(packageLookupCache[cacheKey]);
+            return;
+        }
+        var seq = ++packageLookupSeq;
+        $.getJSON(absUrl('crm/ajax/search_packages_for_quotation.php'), { q: q, limit: 12 })
+            .done(function (res) {
+                if (seq !== packageLookupSeq) {
+                    return;
+                }
+                var items = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+                packageLookupCache[cacheKey] = items;
+                callback(items);
+            })
+            .fail(function () {
+                if (seq !== packageLookupSeq) {
+                    return;
+                }
+                callback([]);
+            });
+    }
+
+    function initPackageSuggest() {
+        $(document).on('input focus', '.js-q-package-search', function () {
+            var $input = $(this);
+            var $menu = $input.closest('.q-lead-combobox').find('.js-q-package-menu');
+            var query = ($input.val() || '').trim();
+
+            hideAllPackageMenus();
+            clearTimeout(packageLookupTimer);
+            packageLookupTimer = setTimeout(function () {
+                searchPackagesForQuotation(query, function (items) {
+                    renderPackageMenu($menu, items, query);
+                });
+            }, 220);
+        });
+
+        $(document).on('click', '.js-q-package-menu .q-lead-item', function () {
+            var pkg = $(this).data('package');
+            if (!pkg) {
+                return;
+            }
+            selectedPackageForItinerary = pkg;
+            $('.js-q-package-search').val(pkg.label || pkg.title || '');
+            hideAllPackageMenus();
+            $('#qApplyPackageItinerary').prop('disabled', false);
+        });
+
+        $(document).on('click', function (e) {
+            if ($(e.target).closest('.q-lead-combobox').length) {
+                return;
+            }
+            hideAllPackageMenus();
+        });
+
+        $('#qApplyPackageItinerary').on('click', function () {
+            if (!selectedPackageForItinerary || !selectedPackageForItinerary.id) {
+                alert('Please select a package first.');
+                return;
+            }
+
+            var existing = snapshotItinerary();
+            var hasContent = existing.some(function (day) {
+                return ((day.title || '').trim() !== '') || ((day.description || '').replace(/<[^>]*>/g, '').trim() !== '');
+            });
+            if (hasContent && !window.confirm('Replace the current itinerary with the selected package itinerary?')) {
+                return;
+            }
+
+            var $btn = $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Loading...');
+            $.getJSON(absUrl('crm/ajax/get_package_for_quotation.php'), { id: selectedPackageForItinerary.id })
+                .done(function (res) {
+                    if (res && res.success && res.package) {
+                        applyPackageItinerary(res.package);
+                    } else {
+                        alert((res && res.message) || 'Could not load package itinerary.');
+                    }
+                })
+                .fail(function () {
+                    alert('Could not load package itinerary.');
+                })
+                .always(function () {
+                    $btn.prop('disabled', false).html('<i class="fas fa-suitcase-rolling mr-1"></i>Apply Itinerary');
+                });
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* AI itinerary suggest                                                */
+    /* ------------------------------------------------------------------ */
+    function refreshAiItineraryMeta() {
+        var $meta = $('#qAiItineraryMeta');
+        if (!$meta.length) {
+            return;
+        }
+        var dest = ($('[name=destination]').val() || '').trim();
+        var nights = parseInt($('#q_nights').val(), 10);
+        if (isNaN(nights) || nights < 0) {
+            nights = 0;
+        }
+        var adults = parseInt($('#q_adults').val(), 10) || 1;
+        var children = parseInt($('#q_children').val(), 10) || 0;
+        var days = nights + 1;
+        var chips = [];
+
+        if (dest) {
+            chips.push('<span class="q-ai-chip"><i class="fas fa-map-marker-alt"></i>' + esc(dest) + '</span>');
+        } else {
+            chips.push('<span class="q-ai-chip"><i class="fas fa-exclamation-circle"></i>Set destination on Step 1</span>');
+        }
+        if (days > 0) {
+            chips.push('<span class="q-ai-chip"><i class="far fa-calendar-alt"></i>' + days + ' day' + (days !== 1 ? 's' : '') + ' / ' + nights + ' night' + (nights !== 1 ? 's' : '') + '</span>');
+        } else {
+            chips.push('<span class="q-ai-chip"><i class="fas fa-exclamation-circle"></i>Set nights on Step 1</span>');
+        }
+        chips.push('<span class="q-ai-chip"><i class="fas fa-users"></i>' + adults + ' adult' + (adults !== 1 ? 's' : '') +
+            (children > 0 ? ', ' + children + ' child' + (children !== 1 ? 'ren' : '') : '') + '</span>');
+
+        $meta.html(chips.join(''));
+    }
+
+    function applyAIItinerary(itinerary, info) {
+        if (!Array.isArray(itinerary) || !itinerary.length) {
+            alert('No itinerary days were returned.');
+            return;
+        }
+
+        $('#q_without_itinerary').prop('checked', false);
+        rebuildItinerary(itinerary);
+        recalcCosts();
+
+        window.setTimeout(function () {
+            initItineraryEditors();
+        }, 80);
+
+        var source = (info && info.source) ? info.source : 'instant';
+        var msg = '<div class="alert alert-success">';
+        msg += '<i class="fas fa-check-circle mr-1"></i> ';
+        if (source === 'ai') {
+            msg += 'Itinerary generated with AI for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong>.';
+        } else {
+            msg += 'Itinerary generated instantly for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong>.';
+        }
+        if (info && info.message) {
+            msg += ' <small class="d-block mt-1 text-muted">' + esc(info.message) + '</small>';
+        }
+        msg += '</div>';
+        $('#qAlert').html(msg);
+        window.scrollTo(0, 0);
+    }
+
+    function initAISuggestItinerary() {
+        refreshAiItineraryMeta();
+
+        $(document).on('input change', '[name=destination], #q_nights, #q_adults, #q_children', refreshAiItineraryMeta);
+
+        $('#qSuggestAIItinerary').on('click', function () {
+            var dest = ($('[name=destination]').val() || '').trim();
+            var nights = parseInt($('#q_nights').val(), 10);
+            if (isNaN(nights) || nights < 0) {
+                nights = 0;
+            }
+
+            if (!dest) {
+                alert('Please enter a destination on the Guest & Tour step first.');
+                return;
+            }
+            if (nights < 1) {
+                alert('Please set No of Nights (at least 1) on the Guest & Tour step.');
+                return;
+            }
+
+            var existing = snapshotItinerary();
+            var hasContent = existing.some(function (day) {
+                return ((day.title || '').trim() !== '') || ((day.description || '').replace(/<[^>]*>/g, '').trim() !== '');
+            });
+            if (hasContent && !window.confirm('Replace the current itinerary with the generated plan?')) {
+                return;
+            }
+
+            var $btn = $(this).prop('disabled', true).html('<i class="fas fa-bolt mr-1"></i> Generating...');
+
+            $.ajax({
+                url: absUrl('crm/ajax/ai_suggest_itinerary.php'),
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    destination: dest,
+                    nights: nights,
+                    adults: parseInt($('#q_adults').val(), 10) || 2,
+                    children: parseInt($('#q_children').val(), 10) || 0,
+                    start_date: $('#q_tentative_date').val() || '',
+                    notes: ($('#qAiItineraryNotes').val() || '').trim()
+                }
+            }).done(function (res) {
+                if (res && res.success && Array.isArray(res.itinerary)) {
+                    applyAIItinerary(res.itinerary, {
+                        source: res.source,
+                        message: res.message || ''
+                    });
+                } else {
+                    alert((res && res.message) ? res.message : 'Could not generate itinerary.');
+                }
+            }).fail(function (xhr) {
+                var msg = 'Could not generate itinerary.';
+                try {
+                    var j = JSON.parse(xhr.responseText);
+                    if (j.message) {
+                        msg = j.message;
+                    }
+                } catch (e) { /* ignore */ }
+                alert(msg);
+            }).always(function () {
+                $btn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Itinerary Now');
+            });
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Image picker (uploads to server)                                    */
+    /* ------------------------------------------------------------------ */
+    function updateDayImagePreview($card, url) {
+        var $wrap = $card.find('.q-img-preview-wrap');
+        var $img = $card.find('.q-img-preview');
+        var $empty = $card.find('.q-img-preview-empty');
+        if (url) {
+            $img.attr('src', absUrl(url)).show();
+            $empty.hide();
+            $wrap.addClass('has-image');
+        } else {
+            $img.attr('src', '').hide();
+            $empty.show();
+            $wrap.removeClass('has-image');
+        }
+    }
+
+    window.qUpdateDayImagePreview = updateDayImagePreview;
+    window.qQuotationAbsUrl = absUrl;
+
+    var $imgInput = $('<input type="file" accept="image/*" style="display:none">').appendTo('body');
+    var $imgTargetCard = null;
+
+    $(document).on('click', '.q-choose-image', function () {
+        $imgTargetCard = $(this).closest('.q-day-card');
+        $imgInput.val('').trigger('click');
+    });
+
+    $imgInput.on('change', function () {
+        if (!this.files || !this.files[0] || !$imgTargetCard) return;
+        var fd = new FormData();
+        fd.append('image', this.files[0]);
+        var $card = $imgTargetCard;
+        $.ajax({
+            url: 'crm/ajax/upload_quotation_image.php',
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        }).done(function (res) {
+            if (res && res.success && res.url) {
+                $card.find('.q-day-image').val(res.url);
+                updateDayImagePreview($card, res.url);
+            } else {
+                alert((res && res.message) || 'Upload failed.');
+            }
+        }).fail(function () {
+            alert('Upload failed.');
+        });
+    });
+
+    /* ------------------------------------------------------------------ */
+    /* Custom cost rows + multi option pricing sheets                      */
+    /* ------------------------------------------------------------------ */
+    var qPricingOptionsState = {};
+
+    function customCostRowHtml(data) {
+        data = data || {};
+        return '' +
+            '<div class="form-group q-custom-cost mb-1">' +
+            '<input type="text" class="form-control form-control-sm cc-label" placeholder="Label" value="' + esc(data.label) + '">' +
+            '<div class="q-custom-cost-amt">' +
+            '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost cc-amount" value="' + esc(data.amount) + '">' +
+            '<button type="button" class="btn btn-outline-danger btn-sm q-remove" data-remove=".q-custom-cost" title="Remove"><i class="fas fa-times"></i></button>' +
+            '</div></div>';
+    }
+
+    function defaultPricingSheetState() {
+        return {
+            fixed: {
+                flight_train: '',
+                land: '',
+                hotel: '',
+                transport: '',
+                visa: '',
+                travel_insurance: ''
+            },
+            custom: [],
+            user_edited: { flight_train: 0, hotel: 0 },
+            profit_percent: '',
+            profit_amount: '',
+            price_per_adult: '',
+            price_per_adult_edited: 0
+        };
+    }
+
+    function collectSheetStateFromDom($sheet) {
+        var fixed = {};
+        $sheet.find('.q-cost').each(function () {
+            var $c = $(this);
+            if ($c.hasClass('cc-amount')) return;
+            fixed[String($c.data('key') || '')] = $c.val();
+        });
+        var custom = [];
+        $sheet.find('.q-custom-cost').each(function () {
+            custom.push({
+                label: $(this).find('.cc-label').val(),
+                amount: $(this).find('.cc-amount').val()
+            });
+        });
+        return {
+            fixed: fixed,
+            custom: custom,
+            user_edited: {
+                flight_train: $sheet.find('.q-cost[data-key="flight_train"]').attr('data-user-edited') === '1' ? 1 : 0,
+                hotel: $sheet.find('.q-cost[data-key="hotel"]').attr('data-user-edited') === '1' ? 1 : 0
+            },
+            profit_percent: $sheet.find('.q-sheet-profit-percent').val() || '',
+            profit_amount: $sheet.find('.q-sheet-profit-amount').val() || '',
+            price_per_adult: $sheet.find('.q-sheet-price-per-adult').val() || '',
+            price_per_adult_edited: $sheet.find('.q-sheet-price-per-adult').attr('data-user-edited') === '1' ? 1 : 0
+        };
+    }
+
+    function snapshotPricingSheets() {
+        $('#qPricingSheetsHost .q-pricing-option-sheet').each(function () {
+            var id = String($(this).attr('data-cat-id') || '');
+            if (!id) return;
+            qPricingOptionsState[id] = collectSheetStateFromDom($(this));
+        });
+    }
+
+    function hotelTotalForCategory(cat) {
+        var hotelTotal = 0;
+        (cat.hotels || []).forEach(function (h) {
+            var v = parseFloat(h.rate);
+            if (!isNaN(v)) hotelTotal += v;
+        });
+        return hotelTotal;
+    }
+
+    function pricingFixedCostKeys() {
+        return [
+            { key: 'flight_train', label: 'Flight/Train' },
+            { key: 'land', label: 'Land' },
+            { key: 'hotel', label: 'Hotel' },
+            { key: 'transport', label: 'Transport' },
+            { key: 'visa', label: 'Visa' },
+            { key: 'travel_insurance', label: 'Travel Insurance' }
+        ];
+    }
+
+    function pricingOptionColumnHtml(cat, state, idx, maxCustom) {
+        cat = cat || {};
+        state = state || defaultPricingSheetState();
+        var fixed = state.fixed || {};
+        var id = cat.id || ('opt_' + (idx + 1));
+        var label = cat.label || defaultHotelCategoryLabel(idx);
+        var isActive = String(id) === String(qActiveHotelCategoryId);
+        maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
+        var html = '<div class="q-pricing-option-sheet' + (isActive ? ' is-active' : '') + '" data-cat-id="' + esc(id) + '">';
+        html += '<div class="q-pricing-option-hd">';
+        html += '<h4>' + esc(label) + '</h4>';
+        if (isActive) {
+            html += '<span class="badge-active-price">Selected</span>';
+        } else {
+            html += '<button type="button" class="btn btn-outline-success btn-sm q-set-active-pricing" data-cat-id="' + esc(id) + '">Use</button>';
+        }
+        html += '</div><div class="q-pricing-option-body">';
+        html += '<div class="q-pricing-col-spacer q-pricing-section-spacer"></div>';
+        pricingFixedCostKeys().forEach(function (row) {
+            var synced = (row.key === 'flight_train' || row.key === 'hotel') ? ' q-cost-synced' : '';
+            var edited = state.user_edited && parseInt(state.user_edited[row.key], 10) === 1 ? '1' : '0';
+            html += '<div class="q-pricing-amount-cell">' +
+                '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + row.key + '" value="' + esc(fixed[row.key] != null ? fixed[row.key] : '') + '" data-user-edited="' + edited + '">' +
+                '</div>';
+        });
+        html += '<div class="q-custom-cost-rows">';
+        var customs = state.custom || [];
+        for (var ci = 0; ci < maxCustom; ci++) {
+            html += customCostRowHtml(customs[ci] || {});
+        }
+        html += '</div>';
+        html += '<div class="q-pricing-amount-cell q-pricing-add-cell">' +
+            '<button type="button" class="btn btn-outline-secondary btn-sm q-add-cost-row" title="Add cost line"><i class="fas fa-plus"></i></button>' +
+            '</div>';
+        html += '<div class="q-cost-totals">';
+        html += '<div class="q-pricing-amount-cell"><input type="text" class="form-control form-control-sm cost-input q-sheet-total-cost" readonly value="0"></div>';
+        html += '<div class="q-pricing-amount-cell q-pricing-profit-cell"><div class="q-profit-row">' +
+            '<div class="input-group input-group-sm"><input type="number" step="0.01" class="form-control q-sheet-profit-percent" placeholder="%" value="' + esc(state.profit_percent || '') + '">' +
+            '<div class="input-group-append"><span class="input-group-text">%</span></div></div>' +
+            '<span class="text-muted q-profit-or">OR</span>' +
+            '<input type="number" step="0.01" class="form-control form-control-sm q-sheet-profit-amount" placeholder="Amt" value="' + esc(state.profit_amount || '') + '">' +
+            '</div></div>';
+        html += '<div class="q-pricing-amount-cell"><input type="text" class="form-control form-control-sm cost-input q-sheet-package-total" readonly value="0"></div>';
+        html += '</div>';
+        html += '<div class="q-pricing-col-spacer q-pricing-section-spacer"></div>';
+        html += '<div class="q-pricing-amount-cell">' +
+            '<input type="number" step="0.01" class="form-control form-control-sm q-sheet-price-per-adult" value="' + esc(state.price_per_adult || '') + '"' +
+            (parseInt(state.price_per_adult_edited, 10) === 1 ? ' data-user-edited="1"' : '') + '>' +
+            '</div>';
+        html += '<div class="q-pricing-amount-cell">' +
+            '<input type="text" class="form-control form-control-sm q-sheet-quotation-total" readonly value="0">' +
+            '</div>';
+        html += '<span class="q-sheet-adult-lbl d-none">1</span>';
+        html += '</div></div>';
+        return html;
+    }
+
+    function pricingLabelsColumnHtml(maxCustom) {
+        maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
+        var html = '<div class="q-pricing-labels-col">';
+        html += '<div class="q-pricing-option-hd q-pricing-labels-hd"><span class="q-pricing-labels-title">Item</span></div>';
+        html += '<div class="q-pricing-option-body">';
+        html += '<div class="q-pricing-section-spacer"><span class="q-subsection-label mb-0">Cost Sheet</span></div>';
+        pricingFixedCostKeys().forEach(function (row) {
+            html += '<div class="q-pricing-row-label">' + esc(row.label) + '</div>';
+        });
+        if (maxCustom > 0) {
+            for (var i = 0; i < maxCustom; i++) {
+                html += '<div class="q-pricing-row-label q-pricing-custom-label">' + (i === 0 ? 'Extra cost' : '') + '</div>';
+            }
+        } else {
+            html += '<div class="q-pricing-row-label q-pricing-custom-label">Extra costs</div>';
+        }
+        html += '<div class="q-pricing-row-label q-pricing-add-label"></div>';
+        html += '<div class="q-pricing-row-label">Total Cost</div>';
+        html += '<div class="q-pricing-row-label">Add Profit</div>';
+        html += '<div class="q-pricing-row-label q-pricing-package-label">Package Total' +
+            '<small class="q-hint d-block mb-0">(Cost + Profit) × Adults</small></div>';
+        html += '<div class="q-pricing-section-spacer"><span class="q-subsection-label mb-0">Quotation Cost</span></div>';
+        html += '<div class="q-pricing-row-label">Price/Adult × <span class="q-matrix-adult-lbl">1</span></div>';
+        html += '<div class="q-pricing-row-label">Quotation Total</div>';
+        html += '</div></div>';
+        return html;
+    }
+
+    function renderPricingSheets() {
+        snapshotPricingSheets();
+        var data = collectHotelCategories();
+        var $host = $('#qPricingSheetsHost');
+        if (!$host.length) {
+            return;
+        }
+        $host.empty();
+        var cats = data.categories || [];
+        if (!cats.length) {
+            cats = [{ id: 'opt_1', label: defaultHotelCategoryLabel(0), hotels: [] }];
+        }
+        if (!qActiveHotelCategoryId || !cats.some(function (c) { return String(c.id) === String(qActiveHotelCategoryId); })) {
+            qActiveHotelCategoryId = String(cats[0].id || '');
+        }
+        $host.css('--q-opt-count', String(cats.length));
+        var maxCustom = 0;
+        cats.forEach(function (cat) {
+            var st = qPricingOptionsState[cat.id] || defaultPricingSheetState();
+            maxCustom = Math.max(maxCustom, (st.custom || []).length);
+        });
+        $host.append(pricingLabelsColumnHtml(maxCustom));
+        cats.forEach(function (cat, idx) {
+            var state = qPricingOptionsState[cat.id] || defaultPricingSheetState();
+            $host.append(pricingOptionColumnHtml(cat, state, idx, maxCustom));
+        });
+        Object.keys(qPricingOptionsState).forEach(function (key) {
+            if (!cats.some(function (c) { return String(c.id) === String(key); })) {
+                delete qPricingOptionsState[key];
+            }
+        });
+        recalcCosts();
+    }
+
+    function sumNumericFields(selector) {
+        var total = 0;
+        $(selector).each(function () {
+            var v = parseFloat($(this).val());
+            if (!isNaN(v)) {
+                total += v;
+            }
+        });
+        return total;
+    }
+
+    function isSheetCostUserEdited($sheet, key) {
+        return $sheet.find('.q-cost[data-key="' + key + '"]').attr('data-user-edited') === '1';
+    }
+
+    function syncSheetHotelFromCategory($sheet) {
+        var catId = String($sheet.attr('data-cat-id') || '');
+        var data = collectHotelCategories();
+        var cat = data.categories.find(function (c) { return String(c.id) === catId; });
+        if (!cat) return;
+        if (!isSheetCostUserEdited($sheet, 'hotel')) {
+            var hotelTotal = hotelTotalForCategory(cat);
+            var count = (cat.hotels || []).length;
+            $sheet.find('.q-cost[data-key="hotel"]').val(count ? hotelTotal.toFixed(2) : '');
+        }
+    }
+
+    function syncSheetFlightFromServices($sheet) {
+        if (!isSheetCostUserEdited($sheet, 'flight_train')) {
+            var flightTotal = sumNumericFields('#qFlightRows .f-fare');
+            $sheet.find('.q-cost[data-key="flight_train"]').val(
+                $('#qFlightRows .q-flight-row').length ? flightTotal.toFixed(2) : ''
+            );
+        }
+    }
+
+    function recalcOnePricingSheet($sheet, adults) {
+        syncSheetFlightFromServices($sheet);
+        syncSheetHotelFromCategory($sheet);
+
+        var total = 0;
+        $sheet.find('.q-cost').each(function () {
+            var v = parseFloat($(this).val());
+            if (!isNaN(v)) total += v;
+        });
+        $sheet.find('.q-sheet-total-cost').val(money(total));
+
+        var profit = 0;
+        var pct = parseFloat($sheet.find('.q-sheet-profit-percent').val());
+        var amt = parseFloat($sheet.find('.q-sheet-profit-amount').val());
+        if (!isNaN(amt) && amt > 0) {
+            profit = amt;
+        } else if (!isNaN(pct) && pct > 0) {
+            profit = total * pct / 100;
+        }
+        var pkgBase = total + profit;
+        $sheet.find('.q-sheet-adult-lbl').text(adults);
+        $('#qPricingSheetsHost .q-matrix-adult-lbl').text(adults);
+        $sheet.find('.q-sheet-package-total').val(money(pkgBase * adults));
+
+        var $ppa = $sheet.find('.q-sheet-price-per-adult');
+        var perAdult;
+        if ($ppa.attr('data-user-edited') !== '1') {
+            perAdult = pkgBase;
+            $ppa.val(pkgBase > 0 ? Math.round(pkgBase * 100) / 100 : '');
+        } else {
+            perAdult = parseFloat($ppa.val());
+        }
+        if (!isNaN(perAdult) && perAdult > 0) {
+            $sheet.find('.q-sheet-quotation-total').val(money(perAdult * adults));
+        } else {
+            $sheet.find('.q-sheet-quotation-total').val(money(pkgBase * adults));
+        }
+    }
+
+    function syncLegacyPricingFieldsFromActiveSheet() {
+        var $active = $('#qPricingSheetsHost .q-pricing-option-sheet[data-cat-id="' + String(qActiveHotelCategoryId || '').replace(/"/g, '\\"') + '"]');
+        if (!$active.length) {
+            $active = $('#qPricingSheetsHost .q-pricing-option-sheet').first();
+        }
+        if (!$active.length) {
+            return;
+        }
+        $('#q_total_cost').val($active.find('.q-sheet-total-cost').val() || '0');
+        $('#q_package_total').val($active.find('.q-sheet-package-total').val() || '0');
+        $('#q_price_per_adult').val($active.find('.q-sheet-price-per-adult').val() || '');
+        if ($active.find('.q-sheet-price-per-adult').attr('data-user-edited') === '1') {
+            $('#q_price_per_adult').attr('data-user-edited', '1');
+        } else {
+            $('#q_price_per_adult').removeAttr('data-user-edited');
+        }
+        $('#q_quotation_total').val(String($active.find('.q-sheet-quotation-total').val() || '0').replace(/,/g, ''));
+        $('#q_profit_percent').val($active.find('.q-sheet-profit-percent').val() || '');
+        $('#q_profit_amount').val($active.find('.q-sheet-profit-amount').val() || '');
+    }
+
+    function recalcCosts() {
+        var adults = parseInt($('#q_adults').val(), 10);
+        if (isNaN(adults) || adults < 1) adults = 1;
+        var $sheets = $('#qPricingSheetsHost .q-pricing-option-sheet');
+        if (!$sheets.length) {
+            return;
+        }
+        $sheets.each(function () {
+            recalcOnePricingSheet($(this), adults);
+        });
+        $('#qPricingSheetsHost .q-pricing-option-sheet').removeClass('is-active');
+        $('#qPricingSheetsHost .q-pricing-option-sheet[data-cat-id="' + String(qActiveHotelCategoryId || '').replace(/"/g, '\\"') + '"]').addClass('is-active');
+        syncLegacyPricingFieldsFromActiveSheet();
+    }
+
+    function collectPricingOptionsPayload() {
+        snapshotPricingSheets();
+        var data = collectHotelCategories();
+        var options = [];
+        (data.categories || []).forEach(function (cat, idx) {
+            var state = qPricingOptionsState[cat.id] || defaultPricingSheetState();
+            var $sheet = $('#qPricingSheetsHost .q-pricing-option-sheet').filter(function () {
+                return String($(this).attr('data-cat-id') || '') === String(cat.id);
+            }).first();
+            options.push({
+                category_id: cat.id,
+                label: cat.label || defaultHotelCategoryLabel(idx),
+                fixed: state.fixed || {},
+                custom: state.custom || [],
+                user_edited: state.user_edited || {},
+                profit_percent: state.profit_percent || '',
+                profit_amount: state.profit_amount || '',
+                price_per_adult: state.price_per_adult || '',
+                price_per_adult_edited: state.price_per_adult_edited || 0,
+                total_cost: $sheet.length ? String($sheet.find('.q-sheet-total-cost').val() || '').replace(/,/g, '') : '',
+                package_total: $sheet.length ? String($sheet.find('.q-sheet-package-total').val() || '').replace(/,/g, '') : '',
+                quotation_total: $sheet.length ? String($sheet.find('.q-sheet-quotation-total').val() || '').replace(/,/g, '') : '',
+                hotel_total: hotelTotalForCategory(cat),
+                hotel_count: (cat.hotels || []).length
+            });
+        });
+        var activeId = String(qActiveHotelCategoryId || '');
+        var active = options.find(function (o) { return String(o.category_id) === activeId; }) || options[0] || null;
+        return {
+            fixed: active ? (active.fixed || {}) : {},
+            custom: active ? (active.custom || []) : [],
+            user_edited: active ? (active.user_edited || {}) : {},
+            options: options,
+            active_option_id: active ? active.category_id : activeId,
+            pricing_notes: $.trim($('#q_pricing_notes').val() || ''),
+            hotel_categories: {
+                active_category_id: data.active_category_id,
+                options: (function () {
+                    var hc = {};
+                    options.forEach(function (o) {
+                        hc[o.category_id] = {
+                            label: o.label,
+                            hotel_total: o.hotel_total,
+                            hotel_count: o.hotel_count
+                        };
+                    });
+                    return hc;
+                })()
+            }
+        };
+    }
+
+    function applyPricingNotes(notes) {
+        $('#q_pricing_notes').val(notes != null ? String(notes) : '');
+    }
+
+    function rawNumber(id) {
+        var v = ('' + $(id).val()).replace(/,/g, '');
+        var n = parseFloat(v);
+        return isNaN(n) ? 0 : n;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* USD converter                                                       */
+    /* ------------------------------------------------------------------ */
+    var $lastFocusedCost = null;
+    $(document).on('focus', '#qPricingSheetsHost .q-cost, #qPricingSheetsHost .q-sheet-profit-percent, #qPricingSheetsHost .q-sheet-profit-amount, #qPricingSheetsHost .q-sheet-price-per-adult', function () {
+        $lastFocusedCost = $(this);
+        qCalcUpdateTargetLabel();
+    });
+
+    /* ------------------------------------------------------------------ */
+    /* Pricing calculator                                                  */
+    /* ------------------------------------------------------------------ */
+    var qCalc = { display: '0', prev: null, op: null, fresh: true, error: false };
+    var qCalcFeedbackTimer = null;
+
+    function qCalcOpSymbol(op) {
+        if (op === '/') return '÷';
+        if (op === '*') return '×';
+        if (op === '-') return '−';
+        if (op === '+') return '+';
+        if (op === '%') return '%';
+        return '';
+    }
+
+    function qCalcFormat(val) {
+        var s = String(val);
+        if (s === 'Error' || s === '' || s === 'NaN' || s === 'Infinity' || s === '-Infinity') return s === '' ? '0' : s;
+        var neg = s.charAt(0) === '-';
+        if (neg) s = s.slice(1);
+        var parts = s.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return (neg ? '-' : '') + parts.join('.');
+    }
+
+    function qCalcUpdateUi() {
+        var expr = '';
+        if (qCalc.prev != null && qCalc.op) {
+            expr = qCalcFormat(qCalc.prev) + ' ' + qCalcOpSymbol(qCalc.op);
+        }
+        $('#qCalcExpr').text(expr);
+        $('#qCalcDisplay').val(qCalcFormat(qCalc.display));
+        $('#qCalcKeys .q-calc-op').removeClass('is-active');
+        if (qCalc.op && qCalc.fresh) {
+            $('#qCalcKeys .q-calc-op[data-calc="' + qCalc.op + '"]').addClass('is-active');
+        }
+        $('#qCalcScreen').toggleClass('is-error', !!qCalc.error);
+    }
+
+    function qCalcSetDisplay(val, isError) {
+        var s = String(val);
+        if (s === '' || s === 'NaN' || s === 'Infinity' || s === '-Infinity') s = '0';
+        qCalc.display = s;
+        qCalc.error = !!isError;
+        qCalcUpdateUi();
+        if (isError) {
+            window.setTimeout(function () {
+                $('#qCalcScreen').removeClass('is-error');
+            }, 320);
+        }
+    }
+
+    function qCalcNum() {
+        var n = parseFloat(String(qCalc.display).replace(/,/g, ''));
+        return isNaN(n) ? 0 : n;
+    }
+
+    function qCalcCompute() {
+        if (qCalc.prev == null || !qCalc.op) return qCalcNum();
+        var a = qCalc.prev;
+        var b = qCalcNum();
+        var r = b;
+        if (qCalc.op === '+') r = a + b;
+        else if (qCalc.op === '-') r = a - b;
+        else if (qCalc.op === '*') r = a * b;
+        else if (qCalc.op === '/') r = b === 0 ? NaN : a / b;
+        else if (qCalc.op === '%') r = a * (b / 100);
+        if (isFinite(r)) {
+            r = Math.round(r * 1e8) / 1e8;
+            var out = String(r);
+            if (out.indexOf('e') >= 0) out = r.toFixed(6).replace(/\.?0+$/, '');
+            return parseFloat(out);
+        }
+        return r;
+    }
+
+    function qCalcFlash(msg) {
+        var $fb = $('#qCalcFeedback');
+        if (!$fb.length) return;
+        $fb.text(msg || '').addClass('is-on');
+        if (qCalcFeedbackTimer) window.clearTimeout(qCalcFeedbackTimer);
+        qCalcFeedbackTimer = window.setTimeout(function () {
+            $fb.removeClass('is-on').text('');
+        }, 1400);
+    }
+
+    function qCalcCostLabel($el) {
+        if (!$el || !$el.length) return 'Land';
+        var key = String($el.attr('data-key') || '');
+        var map = {
+            flight_train: 'Flight/Train',
+            land: 'Land',
+            hotel: 'Hotel',
+            transport: 'Transport',
+            visa: 'Visa',
+            travel_insurance: 'Insurance'
+        };
+        if (map[key]) return map[key];
+        if ($el.hasClass('cc-amount') || $el.closest('.q-custom-cost').length) {
+            var lbl = $.trim($el.closest('.q-custom-cost').find('.cc-label').val() || '');
+            return lbl || 'Extra cost';
+        }
+        if ($el.hasClass('q-sheet-profit-percent')) return 'Profit %';
+        if ($el.hasClass('q-sheet-profit-amount')) return 'Profit amt';
+        if ($el.hasClass('q-sheet-price-per-adult')) return 'Price/Adult';
+        return key ? key.replace(/_/g, ' ') : 'Cost field';
+    }
+
+    function qCalcResolveTarget() {
+        var $target = $lastFocusedCost && $lastFocusedCost.length && $lastFocusedCost.closest('body').length
+            ? $lastFocusedCost
+            : $();
+        if ($target.length && !$target.closest('#qPricingSheetsHost').length) {
+            $target = $();
+        }
+        if (!$target.length) {
+            $target = $('#qPricingSheetsHost .q-pricing-option-sheet.is-active .q-cost[data-key="land"]').first();
+        }
+        if (!$target.length) {
+            $target = $('#qPricingSheetsHost .q-cost[data-key="land"]').first();
+        }
+        return $target;
+    }
+
+    function qCalcUpdateTargetLabel() {
+        var $t = qCalcResolveTarget();
+        $('#qCalcTargetLabel').text(qCalcCostLabel($t));
+    }
+
+    function qCalcPress(key) {
+        qCalc.error = false;
+        if (key === 'C') {
+            qCalc = { display: '0', prev: null, op: null, fresh: true, error: false };
+            qCalcUpdateUi();
+            return;
+        }
+        if (key === 'CE') {
+            qCalcSetDisplay('0');
+            qCalc.fresh = true;
+            return;
+        }
+        if (key === 'BS') {
+            if (qCalc.fresh || qCalc.display === 'Error') {
+                qCalcSetDisplay('0');
+                qCalc.fresh = true;
+                return;
+            }
+            var next = String(qCalc.display);
+            if (next.length <= 1 || (next.length === 2 && next.charAt(0) === '-')) {
+                qCalcSetDisplay('0');
+                qCalc.fresh = true;
+            } else {
+                qCalcSetDisplay(next.slice(0, -1));
+            }
+            return;
+        }
+        if (key === '±') {
+            if (qCalc.display === '0' || qCalc.display === 'Error') return;
+            qCalcSetDisplay(qCalc.display.charAt(0) === '-' ? qCalc.display.slice(1) : '-' + qCalc.display);
+            qCalc.fresh = false;
+            return;
+        }
+        if (key === '=') {
+            var result = qCalcCompute();
+            if (!isFinite(result)) {
+                qCalcSetDisplay('Error', true);
+                qCalc.prev = null;
+                qCalc.op = null;
+                qCalc.fresh = true;
+                return;
+            }
+            qCalcSetDisplay(String(result));
+            qCalc.prev = null;
+            qCalc.op = null;
+            qCalc.fresh = true;
+            qCalcUpdateUi();
+            return;
+        }
+        if (key === '+' || key === '-' || key === '*' || key === '/' || key === '%') {
+            if (qCalc.display === 'Error') {
+                qCalcSetDisplay('0');
+            }
+            if (qCalc.op && !qCalc.fresh) {
+                var mid = qCalcCompute();
+                if (!isFinite(mid)) {
+                    qCalcSetDisplay('Error', true);
+                    qCalc.prev = null;
+                    qCalc.op = null;
+                    qCalc.fresh = true;
+                    return;
+                }
+                qCalcSetDisplay(String(mid));
+            }
+            qCalc.prev = qCalcNum();
+            qCalc.op = key;
+            qCalc.fresh = true;
+            qCalcUpdateUi();
+            return;
+        }
+        if (key === '.') {
+            if (qCalc.display === 'Error') {
+                qCalcSetDisplay('0.');
+                qCalc.fresh = false;
+                return;
+            }
+            if (qCalc.fresh) {
+                qCalcSetDisplay('0.');
+                qCalc.fresh = false;
+                return;
+            }
+            if (qCalc.display.indexOf('.') >= 0) return;
+            qCalcSetDisplay(qCalc.display + '.');
+            return;
+        }
+        if (/^\d$/.test(key)) {
+            if (qCalc.display === 'Error') {
+                qCalcSetDisplay(key);
+                qCalc.fresh = false;
+                return;
+            }
+            if (qCalc.fresh || qCalc.display === '0') {
+                qCalcSetDisplay(key);
+                qCalc.fresh = false;
+            } else if (String(qCalc.display).replace('-', '').replace('.', '').length >= 14) {
+                return;
+            } else {
+                qCalcSetDisplay(qCalc.display + key);
+            }
+        }
+    }
+
+    function qCalcFillTarget() {
+        var n = qCalcNum();
+        if (!isFinite(n) || qCalc.display === 'Error') {
+            qCalcSetDisplay('Error', true);
+            qCalcFlash('Invalid');
+            return;
+        }
+        var $target = qCalcResolveTarget();
+        if (!$target.length) {
+            qCalcFlash('No field');
+            return;
+        }
+        $target.val(n.toFixed(2)).trigger('input');
+        if ($target.hasClass('q-cost-synced')) {
+            $target.attr('data-user-edited', '1');
+        }
+        $lastFocusedCost = $target;
+        qCalcUpdateTargetLabel();
+        recalcCosts();
+        qCalcFlash('Filled');
+        $target.addClass('q-calc-just-filled');
+        window.setTimeout(function () { $target.removeClass('q-calc-just-filled'); }, 700);
+    }
+
+    function qCalcLoadFromTarget() {
+        var $target = qCalcResolveTarget();
+        if (!$target.length) {
+            qCalcFlash('No field');
+            return;
+        }
+        var raw = String($target.val() || '').replace(/,/g, '');
+        var n = parseFloat(raw);
+        if (isNaN(n)) {
+            qCalcFlash('Empty');
+            return;
+        }
+        qCalc = { display: String(n), prev: null, op: null, fresh: true, error: false };
+        qCalcUpdateUi();
+        qCalcUpdateTargetLabel();
+        qCalcFlash('Loaded');
+    }
+
+    function qCalcCopyResult() {
+        var text = String(qCalc.display || '0');
+        if (text === 'Error') {
+            qCalcFlash('Invalid');
+            return;
+        }
+        var done = function () { qCalcFlash('Copied'); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(function () {
+                var $tmp = $('<input>').val(text).appendTo('body').select();
+                try { document.execCommand('copy'); } catch (e) {}
+                $tmp.remove();
+                done();
+            });
+        } else {
+            var $tmp = $('<input>').val(text).appendTo('body').select();
+            try { document.execCommand('copy'); } catch (e2) {}
+            $tmp.remove();
+            done();
+        }
+    }
+
+    // Keep legacy name used nowhere critical
+    function qCalcFillLand() { qCalcFillTarget(); }
+
+    /* ------------------------------------------------------------------ */
+    /* Rich editors                                                        */
+    /* ------------------------------------------------------------------ */
+    function initRichEditors() {
+        richEditors.forEach(function (field) {
+            var $ta = $('#qed_' + field);
+            var $section = $('#qbody_' + field);
+            if ($section.is(':visible')) {
+                initQuotationSummernote($ta, 160);
+            }
+        });
+    }
+
+    function syncAllEditors() {
+        $('textarea.q-editor, #qItineraryDays .q-day-textarea').each(function () {
+            var $ta = $(this);
+            if ($.fn.summernote && $ta.data('summernote')) {
+                $ta.val($ta.summernote('code'));
+            }
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Collect full payload                                                */
+    /* ------------------------------------------------------------------ */
+    function collectPayload() {
+        syncAllEditors();
+        syncLegacyPricingFieldsFromActiveSheet();
+        var costSheetObj = collectPricingOptionsPayload();
+
+        return {
+            id: $('#q_id').val() || '',
+            lead_id: $('#q_lead_id').val() || '',
+            edit_from_version: $('#q_edit_from_version').val() || '',
+            guest_name: $('[name=guest_name]').val(),
+            reference_name: $('[name=reference_name]').val(),
+            mobile_no: $('[name=mobile_no]').val(),
+            email: $('[name=email]').val(),
+            destination: $('[name=destination]').val(),
+            tentative_date: $('#q_tentative_date').val(),
+            no_of_nights: $('#q_nights').val(),
+            no_of_adults: $('#q_adults').val(),
+            no_of_children: $('#q_children').val(),
+            flights_json: JSON.stringify(collectFlights()),
+            hotels_json: JSON.stringify(collectHotelCategories()),
+            itinerary_json: JSON.stringify(snapshotItinerary()),
+            inclusion: $('#qed_inclusion').val(),
+            exclusion: $('#qed_exclusion').val(),
+            payment_policy: $('#qed_payment_policy').val(),
+            cancellation_policy: $('#qed_cancellation_policy').val(),
+            terms_conditions: $('#qed_terms_conditions').val(),
+            other_details: $('#qed_other_details').val(),
+            cost_sheet_json: JSON.stringify(costSheetObj),
+            pricing_options: costSheetObj.options || [],
+            active_option_id: costSheetObj.active_option_id || '',
+            pricing_notes: costSheetObj.pricing_notes || '',
+            total_cost: rawNumber('#q_total_cost'),
+            profit_type: (parseFloat($('#q_profit_amount').val()) > 0) ? 'amount' : 'percent',
+            profit_value: (parseFloat($('#q_profit_amount').val()) > 0) ? $('#q_profit_amount').val() : ($('#q_profit_percent').val() || 0),
+            package_total: rawNumber('#q_package_total'),
+            price_per_adult: $('#q_price_per_adult').val() || 0,
+            quotation_total: rawNumber('#q_quotation_total'),
+            without_itinerary: $('#q_without_itinerary').is(':checked') ? 1 : 0,
+            hide_gst_note: $('#q_hide_gst_note').is(':checked') ? 1 : 0,
+            wizard_step: qWizardCurrent
+        };
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Preview                                                             */
+    /* ------------------------------------------------------------------ */
+    var Q_PREVIEW_META = (typeof QUOTATION_PREVIEW_META === 'object' && QUOTATION_PREVIEW_META) ? QUOTATION_PREVIEW_META : {};
+    var previewEditOrig = '';
+    var previewDirty = false;
+
+    function setPreviewDirty(isDirty) {
+        previewDirty = !!isDirty;
+        var $btn = $('#qPreviewSaveBtn');
+        var $hint = $('#qPreviewUnsavedHint');
+        if (!$btn.length) return;
+        if (previewDirty) {
+            $btn.removeClass('d-none').prop('disabled', false);
+            $hint.removeClass('d-none');
+        } else {
+            $btn.addClass('d-none').prop('disabled', true);
+            $hint.addClass('d-none');
+        }
+    }
+
+    function previewVal(v, fallback) {
+        var s = v == null ? '' : String(v).trim();
+        return s !== '' ? s : (fallback || '—');
+    }
+
+    function previewHasHtmlContent(html) {
+        if (!html) return false;
+        return String(html).replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim() !== '';
+    }
+
+    function previewEditable(text, path, opts) {
+        opts = opts || {};
+        var type = opts.type || 'text';
+        var tag = opts.tag || (type === 'html' ? 'div' : 'span');
+        var cls = 'q-preview-editable' + (opts.cls ? (' ' + opts.cls) : '');
+        var display = text == null ? '' : String(text);
+        if (type !== 'html' && $.trim(display) === '') {
+            display = opts.placeholder != null ? opts.placeholder : '—';
+        }
+        var html = '<' + tag + ' class="' + cls + '" contenteditable="true"'
+            + ' data-q-edit="' + esc(path) + '"'
+            + ' data-q-type="' + esc(type) + '"'
+            + ' spellcheck="false"';
+        if (opts.multiline || type === 'html') {
+            html += ' data-q-multiline="1"';
+        }
+        html += '>';
+        if (type === 'html') {
+            html += display || '<p><br></p>';
+        } else {
+            html += esc(display);
+        }
+        html += '</' + tag + '>';
+        return html;
+    }
+
+    function previewTd(text, path, opts) {
+        opts = opts || {};
+        var type = opts.type || 'text';
+        var tdCls = opts.tdCls ? (' class="' + opts.tdCls + '"') : '';
+        var display = text == null ? '' : String(text);
+        if ($.trim(display) === '') {
+            display = opts.placeholder != null ? opts.placeholder : '—';
+        }
+        return '<td' + tdCls + '>' +
+            previewEditable(display, path, {
+                type: type,
+                multiline: opts.multiline,
+                placeholder: opts.placeholder,
+                cls: 'q-preview-cell-edit'
+            }) +
+            '</td>';
+    }
+
+    function parsePreviewDate(str) {
+        if (!str) return null;
+        var s = String(str).trim();
+        var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (m) {
+            var dd = parseInt(m[1], 10);
+            var mm = parseInt(m[2], 10);
+            var yy = parseInt(m[3], 10);
+            if (m[3].length === 2) {
+                yy += yy >= 70 ? 1900 : 2000;
+            }
+            var dSlash = new Date(yy, mm - 1, dd);
+            if (!isNaN(dSlash.getTime()) && dSlash.getDate() === dd && dSlash.getMonth() === mm - 1) {
+                return dSlash;
+            }
+        }
+        var months = {
+            jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+            jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+        };
+        var m2 = s.match(/^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})$/);
+        if (m2) {
+            var monKey = m2[2].slice(0, 3).toLowerCase();
+            if (months[monKey] !== undefined) {
+                var dFlight = new Date(parseInt(m2[3], 10), months[monKey], parseInt(m2[1], 10));
+                if (!isNaN(dFlight.getTime())) return dFlight;
+            }
+        }
+        var d = new Date(s + (s.indexOf('T') >= 0 ? '' : 'T00:00:00'));
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function toIsoDateFromPreview(str) {
+        var d = parsePreviewDate(str);
+        if (!d) return '';
+        return d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0');
+    }
+
+    function formatPreviewSlashDate(str) {
+        var d = parsePreviewDate(str);
+        if (!d) return previewVal(str, '—');
+        return String(d.getDate()).padStart(2, '0') + '/' +
+            String(d.getMonth() + 1).padStart(2, '0') + '/' +
+            d.getFullYear();
+    }
+
+    function formatPreviewDashDate(str) {
+        var d = parsePreviewDate(str);
+        if (!d) return previewVal(str, '—');
+        return String(d.getDate()).padStart(2, '0') + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            d.getFullYear();
+    }
+
+    function formatPreviewLongDate(str) {
+        var d = parsePreviewDate(str);
+        if (!d) return previewVal(str, '—');
+        var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function formatPreviewFlightDate(str) {
+        var d = parsePreviewDate(str);
+        if (!d) return previewVal(str, '—');
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function formatPreviewFlightDateTime(dateStr, timeStr) {
+        var datePart = formatPreviewFlightDate(dateStr);
+        var timePart = (timeStr || '').trim();
+        if (datePart === '—' && !timePart) return '—';
+        if (!timePart) return datePart;
+        return datePart + ' | ' + timePart;
+    }
+
+    function previewDayMeta(baseStr, offset) {
+        var d = parsePreviewDate(baseStr);
+        if (!d) {
+            return { dayName: '', dateDash: '' };
+        }
+        d.setDate(d.getDate() + offset);
+        return {
+            dayName: DAY_NAMES[d.getDay()].toUpperCase(),
+            dateDash: String(d.getDate()).padStart(2, '0') + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                d.getFullYear()
+        };
+    }
+
+    function previewRefNo(p) {
+        if (Q_PREVIEW_META.quotation_uid) {
+            return Q_PREVIEW_META.quotation_uid;
+        }
+        if (p.id) {
+            return 'QT-' + p.id;
+        }
+        var now = new Date();
+        return 'MZQ/' + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + '/' +
+            String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0');
+    }
+
+    function previewExpertInitial(name) {
+        name = (name || '').trim();
+        return name ? name.charAt(0).toUpperCase() : 'H';
+    }
+
+    function setEditorFieldValue(selector, htmlOrText, isHtml) {
+        var $ta = $(selector);
+        if (!$ta.length) return;
+        var val = htmlOrText == null ? '' : String(htmlOrText);
+        if ($.fn.summernote && $ta.data('summernote')) {
+            try {
+                $ta.summernote('code', isHtml ? val : esc(val));
+            } catch (e) {
+                $ta.val(val);
+            }
+        } else {
+            $ta.val(val);
+        }
+    }
+
+    function readPreviewEditableValue($el) {
+        var type = $el.attr('data-q-type') || 'text';
+        var raw;
+        if (type === 'html') {
+            raw = ($el.html() || '').trim();
+        } else {
+            raw = ($el.text() || '').trim();
+        }
+        if (raw === '—' || raw === '-' || raw === '–') {
+            raw = '';
+        }
+        return raw;
+    }
+
+    function normalizePreviewMoney(str) {
+        return String(str || '').replace(/INR/gi, '').replace(/[,\s₹]/g, '').trim();
+    }
+
+    function parsePreviewDateTimeLabel(str) {
+        var s = String(str || '').trim();
+        var datePart = s;
+        var timePart = '';
+        var pipe = s.split('|');
+        if (pipe.length >= 2) {
+            datePart = pipe[0].trim();
+            timePart = pipe.slice(1).join('|').trim();
+        } else {
+            var m = s.match(/^(.+?)\s+(\d{1,2}:\d{2}(?:\s*[AaPp][Mm])?)$/);
+            if (m) {
+                datePart = m[1].trim();
+                timePart = m[2].trim();
+            }
+        }
+        return {
+            date: toIsoDateFromPreview(datePart) || datePart,
+            time: timePart
+        };
+    }
+
+    function parseFlightLabel(str) {
+        var s = String(str || '').trim();
+        var m = s.match(/^(.+?)\s*[-–—]\s*(.*)$/);
+        if (m) {
+            return { name: m[1].trim(), fl_tr_no: m[2].trim() };
+        }
+        return { name: s, fl_tr_no: '' };
+    }
+
+    function parseLayoverLabel(str) {
+        var s = String(str || '').replace(/^Layover\s*/i, '').trim();
+        var at = '';
+        var time = '';
+        var m = s.match(/^(?:at\s+)?([^:]+):\s*(.*)$/i);
+        if (m) {
+            at = m[1].trim();
+            time = m[2].trim();
+        } else {
+            at = s;
+        }
+        return { layover_at: at, layover_time: time };
+    }
+
+    function parseNightsLabel(str) {
+        var m = String(str || '').match(/(\d+)/);
+        return m ? parseInt(m[1], 10) : 0;
+    }
+
+    function applyPreviewEdit($el) {
+        if (!$el || !$el.length) return;
+        var path = String($el.attr('data-q-edit') || '');
+        if (!path) return;
+        var type = $el.attr('data-q-type') || 'text';
+        var value = readPreviewEditableValue($el);
+        var parts = path.split('.');
+        var needsItineraryRebuild = false;
+        var needsCostRecalc = false;
+        var needsPreviewRefresh = false;
+
+        function setInput($input, val) {
+            if (!$input || !$input.length) return;
+            $input.val(val);
+            $input.trigger('change');
+        }
+
+        if (parts[0] === 'flight' && parts.length >= 3) {
+            var fi = parseInt(parts[1], 10) || 0;
+            var fField = parts[2];
+            var $fRow = $('#qFlightRows .q-flight-row').eq(fi);
+            if (!$fRow.length) return;
+
+            if (fField === 'dep_datetime') {
+                var depParsed = parsePreviewDateTimeLabel(value);
+                setInput($fRow.find('.f-dep-date'), depParsed.date);
+                setInput($fRow.find('.f-dep-time'), depParsed.time);
+            } else if (fField === 'arr_datetime') {
+                var arrParsed = parsePreviewDateTimeLabel(value);
+                setInput($fRow.find('.f-arr-date'), arrParsed.date);
+                setInput($fRow.find('.f-arr-time'), arrParsed.time);
+            } else if (fField === 'flight_label') {
+                var labelParsed = parseFlightLabel(value);
+                setInput($fRow.find('.f-name'), labelParsed.name);
+                setInput($fRow.find('.f-fl-no'), labelParsed.fl_tr_no);
+            } else if (fField === 'layover') {
+                var layParsed = parseLayoverLabel(value);
+                setInput($fRow.find('.f-layover-at'), layParsed.layover_at);
+                setInput($fRow.find('.f-layover-time'), layParsed.layover_time);
+            } else {
+                var fMap = {
+                    from: '.f-from',
+                    to: '.f-to',
+                    name: '.f-name',
+                    fl_tr_no: '.f-fl-no',
+                    dep_date: '.f-dep-date',
+                    dep_time: '.f-dep-time',
+                    arr_date: '.f-arr-date',
+                    arr_time: '.f-arr-time',
+                    layover_time: '.f-layover-time',
+                    layover_at: '.f-layover-at'
+                };
+                var fSel = fMap[fField];
+                if (!fSel) return;
+                if (fField === 'dep_date' || fField === 'arr_date') {
+                    value = toIsoDateFromPreview(value) || value;
+                }
+                setInput($fRow.find(fSel), value);
+            }
+            if (typeof refreshFlightLayovers === 'function') {
+                refreshFlightLayovers();
+            }
+            return;
+        }
+
+        if (parts[0] === 'hotel' && parts.length >= 4) {
+            var ci = parseInt(parts[1], 10) || 0;
+            var ri = parseInt(parts[2], 10) || 0;
+            var hField = parts[3];
+            var $panel = getHotelCategoryPanels().eq(ci);
+            var $hRow = $panel.find('.q-hotel-row').eq(ri);
+            if (!$hRow.length) return;
+            var hMap = {
+                city: '.h-city',
+                name: '.h-name',
+                nights: '.h-nights',
+                room_type: '.h-room',
+                checkin: '.h-checkin',
+                checkout: '.h-checkout',
+                meal_plan: '.h-meal'
+            };
+            var hSel = hMap[hField];
+            if (!hSel) return;
+            if (hField === 'checkin' || hField === 'checkout') {
+                value = toIsoDateFromPreview(value) || value;
+            }
+            setInput($hRow.find(hSel), value);
+            return;
+        }
+
+        if (parts[0] === 'itinerary' && parts.length >= 3) {
+            var di = parseInt(parts[1], 10) || 0;
+            var iField = parts[2];
+            var $day = $('#qItineraryDays .q-day-card').eq(di);
+            if (!$day.length) {
+                if (typeof scheduleItineraryRebuild === 'function') {
+                    scheduleItineraryRebuild();
+                }
+                window.setTimeout(function () {
+                    var $retryDay = $('#qItineraryDays .q-day-card').eq(di);
+                    if (!$retryDay.length) return;
+                    if (iField === 'title') {
+                        setInput($retryDay.find('.q-day-title'), value);
+                    } else if (iField === 'description') {
+                        var $retryTa = $retryDay.find('.q-day-textarea');
+                        if ($.fn.summernote && $retryTa.data('summernote')) {
+                            try { $retryTa.summernote('code', value); } catch (e) { $retryTa.val(value); }
+                        } else {
+                            $retryTa.val(value);
+                        }
+                    }
+                }, 180);
+                return;
+            }
+            if (iField === 'title') {
+                setInput($day.find('.q-day-title'), value);
+            } else if (iField === 'description') {
+                var $ta = $day.find('.q-day-textarea');
+                if ($.fn.summernote && $ta.data('summernote')) {
+                    try { $ta.summernote('code', value); } catch (e) { $ta.val(value); }
+                } else {
+                    $ta.val(value);
+                }
+            }
+            return;
+        }
+
+        switch (path) {
+            case 'guest_name':
+                setInput($('[name=guest_name]'), value);
+                break;
+            case 'mobile_no':
+                setInput($('[name=mobile_no]'), value);
+                break;
+            case 'email':
+                setInput($('[name=email]'), value);
+                break;
+            case 'destination':
+                setInput($('[name=destination]'), value);
+                $('#qPreviewPrintArea .q-preview-dest-title').text(value ? value.toUpperCase() : 'DESTINATION');
+                break;
+            case 'tentative_date':
+                value = toIsoDateFromPreview(value) || value;
+                setInput($('#q_tentative_date'), value);
+                needsItineraryRebuild = true;
+                needsPreviewRefresh = true;
+                break;
+            case 'no_of_nights':
+                value = String(parseNightsLabel(value) || 0);
+                setInput($('#q_nights'), value);
+                needsItineraryRebuild = true;
+                needsCostRecalc = true;
+                needsPreviewRefresh = true;
+                break;
+            case 'no_of_adults':
+                value = String(Math.max(1, parseInt(value, 10) || 1));
+                setInput($('#q_adults'), value);
+                needsCostRecalc = true;
+                needsPreviewRefresh = true;
+                break;
+            case 'no_of_children':
+                value = String(Math.max(0, parseInt(value, 10) || 0));
+                setInput($('#q_children'), value);
+                break;
+            case 'inclusion':
+                setEditorFieldValue('#qed_inclusion', value, true);
+                break;
+            case 'exclusion':
+                setEditorFieldValue('#qed_exclusion', value, true);
+                break;
+            case 'payment_policy':
+                setEditorFieldValue('#qed_payment_policy', value, true);
+                break;
+            case 'cancellation_policy':
+                setEditorFieldValue('#qed_cancellation_policy', value, true);
+                break;
+            case 'terms_conditions':
+                setEditorFieldValue('#qed_terms_conditions', value, true);
+                break;
+            case 'other_details':
+                setEditorFieldValue('#qed_other_details', value, true);
+                break;
+            case 'price_per_adult':
+                value = normalizePreviewMoney(value);
+                setInput($('#q_price_per_adult'), value);
+                $('#q_price_per_adult').attr('data-user-edited', '1');
+                needsCostRecalc = true;
+                needsPreviewRefresh = true;
+                break;
+            case 'quotation_total':
+                value = normalizePreviewMoney(value);
+                setInput($('#q_quotation_total'), value);
+                needsPreviewRefresh = true;
+                break;
+            default:
+                break;
+        }
+
+        if (needsCostRecalc && typeof recalcCosts === 'function') {
+            recalcCosts();
+        }
+        if (needsItineraryRebuild) {
+            scheduleItineraryRebuild();
+        }
+        if (needsPreviewRefresh) {
+            window.setTimeout(function () {
+                if ($('#qPreviewModal').hasClass('show')) {
+                    refreshQuotationPreviewPreserveFocus();
+                }
+            }, 120);
+        }
+    }
+
+    function refreshQuotationPreviewPreserveFocus() {
+        var activePath = '';
+        var $active = $('#qPreviewPrintArea .q-preview-editable:focus');
+        if ($active.length) {
+            activePath = $active.attr('data-q-edit') || '';
+        }
+        try {
+            $('#qPreviewPrintArea').html(buildPreviewHtml(collectPayload()));
+        } catch (err) {
+            return;
+        }
+        if (activePath) {
+            var $next = $('#qPreviewPrintArea .q-preview-editable[data-q-edit="' + activePath.replace(/"/g, '\\"') + '"]').first();
+            if ($next.length) {
+                $next.focus();
+                try {
+                    var range = document.createRange();
+                    range.selectNodeContents($next.get(0));
+                    range.collapse(false);
+                    var sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                } catch (e2) { /* ignore */ }
+            }
+        }
+    }
+
+    function buildPreviewHtml(p) {
+        var flights = JSON.parse(p.flights_json || '[]');
+        var hotelsRaw = JSON.parse(p.hotels_json || '[]');
+        var hotelsData = normalizeHotelsPrefill(hotelsRaw);
+        var itinerary = JSON.parse(p.itinerary_json || '[]');
+        var nights = parseInt(p.no_of_nights, 10);
+        if (isNaN(nights) || nights < 0) nights = 0;
+        var days = nights + 1;
+        var adults = parseInt(p.no_of_adults, 10);
+        if (isNaN(adults) || adults < 1) adults = 1;
+        var children = parseInt(p.no_of_children, 10);
+        if (isNaN(children) || children < 0) children = 0;
+        var destination = previewVal(p.destination, 'Destination');
+        var logoUrl = absUrl(Q_PREVIEW_META.logo || 'img/web-logo.png');
+        var todayLong = formatPreviewLongDate(new Date().toISOString().slice(0, 10));
+        var paxChildren = children > 0 ? String(children) : '0';
+        var nightsLabel = nights + ' Nights / ' + days + ' Days';
+        var durationLabel = nights + ' Nts / ' + days + ' Days';
+
+        var html = '';
+
+        html += '<div class="q-preview-head">';
+        html += '<div class="q-preview-logo"><img src="' + esc(logoUrl) + '" alt="Multi Zone Travels"></div>';
+        html += '<div class="q-preview-title-block">';
+        html += '<h1>Quotation For ' + previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-dest-title' }) + '</h1>';
+        html += '<div class="q-preview-duration">' +
+            previewEditable(durationLabel, 'no_of_nights', { type: 'nights_label', placeholder: '0 Nts / 1 Days' }) +
+            '</div>';
+        html += '</div>';
+        html += '<div class="q-preview-ref-block">';
+        html += '<div class="ref">REF: ' + esc(previewRefNo(p)) + '</div>';
+        html += '<div>Quotation Date: ' + esc(todayLong) + '</div>';
+        html += '</div></div>';
+
+        html += '<table class="q-preview-table"><thead><tr>' +
+            '<th>Guest Name</th><th>Mobile No</th><th>Email Address</th>' +
+            '</tr></thead><tbody><tr>' +
+            previewTd(previewVal(p.guest_name), 'guest_name') +
+            previewTd(previewVal(p.mobile_no), 'mobile_no') +
+            previewTd(previewVal(p.email), 'email') +
+            '</tr></tbody></table>';
+
+        html += '<table class="q-preview-table"><thead><tr>' +
+            '<th>Destination</th><th>No Of Nights</th><th>Tentative Date</th><th>No Of Adults</th><th>No Of Children</th>' +
+            '</tr></thead><tbody><tr>' +
+            previewTd(destination.toUpperCase(), 'destination', { tdCls: 'text-left' }) +
+            previewTd(nightsLabel, 'no_of_nights', { type: 'nights_label' }) +
+            previewTd(formatPreviewSlashDate(p.tentative_date), 'tentative_date', { type: 'date' }) +
+            previewTd(String(adults), 'no_of_adults', { type: 'int' }) +
+            previewTd(paxChildren, 'no_of_children', { type: 'int' }) +
+            '</tr></tbody></table>';
+
+        if (flights.length) {
+            html += '<div class="q-preview-section-title">Flight Details</div>';
+            html += '<table class="q-preview-table"><thead><tr>' +
+                '<th>Departure</th><th>From</th><th>To</th><th>Arrival</th><th>Flight</th>' +
+                '</tr></thead><tbody>';
+            flights.forEach(function (f, fi) {
+                var d = normalizeFlightData(f);
+                var layoverText = '';
+                if (d.layover_time || d.layover_at) {
+                    layoverText = 'Layover at ' + (d.layover_at || '—') + ': ' + (d.layover_time || '—');
+                    html += '<tr class="q-preview-layover"><td colspan="5">' +
+                        previewEditable(layoverText, 'flight.' + fi + '.layover', {
+                            type: 'layover',
+                            cls: 'q-preview-cell-edit'
+                        }) +
+                        '</td></tr>';
+                }
+                var flightLabel = '';
+                if (d.name && d.fl_tr_no) {
+                    flightLabel = d.name + ' - ' + d.fl_tr_no;
+                } else {
+                    flightLabel = d.name || d.fl_tr_no || '';
+                }
+                html += '<tr>' +
+                    previewTd(formatPreviewFlightDateTime(d.dep_date, d.dep_time), 'flight.' + fi + '.dep_datetime', { type: 'datetime' }) +
+                    previewTd(previewVal(d.from), 'flight.' + fi + '.from', { tdCls: 'text-left' }) +
+                    previewTd(previewVal(d.to), 'flight.' + fi + '.to', { tdCls: 'text-left' }) +
+                    previewTd(formatPreviewFlightDateTime(d.arr_date || d.dep_date, d.arr_time), 'flight.' + fi + '.arr_datetime', { type: 'datetime' }) +
+                    previewTd(previewVal(flightLabel), 'flight.' + fi + '.flight_label', { type: 'flight_label', tdCls: 'text-left' }) +
+                    '</tr>';
+            });
+            html += '</tbody></table>';
+        }
+
+        var pricingOptions = Array.isArray(p.pricing_options) ? p.pricing_options : [];
+        if (!pricingOptions.length && p.cost_sheet_json) {
+            try {
+                var csPrev = typeof p.cost_sheet_json === 'string' ? JSON.parse(p.cost_sheet_json) : p.cost_sheet_json;
+                if (csPrev && Array.isArray(csPrev.options)) {
+                    pricingOptions = csPrev.options;
+                }
+            } catch (e) { /* ignore */ }
+        }
+        var activeOptionId = String(p.active_option_id || hotelsData.active_category_id || '');
+        var multiHotelOptions = hotelsData.categories.length > 1;
+
+        function findPricingOptionForCategory(cat, catIdx) {
+            if (!cat) return null;
+            var byId = pricingOptions.find(function (o) {
+                return String(o.category_id || o.id || '') === String(cat.id);
+            });
+            if (byId) return byId;
+            if (pricingOptions[catIdx]) return pricingOptions[catIdx];
+            return null;
+        }
+
+        function optionHasTourCost(opt) {
+            if (!opt) return false;
+            var ppa = parseFloat(opt.price_per_adult);
+            var qt = parseFloat(String(opt.quotation_total || '').replace(/,/g, ''));
+            var pkg = parseFloat(String(opt.package_total || '').replace(/,/g, ''));
+            return (ppa > 0) || (qt > 0) || (pkg > 0);
+        }
+
+        function buildPreviewTourCostTable(opt, opts) {
+            opts = opts || {};
+            var editable = !!opts.editable;
+            var ppa = parseFloat(opt && opt.price_per_adult);
+            var qt = parseFloat(String((opt && opt.quotation_total) || '').replace(/,/g, ''));
+            var pkg = parseFloat(String((opt && opt.package_total) || '').replace(/,/g, ''));
+            if (isNaN(ppa)) ppa = 0;
+            if (isNaN(qt)) qt = 0;
+            if (isNaN(pkg)) pkg = 0;
+            if (!(ppa > 0 || qt > 0 || pkg > 0)) {
+                return '';
+            }
+            var adultTotal = ppa > 0 ? ppa * adults : (pkg > 0 ? pkg : qt);
+            var totalVal = qt > 0 ? qt : (pkg > 0 ? pkg : adultTotal);
+            var block = '<div class="q-preview-section-title">Tour Cost</div>';
+            block += '<table class="q-preview-table q-preview-cost"><tbody>';
+            if (ppa > 0) {
+                block += '<tr><td>INR ';
+                if (editable) {
+                    block += previewEditable(money(ppa), 'price_per_adult', { type: 'money' });
+                } else {
+                    block += esc(money(ppa));
+                }
+                block += ' X ' + esc(adults) + ' Adults</td>' +
+                    '<td>' + esc(money(ppa * adults)) + '</td></tr>';
+            }
+            block += '<tr><td><strong>Total</strong></td><td><strong>';
+            if (editable) {
+                block += previewEditable(money(totalVal), 'quotation_total', { type: 'money' });
+            } else {
+                block += esc(money(totalVal));
+            }
+            block += '</strong></td></tr>';
+            block += '</tbody></table>';
+            if (opts.showGst && !parseInt(p.hide_gst_note, 10)) {
+                block += '<div class="q-preview-gst-note">* GST as applicable will be charged extra.</div>';
+            }
+            return block;
+        }
+
+        var hasHotels = hotelsData.categories.some(function (cat) {
+            return (cat.hotels || []).length > 0;
+        });
+        if (hasHotels) {
+            hotelsData.categories.forEach(function (cat, idx) {
+                if (!(cat.hotels || []).length) {
+                    return;
+                }
+                var title = 'Hotel Details';
+                if (multiHotelOptions) {
+                    title += ' — ' + (cat.label || defaultHotelCategoryLabel(idx));
+                    if (String(cat.id) === activeOptionId || cat.id === hotelsData.active_category_id) {
+                        title += ' (Recommended)';
+                    }
+                }
+                html += '<div class="q-preview-section-title">' + esc(title) + '</div>';
+                html += '<table class="q-preview-table"><thead><tr>' +
+                    '<th>City</th><th>Hotel</th><th>Nts</th><th>Room Type</th><th>Check In</th><th>Check Out</th><th>Meals</th>' +
+                    '</tr></thead><tbody>';
+                (cat.hotels || []).forEach(function (h, hi) {
+                    var d = normalizeHotelData(h);
+                    var base = 'hotel.' + idx + '.' + hi + '.';
+                    html += '<tr>' +
+                        previewTd(previewVal(d.city), base + 'city', { tdCls: 'text-left' }) +
+                        previewTd(previewVal(d.name), base + 'name', { tdCls: 'text-left' }) +
+                        previewTd(previewVal(d.nights), base + 'nights', { type: 'int' }) +
+                        previewTd(previewVal(d.room_type), base + 'room_type', { tdCls: 'text-left' }) +
+                        previewTd(formatPreviewSlashDate(d.checkin), base + 'checkin', { type: 'date' }) +
+                        previewTd(formatPreviewSlashDate(d.checkout), base + 'checkout', { type: 'date' }) +
+                        previewTd(previewVal(d.meal_plan, 'CP'), base + 'meal_plan') +
+                        '</tr>';
+                });
+                html += '</tbody></table>';
+
+                // Multiple hotel options: show that option's Tour Cost right under its hotels.
+                if (multiHotelOptions) {
+                    var optForCat = findPricingOptionForCategory(cat, idx);
+                    if (optionHasTourCost(optForCat)) {
+                        var isActiveOpt = activeOptionId
+                            ? String(optForCat.category_id || optForCat.id || cat.id) === activeOptionId
+                            : String(cat.id) === String(hotelsData.active_category_id);
+                        html += buildPreviewTourCostTable(optForCat, {
+                            editable: isActiveOpt,
+                            showGst: true
+                        });
+                    }
+                }
+            });
+        }
+
+        if (!parseInt(p.without_itinerary, 10)) {
+            var itineraryHtml = '';
+            itinerary.forEach(function (day, di) {
+                var dayTitle = day && day.title ? String(day.title).trim() : '';
+                var dayDesc = day && day.description ? String(day.description).replace(/<[^>]*>/g, '').trim() : '';
+                if (!dayTitle && !dayDesc) {
+                    return;
+                }
+                var meta = previewDayMeta(p.tentative_date, di);
+                var headPrefix = meta.dayName ? (meta.dayName + ' DAY ' + (di + 1)) : ('DAY ' + (di + 1));
+                if (meta.dateDash) {
+                    headPrefix += ' | ' + meta.dateDash;
+                }
+                itineraryHtml += '<div class="q-preview-day">';
+                itineraryHtml += '<div class="q-preview-day-head">' + esc(headPrefix) + ' | ' +
+                    previewEditable(previewVal(day.title, ''), 'itinerary.' + di + '.title', {
+                        placeholder: 'Day title'
+                    }) + '</div>';
+                itineraryHtml += '<div class="q-preview-day-body">';
+                itineraryHtml += previewEditable(day.description || '', 'itinerary.' + di + '.description', {
+                    type: 'html',
+                    multiline: true,
+                    cls: 'q-preview-rich'
+                });
+                itineraryHtml += '</div></div>';
+            });
+            if (itineraryHtml) {
+                html += '<div class="q-preview-section-title">Day Wise Itinerary</div>';
+                html += itineraryHtml;
+            }
+        }
+
+        if (previewHasHtmlContent(p.inclusion)) {
+            html += '<div class="q-preview-section-title">Inclusions</div>';
+            html += previewEditable(p.inclusion || '', 'inclusion', { type: 'html', multiline: true, cls: 'q-preview-rich' });
+        }
+
+        if (previewHasHtmlContent(p.exclusion)) {
+            html += '<div class="q-preview-section-title">Exclusion</div>';
+            html += previewEditable(p.exclusion || '', 'exclusion', { type: 'html', multiline: true, cls: 'q-preview-rich' });
+        }
+
+        // Single hotel option: keep Tour Cost in the original place (after inclusions/exclusions).
+        if (!multiHotelOptions) {
+            var pricePerAdult = parseFloat(p.price_per_adult);
+            var quotationTotal = parseFloat(String(p.quotation_total || '').replace(/,/g, ''));
+            var packageTotal = parseFloat(String(p.package_total || '').replace(/,/g, ''));
+            if (isNaN(pricePerAdult)) pricePerAdult = 0;
+            if (isNaN(quotationTotal)) quotationTotal = 0;
+            if (isNaN(packageTotal)) packageTotal = 0;
+
+            var singleOpt = pricingOptions[0] || {
+                price_per_adult: pricePerAdult,
+                quotation_total: quotationTotal,
+                package_total: packageTotal
+            };
+            if (!optionHasTourCost(singleOpt) && (pricePerAdult > 0 || quotationTotal > 0 || packageTotal > 0)) {
+                singleOpt = {
+                    price_per_adult: pricePerAdult,
+                    quotation_total: quotationTotal,
+                    package_total: packageTotal
+                };
+            }
+            if (optionHasTourCost(singleOpt) || pricePerAdult > 0 || quotationTotal > 0 || packageTotal > 0) {
+                html += buildPreviewTourCostTable({
+                    price_per_adult: parseFloat(singleOpt.price_per_adult) > 0 ? singleOpt.price_per_adult : pricePerAdult,
+                    quotation_total: singleOpt.quotation_total || quotationTotal,
+                    package_total: singleOpt.package_total || packageTotal
+                }, {
+                    editable: true,
+                    showGst: true
+                });
+            }
+        }
+
+        var policyBlocks = [
+            { key: 'payment_policy', title: 'Payment Policy', html: p.payment_policy },
+            { key: 'cancellation_policy', title: 'Cancellation Policy', html: p.cancellation_policy },
+            { key: 'terms_conditions', title: 'Terms & Conditions', html: p.terms_conditions },
+            { key: 'other_details', title: 'Other Details', html: p.other_details }
+        ];
+        var policyHtml = '';
+        policyBlocks.forEach(function (b) {
+            if (!previewHasHtmlContent(b.html)) return;
+            policyHtml += '<div class="q-preview-policy-block">';
+            policyHtml += '<div class="q-preview-policy-title">' + esc(b.title) + '</div>';
+            policyHtml += previewEditable(b.html || '', b.key, { type: 'html', multiline: true, cls: 'q-preview-rich' });
+            policyHtml += '</div>';
+        });
+        if (policyHtml) {
+            html += '<div class="q-preview-section-title">Quotation Terms &amp; Conditions</div>';
+            html += policyHtml;
+        }
+
+        html += '<div class="q-preview-footer">';
+        html += '<div class="q-preview-expert">';
+        var expertPhoto = Q_PREVIEW_META.expert_photo ? absUrl(Q_PREVIEW_META.expert_photo) : '';
+        var expertName = Q_PREVIEW_META.expert_name || 'Raju Gupta';
+        var expertTitle = Q_PREVIEW_META.expert_title || 'Holiday Expert';
+        if (expertPhoto) {
+            html += '<div class="q-preview-expert-avatar"><img src="' + esc(expertPhoto) + '" alt="' + esc(expertName) + '"></div>';
+        } else {
+            html += '<div class="q-preview-expert-avatar">' + esc(previewExpertInitial(expertName)) + '</div>';
+        }
+        html += '<div class="q-preview-expert-name">' +
+            '<span class="q-preview-expert-fullname">' + esc(expertName) + '</span>' +
+            '<span class="q-preview-expert-sep">|</span>' +
+            '<span class="q-preview-expert-role">' + esc(expertTitle) + '</span>' +
+            '</div>';
+        html += '<div class="q-preview-expert-lines">';
+        if (Q_PREVIEW_META.phone) {
+            html += '<div class="q-preview-phone-primary">' + esc(Q_PREVIEW_META.phone) + '</div>';
+        }
+        if (Q_PREVIEW_META.phone_alt) {
+            html += '<div>' + esc(Q_PREVIEW_META.phone_alt) + '</div>';
+        }
+        if (Q_PREVIEW_META.email) {
+            html += '<div>' + esc(Q_PREVIEW_META.email) + '</div>';
+        }
+        if (Q_PREVIEW_META.website) {
+            html += '<div>' + esc(Q_PREVIEW_META.website) + '</div>';
+        }
+        if (Q_PREVIEW_META.address) {
+            html += '<div>' + esc(Q_PREVIEW_META.address) + '</div>';
+        }
+        html += '</div></div>';
+        html += '<div class="q-preview-services-bar">' +
+            esc(Q_PREVIEW_META.services || 'FLIGHTS | HOTELS | HOLIDAYS | VISA | FOREX') +
+            '</div>';
+        var social = Array.isArray(Q_PREVIEW_META.social) ? Q_PREVIEW_META.social : [];
+        if (social.length) {
+            html += '<div class="q-preview-social">';
+            social.forEach(function (s) {
+                var cls = 'web';
+                if (s.type === 'facebook') cls = 'fb';
+                else if (s.type === 'twitter') cls = 'tw';
+                else if (s.type === 'google') cls = 'gp';
+                html += '<a class="' + cls + '" href="' + esc(s.url || '#') + '" target="_blank" rel="noopener">' +
+                    '<i class="' + esc(s.icon || 'fas fa-globe') + '"></i></a>';
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+
+        return html;
+    }
+
+    window.qGetQuotationPreviewHtml = function () {
+        try {
+            return buildPreviewHtml(collectPayload());
+        } catch (err) {
+            return '';
+        }
+    };
+
+    function openQuotationPreview() {
+        var p;
+        try {
+            p = collectPayload();
+        } catch (err) {
+            alert('Could not prepare preview. ' + (err && err.message ? err.message : ''));
+            return;
+        }
+        $('#qPreviewPrintArea').html(buildPreviewHtml(p));
+        setPreviewDirty(false);
+        $('#qPreviewModal').modal('show');
+    }
+
+    function flushPreviewActiveEdit() {
+        var $active = $('#qPreviewPrintArea .q-preview-editable:focus');
+        if ($active.length) {
+            $active.blur();
+        }
+    }
+
+    function initPreviewInlineEditing() {
+        $(document).on('focus', '#qPreviewPrintArea .q-preview-editable', function () {
+            previewEditOrig = readPreviewEditableValue($(this));
+            $(this).addClass('is-editing');
+            var text = ($(this).text() || '').trim();
+            if (text === '—' || text === '-' || text === '–') {
+                try {
+                    var range = document.createRange();
+                    range.selectNodeContents(this);
+                    var sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                } catch (e) { /* ignore */ }
+            }
+        });
+
+        $(document).on('input', '#qPreviewPrintArea .q-preview-editable', function () {
+            var current = readPreviewEditableValue($(this));
+            if (current !== previewEditOrig) {
+                setPreviewDirty(true);
+            }
+        });
+
+        $(document).on('blur', '#qPreviewPrintArea .q-preview-editable', function () {
+            var $el = $(this);
+            $el.removeClass('is-editing');
+            var current = readPreviewEditableValue($el);
+            applyPreviewEdit($el);
+            if (current !== previewEditOrig) {
+                setPreviewDirty(true);
+            }
+        });
+
+        $(document).on('click', '#qPreviewPrintArea td, #qPreviewPrintArea .q-preview-day-head, #qPreviewPrintArea .q-preview-day-body, #qPreviewPrintArea .q-preview-policy-block, #qPreviewPrintArea .q-preview-rich', function (e) {
+            var $target = $(e.target);
+            if ($target.closest('.q-preview-editable').length) return;
+            var $edit = $(this).find('.q-preview-editable').first();
+            if ($edit.length) {
+                e.preventDefault();
+                $edit.focus();
+            }
+        });
+
+        $(document).on('keydown', '#qPreviewPrintArea .q-preview-editable', function (e) {
+            var $el = $(this);
+            var multiline = $el.attr('data-q-multiline') === '1' || ($el.attr('data-q-type') || '') === 'html';
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                if (($el.attr('data-q-type') || '') === 'html') {
+                    $el.html(previewEditOrig);
+                } else {
+                    $el.text(previewEditOrig || '—');
+                }
+                $el.blur();
+                return;
+            }
+            if (e.key === 'Enter' && !multiline) {
+                e.preventDefault();
+                $el.blur();
+            }
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Lead lookup (guest name / mobile / email)                           */
+    /* ------------------------------------------------------------------ */
+    var leadLookupTimer = null;
+    var leadLookupSeq = 0;
+    var leadLookupCache = {};
+
+    function hideAllLeadMenus() {
+        $('.js-q-lead-menu').hide().empty();
+    }
+
+    function renderLeadMenu($menu, items, query) {
+        $menu.empty();
+        if (!items || !items.length) {
+            $menu.append('<div class="q-lead-empty">No leads found' + (query ? ' for "' + esc(query) + '"' : '') + '</div>');
+        } else {
+            items.forEach(function (item) {
+                var $btn = $('<button type="button" class="q-lead-item"></button>');
+                $btn.append($('<span class="q-lead-item-title"></span>').text(item.label || item.guest_name || 'Lead'));
+                if (item.sub_label) {
+                    $btn.append($('<span class="q-lead-item-meta"></span>').text(item.sub_label));
+                }
+                $btn.data('lead', item);
+                $menu.append($btn);
+            });
+        }
+        $menu.show();
+    }
+
+    function searchLeadsForQuotation(query, callback) {
+        var q = (query || '').trim();
+        if (q.length < 2) {
+            callback([]);
+            return;
+        }
+        if (leadLookupCache[q]) {
+            callback(leadLookupCache[q]);
+            return;
+        }
+        var seq = ++leadLookupSeq;
+        $.getJSON('crm/ajax/search_leads_for_quotation.php', { q: q, limit: 10 })
+            .done(function (res) {
+                if (seq !== leadLookupSeq) return;
+                var items = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+                leadLookupCache[q] = items;
+                callback(items);
+            })
+            .fail(function () {
+                if (seq !== leadLookupSeq) return;
+                callback([]);
+            });
+    }
+
+    function applyLeadSuggestion(lead) {
+        if (!lead) return;
+        if (lead.lead_id) {
+            $('#q_lead_id').val(lead.lead_id);
+        }
+        $('[name=guest_name]').val(lead.guest_name || '');
+        $('[name=mobile_no]').val(lead.mobile_no || '');
+        $('[name=email]').val(lead.email || '');
+        if (lead.reference_name) {
+            $('[name=reference_name]').val(lead.reference_name);
+        }
+        if (lead.destination) {
+            $('[name=destination]').val(lead.destination);
+        }
+        if (lead.tentative_date) {
+            $('#q_tentative_date').val(lead.tentative_date);
+        }
+        if (lead.no_of_nights != null && lead.no_of_nights !== '') {
+            $('#q_nights').val(parseInt(lead.no_of_nights, 10) || 0);
+        }
+        if (lead.no_of_adults != null && lead.no_of_adults !== '') {
+            $('#q_adults').val(Math.max(1, parseInt(lead.no_of_adults, 10) || 1));
+        }
+        if (lead.no_of_children != null && lead.no_of_children !== '') {
+            $('#q_children').val(Math.max(0, parseInt(lead.no_of_children, 10) || 0));
+        }
+        suspendItineraryRebuild();
+        rebuildItinerary();
+        resumeItineraryRebuild();
+        recalcCosts();
+    }
+
+    function initLeadLookup() {
+        $(document).on('input', '.js-q-lead-lookup', function () {
+            var $input = $(this);
+            var $menu = $input.closest('.q-lead-combobox').find('.js-q-lead-menu');
+            var query = ($input.val() || '').trim();
+
+            hideAllLeadMenus();
+            if (query.length < 2) {
+                return;
+            }
+
+            clearTimeout(leadLookupTimer);
+            leadLookupTimer = setTimeout(function () {
+                searchLeadsForQuotation(query, function (items) {
+                    renderLeadMenu($menu, items, query);
+                });
+            }, 280);
+        });
+
+        $(document).on('click', '.js-q-lead-lookup', function () {
+            var $input = $(this);
+            var query = ($input.val() || '').trim();
+            if (query.length < 2) {
+                hideAllLeadMenus();
+                return;
+            }
+            var $menu = $input.closest('.q-lead-combobox').find('.js-q-lead-menu');
+            searchLeadsForQuotation(query, function (items) {
+                renderLeadMenu($menu, items, query);
+            });
+        });
+
+        $(document).on('mousedown', '.q-lead-item', function (e) {
+            e.preventDefault();
+            var lead = $(this).data('lead');
+            hideAllLeadMenus();
+            applyLeadSuggestion(lead);
+        });
+
+        $(document).on('blur', '.js-q-lead-lookup', function () {
+            window.setTimeout(hideAllLeadMenus, 180);
+        });
+
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.q-lead-combobox').length) {
+                hideAllLeadMenus();
+            }
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Prefill (edit mode)                                                 */
+    /* ------------------------------------------------------------------ */
+    function applyPrefill(p) {
+        if (!p) return;
+        suspendItineraryRebuild();
+        $('#q_id').val(p.id || '');
+        $('[name=guest_name]').val(p.guest_name || '');
+        $('[name=reference_name]').val(p.reference_name || '');
+        $('[name=mobile_no]').val(p.mobile_no || '');
+        $('[name=email]').val(p.email || '');
+        $('[name=destination]').val(p.destination || '');
+        $('#q_tentative_date').val(p.tentative_date && p.tentative_date !== '0000-00-00' ? p.tentative_date : '');
+        $('#q_nights').val(p.no_of_nights || 0);
+        $('#q_adults').val(p.no_of_adults || 1);
+        $('#q_children').val(p.no_of_children || 0);
+
+        var draft = loadFormDraftFromStorage();
+        var flights = Array.isArray(p.flights) ? p.flights.slice() : [];
+        if ((!flights || !flights.length) && draft && Array.isArray(draft.flights) && draft.flights.length) {
+            flights = draft.flights;
+        }
+        flights.forEach(function (f) { $('#qFlightRows').append(flightRowHtml(f)); });
+        renumberFlightRows();
+
+        var cs = p.cost_sheet || {};
+        qPricingOptionsState = {};
+        var legacyPricing = null;
+        if (Array.isArray(cs.options) && cs.options.length) {
+            cs.options.forEach(function (opt) {
+                var id = String(opt.category_id || opt.id || '');
+                if (!id) return;
+                qPricingOptionsState[id] = {
+                    fixed: opt.fixed || {},
+                    custom: Array.isArray(opt.custom) ? opt.custom : [],
+                    user_edited: opt.user_edited || {},
+                    profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
+                    profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
+                    price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
+                    price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
+                };
+            });
+            if (cs.active_option_id) {
+                qActiveHotelCategoryId = String(cs.active_option_id);
+            }
+        } else {
+            legacyPricing = {
+                fixed: cs.fixed || {},
+                custom: Array.isArray(cs.custom) ? cs.custom : [],
+                user_edited: cs.user_edited || cs.manual || {},
+                profit_percent: '',
+                profit_amount: '',
+                price_per_adult: '',
+                price_per_adult_edited: 0
+            };
+            if (p.profit_type === 'amount') {
+                legacyPricing.profit_amount = p.profit_value || '';
+            } else if (parseFloat(p.profit_value) > 0) {
+                legacyPricing.profit_percent = p.profit_value;
+            }
+            var savedPpa = parseFloat(p.price_per_adult);
+            if (savedPpa > 0) {
+                legacyPricing.price_per_adult = p.price_per_adult;
+                legacyPricing.price_per_adult_edited = 1;
+            }
+            if (parseInt(legacyPricing.user_edited.flight_train, 10) === 1 || (p.id && legacyPricing.fixed.flight_train !== undefined && legacyPricing.fixed.flight_train !== '')) {
+                legacyPricing.user_edited.flight_train = 1;
+            }
+            if (parseInt(legacyPricing.user_edited.hotel, 10) === 1 || (p.id && legacyPricing.fixed.hotel !== undefined && legacyPricing.fixed.hotel !== '')) {
+                legacyPricing.user_edited.hotel = 1;
+            }
+        }
+
+        // Same draft preference as flights/itinerary — session hotel edits must survive refresh.
+        var hotelsToLoad = pickPreferredHotels(
+            p.hotels || [],
+            draft && draft.hotels ? draft.hotels : null
+        );
+        if (draft && draft.cost_sheet && Array.isArray(draft.cost_sheet.options) && !Array.isArray(cs.options)) {
+            draft.cost_sheet.options.forEach(function (opt) {
+                var id = String(opt.category_id || opt.id || '');
+                if (!id || qPricingOptionsState[id]) return;
+                qPricingOptionsState[id] = {
+                    fixed: opt.fixed || {},
+                    custom: Array.isArray(opt.custom) ? opt.custom : [],
+                    user_edited: opt.user_edited || {},
+                    profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
+                    profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
+                    price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
+                    price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
+                };
+            });
+            if (draft.active_option_id || draft.cost_sheet.active_option_id) {
+                qActiveHotelCategoryId = String(draft.active_option_id || draft.cost_sheet.active_option_id);
+            }
+        }
+        renderHotelCategories(hotelsToLoad);
+
+        if (legacyPricing) {
+            var hotelData = collectHotelCategories();
+            var activeId = String(qActiveHotelCategoryId || (hotelData.categories[0] && hotelData.categories[0].id) || '');
+            hotelData.categories.forEach(function (cat) {
+                var st = JSON.parse(JSON.stringify(legacyPricing));
+                if (String(cat.id) !== activeId) {
+                    st.fixed = st.fixed || {};
+                    st.fixed.hotel = '';
+                    st.user_edited = st.user_edited || {};
+                    st.user_edited.hotel = 0;
+                    st.price_per_adult = '';
+                    st.price_per_adult_edited = 0;
+                    st.profit_percent = '';
+                    st.profit_amount = '';
+                }
+                qPricingOptionsState[cat.id] = st;
+            });
+            renderPricingSheets();
+        }
+
+        if (parseInt(p.without_itinerary, 10)) $('#q_without_itinerary').prop('checked', true);
+        if (parseInt(p.hide_gst_note, 10)) $('#q_hide_gst_note').prop('checked', true);
+
+        var notesVal = '';
+        if (cs.pricing_notes != null && String(cs.pricing_notes) !== '') {
+            notesVal = cs.pricing_notes;
+        } else if (p.pricing_notes != null) {
+            notesVal = p.pricing_notes;
+        } else if (draft && draft.cost_sheet && draft.cost_sheet.pricing_notes != null) {
+            notesVal = draft.cost_sheet.pricing_notes;
+        } else if (draft && draft.pricing_notes != null) {
+            notesVal = draft.pricing_notes;
+        }
+        applyPricingNotes(notesVal);
+
+        var itinerary = Array.isArray(p.itinerary) ? p.itinerary : [];
+        if ((!itinerary || !itinerary.length) && draft && Array.isArray(draft.itinerary) && draft.itinerary.length) {
+            itinerary = draft.itinerary;
+        }
+        rebuildItinerary(itinerary);
+        richEditors.forEach(function (field) {
+            if (p[field]) {
+                setRichEditorValue('qed_' + field, p[field]);
+            }
+        });
+        resumeItineraryRebuild();
+        saveFormDraftToStorage();
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Step wizard                                                         */
+    /* ------------------------------------------------------------------ */
+    var Q_WIZARD_TOTAL = 6;
+    var qWizardCurrent = 1;
+    var qWizardMax = 1;
+
+    function wizardIds() {
+        var quotationId = 0;
+        var leadId = 0;
+        if (QUOTATION_PREFILL && typeof QUOTATION_PREFILL === 'object') {
+            quotationId = parseInt(QUOTATION_PREFILL.id, 10) || 0;
+            leadId = parseInt(QUOTATION_PREFILL.lead_id, 10) || 0;
+        }
+        if (!quotationId) {
+            quotationId = parseInt($('#q_id').val() || $('[name="id"]').val() || 0, 10) || 0;
+        }
+        if (!leadId) {
+            leadId = parseInt($('#q_lead_id').val() || $('[name="lead_id"]').val() || 0, 10) || 0;
+        }
+        return { quotationId: quotationId, leadId: leadId };
+    }
+
+    function wizardStorageKey() {
+        var ids = wizardIds();
+        if (ids.quotationId > 0) {
+            return 'qWizardState:id:' + ids.quotationId;
+        }
+        if (ids.leadId > 0) {
+            return 'qWizardState:lead:' + ids.leadId;
+        }
+        return 'qWizardState:new';
+    }
+
+    function formDraftStorageKey() {
+        return wizardStorageKey() + ':formDraft';
+    }
+
+    function formDraftCandidateKeys() {
+        var ids = wizardIds();
+        var keys = [];
+        if (ids.quotationId > 0) {
+            keys.push('qWizardState:id:' + ids.quotationId + ':formDraft');
+        }
+        if (ids.leadId > 0) {
+            keys.push('qWizardState:lead:' + ids.leadId + ':formDraft');
+        }
+        keys.push('qWizardState:new:formDraft');
+        keys.push(formDraftStorageKey());
+        return keys.filter(function (key, idx, arr) {
+            return arr.indexOf(key) === idx;
+        });
+    }
+
+    function hotelEntryFillScore(h) {
+        if (!h || typeof h !== 'object') {
+            return 0;
+        }
+        var score = 0;
+        ['city', 'name', 'hotel_name', 'room_type', 'meal_plan', 'meal', 'checkin', 'check_in', 'checkout', 'check_out', 'rate', 'amount', 'rooms', 'nights', 'city_id', 'hotel_id'].forEach(function (key) {
+            var v = h[key];
+            if (v == null) return;
+            var s = String(v).trim();
+            if (s === '' || s === '0') return;
+            score += 1;
+        });
+        return score;
+    }
+
+    function hotelCategoriesScore(raw) {
+        var data = normalizeHotelsPrefill(raw);
+        var hotelCount = 0;
+        var fillScore = 0;
+        (data.categories || []).forEach(function (cat) {
+            (cat.hotels || []).forEach(function (h) {
+                hotelCount += 1;
+                fillScore += hotelEntryFillScore(h);
+            });
+        });
+        return {
+            optionCount: (data.categories || []).length,
+            hotelCount: hotelCount,
+            fillScore: fillScore,
+            data: data
+        };
+    }
+
+    function pickPreferredHotels(prefillHotels, draftHotels) {
+        var fromDb = hotelCategoriesScore(prefillHotels || []);
+        if (!draftHotels) {
+            return fromDb.data;
+        }
+        var fromDraft = hotelCategoriesScore(draftHotels);
+        var draftUseful = fromDraft.hotelCount > 0 || fromDraft.fillScore > 0 || fromDraft.optionCount > 1;
+        if (!draftUseful) {
+            return fromDb.data;
+        }
+        // Prefer session draft whenever it has equal/more filled hotel content.
+        // (Do not let empty multi-option DB shape beat a filled single-option draft.)
+        if (fromDb.hotelCount === 0 && fromDb.fillScore === 0) {
+            return fromDraft.data;
+        }
+        if (fromDraft.fillScore > fromDb.fillScore) {
+            return fromDraft.data;
+        }
+        if (fromDraft.fillScore === fromDb.fillScore && fromDraft.hotelCount >= fromDb.hotelCount) {
+            return fromDraft.data;
+        }
+        if (fromDraft.hotelCount > fromDb.hotelCount) {
+            return fromDraft.data;
+        }
+        return fromDb.data;
+    }
+
+    function saveFormDraftToStorage() {
+        try {
+            var hotels = collectHotelCategories();
+            var flights = collectFlights();
+            var itinerary = snapshotItinerary();
+            var costSheet = null;
+            var activeOptionId = qActiveHotelCategoryId || '';
+            try {
+                snapshotPricingSheets();
+                costSheet = collectPricingOptionsPayload();
+                activeOptionId = (costSheet && costSheet.active_option_id) || activeOptionId;
+            } catch (pricingErr) { /* pricing must not block hotel/flight draft save */ }
+
+            // If hotel UI isn't mounted yet, keep previously saved hotels.
+            if (!getHotelCategoryPanels().length) {
+                var existing = loadFormDraftFromStorage();
+                if (existing && existing.hotels) {
+                    var scoreOld = hotelCategoriesScore(existing.hotels);
+                    if (scoreOld.hotelCount > 0 || scoreOld.fillScore > 0) {
+                        hotels = existing.hotels;
+                    }
+                }
+            }
+
+            var payload = {
+                saved_at: Date.now(),
+                hotels: hotels,
+                flights: flights,
+                itinerary: itinerary,
+                cost_sheet: costSheet,
+                active_option_id: activeOptionId
+            };
+            var raw = JSON.stringify(payload);
+            // Write to all candidate keys so lead/id/new URL switches don't lose hotel draft.
+            formDraftCandidateKeys().forEach(function (key) {
+                try {
+                    sessionStorage.setItem(key, raw);
+                } catch (eKey) {}
+            });
+        } catch (e) {}
+    }
+
+    function loadFormDraftFromStorage() {
+        var best = null;
+        formDraftCandidateKeys().forEach(function (key) {
+            try {
+                var raw = sessionStorage.getItem(key);
+                if (!raw) {
+                    return;
+                }
+                var parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== 'object') {
+                    return;
+                }
+                var ts = parseInt(parsed.saved_at, 10) || 0;
+                var fill = hotelCategoriesScore(parsed.hotels || []).fillScore;
+                if (!best) {
+                    best = parsed;
+                    best.saved_at = ts;
+                    best._fill = fill;
+                    return;
+                }
+                // Prefer newer drafts; if timestamps tie, prefer more filled hotel data.
+                if (ts > best.saved_at || (ts === best.saved_at && fill > (best._fill || 0))) {
+                    best = parsed;
+                    best.saved_at = ts;
+                    best._fill = fill;
+                }
+            } catch (e) {}
+        });
+        if (best) {
+            delete best._fill;
+        }
+        return best;
+    }
+
+    function clearFormDraftFromStorage() {
+        formDraftCandidateKeys().forEach(function (key) {
+            try {
+                sessionStorage.removeItem(key);
+            } catch (e) {}
+        });
+    }
+
+    function resolveHotelsForLoad(prefillHotels) {
+        var draft = loadFormDraftFromStorage();
+        return pickPreferredHotels(prefillHotels || [], draft && draft.hotels ? draft.hotels : null);
+    }
+
+    function saveWizardState() {
+        try {
+            sessionStorage.setItem(wizardStorageKey(), JSON.stringify({
+                step: qWizardCurrent,
+                max: qWizardMax
+            }));
+        } catch (e) {}
+        saveFormDraftToStorage();
+    }
+
+    function loadWizardState() {
+        try {
+            var raw = sessionStorage.getItem(wizardStorageKey());
+            if (!raw) {
+                return null;
+            }
+            var data = JSON.parse(raw);
+            if (!data || typeof data !== 'object') {
+                return null;
+            }
+            var step = parseInt(data.step, 10) || 1;
+            var max = parseInt(data.max, 10) || step;
+            step = Math.max(1, Math.min(Q_WIZARD_TOTAL, step));
+            max = Math.max(step, Math.min(Q_WIZARD_TOTAL, max));
+            return { step: step, max: max };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function validateWizardStep(step) {
+        if (step === 1) {
+            var guestName = $.trim($('[name=guest_name]').val());
+            if (!guestName) {
+                alert('Please enter the guest name.');
+                $('[name=guest_name]').focus();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function updateWizardStepperUi() {
+        $('.q-stepper-item').each(function () {
+            var step = parseInt($(this).data('qStep'), 10);
+            var $item = $(this);
+            $item.removeClass('is-active is-complete is-locked');
+            if (step < qWizardCurrent) {
+                $item.addClass('is-complete');
+            } else if (step === qWizardCurrent) {
+                $item.addClass('is-active');
+            } else if (step > qWizardMax) {
+                $item.addClass('is-locked');
+            }
+            $item.attr('aria-current', step === qWizardCurrent ? 'step' : 'false');
+        });
+        $('#qWizardStepIndicator').text('Step ' + qWizardCurrent + ' of ' + Q_WIZARD_TOTAL);
+        $('#qWizardPrev').css('visibility', qWizardCurrent <= 1 ? 'hidden' : 'visible');
+        $('#qWizardNext').toggle(qWizardCurrent < Q_WIZARD_TOTAL);
+    }
+
+    function onWizardStepShown(step) {
+        if (step === 4) {
+            refreshAiItineraryMeta();
+            if (!$('#qItineraryDays .q-day-card').length) {
+                rebuildItinerary(itineraryPreserveSeed.length ? itineraryPreserveSeed : undefined);
+            } else {
+                initItineraryEditors();
+                refreshAllItineraryImagePreviews();
+            }
+        }
+    }
+
+    function setWizardStep(step, scroll) {
+        step = Math.max(1, Math.min(Q_WIZARD_TOTAL, step));
+        if (step > qWizardCurrent && !validateWizardStep(qWizardCurrent)) {
+            return false;
+        }
+        qWizardCurrent = step;
+        if (qWizardCurrent > qWizardMax) {
+            qWizardMax = qWizardCurrent;
+        }
+        $('.q-wizard-step').removeClass('is-active');
+        $('.q-wizard-step[data-q-step="' + step + '"]').addClass('is-active');
+        updateWizardStepperUi();
+        onWizardStepShown(step);
+        saveWizardState();
+        if (scroll !== false) {
+            var wizardEl = document.getElementById('qWizard');
+            if (wizardEl) {
+                wizardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+        return true;
+    }
+
+    function unlockAllWizardSteps() {
+        qWizardMax = Q_WIZARD_TOTAL;
+        updateWizardStepperUi();
+    }
+
+    function restoreWizardStepOnLoad() {
+        var saved = loadWizardState();
+        var startStep = 1;
+        var isDraft = !!(QUOTATION_PREFILL && QUOTATION_PREFILL.status === 'draft');
+        if (QUOTATION_PREFILL && QUOTATION_PREFILL.id && !isDraft) {
+            qWizardMax = Q_WIZARD_TOTAL;
+        }
+        if (saved) {
+            qWizardMax = Math.max(qWizardMax, saved.max);
+            startStep = saved.step;
+        } else if (isDraft) {
+            startStep = parseInt(QUOTATION_PREFILL.wizard_step, 10) || 1;
+            qWizardMax = Math.max(qWizardMax, startStep);
+        }
+        setWizardStep(startStep, false);
+    }
+
+    function initQuotationWizard() {
+        if (!$('#qWizard').length) {
+            return;
+        }
+        updateWizardStepperUi();
+        $('#qWizardNext').on('click', function () {
+            setWizardStep(qWizardCurrent + 1);
+        });
+        $('#qWizardPrev').on('click', function () {
+            setWizardStep(qWizardCurrent - 1, false);
+        });
+        $(document).on('click', '.q-stepper-item:not(.is-locked)', function () {
+            var target = parseInt($(this).data('qStep'), 10);
+            if (target === qWizardCurrent) {
+                $(this).blur();
+                return;
+            }
+            if (target > qWizardCurrent && !validateWizardStep(qWizardCurrent)) {
+                $(this).blur();
+                return;
+            }
+            setWizardStep(target);
+            $(this).blur();
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Destination picker                                                  */
+    /* ------------------------------------------------------------------ */
+    function initDestinationPicker() {
+        var $picker = $('#qDestPicker');
+        var $input = $('#qDestinationInput');
+        var $menu = $picker.find('.js-q-dest-menu');
+        var $toggle = $picker.find('.js-q-dest-toggle');
+        if (!$picker.length || !$input.length || !$menu.length) {
+            return;
+        }
+
+        var destinations = Array.isArray(window.QUOTATION_DESTINATIONS)
+            ? window.QUOTATION_DESTINATIONS.slice()
+            : [];
+        var activeIndex = -1;
+
+        function positionMenu() {
+            var rect = $input[0].getBoundingClientRect();
+            var viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+            var spaceBelow = viewportH - rect.bottom - 8;
+            var spaceAbove = rect.top - 8;
+            var maxHeight = 240;
+            var openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+            var height = Math.max(120, Math.min(maxHeight, openUp ? spaceAbove : spaceBelow));
+            var width = Math.max(rect.width, 220);
+
+            $menu.css({
+                position: 'fixed',
+                left: rect.left + 'px',
+                width: width + 'px',
+                maxHeight: height + 'px',
+                top: openUp ? 'auto' : (rect.bottom + 4) + 'px',
+                bottom: openUp ? (viewportH - rect.top + 4) + 'px' : 'auto',
+                zIndex: 2000
+            });
+        }
+
+        function closeMenu() {
+            $menu.hide().empty();
+            $picker.removeClass('is-open');
+            $input.attr('aria-expanded', 'false');
+            activeIndex = -1;
+        }
+
+        function openMenu() {
+            renderMenu(String($input.val() || ''));
+            positionMenu();
+            $menu.show();
+            $picker.addClass('is-open');
+            $input.attr('aria-expanded', 'true');
+        }
+
+        function filteredDestinations(query) {
+            var q = String(query || '').trim().toLowerCase();
+            if (!q) {
+                return destinations.slice(0, 50);
+            }
+            return destinations.filter(function (name) {
+                return String(name).toLowerCase().indexOf(q) >= 0;
+            }).slice(0, 50);
+        }
+
+        function renderMenu(query) {
+            var items = filteredDestinations(query);
+            $menu.empty();
+            activeIndex = -1;
+
+            if (!items.length) {
+                var typed = String(query || '').trim();
+                if (typed) {
+                    $menu.append(
+                        $('<div class="q-dest-empty"></div>').html(
+                            'No match. Press Enter to use <strong>' + esc(typed) + '</strong>'
+                        )
+                    );
+                } else {
+                    $menu.append($('<div class="q-dest-empty"></div>').text('No destinations found'));
+                }
+                return;
+            }
+
+            items.forEach(function (name, index) {
+                var $btn = $('<button type="button" class="q-dest-item" role="option"></button>')
+                    .attr('data-index', index)
+                    .attr('data-value', name)
+                    .append($('<i class="fas fa-map-marker-alt"></i>'))
+                    .append($('<span></span>').text(name));
+                $menu.append($btn);
+            });
+        }
+
+        function selectDestination(name) {
+            $input.val(name).trigger('change').trigger('input');
+            closeMenu();
+        }
+
+        function highlightActive() {
+            var $items = $menu.find('.q-dest-item');
+            $items.removeClass('is-active');
+            if (activeIndex >= 0 && activeIndex < $items.length) {
+                var $active = $items.eq(activeIndex).addClass('is-active');
+                var el = $active.get(0);
+                if (el && el.scrollIntoView) {
+                    el.scrollIntoView({ block: 'nearest' });
+                }
+            }
+        }
+
+        $input.on('focus', function () {
+            openMenu();
+        });
+
+        $input.on('input', function () {
+            openMenu();
+        });
+
+        $toggle.on('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ($menu.is(':visible')) {
+                closeMenu();
+            } else {
+                $input.trigger('focus');
+                openMenu();
+            }
+        });
+
+        $menu.on('mousedown', '.q-dest-item', function (e) {
+            e.preventDefault();
+            selectDestination(String($(this).data('value') || ''));
+        });
+
+        $input.on('keydown', function (e) {
+            var $items = $menu.find('.q-dest-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!$menu.is(':visible')) {
+                    openMenu();
+                }
+                activeIndex = Math.min($items.length - 1, activeIndex + 1);
+                highlightActive();
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = Math.max(0, activeIndex - 1);
+                highlightActive();
+                return;
+            }
+            if (e.key === 'Enter') {
+                if ($menu.is(':visible') && activeIndex >= 0 && activeIndex < $items.length) {
+                    e.preventDefault();
+                    selectDestination(String($items.eq(activeIndex).data('value') || ''));
+                    return;
+                }
+                closeMenu();
+                return;
+            }
+            if (e.key === 'Escape') {
+                closeMenu();
+            }
+        });
+
+        $(document).on('mousedown.qDestPicker', function (e) {
+            if (!$(e.target).closest('#qDestPicker, .js-q-dest-menu').length) {
+                closeMenu();
+            }
+        });
+
+        function onViewportChange() {
+            if ($menu.is(':visible')) {
+                positionMenu();
+            }
+        }
+
+        $(window).on('resize.qDestPicker', onViewportChange);
+        document.addEventListener('scroll', onViewportChange, true);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Wire events                                                         */
+    /* ------------------------------------------------------------------ */
+    $(function () {
+        initQuotationWizard();
+        initRichEditors();
+        initLeadLookup();
+        initDestinationPicker();
+        initPackageSuggest();
+        initAISuggestItinerary();
+        initPreviewInlineEditing();
+
+        function addFlightSegment(data) {
+            $('#qFlightRows').append(flightRowHtml(data || {}));
+            renumberFlightRows();
+            recalcCosts();
+        }
+
+        $('#qAddFlight, #qAddFlightSegment').on('click', function () {
+            addFlightSegment({});
+        });
+        window.qQuotationAddFlightRow = function (data) {
+            addFlightSegment(data || {});
+        };
+
+        $('#qUploadSsInput').on('change', function () {
+            var file = this.files && this.files[0];
+            $('#qUploadSsLabel').text(file ? ('Screenshot attached: ' + file.name) : '');
+        });
+        window.qQuotationAddHotelRow = function (data) {
+            ensureHotelCategoriesReady();
+            var $panel = getHotelCategoryPanels().filter('[data-cat-id="' + qActiveHotelCategoryId + '"]').first();
+            if (!$panel.length) {
+                $panel = getHotelCategoryPanels().first();
+            }
+            var $row = $(hotelRowHtml(data || {}));
+            $panel.find('.q-hotel-rows').append($row);
+            initHotelRow($row);
+            recalcCosts();
+            saveFormDraftToStorage();
+        };
+        $(document).on('input change', '#qFlightRows .f-from, #qFlightRows .f-to, #qFlightRows .f-dep-date, #qFlightRows .f-dep-time, #qFlightRows .f-arr-date, #qFlightRows .f-arr-time', function () {
+            refreshFlightLayovers();
+        });
+
+        $(document).on('click', '.q-flight-swap', function () {
+            var $row = $(this).closest('.q-flight-row');
+            var $from = $row.find('.f-from');
+            var $to = $row.find('.f-to');
+            var tmp = $from.val();
+            $from.val($to.val());
+            $to.val(tmp);
+            refreshFlightLayovers();
+        });
+        $('#qSearchTrain').on('click', function () { alert('Live train search is not configured. Use "Add Flight /Train" to enter details manually.'); });
+        $('#qAddHotelCategory').on('click', function () {
+            if (getHotelCategoryPanels().length >= Q_MAX_HOTEL_OPTIONS) {
+                refreshHotelCategoryTabs();
+                return;
+            }
+            addHotelCategory();
+            saveFormDraftToStorage();
+        });
+        $(document).on('click', '.q-hotel-cat-tab', function () {
+            setActiveHotelCategory($(this).attr('data-cat-id'));
+            saveFormDraftToStorage();
+        });
+        $(document).on('input', '.q-hotel-cat-label', function () {
+            refreshHotelCategoryTabs();
+            renderPricingSheets();
+            saveFormDraftToStorage();
+        });
+        $(document).on('click', '.q-add-hotel-in-cat', function () {
+            var $panel = $(this).closest('.q-hotel-category');
+            qActiveHotelCategoryId = String($panel.attr('data-cat-id') || '');
+            refreshHotelCategoryTabs();
+            var $row = $(hotelRowHtml({}));
+            $panel.find('.q-hotel-rows').append($row);
+            initHotelRow($row);
+            renderPricingSheets();
+            saveFormDraftToStorage();
+        });
+        $(document).on('click', '.q-remove-hotel-cat', function () {
+            if (getHotelCategoryPanels().length <= 1) {
+                return;
+            }
+            if (!window.confirm('Remove this hotel option and its hotels?')) {
+                return;
+            }
+            var $panel = $(this).closest('.q-hotel-category');
+            var removedId = String($panel.attr('data-cat-id') || '');
+            snapshotPricingSheets();
+            $panel.remove();
+            if (qPricingOptionsState[removedId]) {
+                delete qPricingOptionsState[removedId];
+            }
+            renumberHotelCategoryLabels();
+            if (qActiveHotelCategoryId === removedId || !getHotelCategoryPanels().filter('[data-cat-id="' + String(qActiveHotelCategoryId).replace(/"/g, '\\"') + '"]').length) {
+                qActiveHotelCategoryId = String(getHotelCategoryPanels().first().attr('data-cat-id') || '');
+            }
+            refreshHotelCategoryTabs();
+            renderPricingSheets();
+            saveFormDraftToStorage();
+        });
+        $(document).on('click', '.q-set-active-pricing', function () {
+            setActiveHotelCategory($(this).attr('data-cat-id'));
+            saveFormDraftToStorage();
+        });
+        $(document).on('click', '.q-add-cost-row', function () {
+            var $sheet = $(this).closest('.q-pricing-option-sheet');
+            var id = String($sheet.attr('data-cat-id') || '');
+            snapshotPricingSheets();
+            if (!id) {
+                return;
+            }
+            if (!qPricingOptionsState[id]) {
+                qPricingOptionsState[id] = defaultPricingSheetState();
+            }
+            qPricingOptionsState[id].custom = qPricingOptionsState[id].custom || [];
+            qPricingOptionsState[id].custom.push({ label: '', amount: '' });
+            renderPricingSheets();
+        });
+        $(document).on('input change', '#qHotelCategories .q-hotel-row input, #qHotelCategories .q-hotel-row select', function () {
+            saveFormDraftToStorage();
+        });
+        $(document).on('input change', '#qFlightRows input, #qFlightRows select', function () {
+            saveFormDraftToStorage();
+        });
+        $(window).on('beforeunload', function () {
+            saveFormDraftToStorage();
+        });
+        $(document).on('change input', '[name=destination]', function () {
+            hideHotelMenus();
+        });
+        var qHotelCityTimer = null;
+        var qHotelNameTimer = null;
+
+        $(document).on('focus click', '.h-city', function () {
+            showHotelCitySuggestions($(this).closest('.q-hotel-row'));
+        });
+        $(document).on('input', '.h-city', function () {
+            var $input = $(this);
+            var $row = $input.closest('.q-hotel-row');
+            $row.find('.h-city-id').val('');
+            $row.find('.h-hotel-id').val('');
+            clearTimeout(qHotelCityTimer);
+            qHotelCityTimer = setTimeout(function () {
+                showHotelCitySuggestions($row);
+            }, 250);
+        });
+        $(document).on('mousedown', '.q-hotel-city-pick', function (e) {
+            e.preventDefault();
+            var $row = $(this).closest('.q-hotel-row');
+            var cityId = $(this).data('id');
+            var cityName = $(this).text();
+            $row.find('.h-city-id').val(cityId);
+            $row.find('.h-city').val(cityName);
+            hideHotelMenus($row);
+            if ($.trim($row.find('.h-name').val())) {
+                showHotelNameSuggestions($row);
+            }
+            saveFormDraftToStorage();
+        });
+
+        $(document).on('focus click', '.h-name', function () {
+            showHotelNameSuggestions($(this).closest('.q-hotel-row'));
+        });
+        $(document).on('input', '.h-name', function () {
+            var $row = $(this).closest('.q-hotel-row');
+            $row.find('.h-hotel-id').val('');
+            clearTimeout(qHotelNameTimer);
+            qHotelNameTimer = setTimeout(function () {
+                showHotelNameSuggestions($row);
+            }, 250);
+        });
+        $(document).on('mousedown', '.q-hotel-name-pick', function (e) {
+            e.preventDefault();
+            var $row = $(this).closest('.q-hotel-row');
+            var hotelId = parseInt($(this).data('id'), 10);
+            var cache = getHotelRowCache($row);
+            var hotel = (cache.hotels || []).find(function (h) { return parseInt(h.id, 10) === hotelId; });
+            if (hotel) {
+                applyHotelMasterToRow($row, hotel, { forceFill: true });
+            }
+            hideHotelMenus($row);
+            recalcCosts();
+            saveFormDraftToStorage();
+        });
+
+        var qHotelRoomTimer = null;
+        var qHotelMealTimer = null;
+
+        $(document).on('focus click', '.h-room', function () {
+            showHotelRoomSuggestions($(this).closest('.q-hotel-row'));
+        });
+        $(document).on('input', '.h-room', function () {
+            var $row = $(this).closest('.q-hotel-row');
+            clearTimeout(qHotelRoomTimer);
+            qHotelRoomTimer = setTimeout(function () {
+                showHotelRoomSuggestions($row);
+            }, 200);
+        });
+        $(document).on('mousedown', '.q-hotel-room-pick', function (e) {
+            e.preventDefault();
+            var $row = $(this).closest('.q-hotel-row');
+            var room = $(this).data('room') || {};
+            $row.find('.h-room').val(room.type || $(this).find('span').first().text() || '');
+            var price = parseFloat(room.price);
+            if (!isNaN(price) && price > 0) {
+                $row.find('.h-rate').val(Math.round(price));
+            }
+            hideHotelMenus($row);
+            recalcCosts();
+            saveFormDraftToStorage();
+        });
+
+        $(document).on('focus click', '.h-meal', function () {
+            showHotelMealSuggestions($(this).closest('.q-hotel-row'));
+        });
+        $(document).on('input', '.h-meal', function () {
+            var $row = $(this).closest('.q-hotel-row');
+            clearTimeout(qHotelMealTimer);
+            qHotelMealTimer = setTimeout(function () {
+                showHotelMealSuggestions($row);
+            }, 200);
+        });
+        $(document).on('mousedown', '.q-hotel-meal-pick', function (e) {
+            e.preventDefault();
+            var $row = $(this).closest('.q-hotel-row');
+            var meal = $(this).data('meal') || {};
+            $row.find('.h-meal').val(meal.name || $(this).find('span').first().text() || '');
+            hideHotelMenus($row);
+            saveFormDraftToStorage();
+        });
+
+        $(document).on('change', '.h-checkin, .h-checkout', function () {
+            var $row = $(this).closest('.q-hotel-row');
+            var inDt = $row.find('.h-checkin').val();
+            var outDt = $row.find('.h-checkout').val();
+            if (inDt && outDt && window.moment) {
+                var nights = moment(outDt).diff(moment(inDt), 'days');
+                if (nights > 0) {
+                    $row.find('.h-nights').val(nights);
+                }
+            }
+        });
+
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.q-hotel-combo').length) {
+                hideHotelMenus();
+            }
+        });
+
+        var pricingNumberSelector = '.q-wizard-step[data-q-step="6"] input[type="number"]';
+
+        function sanitizePricingNumberValue(raw) {
+            var value = String(raw == null ? '' : raw);
+            value = value.replace(/[^\d.]/g, '');
+            var firstDot = value.indexOf('.');
+            if (firstDot >= 0) {
+                value = value.slice(0, firstDot + 1) + value.slice(firstDot + 1).replace(/\./g, '');
+            }
+            return value;
+        }
+
+        $(document).on('keydown', pricingNumberSelector, function (e) {
+            if (e.ctrlKey || e.metaKey || e.altKey) {
+                return;
+            }
+            var key = e.key;
+            if (
+                key === 'Backspace' || key === 'Delete' || key === 'Tab' || key === 'Escape' ||
+                key === 'Enter' || key === 'ArrowLeft' || key === 'ArrowRight' ||
+                key === 'ArrowUp' || key === 'ArrowDown' || key === 'Home' || key === 'End'
+            ) {
+                return;
+            }
+            if (key === '.' || key === 'Decimal') {
+                if (String($(this).val() || '').indexOf('.') >= 0) {
+                    e.preventDefault();
+                }
+                return;
+            }
+            if (!/^\d$/.test(key)) {
+                e.preventDefault();
+            }
+        });
+
+        $(document).on('input', pricingNumberSelector, function () {
+            var $input = $(this);
+            var cleaned = sanitizePricingNumberValue($input.val());
+            if (String($input.val()) !== cleaned) {
+                $input.val(cleaned);
+            }
+        });
+
+        $(document).on('paste', pricingNumberSelector, function (e) {
+            e.preventDefault();
+            var pasted = '';
+            if (e.originalEvent && e.originalEvent.clipboardData) {
+                pasted = e.originalEvent.clipboardData.getData('text');
+            } else if (window.clipboardData) {
+                pasted = window.clipboardData.getData('Text');
+            }
+            var cleaned = sanitizePricingNumberValue(pasted);
+            var input = this;
+            var start = input.selectionStart || 0;
+            var end = input.selectionEnd || 0;
+            var current = String($(input).val() || '');
+            var next = sanitizePricingNumberValue(current.slice(0, start) + cleaned + current.slice(end));
+            $(input).val(next).trigger('input');
+        });
+
+        $(document).on('input', '.q-cost-synced', function () {
+            $(this).attr('data-user-edited', '1');
+        });
+
+        $(document).on('input change', '.f-fare, .h-rate, .h-rooms, .h-nights', function () {
+            if ($(this).hasClass('h-rate')) {
+                var raw = String($(this).val() || '');
+                if (raw !== '') {
+                    var n = parseInt(raw.replace(/[^\d-]/g, ''), 10);
+                    if (isNaN(n) || n < 0) {
+                        $(this).val('');
+                    } else if (String(n) !== raw) {
+                        $(this).val(n);
+                    }
+                }
+            }
+            recalcCosts();
+        });
+
+        $(document).on('input change', '.q-cost', recalcCosts);
+        $(document).on('input change', '.q-sheet-profit-percent, .q-sheet-profit-amount', recalcCosts);
+        $(document).on('input', '.q-sheet-profit-percent', function () {
+            if ($(this).val()) {
+                $(this).closest('.q-pricing-option-sheet').find('.q-sheet-profit-amount').val('');
+            }
+        });
+        $(document).on('input', '.q-sheet-profit-amount', function () {
+            if ($(this).val()) {
+                $(this).closest('.q-pricing-option-sheet').find('.q-sheet-profit-percent').val('');
+            }
+        });
+        $(document).on('input', '.q-sheet-price-per-adult', function () {
+            if ($.trim($(this).val()) === '') {
+                $(this).removeAttr('data-user-edited');
+            } else {
+                $(this).attr('data-user-edited', '1');
+            }
+            recalcCosts();
+        });
+
+        $(document).on('click', '.q-remove', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var selector = $(this).attr('data-remove') || '.q-repeat-row';
+            var $row = $(this).closest(selector);
+            if (!$row.length) {
+                $row = $(this).closest('.q-repeat-row');
+            }
+            var isCustomCost = $row.hasClass('q-custom-cost') || selector === '.q-custom-cost';
+            if (isCustomCost) {
+                var sheetId = String($row.closest('.q-pricing-option-sheet').attr('data-cat-id') || '');
+                $row.remove();
+                snapshotPricingSheets();
+                if (sheetId && qPricingOptionsState[sheetId]) {
+                    qPricingOptionsState[sheetId].custom = (qPricingOptionsState[sheetId].custom || []).filter(function (c) {
+                        return $.trim(c.label || '') !== '' || $.trim(String(c.amount || '')) !== '';
+                    });
+                }
+                renderPricingSheets();
+                return;
+            }
+            $row.remove();
+            renumberFlightRows();
+            recalcCosts();
+        });
+
+        $('#q_tentative_date').on('change', function () { scheduleItineraryRebuild(); });
+        $('#q_nights').on('input change', function () { scheduleItineraryRebuild(); });
+        $('#q_adults').on('input change', recalcCosts);
+
+        $('#qConvertUsd').on('click', function () {
+            var usd = parseFloat($('#q_usd_amount').val());
+            var rate = parseFloat($('#q_usd_rate').val());
+            if (isNaN(usd) || isNaN(rate)) { alert('Enter both USD amount and rate.'); return; }
+            var inr = usd * rate;
+            var $target = $lastFocusedCost && $lastFocusedCost.length ? $lastFocusedCost : $();
+            if (!$target.length) {
+                $target = $('#qPricingSheetsHost .q-pricing-option-sheet.is-active .q-cost[data-key="land"]').first();
+            }
+            if (!$target.length) {
+                $target = $('#qPricingSheetsHost .q-cost[data-key="land"]').first();
+            }
+            if (!$target.length) {
+                alert('No cost field available to fill.');
+                return;
+            }
+            $target.val(inr.toFixed(2));
+            if ($target.hasClass('q-cost-synced')) {
+                $target.attr('data-user-edited', '1');
+            }
+            recalcCosts();
+        });
+
+        $(document).on('click', '#qCalcKeys [data-calc]', function () {
+            var key = String($(this).attr('data-calc') || '');
+            var $btn = $(this);
+            $btn.addClass('is-pressed');
+            window.setTimeout(function () { $btn.removeClass('is-pressed'); }, 90);
+            qCalcPress(key);
+            $('#qCalcPanel').addClass('is-focused').focus();
+        });
+        $('#qCalcCopy').on('click', function () { qCalcCopyResult(); });
+        $('#qCalcUseField, #qCalcUseLand').on('click', function () { qCalcFillTarget(); });
+        $('#qCalcLoad').on('click', function () { qCalcLoadFromTarget(); });
+        $('#qCalcPanel').on('focusin', function () {
+            $(this).addClass('is-focused');
+            qCalcUpdateTargetLabel();
+        }).on('focusout', function (e) {
+            var $panel = $(this);
+            window.setTimeout(function () {
+                if (!$panel.has(document.activeElement).length && document.activeElement !== $panel[0]) {
+                    $panel.removeClass('is-focused');
+                }
+            }, 0);
+        });
+        $(document).on('keydown', function (e) {
+            var $panel = $('#qCalcPanel');
+            if (!$panel.length || !$panel.hasClass('is-focused')) return;
+            var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+            if (tag === 'textarea' || (tag === 'input' && !$(e.target).hasClass('q-calc-display'))) return;
+
+            var key = e.key;
+            var map = {
+                Enter: '=',
+                '=': '=',
+                Escape: 'C',
+                Backspace: 'BS',
+                Delete: 'CE',
+                '%': '%',
+                '+': '+',
+                '-': '-',
+                '*': '*',
+                '/': '/',
+                '.': '.',
+                ',': '.'
+            };
+            var calcKey = null;
+            if (/^\d$/.test(key)) calcKey = key;
+            else if (map[key] != null) calcKey = map[key];
+            else if (key === 'c' || key === 'C') calcKey = 'C';
+
+            if (!calcKey) return;
+            e.preventDefault();
+            var $btn = $('#qCalcKeys [data-calc="' + calcKey.replace(/"/g, '\\"') + '"]').first();
+            if ($btn.length) {
+                $btn.addClass('is-pressed');
+                window.setTimeout(function () { $btn.removeClass('is-pressed'); }, 90);
+            }
+            qCalcPress(calcKey);
+        });
+        qCalcUpdateUi();
+        qCalcUpdateTargetLabel();
+        $(document).on('input change', '#q_pricing_notes', function () {
+            saveFormDraftToStorage();
+        });
+
+        $('#qPreviewBtn').on('click', function () {
+            openQuotationPreview();
+        });
+
+        $('#qLoadTermsMasterBtn').on('click', function () {
+            if (!window.confirm('Replace all Terms & Policies fields with master content?')) {
+                return;
+            }
+            loadTermsFromMaster();
+        });
+
+        $('#qPreviewPrintBtn').on('click', function () {
+            var $area = $('#qPreviewPrintArea');
+            if (!$area.length || !$area.html()) {
+                return;
+            }
+            flushPreviewActiveEdit();
+
+            var $clone = $area.clone();
+            $clone.find('.q-preview-editable').each(function () {
+                var $el = $(this);
+                $el.removeAttr('contenteditable')
+                    .removeAttr('spellcheck')
+                    .removeClass('is-editing q-preview-editable q-preview-cell-edit')
+                    .removeAttr('data-q-edit')
+                    .removeAttr('data-q-type')
+                    .removeAttr('data-q-multiline');
+            });
+
+            var styles = '';
+            $('style').each(function () {
+                var txt = $(this).html() || '';
+                if (txt.indexOf('.q-preview-') >= 0) {
+                    styles = txt;
+                }
+            });
+            // Remove page-level @media print rules (they hide everything outside #qPreviewPrintArea
+            // and can blank the popup if matched incorrectly). Rebuild print styles below.
+            (function stripPrintMedia() {
+                var lower = styles.toLowerCase();
+                var idx = lower.indexOf('@media print');
+                while (idx >= 0) {
+                    var brace = styles.indexOf('{', idx);
+                    if (brace < 0) break;
+                    var depth = 0;
+                    var end = -1;
+                    var i;
+                    for (i = brace; i < styles.length; i++) {
+                        if (styles.charAt(i) === '{') depth++;
+                        else if (styles.charAt(i) === '}') {
+                            depth--;
+                            if (depth === 0) {
+                                end = i + 1;
+                                break;
+                            }
+                        }
+                    }
+                    if (end < 0) break;
+                    styles = styles.slice(0, idx) + styles.slice(end);
+                    lower = styles.toLowerCase();
+                    idx = lower.indexOf('@media print');
+                }
+            })();
+
+            var printWin = window.open('', '_blank');
+            if (!printWin) {
+                alert('Please allow pop-ups to print.');
+                return;
+            }
+            printWin.document.open();
+            printWin.document.write(
+                '<!DOCTYPE html><html><head><title>Quotation Preview</title><meta charset="utf-8">' +
+                '<link rel="stylesheet" href="' + esc(absUrl('plugins/fontawesome-free/css/all.min.css')) + '">' +
+                '<style>' +
+                styles +
+                'html,body{margin:0;padding:0;background:#fff;}' +
+                '.q-preview-doc{padding:18px 22px;max-width:900px;margin:0 auto;}' +
+                '@media print{' +
+                'body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                '.q-preview-doc{padding:12px 16px;}' +
+                '.q-preview-editable,.q-preview-cell-edit{background:transparent!important;outline:none!important;box-shadow:none!important;}' +
+                '.q-preview-services-bar,.q-preview-social a{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                '}' +
+                '</style></head><body>' +
+                '<div id="qPreviewPrintArea" class="q-preview-doc">' + $clone.html() + '</div>' +
+                '</body></html>'
+            );
+            printWin.document.close();
+
+            var triggerPrint = function () {
+                try {
+                    printWin.focus();
+                    printWin.print();
+                } catch (err) { /* ignore */ }
+            };
+            window.setTimeout(triggerPrint, 700);
+        });
+
+        function postQuotationSave(p, saveMode, $btn, btnDefaultHtml, onSuccess) {
+            p.save_mode = saveMode;
+            // Keep hotels_json / flights_json / itinerary_json as raw JSON strings
+            // so PHP receives the multi-option hotel shape intact.
+            if (p.hotels_json && typeof p.hotels_json !== 'string') {
+                p.hotels_json = JSON.stringify(p.hotels_json);
+            }
+            if (p.flights_json && typeof p.flights_json !== 'string') {
+                p.flights_json = JSON.stringify(p.flights_json);
+            }
+            if (p.itinerary_json && typeof p.itinerary_json !== 'string') {
+                p.itinerary_json = JSON.stringify(p.itinerary_json);
+            }
+            if (p.cost_sheet_json && typeof p.cost_sheet_json !== 'string') {
+                p.cost_sheet_json = JSON.stringify(p.cost_sheet_json);
+            }
+            var saveUrl = absUrl($('#quotationForm').attr('data-save-url') || 'crm/ajax/save_quotation.php');
+            $.ajax({
+                url: saveUrl,
+                type: 'POST',
+                data: p,
+                traditional: true,
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .done(function (res) {
+                    if (res && res.success) {
+                        if (res.id) {
+                            $('#q_id').val(res.id);
+                        }
+                        $('#q_edit_from_version').remove();
+                        if (typeof onSuccess === 'function') {
+                            onSuccess(res);
+                        }
+                    } else {
+                        $('#qAlert').html('<div class="alert alert-danger">' + esc((res && res.message) || 'Could not save.') + '</div>');
+                        window.scrollTo(0, 0);
+                    }
+                })
+                .fail(function (xhr) {
+                    var msg = 'Could not save. Please try again.';
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    } else if (xhr && xhr.responseText) {
+                        var text = $.trim(xhr.responseText);
+                        if (text.indexOf('{') === 0) {
+                            try {
+                                var parsed = JSON.parse(text);
+                                if (parsed && parsed.message) {
+                                    msg = parsed.message;
+                                }
+                            } catch (e) { /* ignore */ }
+                        } else if (text !== '') {
+                            msg = text.substring(0, 240);
+                        }
+                    }
+                    $('#qAlert').html('<div class="alert alert-danger">' + esc(msg) + '</div>');
+                    window.scrollTo(0, 0);
+                })
+                .always(function () {
+                    if ($btn && $btn.length) {
+                        $btn.prop('disabled', false).html(btnDefaultHtml);
+                    }
+                });
+        }
+
+        function saveQuotationDraft() {
+            var p;
+            try {
+                p = collectPayload();
+            } catch (err) {
+                alert('Could not prepare draft data. ' + (err && err.message ? err.message : ''));
+                return;
+            }
+            var $btn = $('#qSaveDraftBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+            postQuotationSave(p, 'draft', $btn, '<i class="fas fa-bookmark mr-1"></i> Save Draft', function (res) {
+                var successHtml = esc(res.message || 'Draft saved.');
+                if (res.quotation_uid) {
+                    successHtml += ' (' + esc(res.quotation_uid) + ')';
+                }
+                $('#qAlert').html('<div class="alert alert-success">' + successHtml + '</div>');
+                window.scrollTo(0, 0);
+                if (res.id) {
+                    $('#q_id').val(res.id);
+                }
+                saveFormDraftToStorage();
+                if (res.id && !window.location.search.match(/[?&]id=/)) {
+                    var nextUrl = absUrl('crm/quotation_generator.php?id=' + encodeURIComponent(res.id));
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState({}, '', nextUrl);
+                    }
+                    saveFormDraftToStorage();
+                }
+            });
+        }
+
+        function saveQuotation($btnOverride) {
+            var p;
+            try {
+                p = collectPayload();
+            } catch (err) {
+                alert('Could not prepare quotation data. ' + (err && err.message ? err.message : ''));
+                return;
+            }
+            if (!p.guest_name) {
+                alert('Please enter the guest name.');
+                setWizardStep(1);
+                return;
+            }
+            var $btn = ($btnOverride && $btnOverride.length) ? $btnOverride : $('#qSaveBtn');
+            var btnDefaultHtml = $btn.is('#qPreviewSaveBtn')
+                ? '<i class="fas fa-save mr-1"></i>Save Changes'
+                : '<i class="fas fa-save mr-1"></i>Save Quotation';
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+            postQuotationSave(p, 'publish', $btn, btnDefaultHtml, function (res) {
+                setPreviewDirty(false);
+                var successHtml = esc(res.message || 'Quotation saved.');
+                if (res.quotation_uid) {
+                    successHtml += ' (' + esc(res.quotation_uid) + ')';
+                }
+                if (res.version) {
+                    successHtml += ' — now at <strong>v' + esc(String(res.version)) + '</strong>.';
+                }
+                $('#qAlert').html('<div class="alert alert-success">' + successHtml + '</div>');
+                window.scrollTo(0, 0);
+                if (res.id) {
+                    $('#q_id').val(res.id);
+                }
+                saveFormDraftToStorage();
+                if ($('#qPreviewModal').hasClass('show')) {
+                    $('#qPreviewModal').modal('hide');
+                }
+                setTimeout(function () {
+                    if (res.id) {
+                        window.location.href = absUrl('crm/quotation_generator.php?id=' + encodeURIComponent(res.id));
+                    } else {
+                        window.location.href = absUrl('crm/quotation-generator-list.php');
+                    }
+                }, 900);
+            });
+        }
+
+        window.qSaveQuotation = saveQuotation;
+
+        $('#quotationForm').on('submit', function (e) {
+            e.preventDefault();
+            saveQuotation();
+        });
+        $('#qSaveBtn').on('click', function (e) {
+            e.preventDefault();
+            saveQuotation();
+        });
+        $('#qSaveDraftBtn').on('click', function (e) {
+            e.preventDefault();
+            saveQuotationDraft();
+        });
+        $('#qPreviewSaveBtn').on('click', function (e) {
+            e.preventDefault();
+            flushPreviewActiveEdit();
+            window.setTimeout(function () {
+                saveQuotation($('#qPreviewSaveBtn'));
+            }, 80);
+        });
+        $('#qPreviewModal').on('hide.bs.modal', function (e) {
+            if (!previewDirty) return;
+            if (!window.confirm('You have unsaved preview edits. Close without saving?')) {
+                e.preventDefault();
+            }
+        });
+        $('#qPreviewModal').on('hidden.bs.modal', function () {
+            setPreviewDirty(false);
+        });
+
+        $('#qVersionSelect').on('change', function () {
+            var href = $.trim(String($(this).val() || ''));
+            if (!href) {
+                return;
+            }
+            window.location.href = absUrl(href);
+        });
+
+        $(document).on('click', '.js-q-side-collapse', function () {
+            var $card = $(this).closest('.q-side-card');
+            var isCollapsed = $card.hasClass('is-collapsed');
+            $card.toggleClass('is-collapsed', !isCollapsed);
+            $(this).attr('aria-expanded', isCollapsed ? 'true' : 'false');
+        });
+
+        if (QUOTATION_PREFILL && (QUOTATION_PREFILL.id || QUOTATION_PREFILL.guest_name || QUOTATION_PREFILL.status === 'draft')) {
+            applyPrefill(QUOTATION_PREFILL);
+            if (QUOTATION_PREFILL.status === 'draft') {
+                var draftStep = parseInt(QUOTATION_PREFILL.wizard_step, 10) || 1;
+                qWizardMax = Math.max(draftStep, qWizardMax);
+            } else {
+                unlockAllWizardSteps();
+            }
+            restoreWizardStepOnLoad();
+            if (QUOTATION_PREFILL.editing_from_version) {
+                var archivedVer = QUOTATION_PREFILL.editing_from_version;
+                $('#qAlert').html(
+                    '<div class="alert alert-info mb-3">You are editing <strong>version v' + esc(String(archivedVer)) + '</strong>. '
+                    + 'Saving will publish a new latest version while keeping earlier versions unchanged.</div>'
+                );
+            }
+        } else {
+            var localDraft = loadFormDraftFromStorage();
+            if (localDraft) {
+                if (Array.isArray(localDraft.flights) && localDraft.flights.length) {
+                    localDraft.flights.forEach(function (f) { $('#qFlightRows').append(flightRowHtml(f)); });
+                    renumberFlightRows();
+                }
+                if (localDraft.cost_sheet && Array.isArray(localDraft.cost_sheet.options)) {
+                    qPricingOptionsState = {};
+                    localDraft.cost_sheet.options.forEach(function (opt) {
+                        var id = String(opt.category_id || opt.id || '');
+                        if (!id) return;
+                        qPricingOptionsState[id] = {
+                            fixed: opt.fixed || {},
+                            custom: Array.isArray(opt.custom) ? opt.custom : [],
+                            user_edited: opt.user_edited || {},
+                            profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
+                            profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
+                            price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
+                            price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
+                        };
+                    });
+                    if (localDraft.active_option_id || localDraft.cost_sheet.active_option_id) {
+                        qActiveHotelCategoryId = String(localDraft.active_option_id || localDraft.cost_sheet.active_option_id);
+                    }
+                }
+                if (localDraft.cost_sheet && localDraft.cost_sheet.pricing_notes != null) {
+                    applyPricingNotes(localDraft.cost_sheet.pricing_notes);
+                } else if (localDraft.pricing_notes != null) {
+                    applyPricingNotes(localDraft.pricing_notes);
+                }
+                renderHotelCategories(resolveHotelsForLoad((localDraft && localDraft.hotels) || []));
+                if (Array.isArray(localDraft.itinerary) && localDraft.itinerary.length) {
+                    rebuildItinerary(localDraft.itinerary);
+                } else {
+                    rebuildItinerary();
+                }
+            } else {
+                rebuildItinerary();
+            }
+            ensureHotelCategoriesReady();
+            renderPricingSheets();
+            recalcCosts();
+            restoreWizardStepOnLoad();
+            saveFormDraftToStorage();
+        }
+        ensureHotelCategoriesReady();
+        if (!$('#qPricingSheetsHost .q-pricing-option-sheet').length) {
+            renderPricingSheets();
+        }
+    });
+
+})(jQuery);

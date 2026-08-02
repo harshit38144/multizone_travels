@@ -1,0 +1,164 @@
+body{
+	margin:0;
+	padding:0;
+}
+.test{
+	width: 100%;
+	height:500px;
+	background: red;
+}
+.category-list{
+	width:100%;
+	height:auto;
+	padding:40px 0;
+}
+.content-subcat{
+	width: 100%;
+	height:auto;
+}
+.content-subcat label{
+	margin-bottom:0;
+	margin-top: 10px;
+}
+.edit-image-box{
+	width:100%;
+	height:auto;
+	border:1px solid #ccc;
+	margin-top: 10px;
+	text-align: center;
+	padding:4px;
+}
+.payment-success{
+	width:100%;
+	height:auto;
+	padding: 80px 0;
+}
+.payment-success-box{
+	width:40%;
+	height:auto;
+	background: #fff;
+	border:1px solid #ccc;
+	border-radius: 8px;
+	padding: 20px;
+	margin: 0 auto;
+	box-shadow: 2px 3px 6px 2px #6ea743;
+	text-align: center;
+}
+.payment-success-box img{
+	width: 25%;
+}
+.payment-success-box h3{
+	margin:20px 0;
+	color:green;
+	text-shadow: 1px 2px 1px #68b700;
+}
+.payment-page{
+	width: 100%;
+	height:auto;
+}
+@media(max-width: 768px){
+	.payment-form{
+		width: 65%;
+	}
+	.payment-success-box{
+		width:65%;
+	}
+}
+@media(max-width:576px){
+	.payment-success-box{
+		width:100%;
+	}
+	.payment-form{
+		width: 100%;
+	}
+	.payment-success-box h3{
+		font-size: 24px;
+	}
+}
+
+/* ——— AdminLTE sidebar width (default 250px clips long nested labels) ——— */
+:root {
+	--mz-sidebar-width: 300px;
+}
+
+/* No !important on width — sidebar-mini collapsed must stay 4.6rem */
+.main-sidebar,
+.main-sidebar::before {
+	width: var(--mz-sidebar-width);
+}
+
+.layout-fixed .brand-link {
+	width: var(--mz-sidebar-width);
+}
+
+/* Desktop: shift main content / header / footer — skip when mini sidebar is collapsed (AdminLTE uses 4.6rem) */
+@media (min-width: 992px) {
+	body:not(.sidebar-mini.sidebar-collapse):not(.sidebar-mini-md.sidebar-collapse) .content-wrapper,
+	body:not(.sidebar-mini.sidebar-collapse):not(.sidebar-mini-md.sidebar-collapse) .main-footer,
+	body:not(.sidebar-mini.sidebar-collapse):not(.sidebar-mini-md.sidebar-collapse) .main-header {
+		margin-left: var(--mz-sidebar-width) !important;
+	}
+}
+
+/* Full hide when collapsed (not icon-strip mini modes) */
+body.sidebar-collapse:not(.sidebar-mini):not(.sidebar-mini-md) .main-sidebar,
+body.sidebar-collapse:not(.sidebar-mini):not(.sidebar-mini-md) .main-sidebar::before {
+	margin-left: calc(-1 * var(--mz-sidebar-width)) !important;
+}
+
+@media (max-width: 767.98px) {
+	.main-sidebar,
+	.main-sidebar::before {
+		margin-left: calc(-1 * var(--mz-sidebar-width)) !important;
+	}
+
+	.sidebar-open .main-sidebar,
+	.sidebar-open .main-sidebar::before {
+		margin-left: 0 !important;
+	}
+}
+
+/* sidebar-mini / sidebar-mini-md: hover / focus expand width */
+@media (min-width: 992px) {
+	.sidebar-mini.sidebar-collapse .main-sidebar:hover,
+	.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-focused {
+		width: var(--mz-sidebar-width) !important;
+	}
+
+	.sidebar-mini.sidebar-collapse .main-sidebar:hover .brand-link,
+	.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-focused .brand-link {
+		width: var(--mz-sidebar-width) !important;
+	}
+
+	.sidebar-mini.sidebar-collapse.layout-fixed .main-sidebar:hover .brand-link {
+		width: var(--mz-sidebar-width) !important;
+	}
+
+	.sidebar-mini-md.sidebar-collapse .main-sidebar:hover,
+	.sidebar-mini-md.sidebar-collapse .main-sidebar.sidebar-focused {
+		width: var(--mz-sidebar-width) !important;
+	}
+
+	.sidebar-mini-md.sidebar-collapse .main-sidebar:hover .brand-link,
+	.sidebar-mini-md.sidebar-collapse .main-sidebar.sidebar-focused .brand-link {
+		width: var(--mz-sidebar-width) !important;
+	}
+
+	.sidebar-mini-md.sidebar-collapse.layout-fixed .main-sidebar:hover .brand-link {
+		width: var(--mz-sidebar-width) !important;
+	}
+}
+
+/* Nested labels: wrap + avoid clipping (AdminLTE uses nowrap/overflow on .nav-link) */
+.nav-sidebar.nav-child-indent .nav-treeview .nav-link {
+	overflow: visible !important;
+}
+
+.nav-sidebar.nav-child-indent .nav-treeview .nav-link p {
+	white-space: normal !important;
+	line-height: 1.35;
+}
+
+.nav-sidebar .nav-link .right {
+	flex-shrink: 0;
+}

@@ -1,0 +1,14 @@
+/**
+ * CRM listing pages — center-align table column headings.
+ */
+body[class*="crm-"] table thead th,
+.wrapper[class*="crm-"] table thead th,
+.content-wrapper [class*="crm-"] table thead th,
+#intakePendingTable thead th {
+    text-align: center !important;
+}
+
+body[class*="crm-"] .dataTables_wrapper table thead th,
+.wrapper[class*="crm-"] .dataTables_wrapper table thead th {
+    text-align: center !important;
+}

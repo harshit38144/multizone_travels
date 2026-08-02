@@ -1,0 +1,2 @@
+2026-05-01 12:59:12 - PHPMailer Error: SMTP Error: Could not authenticate.
+2026-05-01 13:01:00 - PHPMailer Error: SMTP Error: Could not authenticate.

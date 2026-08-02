@@ -1,0 +1,692 @@
+﻿.q-supplier-mail-modal {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.q-supplier-mail-header {
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.85rem 1rem;
+}
+
+.q-supplier-mail-header .modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.q-supplier-mail-body {
+    padding: 0;
+}
+
+.q-supplier-mail-from-field {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.q-supplier-mail-from-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.q-supplier-mail-from-label {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #334155;
+    flex-shrink: 0;
+}
+
+.q-supplier-mail-from-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.q-supplier-mail-sender-select {
+    flex: 1;
+    min-width: 0;
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0.25rem 1.5rem 0.25rem 0 !important;
+    margin: 0 !important;
+    font-size: 0.92rem !important;
+    color: #334155 !important;
+    cursor: pointer;
+    box-shadow: none !important;
+    height: auto !important;
+    appearance: auto;
+    -webkit-appearance: menulist;
+}
+
+.q-supplier-mail-sender-select:focus {
+    outline: none;
+    box-shadow: none !important;
+}
+
+.q-supplier-mail-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #16a34a;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.q-supplier-mail-from-text {
+    display: none;
+}
+
+.q-supplier-mail-field {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.q-supplier-mail-field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+}
+
+.q-supplier-mail-field .form-control {
+    border: 0;
+    padding-left: 0;
+    padding-right: 0;
+    box-shadow: none;
+    font-size: 0.92rem;
+}
+
+.q-supplier-mail-field .form-control:focus {
+    box-shadow: none;
+}
+
+.q-supplier-mail-to-field {
+    padding-bottom: 0.75rem;
+}
+
+.q-supplier-mail-to-main-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.q-supplier-mail-to-main-row .q-supplier-mail-from-label {
+    padding-top: 0.45rem;
+}
+
+.q-supplier-mail-create-btn {
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-top: 0.15rem;
+}
+
+.q-supplier-mail-to-picker {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.q-supplier-mail-to-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 34px;
+    padding: 0.25rem 0.15rem 0.25rem 0;
+    border: 0;
+    background: transparent;
+    color: #334155;
+    font-size: 0.92rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.q-supplier-mail-to-trigger:focus {
+    outline: none;
+}
+
+.q-supplier-mail-to-trigger-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #334155;
+}
+
+.q-supplier-mail-to-trigger-text.is-placeholder {
+    color: #94a3b8;
+}
+
+.q-supplier-mail-to-trigger-icon {
+    color: #94a3b8;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+}
+
+.q-supplier-mail-to-picker.is-open .q-supplier-mail-to-trigger-icon {
+    transform: rotate(180deg);
+}
+
+.q-supplier-mail-to-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+}
+
+.q-supplier-mail-to-menu-list {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 0.35rem 0;
+}
+
+.q-supplier-mail-to-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.45rem 0.75rem;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 400;
+    color: #334155;
+}
+
+.q-supplier-mail-to-option:hover {
+    background: #f8fafc;
+}
+
+.q-supplier-mail-to-option input[type="checkbox"] {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+}
+
+.q-supplier-mail-to-option-text {
+    min-width: 0;
+    line-height: 1.3;
+}
+
+.q-supplier-mail-to-option-name {
+    display: block;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.q-supplier-mail-to-option-email {
+    display: block;
+    font-size: 0.76rem;
+    color: #64748b;
+}
+
+.q-supplier-mail-to-custom {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.55rem 0.75rem;
+    border-top: 1px solid #eef2f7;
+    background: #f8fafc;
+}
+
+.q-supplier-mail-to-custom .form-control {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 0.3rem 0.55rem !important;
+    font-size: 0.82rem !important;
+    background: #fff !important;
+}
+
+.q-supplier-mail-to-custom .btn {
+    white-space: nowrap;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.q-supplier-mail-to-field .q-supplier-mail-supplier-empty {
+    padding: 0.45rem 0.75rem 0.65rem;
+}
+
+.q-supplier-mail-recipient-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.55rem;
+    min-width: 0;
+}
+
+.q-supplier-mail-recipient-badges:empty {
+    display: none;
+}
+
+.q-supplier-mail-recipient-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+    padding: 0.2rem 0.45rem 0.2rem 0.55rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    color: #1e40af;
+    line-height: 1.3;
+}
+
+.q-supplier-mail-recipient-badge .badge-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 280px;
+}
+
+.q-supplier-mail-recipient-badge .badge-remove {
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    padding: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.q-supplier-mail-recipient-badge .badge-remove:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.q-supplier-mail-recipient-badge.badge-sent {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.q-supplier-mail-recipient-badge.badge-failed {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.q-supplier-mail-recipient-badge .badge-status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.72rem;
+}
+
+.q-supplier-mail-recipient-badge .badge-status-sent {
+    color: #16a34a;
+}
+
+.q-supplier-mail-recipient-badge .badge-status-failed {
+    color: #dc2626;
+}
+
+.q-supplier-mail-recipient-badge .badge-status-sending {
+    color: #64748b;
+}
+
+.q-supplier-mail-subject-field {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+}
+
+.q-supplier-mail-subject-field .q-supplier-mail-from-label {
+    color: #202124;
+    font-weight: 700;
+    min-width: 3.5rem;
+}
+
+.q-supplier-mail-subject-input {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0.25rem 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    font-size: 0.92rem !important;
+    font-weight: 400 !important;
+    color: #202124 !important;
+    flex: 1;
+    min-width: 0;
+}
+
+.q-supplier-mail-subject-input:focus {
+    outline: none;
+    box-shadow: none !important;
+}
+
+.q-supplier-mail-subject-input::placeholder {
+    color: #9aa0a6;
+}
+
+.q-supplier-mail-editor-wrap {
+    padding: 0.35rem 1rem 0.25rem;
+    min-height: 240px;
+}
+
+.q-supplier-mail-editor-wrap .note-editor.note-frame,
+.q-supplier-mail-editor-wrap .note-editor {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent;
+}
+
+.q-supplier-mail-editor-wrap .note-editing-area,
+.q-supplier-mail-editor-wrap .note-editable {
+    background: #fff !important;
+}
+
+.q-supplier-mail-editor-wrap .note-editable {
+    padding: 0.35rem 0.15rem 0.75rem !important;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: #202124;
+    min-height: 220px !important;
+}
+
+.q-supplier-mail-editor-wrap .note-editable:focus {
+    outline: none;
+}
+
+.q-supplier-mail-editor-wrap .note-editable p,
+.q-supplier-mail-editor-wrap .note-editable div {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.45 !important;
+}
+
+.q-supplier-mail-editor-wrap .note-editable br {
+    line-height: 1.45;
+}
+
+.q-supplier-mail-editor-wrap .note-statusbar,
+.q-supplier-mail-editor-wrap .note-resizebar {
+    display: none !important;
+}
+
+.q-supplier-mail-editor-wrap .note-toolbar {
+    display: none !important;
+}
+
+.q-supplier-mail-footer {
+    border-top: 1px solid #e8eaed;
+    padding: 0.55rem 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    background: #fff;
+}
+
+.q-gmail-compose-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    min-width: 0;
+    flex: 1;
+}
+
+.q-gmail-compose-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.q-gmail-send-btn {
+    background: #0b57d0 !important;
+    border-color: #0b57d0 !important;
+    color: #fff !important;
+    border-radius: 999px !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    padding: 0.45rem 1.35rem !important;
+    line-height: 1.2;
+    box-shadow: none !important;
+}
+
+.q-gmail-send-btn:hover,
+.q-gmail-send-btn:focus {
+    background: #0842a0 !important;
+    border-color: #0842a0 !important;
+    color: #fff !important;
+}
+
+.q-gmail-send-btn:disabled {
+    opacity: 0.7;
+}
+
+.q-gmail-format-toolbar {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.15rem;
+}
+
+.q-gmail-format-toolbar .note-toolbar {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.1rem;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+.q-gmail-format-toolbar .note-btn-group {
+    margin: 0 0.1rem 0 0 !important;
+}
+
+.q-gmail-format-toolbar .note-btn {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #5f6368 !important;
+    padding: 0.35rem 0.45rem !important;
+    border-radius: 50% !important;
+    min-width: 32px;
+    height: 32px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.q-gmail-format-toolbar .note-btn:hover,
+.q-gmail-format-toolbar .note-btn:focus,
+.q-gmail-format-toolbar .note-btn.active {
+    background: #f1f3f4 !important;
+    color: #202124 !important;
+}
+
+.q-gmail-format-toolbar .dropdown-toggle::after {
+    display: none;
+}
+
+.q-gmail-icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    color: #5f6368 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none !important;
+}
+
+.q-gmail-icon-btn:hover,
+.q-gmail-icon-btn:focus {
+    background: #f1f3f4 !important;
+    color: #202124 !important;
+}
+
+.q-gmail-attach-label {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem;
+}
+
+.q-gmail-close-link {
+    color: #0b57d0 !important;
+    font-weight: 600;
+    font-size: 0.86rem;
+    padding: 0.25rem 0.4rem;
+}
+
+.q-supplier-mail-status-dialog {
+    max-width: 560px;
+}
+
+.q-supplier-mail-status-modal {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.q-supplier-mail-status-header {
+    border-bottom: 1px solid #e8eaed;
+    padding: 0.85rem 1rem;
+}
+
+.q-supplier-mail-status-header .modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #202124;
+}
+
+.q-supplier-mail-status-body {
+    padding: 1rem 1.1rem 1.15rem;
+}
+
+.q-supplier-mail-status-to-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.q-supplier-mail-status-to-label {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.q-supplier-mail-status-to-summary {
+    font-size: 0.92rem;
+    color: #5f6368;
+}
+
+.q-supplier-mail-status-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.q-supplier-mail-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: 100%;
+    padding: 0.28rem 0.65rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    color: #334155;
+    line-height: 1.3;
+}
+
+.q-supplier-mail-status-badge .badge-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 320px;
+}
+
+.q-supplier-mail-status-badge .badge-status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.78rem;
+}
+
+.q-supplier-mail-status-badge.badge-sending {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #64748b;
+}
+
+.q-supplier-mail-status-badge.badge-sent {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.q-supplier-mail-status-badge.badge-sent .badge-status-icon {
+    color: #16a34a;
+}
+
+.q-supplier-mail-status-badge.badge-failed {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.q-supplier-mail-status-badge.badge-failed .badge-status-icon {
+    color: #dc2626;
+}
+
+.q-supplier-mail-status-footer {
+    border-top: 1px solid #e8eaed;
+    padding: 0.65rem 1rem;
+}
+
+.q-supplier-mail-status-footer .btn-primary {
+    background: #0b57d0;
+    border-color: #0b57d0;
+    border-radius: 999px;
+    min-width: 88px;
+    font-weight: 600;
+}
+
+#qSupplierCreateModal {
+    z-index: 1065;
+}
+
+#qSupplierCreateModal + .modal-backdrop {
+    z-index: 1060;
+}
+
+.q-supplier-create-modal .modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
