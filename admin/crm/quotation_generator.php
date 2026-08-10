@@ -14,6 +14,9 @@ crmEnsureQuotationTermsMasterTable($conn);
 mailEnsureTables($conn);
 crmSyncQuotationUidsFromLeads($conn);
 
+require_once __DIR__ . '/../includes/geo_locations.php';
+geoEnsureTables($conn);
+
 // Destinations for the destination picker (unique, prefer title-case labels)
 $destinations = [];
 $destSeen = [];
@@ -161,6 +164,32 @@ foreach ($destinationLookup as $destId => $destName) {
     }
 }
 $quotationTermsMaster = crmGetQuotationTermsMaster($conn);
+
+$qCountries = [];
+$qCountriesRes = $conn->query('SELECT id, name FROM countries WHERE COALESCE(is_deleted, 0) = 0 ORDER BY name ASC');
+if ($qCountriesRes) {
+    while ($cRow = $qCountriesRes->fetch_assoc()) {
+        $qCountries[] = [
+            'id' => (int) ($cRow['id'] ?? 0),
+            'name' => (string) ($cRow['name'] ?? ''),
+        ];
+    }
+}
+
+$qDestinationCountryIdByName = [];
+$qDestCountryRes = $conn->query('SELECT d.name AS dest_name, c.id AS country_id
+    FROM destinations d
+    LEFT JOIN countries c ON LOWER(TRIM(c.name)) = LOWER(TRIM(d.country)) AND COALESCE(c.is_deleted, 0) = 0
+    WHERE d.is_active = 1');
+if ($qDestCountryRes) {
+    while ($dcRow = $qDestCountryRes->fetch_assoc()) {
+        $dKey = strtolower(trim((string) ($dcRow['dest_name'] ?? '')));
+        $cid = (int) ($dcRow['country_id'] ?? 0);
+        if ($dKey !== '' && $cid > 0 && !isset($qDestinationCountryIdByName[$dKey])) {
+            $qDestinationCountryIdByName[$dKey] = $cid;
+        }
+    }
+}
 
 $pageTitle = $isArchivedView
     ? ('Quotation v' . $viewVersion)
@@ -2092,6 +2121,39 @@ $qWizardSteps = [
             margin-top: 0.1rem;
         }
 
+        .crm-quotation-gen .q-hotel-menu-divider {
+            border-top: 1px solid #e9ecef;
+            margin: 0.25rem 0;
+        }
+
+        .crm-quotation-gen .q-hotel-menu-item-create {
+            color: #007bff;
+            font-weight: 600;
+        }
+
+        .crm-quotation-gen .q-hotel-menu-item-create:hover,
+        .crm-quotation-gen .q-hotel-menu-item-create:focus {
+            background: #eef5ff;
+            outline: none;
+        }
+
+        .crm-quotation-gen .q-city-create-modal .modal-header {
+            background: linear-gradient(115deg, #9a121f 0%, #c4121a 100%);
+            color: #fff;
+            border-bottom: 0;
+        }
+
+        .crm-quotation-gen .q-city-create-modal .modal-header .close {
+            color: #fff;
+            opacity: 0.85;
+            text-shadow: none;
+        }
+
+        .crm-quotation-gen .q-city-create-modal .label-req::after {
+            content: " *";
+            color: #dc3545;
+        }
+
         .crm-quotation-gen .q-hotel-field.q-hotel-field-hotel {
             flex: 3 1 220px;
             min-width: 180px;
@@ -3085,63 +3147,100 @@ $qWizardSteps = [
             margin: 0;
         }
 
+        .crm-quotation-gen .q-wizard-step[data-q-step="6"] .q-pricing-card {
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            padding: 0;
+        }
+
         .crm-quotation-gen .q-pricing-compare {
-            border: 1px solid var(--q-border);
-            border-radius: 12px;
+            border: 1px solid #fecaca;
+            border-radius: 16px;
             background: #fff;
-            box-shadow: var(--q-shadow-sm);
+            box-shadow: 0 10px 30px rgba(185, 28, 28, 0.08);
             overflow: hidden;
         }
 
         .crm-quotation-gen .q-pricing-compare-hd {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
+            justify-content: flex-start;
+            gap: 0.85rem;
             flex-wrap: wrap;
-            padding: 0.75rem 1rem;
-            background: linear-gradient(90deg, #eff6ff 0%, #f0fdf4 100%);
-            border-bottom: 1px solid var(--q-border);
+            padding: 1.05rem 1.25rem 1.15rem;
+            background:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 160' fill='none'%3E%3Cpath fill='%23ffffff' fill-opacity='0.07' d='M0 110c40-35 90-50 140-35 28 8 48 6 72-12 36-28 82-32 124-6 22 14 48 12 68-8 40-40 108-44 160-8 24 16 52 20 80 6l76-28v91H0z'/%3E%3Cpath stroke='%23ffffff' stroke-opacity='0.22' stroke-width='2' stroke-dasharray='4 6' d='M430 58c38-10 78 4 112 28'/%3E%3Cpath fill='%23ffffff' fill-opacity='0.18' d='M548 52l58-16 8 6-52 22z'/%3E%3Ccircle cx='612' cy='40' r='11' fill='%23ffffff' fill-opacity='0.14'/%3E%3Cpath stroke='%23ffffff' stroke-opacity='0.2' stroke-width='2' d='M606 40c8-10 22-14 34-8M500 78c-4-18 6-34 22-40M528 78c0-16 10-28 24-32'/%3E%3C/svg%3E") right center / auto 110% no-repeat,
+                linear-gradient(115deg, #8f0f2e 0%, #c4121a 45%, #a00000 100%);
+            border-bottom: 0;
+            color: #fff;
+            position: relative;
+            min-height: 72px;
+        }
+
+        .crm-quotation-gen .q-pricing-compare-hd-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #fff;
+            color: #c4121a;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex: 0 0 auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .crm-quotation-gen .q-pricing-compare-hd-text {
+            min-width: 0;
         }
 
         .crm-quotation-gen .q-pricing-compare-hd h4 {
             margin: 0;
-            font-size: 0.95rem;
+            font-size: 1.2rem;
             font-weight: 800;
-            color: #0f172a;
+            color: #fff;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
         }
 
         .crm-quotation-gen .q-pricing-compare-hd .q-hint {
-            margin: 0;
-            font-size: 0.75rem;
+            margin: 0.2rem 0 0;
+            font-size: 0.8rem;
+            color: rgba(0, 0, 0, 0.82);
+            font-weight: 500;
         }
 
         .crm-quotation-gen .q-pricing-compare-body {
             display: flex;
             align-items: stretch;
             min-height: 280px;
+            background: #f8fafc;
         }
 
         .crm-quotation-gen .q-pricing-sheets-host {
             display: grid;
-            grid-template-columns: minmax(108px, 128px) repeat(var(--q-opt-count, 1), 140px);
-            gap: 0;
+            grid-template-columns: minmax(132px, 150px) repeat(var(--q-opt-count, 1), minmax(168px, 1fr));
+            gap: 0.75rem;
             align-items: stretch;
             overflow-x: auto;
             justify-content: start;
             flex: 1 1 auto;
             min-width: 0;
+            padding: 0.9rem 0.75rem 1rem 1rem;
+            background: #f8fafc;
         }
 
         .crm-quotation-gen .q-pricing-sidebar {
-            --q-side-gap: 0.5rem;
-            --q-side-pad: 0.55rem;
-            flex: 0 0 360px;
-            width: 360px;
+            --q-side-gap: 0.65rem;
+            --q-side-pad: 0.75rem;
+            flex: 0 0 340px;
+            width: 340px;
             max-width: 100%;
-            border-left: 1px solid var(--q-border);
-            background: #f8fafc;
-            padding: 0.65rem 0.7rem 0.75rem;
+            border-left: 1px solid #fee2e2;
+            background: #fff7f7;
+            padding: 0.85rem 0.8rem 0.9rem;
             display: flex;
             flex-direction: column;
             gap: var(--q-side-gap);
@@ -3150,57 +3249,73 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-side-top {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: var(--q-side-gap);
             align-items: stretch;
-            min-height: 168px;
+            min-height: 0;
         }
 
         .crm-quotation-gen .q-pricing-side-block {
             background: #fff;
-            border: 1px solid var(--q-border);
-            border-radius: 10px;
+            border: 1px solid #fecaca;
+            border-radius: 14px;
             padding: var(--q-side-pad);
             min-width: 0;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            height: 100%;
+            box-shadow: 0 4px 14px rgba(185, 28, 28, 0.05);
         }
 
         .crm-quotation-gen .q-pricing-side-block h5 {
-            margin: 0 0 0.4rem;
-            height: 1rem;
-            font-size: 0.7rem;
+            margin: 0 0 0.55rem;
+            height: auto;
+            font-size: 0.82rem;
             font-weight: 800;
-            color: #334155;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
+            color: #111827;
+            text-transform: none;
+            letter-spacing: 0;
             display: flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.45rem;
             flex: 0 0 auto;
-            line-height: 1;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-pricing-side-block h5 .q-side-ico {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #e11d2e;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            flex: 0 0 auto;
         }
 
         .crm-quotation-gen .q-pricing-side-block h5 i {
-            color: #64748b;
-            font-size: 0.72rem;
-            width: 0.85rem;
+            color: inherit;
+            font-size: inherit;
+            width: auto;
             text-align: center;
         }
 
         .crm-quotation-gen .q-pricing-notes-block #q_pricing_notes {
             flex: 1 1 auto;
             width: 100%;
-            min-height: 0;
+            min-height: 96px;
             height: auto;
             margin: 0;
-            font-size: 0.76rem;
-            line-height: 1.35;
-            resize: none;
-            padding: 0.4rem 0.45rem;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            resize: vertical;
+            padding: 0.55rem 0.65rem;
             box-sizing: border-box;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #f9fafb;
         }
 
         .crm-quotation-gen .q-usd-box-side {
@@ -3209,51 +3324,80 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-usd-box-side .q-label {
             display: block;
-            font-size: 0.62rem;
+            font-size: 0.7rem;
             font-weight: 600;
             color: #64748b;
-            margin: 0 0 0.12rem;
+            margin: 0 0 0.2rem;
             line-height: 1;
         }
 
         .crm-quotation-gen .q-usd-box-side .form-control {
-            height: 28px;
-            font-size: 0.76rem;
-            padding: 0.15rem 0.4rem;
+            height: 36px;
+            font-size: 0.84rem;
+            padding: 0.35rem 0.55rem;
             box-sizing: border-box;
+            border-radius: 9px;
+            border-color: #e5e7eb;
         }
 
         .crm-quotation-gen .q-usd-side-fields {
             display: flex;
             flex-direction: column;
-            gap: 0.32rem;
+            gap: 0.45rem;
             flex: 1 1 auto;
             min-height: 0;
         }
 
         .crm-quotation-gen .q-usd-side-convert {
-            margin-top: 0.05rem;
+            margin-top: 0.15rem;
         }
 
         .crm-quotation-gen .q-usd-side-convert .btn {
             width: 100%;
-            height: 28px;
-            min-height: 28px;
+            height: 38px;
+            min-height: 38px;
             padding: 0;
-            font-size: 0.7rem;
+            font-size: 0.82rem;
             font-weight: 700;
             line-height: 1;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            border: 0;
+            border-radius: 10px;
+            background: #e11d2e;
+            color: #fff;
+        }
+
+        .crm-quotation-gen .q-usd-side-convert .btn:hover {
+            background: #be123c;
+            color: #fff;
+        }
+
+        .crm-quotation-gen .q-usd-result {
+            margin-top: 0.45rem;
+            padding: 0.55rem 0.65rem;
+            border-radius: 10px;
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #9f1239;
+            font-weight: 800;
+            font-size: 0.92rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            min-height: 40px;
+        }
+
+        .crm-quotation-gen .q-usd-result.is-empty {
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.78rem;
         }
 
         .crm-quotation-gen .q-usd-box-side .q-hint {
-            font-size: 0.6rem;
-            line-height: 1.25;
-            margin: 0.35rem 0 0 !important;
-            padding: 0;
-            flex: 0 0 auto;
+            display: none;
         }
 
         .crm-quotation-gen .q-pricing-calc-block {
@@ -3263,7 +3407,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-calc-block.is-focused {
-            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.28);
+            box-shadow: 0 0 0 2px rgba(225, 29, 46, 0.22);
         }
 
         .crm-quotation-gen .q-calc {
@@ -3409,27 +3553,27 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-calc-keys button.q-calc-op {
-            background: #eff6ff;
-            border-color: #bfdbfe;
-            color: #1d4ed8;
+            background: #fff1f2;
+            border-color: #fecdd3;
+            color: #be123c;
         }
 
         .crm-quotation-gen .q-calc-keys button.q-calc-op.is-active {
-            background: #2563eb;
-            border-color: #1d4ed8;
+            background: #e11d2e;
+            border-color: #be123c;
             color: #fff;
-            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
+            box-shadow: 0 1px 4px rgba(225, 29, 46, 0.35);
         }
 
         .crm-quotation-gen .q-calc-keys button.q-calc-eq {
-            background: #0ea5e9;
-            border-color: #0284c7;
+            background: #e11d2e;
+            border-color: #be123c;
             color: #fff;
             font-size: 1rem;
         }
 
         .crm-quotation-gen .q-calc-keys button.q-calc-eq:hover {
-            background: #0284c7;
+            background: #be123c;
         }
 
         .crm-quotation-gen .q-calc-keys button.q-calc-clear {
@@ -3515,136 +3659,424 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-labels-col {
-            background: #f8fafc;
-            border-right: 1px solid var(--q-border);
-            min-width: 108px;
-            max-width: 128px;
+            background: transparent;
+            border-right: 0;
+            min-width: 132px;
+            max-width: 150px;
             position: sticky;
             left: 0;
             z-index: 2;
+            padding-top: 0.15rem;
         }
 
         .crm-quotation-gen .q-pricing-labels-hd {
             justify-content: flex-start;
-            background: #f1f5f9;
+            background: transparent;
+            border: 0;
+            min-height: 72px;
+            height: 72px;
+            padding: 0.4rem 0.25rem;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-pricing-labels-title {
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             font-weight: 800;
-            color: #64748b;
+            color: #94a3b8;
             text-transform: uppercase;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.04em;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet {
-            border: 0;
-            border-radius: 0;
+            border: 1px solid #fecaca;
+            border-radius: 14px;
             background: #fff;
-            box-shadow: none;
+            box-shadow: 0 6px 18px rgba(185, 28, 28, 0.06);
             overflow: hidden;
-            border-right: 1px solid var(--q-border);
-            width: 140px;
-            max-width: 140px;
-            min-width: 140px;
+            width: auto;
+            max-width: none;
+            min-width: 168px;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet:last-child {
-            border-right: 0;
+            border-right: 1px solid #fecaca;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet.is-active {
-            background: #f0fdf4;
-            box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.25);
+            background: #fff;
+            box-shadow: 0 0 0 2px rgba(196, 18, 26, 0.22), 0 8px 22px rgba(185, 28, 28, 0.1);
         }
 
         .crm-quotation-gen .q-pricing-option-hd {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.35rem;
-            flex-wrap: wrap;
-            min-height: 36px;
-            padding: 0.3rem 0.45rem;
-            background: #f8fafc;
-            border-bottom: 1px solid var(--q-border);
+            align-items: stretch;
+            justify-content: flex-start;
+            gap: 0.4rem;
+            flex-wrap: nowrap;
+            flex-direction: column;
+            min-height: 72px;
+            height: auto;
+            padding: 0.65rem 0.75rem 0.6rem;
+            background: linear-gradient(145deg, #9a121f 0%, #c4121a 100%);
+            border-bottom: 0;
+            color: #fff;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet.is-active .q-pricing-option-hd {
-            background: #dcfce7;
+            background: linear-gradient(145deg, #9f1239 0%, #e11d2e 100%);
+        }
+
+        .crm-quotation-gen .q-pricing-option-hd-top {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .crm-quotation-gen .q-pricing-option-hd-action {
+            display: none;
+        }
+
+        .crm-quotation-gen .q-pricing-option-hd-ico {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #fff;
+            color: #e11d2e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex: 0 0 auto;
         }
 
         .crm-quotation-gen .q-pricing-option-hd h4 {
             margin: 0;
-            font-size: 0.78rem;
+            font-size: 0.84rem;
             font-weight: 800;
-            color: #0f172a;
+            color: #fff;
+            line-height: 1.25;
         }
 
-        .crm-quotation-gen .q-pricing-option-hd .badge-active-price {
-            background: #16a34a;
-            color: #fff;
-            font-size: 0.6rem;
+        .crm-quotation-gen .q-pricing-option-hd-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.28rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .crm-quotation-gen .q-pricing-option-hd-badges {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            width: 100%;
+        }
+
+        .crm-quotation-gen .q-pricing-option-hd .badge-active-price,
+        .crm-quotation-gen .q-pricing-option-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.28rem;
+            background: #fff;
+            color: #b91c1c;
+            font-size: 0.64rem;
             font-weight: 700;
-            padding: 0.1rem 0.35rem;
+            padding: 0.2rem 0.55rem;
             border-radius: 999px;
             white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin: 0;
+        }
+
+        .crm-quotation-gen .q-pricing-option-badge.is-selected {
+            background: #ecfdf5;
+            color: #047857;
         }
 
         .crm-quotation-gen .q-pricing-option-hd .q-set-active-pricing {
-            font-size: 0.65rem;
-            padding: 0.1rem 0.35rem;
+            width: auto;
+            max-width: none;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.18rem 0.5rem;
             line-height: 1.2;
             white-space: nowrap;
+            border: 1px solid rgba(255,255,255,0.75);
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+            border-radius: 999px;
+            margin: 0;
+            text-align: center;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-pricing-option-hd .q-set-active-pricing:hover {
+            background: #fff;
+            color: #e11d2e;
+            border-color: #fff;
         }
 
         .crm-quotation-gen .q-pricing-option-body {
-            padding: 0.3rem 0.4rem 0.4rem;
+            padding: 0.55rem 0.55rem 0.65rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            background: #fff;
+        }
+
+        .crm-quotation-gen .q-pricing-section-spacer {
+            display: none;
+        }
+
+        .crm-quotation-gen .q-pricing-row-label,
+        .crm-quotation-gen .q-pricing-amount-cell {
+            min-height: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.35rem;
+        }
+
+        .crm-quotation-gen .q-pricing-row-label {
+            color: #475569;
+            font-size: 0.78rem;
+            font-weight: 600;
+            line-height: 1.15;
+            padding-right: 0.35rem;
+            gap: 0.4rem;
+        }
+
+        .crm-quotation-gen .q-pricing-row-label i {
+            width: 16px;
+            color: #e11d2e;
+            font-size: 0.78rem;
+            text-align: center;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-pricing-package-label {
+            align-items: center;
+            min-height: 34px;
+            height: 34px;
+            flex-direction: row;
+            justify-content: flex-start;
+        }
+
+        .crm-quotation-gen .q-pricing-package-label .q-hint {
+            display: none;
+        }
+
+        .crm-quotation-gen .q-pricing-summary-block {
+            display: none;
+        }
+
+        .crm-quotation-gen .q-pricing-summary-card {
+            margin-top: 0.55rem;
+            padding: 0.45rem 0.55rem;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(185, 28, 28, 0.06);
             display: flex;
             flex-direction: column;
             gap: 0;
         }
 
-        .crm-quotation-gen .q-pricing-section-spacer {
+        .crm-quotation-gen .q-pricing-summary-values .q-sum-row {
             display: flex;
             align-items: center;
-            min-height: 20px;
-            margin: 0.05rem 0 0.15rem;
-        }
-
-        .crm-quotation-gen .q-pricing-section-spacer .q-subsection-label {
+            justify-content: flex-end;
+            gap: 0.35rem;
+            min-height: 34px;
+            height: 34px;
             margin: 0;
-            font-size: 0.65rem;
-            padding: 0.1rem 0.4rem;
+            padding: 0 0.15rem;
         }
 
-        .crm-quotation-gen .q-pricing-row-label,
-        .crm-quotation-gen .q-pricing-amount-cell {
-            min-height: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.15rem;
+        .crm-quotation-gen .q-pricing-summary-values .q-sum-row + .q-sum-row {
+            margin-top: 0.2rem;
         }
 
-        .crm-quotation-gen .q-pricing-row-label {
-            color: var(--q-text-muted);
-            font-size: 0.7rem;
-            font-weight: 600;
-            line-height: 1.15;
-            padding-right: 0.25rem;
-        }
-
-        .crm-quotation-gen .q-pricing-package-label {
-            align-items: flex-start;
-            min-height: 28px;
-            height: auto;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .crm-quotation-gen .q-pricing-package-label .q-hint {
+        .crm-quotation-gen .q-sum-label {
             display: none;
+        }
+
+        .crm-quotation-gen .q-sum-val {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: #e11d2e;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            text-align: right;
+            width: 100%;
+        }
+
+        .crm-quotation-gen .q-sum-profit {
+            color: #16a34a;
+            width: auto;
+        }
+
+        .crm-quotation-gen .q-sum-selling {
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-sum-profit-value {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.25rem;
+            width: 100%;
+        }
+
+        .crm-quotation-gen .q-sum-pct {
+            width: 2.6rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f8fafc;
+            text-align: center;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #16a34a;
+            padding: 0.15rem 0.2rem;
+            height: 28px;
+            line-height: 1;
+            -moz-appearance: textfield;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-sum-pct-sign {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #16a34a;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-sum-pct::-webkit-outer-spin-button,
+        .crm-quotation-gen .q-sum-pct::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .crm-quotation-gen .q-sum-pct:focus {
+            outline: 0;
+            border-color: #86efac;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.15);
+        }
+
+        .crm-quotation-gen .q-sum-ppa-row {
+            margin: 0.25rem -0.55rem -0.45rem;
+            padding: 0.4rem 0.55rem;
+            background: #fff1f2;
+            border-radius: 0 0 11px 11px;
+            border-top: 1px solid #fecdd3;
+            min-height: 38px !important;
+            height: 38px !important;
+        }
+
+        .crm-quotation-gen .q-sum-ppa-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.2rem;
+            width: 100%;
+        }
+
+        .crm-quotation-gen .q-sum-rupee {
+            color: #e11d2e;
+            font-weight: 800;
+            font-size: 0.95rem;
+        }
+
+        .crm-quotation-gen .q-sum-ppa-wrap .q-sheet-price-per-adult {
+            width: 100%;
+            max-width: 100%;
+            height: 30px !important;
+            min-height: 30px !important;
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: #e11d2e !important;
+            font-weight: 800 !important;
+            font-size: 0.95rem !important;
+            padding: 0 !important;
+            text-align: right;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-summary {
+            display: flex;
+            flex-direction: column;
+            margin-top: 0.55rem;
+            padding: 0.45rem 0.15rem;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            gap: 0;
+            box-sizing: border-box;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-summary .q-sum-label-row {
+            min-height: 34px;
+            height: 34px;
+            margin-bottom: 0;
+            margin-top: 0;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-summary .q-sum-label-row + .q-sum-label-row {
+            margin-top: 0.2rem;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-summary .q-sum-label-profit i {
+            color: #16a34a;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-summary .q-sum-label-ppa {
+            min-height: 38px !important;
+            height: 38px !important;
+            margin-top: 0.45rem !important;
+            padding: 0 0.35rem;
+            background: #fff1f2;
+            border-radius: 8px;
+            color: #9f1239;
+            font-weight: 800;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-summary-spacer {
+            display: none;
+        }
+
+        .crm-quotation-gen .q-pricing-summary-block .q-pricing-amount-cell,
+        .crm-quotation-gen .q-pricing-summary-block .q-pricing-row-label {
+            margin-bottom: 0.3rem;
+        }
+
+        .crm-quotation-gen .q-pricing-summary-block .q-pricing-amount-cell:last-child,
+        .crm-quotation-gen .q-pricing-labels-summary .q-pricing-row-label:last-child {
+            margin-bottom: 0;
+        }
+
+        .crm-quotation-gen .q-pricing-ppa-label,
+        .crm-quotation-gen .q-pricing-ppa-cell {
+            background: #fff1f2;
+            border-radius: 8px;
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
+            min-height: 38px !important;
+            height: 38px !important;
+        }
+
+        .crm-quotation-gen .q-pricing-ppa-label {
+            color: #9f1239;
+            font-weight: 800;
+        }
+
+        .crm-quotation-gen .q-pricing-profit-value {
+            color: #16a34a !important;
+            font-weight: 700;
         }
 
         .crm-quotation-gen .q-pricing-amount-cell .form-control,
@@ -3652,11 +4084,66 @@ $qWizardSteps = [
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .form-control {
             width: 100%;
             max-width: none;
-            height: 28px !important;
-            min-height: 28px !important;
-            padding: 0.15rem 0.35rem !important;
-            font-size: 0.75rem !important;
+            height: 34px !important;
+            min-height: 34px !important;
+            padding: 0.2rem 0.45rem 0.2rem 1.15rem !important;
+            font-size: 0.8rem !important;
             line-height: 1.2;
+            border-radius: 9px !important;
+            border-color: #e5e7eb !important;
+            background: #f8fafc !important;
+        }
+
+        .crm-quotation-gen .q-pricing-amount-cell {
+            position: relative;
+        }
+
+        .crm-quotation-gen .q-pricing-amount-cell::before {
+            content: "₹";
+            position: absolute;
+            left: 0.4rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 700;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .crm-quotation-gen .q-pricing-amount-cell.q-pricing-add-cell::before,
+        .crm-quotation-gen .q-pricing-amount-cell.q-pricing-profit-cell::before {
+            display: none;
+        }
+
+        .crm-quotation-gen .q-pricing-profit-cell .form-control,
+        .crm-quotation-gen .q-pricing-add-cell .form-control {
+            padding-left: 0.45rem !important;
+        }
+
+        .crm-quotation-gen .q-pricing-ppa-cell .form-control {
+            background: #fff !important;
+            border-color: #fecaca !important;
+            color: #9f1239 !important;
+            font-weight: 800 !important;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-col .q-pricing-option-body {
+            background: transparent;
+            padding: 0.55rem 0.15rem 0.65rem 0;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-col .q-pricing-option-hd {
+            background: transparent;
+            color: inherit;
+            box-shadow: none;
+        }
+
+        .crm-quotation-gen .q-pricing-footer-note {
+            text-align: center;
+            margin: 0.85rem 0 0;
+            color: #94a3b8;
+            font-size: 0.72rem;
         }
 
         .crm-quotation-gen .q-pricing-profit-cell {
@@ -3671,21 +4158,59 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-custom-label {
-            min-height: 28px;
-            height: 28px;
+            min-height: 34px;
+            height: 34px;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 0.15rem;
-            margin-bottom: 0.15rem !important;
+            gap: 0;
+            margin-bottom: 0.35rem !important;
+            position: relative;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-label {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-custom-cost-amt {
             display: flex;
-            gap: 0.2rem;
+            gap: 0.25rem;
             align-items: center;
+            position: relative;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-custom-cost-amt::before {
+            content: "₹";
+            position: absolute;
+            left: 0.4rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 700;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-amount {
+            width: 100%;
+            max-width: none;
+            height: 34px !important;
+            min-height: 34px !important;
+            padding: 0.2rem 0.45rem 0.2rem 1.15rem !important;
+            font-size: 0.8rem !important;
+            border-radius: 9px !important;
+            border-color: #e5e7eb !important;
+            background: #f8fafc !important;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-remove {
@@ -3694,6 +4219,23 @@ $qWizardSteps = [
             padding: 0;
             line-height: 1;
             font-size: 0.65rem;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost:hover .q-remove {
+            opacity: 1;
+        }
+
+        .crm-quotation-gen .q-pricing-add-cell {
+            justify-content: flex-start;
+            min-height: 26px;
+            height: 26px;
+            opacity: 0.45;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet:hover .q-pricing-add-cell {
+            opacity: 1;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-row {
@@ -3938,6 +4480,130 @@ $qWizardSteps = [
 
         .crm-quotation-gen #qSuggestAIItinerary:disabled {
             opacity: 0.7;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview {
+            display: none;
+            margin-top: 0.85rem;
+            padding: 0.85rem 0.95rem;
+            border-radius: 10px;
+            border: 1px solid #a7f3d0;
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview.is-visible {
+            display: block;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview.is-new {
+            border-color: #fecaca;
+            background: #fff7f7;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview-hd {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.55rem;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview-title {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: #065f46;
+            margin: 0 0 0.2rem;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview.is-new .q-ai-itin-preview-title {
+            color: #991b1b;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview-sub {
+            font-size: 0.74rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .crm-quotation-gen .q-ai-itin-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            padding: 0.28rem 0.6rem;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .crm-quotation-gen .q-ai-itin-badge.is-previous {
+            color: #065f46;
+            background: #d1fae5;
+            border: 1px solid #6ee7b7;
+        }
+
+        .crm-quotation-gen .q-ai-itin-badge.is-new {
+            color: #fff;
+            background: #dc2626;
+            border: 1px solid #b91c1c;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview-days {
+            list-style: none;
+            margin: 0 0 0.75rem;
+            padding: 0;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview-days li {
+            display: flex;
+            align-items: baseline;
+            gap: 0.45rem;
+            font-size: 0.78rem;
+            color: #334155;
+            padding: 0.28rem 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview-days li:last-child {
+            border-bottom: 0;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview-days .day-num {
+            flex-shrink: 0;
+            font-weight: 700;
+            color: #64748b;
+            min-width: 3.2rem;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            align-items: center;
+        }
+
+        .crm-quotation-gen #qApplyAIItinerary {
+            background: #0f766e;
+            border: 0;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 0.4rem 0.95rem;
+            border-radius: 999px;
+        }
+
+        .crm-quotation-gen .q-ai-itin-preview.is-new #qApplyAIItinerary {
+            background: #dc2626;
+        }
+
+        .crm-quotation-gen #qDismissAIItinerary {
+            font-size: 0.75rem;
+            font-weight: 600;
         }
 
         .crm-quotation-gen .q-suggest-divider {
@@ -4686,7 +5352,7 @@ $qWizardSteps = [
                                 </button>
                             </div>
                             <div id="qHotelCategories"></div>
-                            <p class="q-hint mt-2 mb-0">Hotel suggestions are filtered by Tour Information destination from Hotel Master. Type to search, or enter a new hotel name (saved to Hotel Master on quotation save).</p>
+                            <p class="q-hint mt-2 mb-0">Hotel suggestions are filtered by Tour Information destination. Type a city to search City Master, or use <strong>Create new city</strong> if it is missing. For hotels, use <strong>Create new hotel</strong> to add to Hotel Master immediately.</p>
                         </div>
                         </div>
 
@@ -4711,6 +5377,24 @@ $qWizardSteps = [
                                     <button type="button" class="btn btn-sm" id="qSuggestAIItinerary">
                                         <i class="fas fa-bolt mr-1"></i> Generate Itinerary Now
                                     </button>
+                                    <div class="q-ai-itin-preview" id="qAiItineraryPreview" aria-live="polite">
+                                        <div class="q-ai-itin-preview-hd">
+                                            <div>
+                                                <p class="q-ai-itin-preview-title" id="qAiItineraryPreviewTitle">Suggested itinerary</p>
+                                                <p class="q-ai-itin-preview-sub" id="qAiItineraryPreviewSub"></p>
+                                            </div>
+                                            <span class="q-ai-itin-badge" id="qAiItineraryBadge"></span>
+                                        </div>
+                                        <ul class="q-ai-itin-preview-days" id="qAiItineraryPreviewDays"></ul>
+                                        <div class="q-ai-itin-preview-actions">
+                                            <button type="button" class="btn btn-sm" id="qApplyAIItinerary">
+                                                <i class="fas fa-check mr-1"></i> Apply This Itinerary
+                                            </button>
+                                            <button type="button" class="btn btn-link btn-sm text-muted px-1" id="qDismissAIItinerary">
+                                                Dismiss
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="q-suggest-divider">or load from package</div>
@@ -4775,43 +5459,49 @@ $qWizardSteps = [
 
                         <!-- Pricing -->
                         <div class="q-wizard-step" data-q-step="6">
-                        <div class="q-card">
-                            <h3 class="q-section-title">Pricing</h3>
-                            <p class="q-hint mb-2">Compare hotel options side by side. Flight amounts sync from fares; hotel amounts sync from each option’s rates.</p>
+                            <div class="q-card q-pricing-card">
+                            <h3 class="q-section-title d-none">Pricing</h3>
+                            <p class="q-hint mb-2 d-none">Compare hotel options side by side. Flight amounts sync from fares; hotel amounts sync from each option’s rates.</p>
 
                             <div class="q-pricing-compare">
                                 <div class="q-pricing-compare-hd">
-                                    <h4>Cost Sheet &amp; Quotation</h4>
-                                    <p class="q-hint">Labels once — amounts per option</p>
+                                    <span class="q-pricing-compare-hd-icon" aria-hidden="true"><i class="fas fa-suitcase-rolling"></i></span>
+                                    <div class="q-pricing-compare-hd-text">
+                                        <h4>Cost Sheet &amp; Quotation</h4>
+                                        <p class="q-hint">Compare travel options and pricing</p>
+                                    </div>
                                 </div>
                                 <div class="q-pricing-compare-body">
                                     <div id="qPricingSheetsHost" class="q-pricing-sheets-host"></div>
                                     <aside class="q-pricing-sidebar" aria-label="Pricing notes and calculator">
                                         <div class="q-pricing-side-top">
                                             <div class="q-pricing-side-block q-pricing-notes-block">
-                                                <h5><i class="fas fa-sticky-note"></i> Notes</h5>
-                                                <textarea class="form-control" id="q_pricing_notes" name="pricing_notes" rows="5" placeholder="Internal pricing notes (not shown on quotation)…"></textarea>
+                                                <h5><span class="q-side-ico"><i class="fas fa-file-alt"></i></span> Notes</h5>
+                                                <textarea class="form-control" id="q_pricing_notes" name="pricing_notes" rows="4" placeholder="Add internal pricing notes, special instructions, or terms (not visible on quotation)…"></textarea>
                                             </div>
                                             <div class="q-usd-box q-usd-box-side q-pricing-side-block">
-                                                <h5><i class="fas fa-dollar-sign"></i> USD → INR</h5>
+                                                <h5><span class="q-side-ico"><i class="fas fa-exchange-alt"></i></span> USD → INR Converter</h5>
                                                 <div class="q-usd-side-fields">
                                                     <div>
                                                         <label class="q-label">USD Amount</label>
-                                                        <input type="number" step="0.01" class="form-control" id="q_usd_amount">
+                                                        <input type="number" step="0.01" class="form-control" id="q_usd_amount" placeholder="1,000">
                                                     </div>
                                                     <div>
-                                                        <label class="q-label">Rate</label>
-                                                        <input type="number" step="0.01" class="form-control" id="q_usd_rate">
+                                                        <label class="q-label">Rate (USD to INR)</label>
+                                                        <input type="number" step="0.01" class="form-control" id="q_usd_rate" placeholder="83.20">
                                                     </div>
                                                     <div class="q-usd-side-convert">
                                                         <button type="button" class="btn btn-q-primary btn-sm" id="qConvertUsd">Convert</button>
                                                     </div>
                                                 </div>
-                                                <small class="q-hint">Fills last-focused cost field (default: Land).</small>
+                                                <div class="q-usd-result is-empty" id="qUsdResult" aria-live="polite">
+                                                    <span id="qUsdResultText">Enter amount &amp; rate</span>
+                                                    <button type="button" class="btn btn-link btn-sm p-0" id="qUsdCopyResult" title="Copy result" style="display:none;color:#9f1239;"><i class="far fa-copy"></i></button>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="q-pricing-side-block q-pricing-calc-block" id="qCalcPanel" tabindex="0" aria-label="Pricing calculator">
-                                            <h5><i class="fas fa-calculator"></i> Calculator</h5>
+                                            <h5><span class="q-side-ico"><i class="fas fa-calculator"></i></span> Calculator</h5>
                                             <div class="q-calc">
                                                 <div class="q-calc-screen" id="qCalcScreen">
                                                     <div class="q-calc-expr" id="qCalcExpr" aria-live="polite"></div>
@@ -4853,6 +5543,7 @@ $qWizardSteps = [
                                     </aside>
                                 </div>
                             </div>
+                            <p class="q-pricing-footer-note"><i class="fas fa-shield-alt"></i> All costs are in INR • Prices are indicative and subject to change • T&amp;C Apply</p>
 
                             <!-- Legacy fields kept in sync with the active hotel option for save/preview -->
                             <input type="hidden" name="price_per_adult" id="q_price_per_adult" value="">
@@ -4913,6 +5604,113 @@ $qWizardSteps = [
     <?php include __DIR__ . '/includes/quotation_itinerary_image_modal.php'; ?>
     <?php include __DIR__ . '/includes/quotation_supplier_mail_modal.php'; ?>
 
+    <div class="modal fade q-city-create-modal" id="qCityCreateModal" tabindex="-1" role="dialog" aria-labelledby="qCityCreateModalLabel" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <form id="qCityCreateForm" action="#" method="post" onsubmit="return false;">
+                    <div class="modal-header">
+                        <h5 class="modal-title mb-0" id="qCityCreateModalLabel"><i class="fas fa-city mr-2"></i>Create City</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger d-none" id="qCityCreateError"></div>
+                        <div class="form-group">
+                            <label class="label-req" for="qCityCreateCountry">Country</label>
+                            <select class="form-control" id="qCityCreateCountry" name="country_id" required>
+                                <option value="" selected disabled>Select Country</option>
+                                <?php foreach ($qCountries as $country): ?>
+                                    <option value="<?= (int) $country['id'] ?>"><?= htmlspecialchars($country['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="qCityCreateState">State</label>
+                            <select class="form-control" id="qCityCreateState" name="state_id">
+                                <option value="">Select State (optional)</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="label-req" for="qCityCreateName">City Name</label>
+                            <input type="text" class="form-control" id="qCityCreateName" name="city_name" placeholder="Enter city name" required autocomplete="off">
+                        </div>
+                        <input type="hidden" name="is_active" value="1">
+                    </div>
+                    <div class="modal-footer justify-content-between">
+                        <button type="button" class="btn btn-light border" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="qCityCreateSubmit">
+                            <i class="fas fa-plus-circle mr-1"></i>Create City
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade q-city-create-modal" id="qHotelCreateModal" tabindex="-1" role="dialog" aria-labelledby="qHotelCreateModalLabel" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <form id="qHotelCreateForm" action="#" method="post" onsubmit="return false;">
+                    <div class="modal-header">
+                        <h5 class="modal-title mb-0" id="qHotelCreateModalLabel"><i class="fas fa-hotel mr-2"></i>Create Hotel</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger d-none" id="qHotelCreateError"></div>
+                        <div class="form-group">
+                            <label>Destination</label>
+                            <input type="text" class="form-control" id="qHotelCreateDestName" readonly>
+                            <input type="hidden" id="qHotelCreateDestId" value="">
+                        </div>
+                        <div class="form-group">
+                            <label class="label-req">City</label>
+                            <input type="text" class="form-control" id="qHotelCreateCityName" readonly>
+                            <input type="hidden" id="qHotelCreateCityId" value="">
+                            <small class="form-text text-muted">Select or create the city on the hotel row first.</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="label-req" for="qHotelCreateName">Hotel Name</label>
+                            <input type="text" class="form-control" id="qHotelCreateName" placeholder="Enter hotel name" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="label-req" for="qHotelCreateStar">Star Category</label>
+                            <select class="form-control" id="qHotelCreateStar" required>
+                                <option>1 Star</option>
+                                <option>2 Star</option>
+                                <option selected>3 Star</option>
+                                <option>4 Star</option>
+                                <option>5 Star</option>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="qHotelCreateRoom">Room Type</label>
+                                    <input type="text" class="form-control" id="qHotelCreateRoom" placeholder="e.g. Deluxe Room" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="qHotelCreateMeal">Meal Plan</label>
+                                    <input type="text" class="form-control" id="qHotelCreateMeal" placeholder="CP / MAP / AP" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label for="qHotelCreateRate">Rate (₹)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="qHotelCreateRate" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-between">
+                        <button type="button" class="btn btn-light border" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="qHotelCreateSubmit">
+                            <i class="fas fa-plus-circle mr-1"></i>Create Hotel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="qPreviewModal" tabindex="-1" role="dialog" aria-labelledby="qPreviewModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
             <div class="modal-content">
@@ -4950,6 +5748,7 @@ $qWizardSteps = [
         var QUOTATION_PREVIEW_META = <?= json_encode($qPreviewMeta, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var Q_SUPPLIER_MAIL_CATALOG = <?= json_encode($qSupplierMailCatalog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
         var Q_DESTINATION_NAME_TO_ID = <?= json_encode($qDestinationNameToId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
+        var Q_DESTINATION_COUNTRY_ID_BY_NAME = <?= json_encode($qDestinationCountryIdByName, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var QUOTATION_TERMS_MASTER = <?= json_encode($quotationTermsMaster, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var Q_SUPPLIER_MAIL_TEMPLATE = <?= json_encode([
             'subject' => $qMailSubject,
@@ -4957,8 +5756,8 @@ $qWizardSteps = [
             'meta' => $qMailMeta,
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
-    <script src="crm/assets/quotation_generator.js?v=73"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=5"></script>
+    <script src="crm/assets/quotation_generator.js?v=81"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=6"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=17"></script>
     <script>

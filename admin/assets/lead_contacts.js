@@ -38,8 +38,19 @@
         var msg = fallback || 'Network error. Please try again.';
         try {
             var j = JSON.parse(xhr.responseText);
-            if (j && j.message) msg = j.message;
-        } catch (e) {}
+            if (j && j.message) {
+                return j.message;
+            }
+        } catch (e) { /* ignore */ }
+        if (xhr && xhr.responseText) {
+            var raw = String(xhr.responseText).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            if (raw) {
+                return raw.slice(0, 220);
+            }
+        }
+        if (xhr && xhr.status) {
+            return msg + ' (HTTP ' + xhr.status + ')';
+        }
         return msg;
     }
 
@@ -107,6 +118,51 @@
             $box.html('<a href="' + esc(url) + '" target="_blank">Current file (PDF)</a>');
         } else {
             $box.html('<a href="' + esc(url) + '" target="_blank"><img src="' + esc(url) + '" alt=""></a>');
+        }
+    }
+
+    function setProfilePhotoPreview(url, localBlob) {
+        var $preview = $('#lcProfilePhotoPreview');
+        var $img = $preview.find('.lc-profile-photo-img');
+        var $ph = $preview.find('.lc-profile-photo-placeholder');
+        var $clear = $('#lcProfilePhotoClear');
+        var src = String(localBlob || url || '').trim();
+        if (src && src !== 'null' && src !== 'undefined') {
+            $img.attr('src', src).removeClass('d-none');
+            $ph.addClass('d-none');
+            $clear.removeClass('d-none');
+        } else {
+            $img.attr('src', '').addClass('d-none');
+            $ph.removeClass('d-none');
+            $clear.addClass('d-none');
+        }
+    }
+
+    function resetProfilePhotoField() {
+        $('#lcProfilePhotoInput').val('');
+        $('#lcClearProfilePhoto').val('');
+        setProfilePhotoPreview('');
+    }
+
+    function updateContactRowAvatar($row, photoUrl, name) {
+        if (!$row || !$row.length) {
+            return;
+        }
+        var $avatar = $row.find('.lc-avatar').first();
+        if (!$avatar.length) {
+            return;
+        }
+        photoUrl = String(photoUrl || '').trim();
+        name = String(name || $row.find('.lc-contact-name').text() || 'Profile photo').trim();
+        $row.attr('data-photo', photoUrl);
+        if (photoUrl) {
+            var $btn = $('<button type="button" class="lc-avatar has-photo js-lc-avatar-view" title="View profile photo"></button>');
+            $btn.attr('data-photo', photoUrl).attr('data-name', name);
+            $btn.html('<img src="' + esc(photoUrl) + '" alt="">');
+            $avatar.replaceWith($btn);
+        } else {
+            var $span = $('<span class="lc-avatar"></span>').text(initialsFromName(name));
+            $avatar.replaceWith($span);
         }
     }
 
@@ -189,6 +245,8 @@
         }));
 
         $form.find('input[type=file]').val('');
+        $('#lcClearProfilePhoto').val('');
+        setProfilePhotoPreview(data.profile_photo || '');
         setPreview($form, 'pan', data.photo);
         setPreview($form, 'aadhar', data.id_proof_front);
         setPreview($form, 'other', data.id_proof_back);
@@ -349,7 +407,9 @@
         var url = item.url || '';
         var name = item.name || fileNameFromUrl(url) || 'Attachment';
         var isPdf = !!item.isPdf || /\.pdf$/i.test(name) || /\.pdf$/i.test(url);
+        var titleHtml = item.titleHtml || '<i class="far fa-eye mr-2"></i>View attachment';
         viewerContext = { url: url, name: name, isPdf: isPdf };
+        $('#lcAttachViewerModal .modal-title').html(titleHtml);
         $('#lcViewerFileName').text(name);
         var $frame = $('#lcViewerFrame').empty();
         if (!url) {
@@ -1044,7 +1104,12 @@
         var email = primary.email || contact.customer_email || activeRef.email || '';
         var html = '';
         html += '<div class="lc-primary-card">';
-        html += '<span class="lc-primary-avatar">' + esc(initialsFromName(name)) + '</span>';
+        if (primary.profile_photo) {
+            html += '<button type="button" class="lc-primary-avatar has-photo js-lc-avatar-view" title="View profile photo" data-photo="' + esc(primary.profile_photo) + '" data-name="' + esc(name) + '">';
+            html += '<img src="' + esc(primary.profile_photo) + '" alt=""></button>';
+        } else {
+            html += '<span class="lc-primary-avatar">' + esc(initialsFromName(name)) + '</span>';
+        }
         html += '<div class="lc-primary-meta">';
         html += '<div class="lc-primary-badge"><i class="fas fa-crown"></i> Primary Contact</div>';
         html += '<h4 class="lc-primary-name">' + esc(name) + ' <span class="lc-verified" title="Verified"><i class="fas fa-check"></i></span></h4>';
@@ -1133,7 +1198,7 @@
             });
         });
         $('#lcPrimaryCard .js-lc-edit-primary').off('click').on('click', function () {
-            showInlinePrimaryForm();
+            openProfileModal(activeRef.source, activeRef.refId, activeRef.name, activeRef.phone, activeRef.email, false);
         });
         $('#lcPrimaryCard .js-lc-del-primary').off('click').on('click', function () {
             deleteManualContact(activeRef.refId, true);
@@ -1151,6 +1216,7 @@
         var $form = $('#lcProfileForm');
         if (isNew) {
             $form[0].reset();
+            resetProfilePhotoField();
             setPreview($form, 'pan', '');
             setPreview($form, 'aadhar', '');
             setPreview($form, 'other', '');
@@ -1430,10 +1496,26 @@
             openMembersModal(r.source, r.refId, r.name, r.phone, r.email);
         });
 
+        $(document).on('click', '.js-lc-avatar-view', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var url = String($(this).attr('data-photo') || $(this).closest('tr').attr('data-photo') || '').trim();
+            if (!url) {
+                return;
+            }
+            var name = String($(this).attr('data-name') || $(this).closest('tr').find('.lc-contact-name').text() || 'Profile photo').trim();
+            openAttachViewer({
+                url: url,
+                name: name || 'Profile photo',
+                isPdf: false,
+                titleHtml: '<i class="far fa-user-circle mr-2"></i>Profile photo'
+            });
+        });
+
         $(document).on('click', '.js-lc-edit', function () {
             $('.lc-more').removeClass('open');
             var r = btnRef($(this));
-            openMembersModal(r.source, r.refId, r.name, r.phone, r.email, { editPrimary: true });
+            openProfileModal(r.source, r.refId, r.name, r.phone, r.email, false);
         });
 
         $(document).on('click', '.js-lc-docs', function () {
@@ -1635,6 +1717,10 @@
                     $contactRow.find('.lc-contact-email').text(savedEmail);
                     activeRef.email = savedEmail;
                 }
+                if (res.profile) {
+                    profileCache = res.profile;
+                    updateContactRowAvatar($contactRow, res.profile.profile_photo || '', savedName || activeRef.name);
+                }
                 $('#lcProfileModal').modal('hide');
                 showAlert(res.message || 'Saved.');
                 renderContactTable();
@@ -1649,6 +1735,31 @@
         $(document).on('click', '#lcContactRows .js-lc-contact-add', function () {
             $('#lcContactRows').append(contactRowHtml({ name: '', email: '', mobile: '' }, false));
         });
+
+        $('#lcProfilePhotoInput').on('change', function () {
+            var file = this.files && this.files[0] ? this.files[0] : null;
+            $('#lcClearProfilePhoto').val('');
+            if (!file) {
+                return;
+            }
+            if (file.type && file.type.indexOf('image/') !== 0) {
+                showAlert('Please choose an image file for the profile photo.', 'danger');
+                $(this).val('');
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                setProfilePhotoPreview('', ev.target.result);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        $('#lcProfilePhotoClear').on('click', function () {
+            $('#lcProfilePhotoInput').val('');
+            $('#lcClearProfilePhoto').val('1');
+            setProfilePhotoPreview('');
+        });
+
         $(document).on('click', '#lcContactRows .js-lc-contact-remove', function () {
             $(this).closest('.lc-contact-row').remove();
             if (!$('#lcContactRows .lc-contact-row').length) {

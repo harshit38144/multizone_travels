@@ -195,9 +195,9 @@
         var baseObj = paxFares.base || {};
         var taxObj = paxFares.tax || {};
 
-        var base = parseFloat(baseObj.amount || baseObj.baseFare || 3500);
-        var tax = parseFloat(taxObj.amount || taxObj.taxes || 500);
-        var tot = parseFloat(totObj.amount || totObj.total || (base + tax));
+        var base = Math.round(parseFloat(baseObj.amount || baseObj.baseFare || 3500) || 0);
+        var tax = Math.round(parseFloat(taxObj.amount || taxObj.taxes || 500) || 0);
+        var tot = Math.round(parseFloat(totObj.amount || totObj.total || (base + tax)) || 0);
 
         var dTimeRaw = (primaryF.depDetail && primaryF.depDetail.time) ? primaryF.depDetail.time : (primaryF.departureTime || primaryF.depTime || '08:00 AM');
         var aTimeRaw = (primaryF.arrDetail && primaryF.arrDetail.time) ? primaryF.arrDetail.time : (primaryF.arrivalTime || primaryF.arrTime || '10:30 AM');
@@ -281,8 +281,8 @@
         });
 
         var priceLabel = (typeof tot === 'number' && !isNaN(tot))
-            ? tot.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-            : String(tot);
+            ? Math.round(tot).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+            : String(Math.round(parseFloat(tot) || 0));
         cardHtml += '</div>' +
             '<div class="qfs-price-col">' +
             '<div class="qfs-price-value">₹' + priceLabel + '</div>' +

@@ -305,7 +305,8 @@
     }
 
     function defaultHotelCategoryLabel(index) {
-        return 'Option ' + (index + 1);
+        var n = index + 1;
+        return 'Option ' + (n < 10 ? '0' : '') + n;
     }
 
     function bumpHotelIdSeqFromCategory(cat) {
@@ -695,6 +696,220 @@
         }).fail(function () { callback([]); });
     }
 
+    function fetchCityMasterCities(q, callback) {
+        var dest = getQuotationDestinationFilter();
+        var params = { q: q || '', limit: 25 };
+        if (dest.id > 0) {
+            params.destination_id = dest.id;
+        }
+        $.getJSON('crm/ajax/search_cities.php', params).done(function (res) {
+            var list = [];
+            if (res && res.success) {
+                list = res.cities || res.data || [];
+            }
+            callback(list);
+        }).fail(function () { callback([]); });
+    }
+
+    function resolveDestinationCountryId() {
+        var dest = getQuotationDestinationFilter();
+        var map = (typeof window.Q_DESTINATION_COUNTRY_ID_BY_NAME === 'object' && window.Q_DESTINATION_COUNTRY_ID_BY_NAME)
+            ? window.Q_DESTINATION_COUNTRY_ID_BY_NAME
+            : {};
+        if (!dest.name) {
+            return 0;
+        }
+        var key = String(dest.name).toLowerCase();
+        if (map[key] != null) {
+            return parseInt(map[key], 10) || 0;
+        }
+        var found = 0;
+        Object.keys(map).some(function (k) {
+            if (String(k).toLowerCase() === key) {
+                found = parseInt(map[k], 10) || 0;
+                return true;
+            }
+            return false;
+        });
+        return found;
+    }
+
+    var qCityCreateTargetRow = null;
+
+    function resetQCityCreateForm() {
+        var $form = $('#qCityCreateForm');
+        if (!$form.length) {
+            return;
+        }
+        $form.find('#qCityCreateError').addClass('d-none').text('');
+        $form.find('#qCityCreateName').val('');
+        $form.find('#qCityCreateCountry').val('');
+        $form.find('#qCityCreateState').empty().append('<option value="">Select State (optional)</option>');
+        $form.find('#qCityCreateSubmit').prop('disabled', false);
+    }
+
+    function loadQCityCreateStates(countryId, selectedStateId) {
+        var $state = $('#qCityCreateState');
+        $state.empty().append('<option value="">Select State (optional)</option>');
+        if (!countryId) {
+            return $.Deferred().resolve().promise();
+        }
+        return $.getJSON('../ajax/get_states_by_country.php', { country_id: countryId }).done(function (res) {
+            var rows = (res && res.data) ? res.data : [];
+            rows.forEach(function (item) {
+                var $opt = $('<option></option>').val(item.id).text(item.state_name);
+                if (selectedStateId && String(item.id) === String(selectedStateId)) {
+                    $opt.prop('selected', true);
+                }
+                $state.append($opt);
+            });
+        });
+    }
+
+    function openQCityCreateModal(prefillName, $row) {
+        var $modal = $('#qCityCreateModal');
+        if (!$modal.length) {
+            return;
+        }
+        qCityCreateTargetRow = $row && $row.length ? $row : null;
+        resetQCityCreateForm();
+        $('#qCityCreateName').val(String(prefillName || '').trim());
+        var countryId = resolveDestinationCountryId();
+        if (countryId > 0) {
+            $('#qCityCreateCountry').val(String(countryId));
+            loadQCityCreateStates(countryId);
+        }
+        if (!$modal.parent().is('body')) {
+            $modal.appendTo('body');
+        }
+        $modal.modal('show');
+    }
+
+    function applyCreatedCityToRow($row, cityId, cityName) {
+        if (!$row || !$row.length) {
+            return;
+        }
+        $row.find('.h-city-id').val(cityId || '');
+        $row.find('.h-city').val(cityName || '');
+        $row.find('.h-hotel-id').val('');
+        hideHotelMenus($row);
+        if ($.trim($row.find('.h-name').val())) {
+            showHotelNameSuggestions($row);
+        }
+        if (typeof saveFormDraftToStorage === 'function') {
+            saveFormDraftToStorage();
+        }
+    }
+
+    function saveQCityCreateForm() {
+        var $form = $('#qCityCreateForm');
+        var $error = $('#qCityCreateError');
+        var $submit = $('#qCityCreateSubmit');
+        var countryId = parseInt($('#qCityCreateCountry').val(), 10) || 0;
+        var cityName = $.trim($('#qCityCreateName').val());
+        $error.addClass('d-none').text('');
+
+        if (countryId <= 0) {
+            $error.removeClass('d-none').text('Please select a country.');
+            return;
+        }
+        if (!cityName) {
+            $error.removeClass('d-none').text('City name is required.');
+            return;
+        }
+
+        var fd = new FormData();
+        fd.append('country_id', String(countryId));
+        fd.append('city_name', cityName);
+        fd.append('is_active', '1');
+        var stateId = $('#qCityCreateState').val();
+        if (stateId) {
+            fd.append('state_id', String(stateId));
+        }
+
+        $submit.prop('disabled', true);
+        $.ajax({
+            url: 'crm/ajax/save_city.php',
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        }).done(function (res) {
+            if (!res || !res.success || !res.id) {
+                $error.removeClass('d-none').text((res && res.message) ? res.message : 'Could not create city.');
+                return;
+            }
+            applyCreatedCityToRow(qCityCreateTargetRow, res.id, cityName);
+            $('#qCityCreateModal').modal('hide');
+        }).fail(function (xhr) {
+            var message = 'Could not create city.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                message = xhr.responseJSON.message;
+            }
+            $error.removeClass('d-none').text(message);
+        }).always(function () {
+            $submit.prop('disabled', false);
+        });
+    }
+
+    function appendCityCreateAction($menu, typed) {
+        $menu.append('<div class="q-hotel-menu-divider"></div>');
+        $menu.append(
+            $('<button type="button" class="q-hotel-menu-item q-hotel-menu-item-create q-hotel-city-create"></button>')
+                .attr('data-name', typed || '')
+                .html('<i class="fas fa-plus-circle mr-2 text-primary"></i>Create new city' +
+                    (typed ? ' "' + esc(typed) + '"' : ''))
+        );
+    }
+
+    function showHotelCitySuggestions($row) {
+        var $input = $row.find('.h-city');
+        var $menu = $row.find('.q-hotel-city-menu');
+        var typed = $.trim($input.val());
+        var dest = getQuotationDestinationFilter();
+
+        if (!dest.name) {
+            $menu.empty().append(
+                '<div class="q-hotel-menu-empty">Set Destination in Tour Information (Step 1) to see cities from City Master</div>'
+            );
+            appendCityCreateAction($menu, typed);
+            $menu.show();
+            return;
+        }
+
+        fetchCityMasterCities(typed, function (cities) {
+            $menu.empty();
+            if (!cities.length) {
+                if (typed) {
+                    $menu.append(
+                        '<div class="q-hotel-menu-empty">No cities found for "' + esc(typed) + '"</div>'
+                    );
+                } else {
+                    $menu.append(
+                        '<div class="q-hotel-menu-empty">No cities in City Master' +
+                        (dest.name ? ' for ' + esc(dest.name) : '') + '</div>'
+                    );
+                }
+            } else {
+                cities.forEach(function (c) {
+                    var label = c.name;
+                    var sub = [c.state_name, c.country_name].filter(Boolean).join(', ');
+                    var $btn = $('<button type="button" class="q-hotel-menu-item q-hotel-city-pick"></button>')
+                        .attr('data-id', c.id)
+                        .attr('data-name', c.name);
+                    $btn.append($('<span></span>').text(label));
+                    if (sub) {
+                        $btn.append($('<span class="q-hotel-menu-sub"></span>').text(sub));
+                    }
+                    $menu.append($btn);
+                });
+            }
+            appendCityCreateAction($menu, typed);
+            $menu.show();
+        });
+    }
+
     function fetchQuotationHotelsSearch(q, cityId, callback) {
         var params = withDestinationParams({ mode: 'search', q: q || '' });
         if (cityId > 0) {
@@ -905,35 +1120,14 @@
         });
     }
 
-    function showHotelCitySuggestions($row) {
-        var $input = $row.find('.h-city');
-        var $menu = $row.find('.q-hotel-city-menu');
-        var typed = $.trim($input.val());
-        var dest = getQuotationDestinationFilter();
-
-        if (!dest.name) {
-            $menu.empty().append(
-                '<div class="q-hotel-menu-empty">Set Destination in Tour Information (Step 1) to see cities from Hotel Master</div>'
-            ).show();
-            return;
-        }
-
-        fetchQuotationHotelCities(typed, function (cities) {
-            $menu.empty();
-            if (!cities.length) {
-                if (typed) {
-                    $menu.append('<div class="q-hotel-menu-empty">No matching cities for ' + esc(dest.name) + ' — your typed city will be used</div>');
-                } else {
-                    $menu.append('<div class="q-hotel-menu-empty">No cities in Hotel Master for ' + esc(dest.name) + '</div>');
-                }
-            } else {
-                cities.forEach(function (c) {
-                    $menu.append($('<button type="button" class="q-hotel-menu-item q-hotel-city-pick"></button>')
-                        .attr('data-id', c.id).text(c.name));
-                });
-            }
-            $menu.show();
-        });
+    function appendHotelCreateAction($menu, typed) {
+        $menu.append('<div class="q-hotel-menu-divider"></div>');
+        $menu.append(
+            $('<button type="button" class="q-hotel-menu-item q-hotel-menu-item-create q-hotel-name-create"></button>')
+                .attr('data-name', typed || '')
+                .html('<i class="fas fa-plus-circle mr-2 text-primary"></i>Create new hotel' +
+                    (typed ? ' "' + esc(typed) + '"' : ''))
+        );
     }
 
     function showHotelNameSuggestions($row) {
@@ -945,7 +1139,9 @@
         if (!dest.name) {
             $menu.empty().append(
                 '<div class="q-hotel-menu-empty">Set Destination in Tour Information (Step 1) to see hotels from Hotel Master</div>'
-            ).show();
+            );
+            appendHotelCreateAction($menu, typed);
+            $menu.show();
             return;
         }
 
@@ -957,9 +1153,13 @@
 
             if (!hotels.length) {
                 if (typed) {
-                    $menu.append('<div class="q-hotel-menu-empty">No match in ' + esc(dest.name) + ' Hotel Master — continue with "' + esc(typed) + '" as a new hotel</div>');
+                    $menu.append(
+                        '<div class="q-hotel-menu-empty">No hotels found for "' + esc(typed) + '"</div>'
+                    );
                 } else {
-                    $menu.append('<div class="q-hotel-menu-empty">Hotels for ' + esc(dest.name) + ' from Hotel Master — type to filter</div>');
+                    $menu.append(
+                        '<div class="q-hotel-menu-empty">Hotels for ' + esc(dest.name) + ' from Hotel Master — type to filter</div>'
+                    );
                 }
             } else {
                 hotels.forEach(function (h) {
@@ -974,7 +1174,169 @@
                     $menu.append($btn);
                 });
             }
+            appendHotelCreateAction($menu, typed);
             $menu.show();
+        });
+    }
+
+    var qHotelCreateTargetRow = null;
+
+    function resetQHotelCreateForm() {
+        var $form = $('#qHotelCreateForm');
+        if (!$form.length) {
+            return;
+        }
+        $('#qHotelCreateError').addClass('d-none').text('');
+        $('#qHotelCreateDestName').val('');
+        $('#qHotelCreateDestId').val('');
+        $('#qHotelCreateCityName').val('');
+        $('#qHotelCreateCityId').val('');
+        $('#qHotelCreateName').val('');
+        $('#qHotelCreateStar').val('3 Star');
+        $('#qHotelCreateRoom').val('');
+        $('#qHotelCreateMeal').val('CP');
+        $('#qHotelCreateRate').val('');
+        $('#qHotelCreateSubmit').prop('disabled', false);
+    }
+
+    function openQHotelCreateModal(prefillName, $row) {
+        var $modal = $('#qHotelCreateModal');
+        if (!$modal.length) {
+            return;
+        }
+        qHotelCreateTargetRow = $row && $row.length ? $row : null;
+        resetQHotelCreateForm();
+
+        var dest = getQuotationDestinationFilter();
+        $('#qHotelCreateDestName').val(dest.name || '');
+        $('#qHotelCreateDestId').val(dest.id > 0 ? String(dest.id) : '');
+
+        var cityId = 0;
+        var cityName = '';
+        if ($row && $row.length) {
+            cityId = parseInt($row.find('.h-city-id').val(), 10) || 0;
+            cityName = $.trim($row.find('.h-city').val());
+            $('#qHotelCreateName').val(String(prefillName || $.trim($row.find('.h-name').val()) || '').trim());
+            $('#qHotelCreateRoom').val($.trim($row.find('.h-room').val()));
+            $('#qHotelCreateMeal').val($.trim($row.find('.h-meal').val()) || 'CP');
+            $('#qHotelCreateRate').val($.trim($row.find('.h-rate').val()));
+        } else {
+            $('#qHotelCreateName').val(String(prefillName || '').trim());
+        }
+        $('#qHotelCreateCityId').val(cityId > 0 ? String(cityId) : '');
+        $('#qHotelCreateCityName').val(cityName);
+
+        if (!$modal.parent().is('body')) {
+            $modal.appendTo('body');
+        }
+        $modal.modal('show');
+    }
+
+    function saveQHotelCreateForm() {
+        var $error = $('#qHotelCreateError');
+        var $submit = $('#qHotelCreateSubmit');
+        var destId = parseInt($('#qHotelCreateDestId').val(), 10) || 0;
+        var cityId = parseInt($('#qHotelCreateCityId').val(), 10) || 0;
+        var hotelName = $.trim($('#qHotelCreateName').val());
+        var starCategory = $.trim($('#qHotelCreateStar').val()) || '3 Star';
+        var roomType = $.trim($('#qHotelCreateRoom').val());
+        var mealPlan = $.trim($('#qHotelCreateMeal').val()) || 'CP';
+        var rate = parseFloat($('#qHotelCreateRate').val());
+        if (isNaN(rate) || rate < 0) {
+            rate = 0;
+        }
+
+        $error.addClass('d-none').text('');
+
+        if (destId <= 0) {
+            $error.removeClass('d-none').text('Set Destination in Tour Information (Step 1) first.');
+            return;
+        }
+        if (cityId <= 0) {
+            $error.removeClass('d-none').text('Select or create a city on the hotel row first, then create the hotel.');
+            return;
+        }
+        if (!hotelName) {
+            $error.removeClass('d-none').text('Hotel name is required.');
+            return;
+        }
+
+        var fd = new FormData();
+        fd.append('destination', String(destId));
+        fd.append('city_id', String(cityId));
+        fd.append('hotel_name', hotelName);
+        fd.append('star_category', starCategory);
+        fd.append('star_rating', '0');
+        fd.append('default_hotel', '0');
+        fd.append('room_types[0][type]', roomType || 'Standard');
+        fd.append('room_types[0][description]', '');
+        fd.append('room_types[0][price]', String(rate));
+        fd.append('meal_plans[0][name]', mealPlan);
+        fd.append('meal_plans[0][description]', '');
+        fd.append('meal_plans[0][price]', '0');
+
+        $submit.prop('disabled', true);
+        $.ajax({
+            url: 'crm/ajax/save_hotel.php',
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        }).done(function (res) {
+            if (!res || !res.success || !res.id) {
+                $error.removeClass('d-none').text((res && res.message) ? res.message : 'Could not create hotel.');
+                return;
+            }
+            var hotelId = parseInt(res.id, 10) || 0;
+            var finishApply = function (hotel) {
+                if (qHotelCreateTargetRow && qHotelCreateTargetRow.length && hotel) {
+                    applyHotelMasterToRow(qHotelCreateTargetRow, hotel, { forceFill: true });
+                    if (typeof saveFormDraftToStorage === 'function') {
+                        saveFormDraftToStorage();
+                    }
+                }
+                $('#qHotelCreateModal').modal('hide');
+            };
+            if (hotelId > 0) {
+                $.getJSON('crm/ajax/get_hotel.php', { id: hotelId }).done(function (detail) {
+                    if (detail && detail.success && detail.hotel) {
+                        finishApply(detail.hotel);
+                    } else {
+                        finishApply({
+                            id: hotelId,
+                            hotel_name: hotelName,
+                            city_id: cityId,
+                            city_name: $('#qHotelCreateCityName').val(),
+                            destination_id: destId,
+                            star_category: starCategory,
+                            room_types: [{ type: roomType || 'Standard', description: '', price: rate }],
+                            meal_plans: [{ name: mealPlan, description: '', price: 0 }]
+                        });
+                    }
+                }).fail(function () {
+                    finishApply({
+                        id: hotelId,
+                        hotel_name: hotelName,
+                        city_id: cityId,
+                        city_name: $('#qHotelCreateCityName').val(),
+                        destination_id: destId,
+                        star_category: starCategory,
+                        room_types: [{ type: roomType || 'Standard', description: '', price: rate }],
+                        meal_plans: [{ name: mealPlan, description: '', price: 0 }]
+                    });
+                });
+            } else {
+                $error.removeClass('d-none').text('Could not create hotel.');
+            }
+        }).fail(function (xhr) {
+            var message = 'Could not create hotel.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                message = xhr.responseJSON.message;
+            }
+            $error.removeClass('d-none').text(message);
+        }).always(function () {
+            $submit.prop('disabled', false);
         });
     }
 
@@ -1010,7 +1372,7 @@
             return;
         }
         if (cityName) {
-            fetchQuotationHotelCities(cityName, function (cities) {
+            fetchCityMasterCities(cityName, function (cities) {
                 var exact = cities.find(function (c) {
                     return String(c.name).toLowerCase() === cityName.toLowerCase();
                 });
@@ -1512,6 +1874,62 @@
         $meta.html(chips.join(''));
     }
 
+    var pendingAIItinerary = null;
+
+    function hideAIItineraryPreview() {
+        pendingAIItinerary = null;
+        var $preview = $('#qAiItineraryPreview');
+        $preview.removeClass('is-visible is-new').hide();
+        $('#qAiItineraryPreviewDays').empty();
+        $('#qAiItineraryPreviewSub').text('');
+        $('#qAiItineraryBadge').removeClass('is-previous is-new').empty();
+    }
+
+    function showAIItineraryPreview(itinerary, info) {
+        info = info || {};
+        pendingAIItinerary = {
+            itinerary: itinerary,
+            info: info
+        };
+
+        var fromPrevious = !!info.from_previous;
+        var $preview = $('#qAiItineraryPreview');
+        var $badge = $('#qAiItineraryBadge');
+        var dest = ($('[name=destination]').val() || '').trim() || 'your destination';
+
+        $preview.toggleClass('is-new', !fromPrevious);
+        if (fromPrevious) {
+            $('#qAiItineraryPreviewTitle').text('Previous itinerary match');
+            $badge.removeClass('is-new').addClass('is-previous')
+                .html('<i class="fas fa-history"></i> From previous itinerary');
+            var sub = info.message || ('Matched previous plan for ' + dest + '.');
+            if (info.match_label) {
+                sub = (info.match_type === 'package' ? 'Package: ' : 'Quotation: ') + info.match_label;
+            }
+            $('#qAiItineraryPreviewSub').text(sub);
+        } else {
+            $('#qAiItineraryPreviewTitle').text('New generated suggestion');
+            $badge.removeClass('is-previous').addClass('is-new')
+                .html('<i class="fas fa-exclamation-circle"></i> New suggestion — not from a previous itinerary');
+            $('#qAiItineraryPreviewSub').text(
+                'No saved itinerary matched this destination and nights. Review the generated plan before applying.'
+            );
+        }
+
+        var $list = $('#qAiItineraryPreviewDays').empty();
+        (itinerary || []).forEach(function (day, idx) {
+            var title = ((day && day.title) || '').trim() || ('Day ' + (idx + 1));
+            $list.append(
+                '<li><span class="day-num">Day ' + (idx + 1) + '</span><span>' + esc(title) + '</span></li>'
+            );
+        });
+
+        $preview.addClass('is-visible').show();
+        try {
+            $preview[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (e) { /* ignore */ }
+    }
+
     function applyAIItinerary(itinerary, info) {
         if (!Array.isArray(itinerary) || !itinerary.length) {
             alert('No itinerary days were returned.');
@@ -1527,25 +1945,63 @@
         }, 80);
 
         var source = (info && info.source) ? info.source : 'instant';
-        var msg = '<div class="alert alert-success">';
-        msg += '<i class="fas fa-check-circle mr-1"></i> ';
-        if (source === 'ai') {
-            msg += 'Itinerary generated with AI for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong>.';
+        var fromPrevious = !!(info && info.from_previous);
+        var alertClass = fromPrevious ? 'alert-success' : 'alert-warning';
+        var msg = '<div class="alert ' + alertClass + '">';
+        if (fromPrevious) {
+            msg += '<i class="fas fa-check-circle mr-1"></i> ';
+            msg += 'Applied previous itinerary for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong>.';
+            if (info && info.match_label) {
+                msg += ' <span class="badge badge-success ml-1">' + esc(
+                    (info.match_type === 'package' ? 'Package: ' : 'Quotation: ') + info.match_label
+                ) + '</span>';
+            }
         } else {
-            msg += 'Itinerary generated instantly for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong>.';
+            msg += '<span class="badge badge-danger mr-2"><i class="fas fa-exclamation-circle"></i> New suggestion</span> ';
+            if (source === 'ai') {
+                msg += 'Applied AI-generated itinerary for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong> (not from a previous itinerary).';
+            } else {
+                msg += 'Applied generated itinerary for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong> (not from a previous itinerary).';
+            }
         }
-        if (info && info.message) {
+        if (info && info.message && fromPrevious) {
             msg += ' <small class="d-block mt-1 text-muted">' + esc(info.message) + '</small>';
         }
         msg += '</div>';
         $('#qAlert').html(msg);
+        hideAIItineraryPreview();
         window.scrollTo(0, 0);
     }
 
     function initAISuggestItinerary() {
         refreshAiItineraryMeta();
+        hideAIItineraryPreview();
 
-        $(document).on('input change', '[name=destination], #q_nights, #q_adults, #q_children', refreshAiItineraryMeta);
+        $(document).on('input change', '[name=destination], #q_nights, #q_adults, #q_children', function () {
+            refreshAiItineraryMeta();
+            hideAIItineraryPreview();
+        });
+
+        $('#qDismissAIItinerary').on('click', function () {
+            hideAIItineraryPreview();
+        });
+
+        $('#qApplyAIItinerary').on('click', function () {
+            if (!pendingAIItinerary || !Array.isArray(pendingAIItinerary.itinerary)) {
+                alert('Generate a suggestion first.');
+                return;
+            }
+
+            var existing = snapshotItinerary();
+            var hasContent = existing.some(function (day) {
+                return ((day.title || '').trim() !== '') || ((day.description || '').replace(/<[^>]*>/g, '').trim() !== '');
+            });
+            if (hasContent && !window.confirm('Replace the current itinerary with this suggestion?')) {
+                return;
+            }
+
+            applyAIItinerary(pendingAIItinerary.itinerary, pendingAIItinerary.info || {});
+        });
 
         $('#qSuggestAIItinerary').on('click', function () {
             var dest = ($('[name=destination]').val() || '').trim();
@@ -1563,15 +2019,8 @@
                 return;
             }
 
-            var existing = snapshotItinerary();
-            var hasContent = existing.some(function (day) {
-                return ((day.title || '').trim() !== '') || ((day.description || '').replace(/<[^>]*>/g, '').trim() !== '');
-            });
-            if (hasContent && !window.confirm('Replace the current itinerary with the generated plan?')) {
-                return;
-            }
-
             var $btn = $(this).prop('disabled', true).html('<i class="fas fa-bolt mr-1"></i> Generating...');
+            hideAIItineraryPreview();
 
             $.ajax({
                 url: absUrl('crm/ajax/ai_suggest_itinerary.php'),
@@ -1583,13 +2032,19 @@
                     adults: parseInt($('#q_adults').val(), 10) || 2,
                     children: parseInt($('#q_children').val(), 10) || 0,
                     start_date: $('#q_tentative_date').val() || '',
-                    notes: ($('#qAiItineraryNotes').val() || '').trim()
+                    notes: ($('#qAiItineraryNotes').val() || '').trim(),
+                    exclude_quotation_id: parseInt($('#q_id').val(), 10) || 0
                 }
             }).done(function (res) {
                 if (res && res.success && Array.isArray(res.itinerary)) {
-                    applyAIItinerary(res.itinerary, {
+                    showAIItineraryPreview(res.itinerary, {
                         source: res.source,
-                        message: res.message || ''
+                        message: res.message || '',
+                        from_previous: !!res.from_previous,
+                        is_new_suggestion: !!res.is_new_suggestion || !res.from_previous,
+                        match_type: res.match_type || '',
+                        match_label: res.match_label || '',
+                        match_id: res.match_id || 0
                     });
                 } else {
                     alert((res && res.message) ? res.message : 'Could not generate itinerary.');
@@ -1744,13 +2199,36 @@
 
     function pricingFixedCostKeys() {
         return [
-            { key: 'flight_train', label: 'Flight/Train' },
-            { key: 'land', label: 'Land' },
-            { key: 'hotel', label: 'Hotel' },
-            { key: 'transport', label: 'Transport' },
-            { key: 'visa', label: 'Visa' },
-            { key: 'travel_insurance', label: 'Travel Insurance' }
+            { key: 'flight_train', label: 'Flight / Train', icon: 'fas fa-plane' },
+            { key: 'land', label: 'Land', icon: 'fas fa-map-marker-alt' },
+            { key: 'hotel', label: 'Hotel', icon: 'fas fa-bed' },
+            { key: 'transport', label: 'Transport', icon: 'fas fa-car' },
+            { key: 'visa', label: 'Visa', icon: 'fas fa-passport' },
+            { key: 'travel_insurance', label: 'Insurance', icon: 'fas fa-shield-alt' }
         ];
+    }
+
+    function pricingOptionBadge(idx, isActive) {
+        if (isActive) {
+            return '<span class="q-pricing-option-badge is-selected"><i class="fas fa-check"></i> Selected</span>';
+        }
+        if (idx === 0) {
+            return '<span class="q-pricing-option-badge"><i class="fas fa-wallet"></i> Budget</span>';
+        }
+        if (idx === 1) {
+            return '<span class="q-pricing-option-badge"><i class="fas fa-star"></i> Popular</span>';
+        }
+        return '';
+    }
+
+    function pricingOptionTitle(cat, idx) {
+        var base = defaultHotelCategoryLabel(idx);
+        var label = String(cat.label || '').trim();
+        if (!label || /^Option\s+\d+$/i.test(label) || /^Option\s+0?\d+$/i.test(label)) {
+            var stars = idx === 0 ? '3★' : (idx === 1 ? '4★' : 'Hotel');
+            return base + ' – ' + stars + ' Hotel';
+        }
+        return label;
     }
 
     function pricingOptionColumnHtml(cat, state, idx, maxCustom) {
@@ -1758,82 +2236,90 @@
         state = state || defaultPricingSheetState();
         var fixed = state.fixed || {};
         var id = cat.id || ('opt_' + (idx + 1));
-        var label = cat.label || defaultHotelCategoryLabel(idx);
+        var title = pricingOptionTitle(cat, idx);
         var isActive = String(id) === String(qActiveHotelCategoryId);
         maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
         var html = '<div class="q-pricing-option-sheet' + (isActive ? ' is-active' : '') + '" data-cat-id="' + esc(id) + '">';
         html += '<div class="q-pricing-option-hd">';
-        html += '<h4>' + esc(label) + '</h4>';
-        if (isActive) {
-            html += '<span class="badge-active-price">Selected</span>';
-        } else {
-            html += '<button type="button" class="btn btn-outline-success btn-sm q-set-active-pricing" data-cat-id="' + esc(id) + '">Use</button>';
+        html += '<div class="q-pricing-option-hd-top">';
+        html += '<span class="q-pricing-option-hd-ico"><i class="fas fa-building"></i></span>';
+        html += '<div class="q-pricing-option-hd-meta">';
+        html += '<h4>' + esc(title) + '</h4>';
+        html += '<div class="q-pricing-option-hd-badges">';
+        html += pricingOptionBadge(idx, isActive);
+        if (!isActive) {
+            html += '<button type="button" class="btn q-set-active-pricing" data-cat-id="' + esc(id) + '">Use this option</button>';
         }
+        html += '</div></div></div>';
         html += '</div><div class="q-pricing-option-body">';
-        html += '<div class="q-pricing-col-spacer q-pricing-section-spacer"></div>';
         pricingFixedCostKeys().forEach(function (row) {
             var synced = (row.key === 'flight_train' || row.key === 'hotel') ? ' q-cost-synced' : '';
             var edited = state.user_edited && parseInt(state.user_edited[row.key], 10) === 1 ? '1' : '0';
             html += '<div class="q-pricing-amount-cell">' +
-                '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + row.key + '" value="' + esc(fixed[row.key] != null ? fixed[row.key] : '') + '" data-user-edited="' + edited + '">' +
+                '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + row.key + '" value="' + esc(fixed[row.key] != null ? fixed[row.key] : '') + '" data-user-edited="' + edited + '" placeholder="0">' +
                 '</div>';
         });
         html += '<div class="q-custom-cost-rows">';
         var customs = state.custom || [];
-        for (var ci = 0; ci < maxCustom; ci++) {
+        var customCount = Math.max(1, maxCustom);
+        for (var ci = 0; ci < customCount; ci++) {
             html += customCostRowHtml(customs[ci] || {});
         }
         html += '</div>';
         html += '<div class="q-pricing-amount-cell q-pricing-add-cell">' +
-            '<button type="button" class="btn btn-outline-secondary btn-sm q-add-cost-row" title="Add cost line"><i class="fas fa-plus"></i></button>' +
+            '<button type="button" class="btn btn-outline-secondary btn-sm q-add-cost-row" title="Add extra cost"><i class="fas fa-plus"></i></button>' +
             '</div>';
-        html += '<div class="q-cost-totals">';
-        html += '<div class="q-pricing-amount-cell"><input type="text" class="form-control form-control-sm cost-input q-sheet-total-cost" readonly value="0"></div>';
-        html += '<div class="q-pricing-amount-cell q-pricing-profit-cell"><div class="q-profit-row">' +
-            '<div class="input-group input-group-sm"><input type="number" step="0.01" class="form-control q-sheet-profit-percent" placeholder="%" value="' + esc(state.profit_percent || '') + '">' +
-            '<div class="input-group-append"><span class="input-group-text">%</span></div></div>' +
-            '<span class="text-muted q-profit-or">OR</span>' +
-            '<input type="number" step="0.01" class="form-control form-control-sm q-sheet-profit-amount" placeholder="Amt" value="' + esc(state.profit_amount || '') + '">' +
-            '</div></div>';
-        html += '<div class="q-pricing-amount-cell"><input type="text" class="form-control form-control-sm cost-input q-sheet-package-total" readonly value="0"></div>';
-        html += '</div>';
-        html += '<div class="q-pricing-col-spacer q-pricing-section-spacer"></div>';
-        html += '<div class="q-pricing-amount-cell">' +
-            '<input type="number" step="0.01" class="form-control form-control-sm q-sheet-price-per-adult" value="' + esc(state.price_per_adult || '') + '"' +
+
+        html += '<div class="q-pricing-summary-card q-pricing-summary-values">';
+        html += '<div class="q-sum-row q-sum-total-row">' +
+            '<span class="q-sum-val q-sum-total" data-display="total">₹ 0</span>' +
+            '<input type="hidden" class="q-sheet-total-cost" value="0">' +
+            '</div>';
+        html += '<div class="q-sum-row q-sum-profit-row">' +
+            '<div class="q-sum-profit-value">' +
+            '<input type="number" step="0.01" class="q-sheet-profit-percent q-sum-pct" placeholder="0" value="' + esc(state.profit_percent || '') + '" title="Profit %">' +
+            '<span class="q-sum-pct-sign">%</span>' +
+            '<span class="q-sum-val q-sum-profit" data-display="profit">₹ 0</span>' +
+            '</div>' +
+            '<input type="hidden" class="q-sheet-profit-amount" value="' + esc(state.profit_amount || '') + '">' +
+            '</div>';
+        html += '<div class="q-sum-row q-sum-selling-row">' +
+            '<span class="q-sum-val q-sum-selling" data-display="selling">₹ 0</span>' +
+            '<input type="hidden" class="q-sheet-package-total" value="0">' +
+            '</div>';
+        html += '<div class="q-sum-row q-sum-ppa-row">' +
+            '<div class="q-sum-ppa-wrap">' +
+            '<span class="q-sum-rupee">₹</span>' +
+            '<input type="number" step="0.01" class="form-control q-sheet-price-per-adult" value="' + esc(state.price_per_adult || '') + '"' +
             (parseInt(state.price_per_adult_edited, 10) === 1 ? ' data-user-edited="1"' : '') + '>' +
-            '</div>';
-        html += '<div class="q-pricing-amount-cell">' +
-            '<input type="text" class="form-control form-control-sm q-sheet-quotation-total" readonly value="0">' +
-            '</div>';
+            '</div></div>';
+        html += '<input type="hidden" class="q-sheet-quotation-total" value="0">';
+        html += '</div>';
         html += '<span class="q-sheet-adult-lbl d-none">1</span>';
         html += '</div></div>';
         return html;
     }
 
     function pricingLabelsColumnHtml(maxCustom) {
-        maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
+        maxCustom = Math.max(1, parseInt(maxCustom, 10) || 1);
         var html = '<div class="q-pricing-labels-col">';
-        html += '<div class="q-pricing-option-hd q-pricing-labels-hd"><span class="q-pricing-labels-title">Item</span></div>';
+        html += '<div class="q-pricing-labels-hd"></div>';
         html += '<div class="q-pricing-option-body">';
-        html += '<div class="q-pricing-section-spacer"><span class="q-subsection-label mb-0">Cost Sheet</span></div>';
         pricingFixedCostKeys().forEach(function (row) {
-            html += '<div class="q-pricing-row-label">' + esc(row.label) + '</div>';
+            html += '<div class="q-pricing-row-label"><i class="' + row.icon + '" aria-hidden="true"></i><span>' + esc(row.label) + '</span></div>';
         });
-        if (maxCustom > 0) {
-            for (var i = 0; i < maxCustom; i++) {
-                html += '<div class="q-pricing-row-label q-pricing-custom-label">' + (i === 0 ? 'Extra cost' : '') + '</div>';
-            }
-        } else {
-            html += '<div class="q-pricing-row-label q-pricing-custom-label">Extra costs</div>';
+        for (var i = 0; i < maxCustom; i++) {
+            html += '<div class="q-pricing-row-label q-pricing-custom-label">' +
+                (i === 0 ? '<i class="fas fa-ellipsis-h" aria-hidden="true"></i><span>Extra Costs</span>' : '') +
+                '</div>';
         }
         html += '<div class="q-pricing-row-label q-pricing-add-label"></div>';
-        html += '<div class="q-pricing-row-label">Total Cost</div>';
-        html += '<div class="q-pricing-row-label">Add Profit</div>';
-        html += '<div class="q-pricing-row-label q-pricing-package-label">Package Total' +
-            '<small class="q-hint d-block mb-0">(Cost + Profit) × Adults</small></div>';
-        html += '<div class="q-pricing-section-spacer"><span class="q-subsection-label mb-0">Quotation Cost</span></div>';
-        html += '<div class="q-pricing-row-label">Price/Adult × <span class="q-matrix-adult-lbl">1</span></div>';
-        html += '<div class="q-pricing-row-label">Quotation Total</div>';
+        html += '<div class="q-pricing-labels-summary">';
+        html += '<div class="q-pricing-row-label q-sum-label-row"><i class="fas fa-coins" aria-hidden="true"></i><span>Total Cost</span></div>';
+        html += '<div class="q-pricing-row-label q-sum-label-row q-sum-label-profit"><i class="fas fa-arrow-up" aria-hidden="true"></i><span>Profit (%)</span></div>';
+        html += '<div class="q-pricing-row-label q-sum-label-row"><i class="fas fa-tag" aria-hidden="true"></i><span>Selling Price</span></div>';
+        html += '<div class="q-pricing-row-label q-sum-label-row q-sum-label-ppa"><i class="fas fa-user" aria-hidden="true"></i><span>Price per Adult</span></div>';
+        html += '</div>';
         html += '</div></div>';
         return html;
     }
@@ -1908,6 +2394,12 @@
         }
     }
 
+    function formatInrDisplay(n) {
+        var num = parseFloat(n);
+        if (isNaN(num)) num = 0;
+        return '₹ ' + money(num);
+    }
+
     function recalcOnePricingSheet($sheet, adults) {
         syncSheetFlightFromServices($sheet);
         syncSheetHotelFromCategory($sheet);
@@ -1918,6 +2410,7 @@
             if (!isNaN(v)) total += v;
         });
         $sheet.find('.q-sheet-total-cost').val(money(total));
+        $sheet.find('.q-sum-total').text(formatInrDisplay(total));
 
         var profit = 0;
         var pct = parseFloat($sheet.find('.q-sheet-profit-percent').val());
@@ -1928,8 +2421,11 @@
             profit = total * pct / 100;
         }
         var pkgBase = total + profit;
+        $sheet.find('.q-sum-profit').text(formatInrDisplay(profit));
         $sheet.find('.q-sheet-adult-lbl').text(adults);
         $('#qPricingSheetsHost .q-matrix-adult-lbl').text(adults);
+        // Selling Price = cost + profit (matches cost sheet UI); package total keeps guest multiplier for save/preview.
+        $sheet.find('.q-sum-selling').text(formatInrDisplay(pkgBase));
         $sheet.find('.q-sheet-package-total').val(money(pkgBase * adults));
 
         var $ppa = $sheet.find('.q-sheet-price-per-adult');
@@ -4333,7 +4829,7 @@
             e.preventDefault();
             var $row = $(this).closest('.q-hotel-row');
             var cityId = $(this).data('id');
-            var cityName = $(this).text();
+            var cityName = $(this).attr('data-name') || $(this).text();
             $row.find('.h-city-id').val(cityId);
             $row.find('.h-city').val(cityName);
             hideHotelMenus($row);
@@ -4341,6 +4837,52 @@
                 showHotelNameSuggestions($row);
             }
             saveFormDraftToStorage();
+        });
+
+        $(document).on('mousedown', '.q-hotel-city-create', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $row = $(this).closest('.q-hotel-row');
+            var name = $(this).attr('data-name') || $.trim($row.find('.h-city').val());
+            hideHotelMenus($row);
+            openQCityCreateModal(name, $row);
+        });
+
+        $(document).on('mousedown', '.q-hotel-name-create', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $row = $(this).closest('.q-hotel-row');
+            var name = $(this).attr('data-name') || $.trim($row.find('.h-name').val());
+            hideHotelMenus($row);
+            openQHotelCreateModal(name, $row);
+        });
+
+        $(document).on('change', '#qCityCreateCountry', function () {
+            loadQCityCreateStates($(this).val());
+        });
+
+        $('#qCityCreateForm').on('submit', function (e) {
+            e.preventDefault();
+            saveQCityCreateForm();
+        });
+
+        $('#qCityCreateModal').on('shown.bs.modal', function () {
+            $('#qCityCreateName').trigger('focus');
+        }).on('hidden.bs.modal', function () {
+            qCityCreateTargetRow = null;
+            resetQCityCreateForm();
+        });
+
+        $('#qHotelCreateForm').on('submit', function (e) {
+            e.preventDefault();
+            saveQHotelCreateForm();
+        });
+
+        $('#qHotelCreateModal').on('shown.bs.modal', function () {
+            $('#qHotelCreateName').trigger('focus');
+        }).on('hidden.bs.modal', function () {
+            qHotelCreateTargetRow = null;
+            resetQHotelCreateForm();
         });
 
         $(document).on('focus click', '.h-name', function () {
@@ -4567,6 +5109,10 @@
             var rate = parseFloat($('#q_usd_rate').val());
             if (isNaN(usd) || isNaN(rate)) { alert('Enter both USD amount and rate.'); return; }
             var inr = usd * rate;
+            var resultText = '₹ ' + money(inr) + ' INR';
+            $('#qUsdResultText').text(resultText);
+            $('#qUsdResult').removeClass('is-empty');
+            $('#qUsdCopyResult').show().data('copy', String(inr.toFixed(2)));
             var $target = $lastFocusedCost && $lastFocusedCost.length ? $lastFocusedCost : $();
             if (!$target.length) {
                 $target = $('#qPricingSheetsHost .q-pricing-option-sheet.is-active .q-cost[data-key="land"]').first();
@@ -4583,6 +5129,12 @@
                 $target.attr('data-user-edited', '1');
             }
             recalcCosts();
+        });
+
+        $('#qUsdCopyResult').on('click', function () {
+            var val = String($(this).data('copy') || '');
+            if (!val || !navigator.clipboard) return;
+            navigator.clipboard.writeText(val).catch(function () {});
         });
 
         $(document).on('click', '#qCalcKeys [data-calc]', function () {

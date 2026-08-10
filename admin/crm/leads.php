@@ -63,12 +63,23 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
             ];
         }
     }
+
+    $itineraryNights = max(0, (int) ($row['itinerary_total_nights'] ?? 0));
+    if ($itineraryNights === 0 && isset($payload['itinerary_total_nights'])) {
+        $itineraryNights = max(0, (int) $payload['itinerary_total_nights']);
+    }
+    if ($itineraryNights === 0 && !empty($destNightMap) && is_array($destNightMap)) {
+        foreach ($destNightMap as $nightVal) {
+            $itineraryNights += max(0, (int) $nightVal);
+        }
+    }
+
     if (empty($destNames) && !empty($payload['tp_arrival'])) {
         $arrivalName = (string) $payload['tp_arrival'];
         $destNames[] = $arrivalName;
         $destSegments[] = [
             'name' => $arrivalName,
-            'nights' => max(0, (int) ($row['itinerary_total_nights'] ?? 0)),
+            'nights' => $itineraryNights,
         ];
     }
 
@@ -81,8 +92,23 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         $destNames[] = 'N/A';
         $destSegments[] = [
             'name' => 'N/A',
-            'nights' => max(0, (int) ($row['itinerary_total_nights'] ?? 0)),
+            'nights' => $itineraryNights,
         ];
+    }
+
+    // If per-destination nights are missing but total nights exist, apply total to the sole destination.
+    $segmentNightsSum = 0;
+    foreach ($destSegments as $seg) {
+        $segmentNightsSum += max(0, (int) ($seg['nights'] ?? 0));
+    }
+    if ($segmentNightsSum === 0 && $itineraryNights > 0 && count($displayDestNames) === 1) {
+        foreach ($destSegments as $si => $seg) {
+            $segName = trim((string) ($seg['name'] ?? ''));
+            if ($segName !== '' && strtoupper($segName) !== 'N/A') {
+                $destSegments[$si]['nights'] = $itineraryNights;
+                break;
+            }
+        }
     }
 
     $travelDate = '';
@@ -102,9 +128,20 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         }
     }
 
-    $destDisplay = !empty($displayDestNames)
-        ? strtoupper(implode(', ', $displayDestNames))
-        : '';
+    $destDisplayParts = [];
+    foreach ($destSegments as $seg) {
+        $segName = trim((string) ($seg['name'] ?? ''));
+        if ($segName === '' || strtoupper($segName) === 'N/A') {
+            continue;
+        }
+        $segLabel = strtoupper($segName);
+        $segNights = max(0, (int) ($seg['nights'] ?? 0));
+        if ($segNights > 0) {
+            $segLabel .= '-' . str_pad((string) $segNights, 2, '0', STR_PAD_LEFT) . ' N';
+        }
+        $destDisplayParts[] = $segLabel;
+    }
+    $destDisplay = !empty($destDisplayParts) ? implode(', ', $destDisplayParts) : '';
     $departureDisplay = $departure !== '' ? ('Ex-' . $departure) : '';
     $travelDestinationText = '';
     if ($destDisplay !== '' && $departureDisplay !== '') {
@@ -134,8 +171,6 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         $paxParts[] = $children . 'C';
     }
     $paxText = !empty($paxParts) ? implode(' + ', $paxParts) : '—';
-
-    $itineraryNights = max(0, (int) ($row['itinerary_total_nights'] ?? 0));
 
     $customerInitial = crmCustomerInitialFromPayload($payload);
     $customerName = (string) ($row['customer_name'] ?? '');
@@ -473,6 +508,82 @@ if ($destRes) {
     while ($dest = $destRes->fetch_assoc()) {
         $destinationLookup[(int) $dest['id']] = (string) ($dest['name'] ?? '');
     }
+}
+
+$assignUserLookup = [];
+$usersTableCheck = $conn->query("SHOW TABLES LIKE 'users'");
+if ($usersTableCheck && $usersTableCheck->num_rows > 0) {
+    $usersRes = $conn->query("SELECT `id`, `username`, `full_name`, `profile_image` FROM `users` WHERE COALESCE(`is_deleted`, 0) = 0");
+    if ($usersRes) {
+        $tonePalette = [
+            ['key' => 'red', 'color' => '#e11d2e'],
+            ['key' => 'purple', 'color' => '#7c3aed'],
+            ['key' => 'blue', 'color' => '#2563eb'],
+            ['key' => 'orange', 'color' => '#ea580c'],
+            ['key' => 'teal', 'color' => '#0d9488'],
+            ['key' => 'indigo', 'color' => '#4f46e5'],
+            ['key' => 'pink', 'color' => '#db2777'],
+            ['key' => 'green', 'color' => '#16a34a'],
+            ['key' => 'cyan', 'color' => '#0891b2'],
+            ['key' => 'amber', 'color' => '#d97706'],
+        ];
+        while ($uRow = $usersRes->fetch_assoc()) {
+            $uid = (int) ($uRow['id'] ?? 0);
+            $tone = $tonePalette[max(0, $uid - 1) % count($tonePalette)];
+            $entry = [
+                'id' => $uid,
+                'username' => (string) ($uRow['username'] ?? ''),
+                'full_name' => (string) ($uRow['full_name'] ?? ''),
+                'profile_image' => (string) ($uRow['profile_image'] ?? ''),
+                'tone_key' => $tone['key'],
+                'tone_color' => $tone['color'],
+            ];
+            $unameKey = strtolower(trim($entry['username']));
+            $fnameKey = strtolower(trim($entry['full_name']));
+            if ($unameKey !== '') {
+                $assignUserLookup[$unameKey] = $entry;
+            }
+            if ($fnameKey !== '' && !isset($assignUserLookup[$fnameKey])) {
+                $assignUserLookup[$fnameKey] = $entry;
+            }
+        }
+    }
+}
+
+/**
+ * Resolve assigned user display data for leads list.
+ *
+ * @param string $assignTo
+ * @param array<string, array<string, mixed>> $lookup
+ * @return array{label: string, image: string, initial: string, tone_key: string, tone_color: string}|null
+ */
+function crmLeadsResolveAssignee(string $assignTo, array $lookup): ?array
+{
+    $assignTo = trim($assignTo);
+    if ($assignTo === '' || $assignTo === '—') {
+        return null;
+    }
+    $key = strtolower($assignTo);
+    if (isset($lookup[$key])) {
+        $u = $lookup[$key];
+        $label = $u['username'] !== '' ? $u['username'] : $u['full_name'];
+        $seed = $u['full_name'] !== '' ? $u['full_name'] : $label;
+        return [
+            'label' => $label !== '' ? $label : $assignTo,
+            'image' => (string) ($u['profile_image'] ?? ''),
+            'initial' => strtoupper(substr($seed !== '' ? $seed : $assignTo, 0, 1)),
+            'tone_key' => (string) ($u['tone_key'] ?? 'blue'),
+            'tone_color' => (string) ($u['tone_color'] ?? '#2563eb'),
+        ];
+    }
+
+    return [
+        'label' => $assignTo,
+        'image' => '',
+        'initial' => strtoupper(substr($assignTo, 0, 1)),
+        'tone_key' => 'blue',
+        'tone_color' => '#2563eb',
+    ];
 }
 
 $hasLeadsTable = false;
@@ -1131,21 +1242,6 @@ foreach ($destinationLookup as $destId => $destName) {
             border-bottom: 1px solid var(--ld-border);
         }
 
-        .crm-leads-ui table.crm-leads-table thead th:nth-child(1),
-        .crm-leads-ui table.crm-leads-table tbody td:nth-child(1) {
-            text-align: center;
-            vertical-align: middle;
-            width: 44px;
-            max-width: 44px;
-        }
-
-        .crm-leads-ui .cell-serial {
-            color: var(--ld-text-muted);
-            font-weight: 600;
-            font-size: calc(0.78rem + 1px);
-            font-variant-numeric: tabular-nums;
-        }
-
         .crm-leads-ui table.crm-leads-table thead th.col-ld-assign,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-date,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-services,
@@ -1225,7 +1321,8 @@ foreach ($destinationLookup as $destId => $destName) {
 
         .crm-leads-ui table.crm-leads-table thead th.col-ld-assign,
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-assign {
-            width: 8%;
+            width: 10%;
+            text-align: center;
         }
 
         @media (max-width: 1399.98px) {
@@ -1368,7 +1465,7 @@ foreach ($destinationLookup as $destId => $destName) {
             font-weight: 400;
         }
 
-        .crm-leads-ui table.crm-leads-table tbody td:nth-child(2) {
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-lead {
             font-weight: 600;
             color: var(--ld-accent);
         }
@@ -1672,10 +1769,64 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #111827;
             font-size: calc(0.8125rem + 1px);
             text-transform: uppercase;
-            display: block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
             max-width: 100%;
             overflow: hidden;
             text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+
+        .crm-leads-ui .cell-assign-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex: 0 0 auto;
+            border: 1px solid #e5e7eb;
+            background: #f3f4f6;
+        }
+
+        .crm-leads-ui .cell-assign-initial {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            line-height: 1;
+            border: 1px solid transparent;
+        }
+
+        .crm-leads-ui .cell-assign-initial.tone-red { background: #fee2e2; color: #e11d2e; }
+        .crm-leads-ui .cell-assign-initial.tone-purple { background: #ede9fe; color: #7c3aed; }
+        .crm-leads-ui .cell-assign-initial.tone-blue { background: #dbeafe; color: #2563eb; }
+        .crm-leads-ui .cell-assign-initial.tone-orange { background: #ffedd5; color: #ea580c; }
+        .crm-leads-ui .cell-assign-initial.tone-teal { background: #ccfbf1; color: #0d9488; }
+        .crm-leads-ui .cell-assign-initial.tone-indigo { background: #e0e7ff; color: #4f46e5; }
+        .crm-leads-ui .cell-assign-initial.tone-pink { background: #fce7f3; color: #db2777; }
+        .crm-leads-ui .cell-assign-initial.tone-green { background: #dcfce7; color: #16a34a; }
+        .crm-leads-ui .cell-assign-initial.tone-cyan { background: #cffafe; color: #0891b2; }
+        .crm-leads-ui .cell-assign-initial.tone-amber { background: #fef3c7; color: #d97706; }
+
+        .crm-leads-ui .cell-assign-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
+        .crm-leads-ui .cell-assign.is-empty {
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: none;
         }
 
         .crm-leads-ui .cell-lead-source {
@@ -1837,6 +1988,27 @@ foreach ($destinationLookup as $destId => $destName) {
             padding: 0.35rem 0;
             border-color: #e2e8f0;
             box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+            z-index: 1060;
+        }
+
+        .crm-leads-ui table.crm-leads-table tbody tr.is-actions-dropdown-open {
+            position: relative;
+            z-index: 50;
+        }
+
+        .crm-leads-ui table.crm-leads-table tbody tr.is-actions-dropdown-open > td {
+            z-index: auto;
+        }
+
+        .crm-leads-ui table.crm-leads-table tbody tr.is-actions-dropdown-open td.col-actions {
+            overflow: visible;
+            z-index: 51;
+            position: relative;
+        }
+
+        .crm-leads-ui .lead-actions-more.show {
+            position: relative;
+            z-index: 52;
         }
 
         .crm-leads-ui .lead-actions-menu .dropdown-item {
@@ -3113,7 +3285,6 @@ foreach ($destinationLookup as $destId => $destName) {
                             <table class="crm-leads-table">
                                 <thead>
                                     <tr>
-                                        <th style="width:44px;">#</th>
                                         <th class="col-ld-lead">Lead ID</th>
                                         <th class="col-ld-assign">Assigned</th>
                                         <th class="col-ld-guest">Guest</th>
@@ -3128,11 +3299,10 @@ foreach ($destinationLookup as $destId => $destName) {
                                 <tbody>
                                     <?php if (empty($leadRows)) { ?>
                                         <tr>
-                                            <td colspan="10" class="text-center text-muted">No leads found.</td>
+                                            <td colspan="9" class="text-center text-muted">No leads found.</td>
                                         </tr>
                                     <?php } else { ?>
                                         <?php foreach ($leadRows as $rowIndex => $lead) {
-                                            $serialNo = $offset + $rowIndex + 1;
                                             $serviceIcons = [
                                                 'tour_package' => ['fas fa-suitcase-rolling', 'Tour Package'],
                                                 'cruise' => ['fas fa-ship', 'Cruise'],
@@ -3155,7 +3325,6 @@ foreach ($destinationLookup as $destId => $destName) {
                                                 . "Email: " . ((string) ($lead['customer_email'] !== '' ? $lead['customer_email'] : '—'));
                                         ?>
                                             <tr data-lead-id="<?= (int) $lead['id'] ?>">
-                                                <td class="cell-serial"><?= (int) $serialNo ?></td>
                                                 <td class="col-ld-lead">
                                                     <button type="button" class="lead-id-cell js-lead-open-edit"
                                                         data-lead-id="<?= (int) $lead['id'] ?>"
@@ -3165,9 +3334,32 @@ foreach ($destinationLookup as $destId => $destName) {
                                                 </td>
                                                 <td class="col-ld-assign">
                                                     <?php
-                                                    $assignName = (string) ($lead['assign_to'] !== '' ? $lead['assign_to'] : '—');
+                                                    $assignRaw = trim((string) ($lead['assign_to'] ?? ''));
+                                                    $assignee = crmLeadsResolveAssignee($assignRaw, $assignUserLookup);
+                                                    if ($assignee === null) {
+                                                        ?>
+                                                        <span class="cell-assign is-empty">—</span>
+                                                        <?php
+                                                    } else {
+                                                        $assignLabel = (string) $assignee['label'];
+                                                        $assignImage = (string) $assignee['image'];
+                                                        $assignInitial = (string) $assignee['initial'];
+                                                        $assignTone = (string) $assignee['tone_key'];
+                                                        $assignColor = (string) $assignee['tone_color'];
+                                                        ?>
+                                                        <span class="cell-assign" title="<?= htmlspecialchars($assignLabel, ENT_QUOTES, 'UTF-8') ?>">
+                                                            <?php if ($assignImage !== '') { ?>
+                                                                <img class="cell-assign-avatar" src="<?= htmlspecialchars('uploads/users/' . $assignImage, ENT_QUOTES, 'UTF-8') ?>" alt="">
+                                                            <?php } else { ?>
+                                                                <span class="cell-assign-initial tone-<?= htmlspecialchars($assignTone, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($assignInitial, ENT_QUOTES, 'UTF-8') ?></span>
+                                                            <?php } ?>
+                                                            <span class="cell-assign-name" style="color: <?= htmlspecialchars($assignColor, ENT_QUOTES, 'UTF-8') ?>;">
+                                                                <?= htmlspecialchars($assignLabel, ENT_QUOTES, 'UTF-8') ?>
+                                                            </span>
+                                                        </span>
+                                                        <?php
+                                                    }
                                                     ?>
-                                                    <span class="cell-assign"><?= htmlspecialchars($assignName, ENT_QUOTES, 'UTF-8') ?></span>
                                                 </td>
                                                 <td class="col-ld-guest">
                                                     <div class="lead-name">
@@ -3706,8 +3898,25 @@ foreach ($destinationLookup as $destId => $destName) {
                     customer_email: editLead.customer_email || '',
                     lead_source: editLead.lead_source || (editLead.payload ? editLead.payload.lead_source : '') || '',
                     referred_by: editLead.referred_by || (editLead.payload ? editLead.payload.referred_by : '') || '',
-                    assign_to: editLead.assign_to || (editLead.payload ? editLead.payload.assign_to : '') || ''
+                    assign_to: editLead.assign_to || (editLead.payload ? editLead.payload.assign_to : '') || '',
+                    itinerary_total_nights: (editLead.itinerary_total_nights != null && editLead.itinerary_total_nights !== '')
+                        ? editLead.itinerary_total_nights
+                        : ((editLead.payload && editLead.payload.itinerary_total_nights != null)
+                            ? editLead.payload.itinerary_total_nights
+                            : '')
                 });
+                if (prefill.itinerary_total_nights === '' || prefill.itinerary_total_nights == null || Number(prefill.itinerary_total_nights) < 1) {
+                    var nightMap = (editLead.payload && editLead.payload.itinerary_dest_nights) || {};
+                    var nightSum = 0;
+                    if (nightMap && typeof nightMap === 'object') {
+                        Object.keys(nightMap).forEach(function (k) {
+                            nightSum += Math.max(parseInt(nightMap[k], 10) || 0, 0);
+                        });
+                    }
+                    if (nightSum > 0) {
+                        prefill.itinerary_total_nights = nightSum;
+                    }
+                }
                 $form.attr('data-save-url', 'crm/ajax/update_lead.php');
                 $form.find('input[name="lead_id"]').remove();
                 $form.prepend('<input type="hidden" name="lead_id" value="' + editLead.id + '">');
@@ -4219,6 +4428,17 @@ foreach ($destinationLookup as $destId => $destName) {
         }).always(function () {
             $sel.prop('disabled', false);
         });
+    });
+
+    $(document).on('show.bs.dropdown', '.lead-actions-more', function () {
+        $('.crm-leads-ui table.crm-leads-table tbody tr.is-actions-dropdown-open')
+            .not($(this).closest('tr'))
+            .removeClass('is-actions-dropdown-open');
+        $(this).closest('tr').addClass('is-actions-dropdown-open');
+    });
+
+    $(document).on('hide.bs.dropdown hidden.bs.dropdown', '.lead-actions-more', function () {
+        $(this).closest('tr').removeClass('is-actions-dropdown-open');
     });
 
     $(document).on('click', '.js-lead-action-preview, .js-lead-row-expand', function (e) {

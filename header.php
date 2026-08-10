@@ -15,6 +15,7 @@
             <button class="navbar-toggler mobile-toggle" type="button" data-bs-toggle="collapse"
                 data-bs-target="#mainNav">
                 <i class="fas fa-bars"></i>
+            
             </button>
 
             <!-- Navigation Menu -->

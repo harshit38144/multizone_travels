@@ -454,7 +454,7 @@ if (empty($leadSourceOptions)) {
                                 <div class="tp-nights-stepper js-tp-nights-stepper" data-min="1" data-max="60">
                                     <div class="tp-rg-stepper">
                                         <button type="button" class="tp-rg-step-btn js-tp-nights-step" data-action="minus" aria-label="Decrease nights">-</button>
-                                        <input type="number" class="tp-rg-step-input js-tp-total-nights js-itinerary-total-nights" name="itinerary_total_nights" min="1" max="60" value="" inputmode="numeric" aria-label="Number of nights">
+                                        <input type="number" class="tp-rg-step-input js-tp-total-nights js-itinerary-total-nights" name="itinerary_total_nights" min="1" max="60" value="1" inputmode="numeric" aria-label="Number of nights">
                                         <button type="button" class="tp-rg-step-btn js-tp-nights-step" data-action="plus" aria-label="Increase nights">+</button>
                                     </div>
                                 </div>
@@ -1392,11 +1392,11 @@ if (empty($leadSourceOptions)) {
                 $tpDestinationField.toggleClass('is-disabled', !enabled);
                 if (!enabled) {
                     hideTpDestinationMenu();
-                    tpSelectedDestinations = [];
-                    renderTpDestinationTags();
-                    syncTpDestinationHiddenInputs();
                     $tpDestinationInput.val('');
-                    tpDestinationOptions = [];
+                    // Keep selected tags — clearing here made Edit Lead destinations look locked/uneditable.
+                } else {
+                    // Ensure remove buttons / search stay interactive after enable.
+                    $tpDestinationField.find('button').prop('disabled', false);
                 }
             }
 
@@ -1717,10 +1717,19 @@ if (empty($leadSourceOptions)) {
 
                 setTpDestinationEnabled(true, tpDestinationOptions.length ? 'Type to search destination' : 'No destinations found');
 
+                // Keep already-selected destinations editable even if tour-type filter would hide them.
                 tpSelectedDestinations = previousSelected.filter(function (dest) {
-                    return tpDestinationOptions.some(function (option) {
+                    var stillExists = leadDestinations.some(function (option) {
                         return String(option.id) === String(dest.id);
                     });
+                    return stillExists;
+                });
+                tpSelectedDestinations.forEach(function (dest) {
+                    if (!tpDestinationOptions.some(function (option) {
+                        return String(option.id) === String(dest.id);
+                    })) {
+                        tpDestinationOptions.push(dest);
+                    }
                 });
 
                 renderTpDestinationTags();
@@ -1768,8 +1777,12 @@ if (empty($leadSourceOptions)) {
                     nights: nights,
                     dayNotes: dayNotes,
                     dayDestinations: dayDestinations,
-                    totalDays: $form.find('.js-itinerary-total-days').val() || '',
-                    totalNights: $form.find('.js-itinerary-total-nights').val() || ''
+                    totalDays: $form.find('.js-itinerary-total-days, .js-tp-total-days').filter(function () {
+                        return jQuery.trim(String(jQuery(this).val() || '')) !== '';
+                    }).first().val() || '',
+                    totalNights: ($form.find('.js-tp-total-nights').val()
+                        || $form.find('.js-itinerary-total-nights').not('.js-tp-total-nights').val()
+                        || '')
                 };
             }
 
@@ -2109,13 +2122,37 @@ if (empty($leadSourceOptions)) {
                 var nightsMap = distributeItineraryNights(totalNights, tpSelectedDestinations, saved.nights, !!forceAutoNights);
                 totalNights = sumItineraryNights(nightsMap, tpSelectedDestinations);
                 totalDays = totalNights > 0 ? totalNights + 1 : 0;
-                $form.find('.js-itinerary-total-nights').val(totalNights > 0 ? totalNights : '');
+                setItineraryTotalNightsFields(totalNights);
                 $form.find('.js-itinerary-total-days').val(totalDays > 0 ? totalDays : '');
                 dayDestOverrides = sanitizeDayDestOverrides(saved.dayDestinations, totalDays);
                 var dayPlan = buildItineraryDayPlan(totalDays, nightsMap, dayDestOverrides);
                 renderItineraryDestinationRows(nightsMap, dayPlan);
                 renderItineraryDayRows(totalDays, nightsMap, saved.dayNotes, dayDestOverrides);
                 updateItinerarySummary(totalDays, nightsMap);
+            }
+
+            function setItineraryTotalNightsFields(totalNights) {
+                var nightsVal = Math.max(parseInt(totalNights, 10) || 0, 0);
+                var $itinNights = $form.find('.js-itinerary-total-nights').not('.js-tp-total-nights');
+                var $tpNights = $form.find('.js-tp-total-nights');
+                if ($itinNights.length) {
+                    $itinNights.val(nightsVal > 0 ? nightsVal : '');
+                }
+                if ($tpNights.length) {
+                    // Tour Package stepper must never go blank in the UI.
+                    var showNights = nightsVal > 0 ? nightsVal : 1;
+                    $tpNights.val(showNights);
+                    if (typeof syncTpTotalDaysFromNights === 'function') {
+                        syncTpTotalDaysFromNights();
+                    }
+                    var $stepper = $form.find('.js-tp-nights-stepper');
+                    var min = parseInt($stepper.data('min'), 10) || 1;
+                    var max = parseInt($stepper.data('max'), 10) || 60;
+                    $stepper.find('.js-tp-nights-step[data-action="minus"]').prop('disabled', showNights <= min);
+                    $stepper.find('.js-tp-nights-step[data-action="plus"]').prop('disabled', showNights >= max);
+                } else if (!$itinNights.length) {
+                    $form.find('.js-itinerary-total-nights').val(nightsVal > 0 ? nightsVal : '');
+                }
             }
 
             function syncItineraryFromNightsChange() {
@@ -2132,7 +2169,7 @@ if (empty($leadSourceOptions)) {
                 var totalNights = sumItineraryNights(nightsMap, tpSelectedDestinations);
                 var totalDays = totalNights > 0 ? totalNights + 1 : 0;
                 var dayDestOverrides = sanitizeDayDestOverrides(saved.dayDestinations, totalDays);
-                $form.find('.js-itinerary-total-nights').val(totalNights > 0 ? totalNights : '');
+                setItineraryTotalNightsFields(totalNights);
                 $form.find('.js-itinerary-total-days').val(totalDays > 0 ? totalDays : '');
                 var dayPlan = buildItineraryDayPlan(totalDays, nightsMap, dayDestOverrides);
                 renderItineraryDayRows(totalDays, nightsMap, saved.dayNotes, dayDestOverrides);
@@ -2151,10 +2188,15 @@ if (empty($leadSourceOptions)) {
 
             if ($tpWrap.length) {
                 $tpDestinationField.off('click.leadDest mousedown.leadDest').on('click.leadDest mousedown.leadDest', function (e) {
+                    if (jQuery(e.target).closest('.tp-destination-tag-remove').length) {
+                        return;
+                    }
                     if ($tpDestinationInput.prop('disabled')) {
                         return;
                     }
                     e.preventDefault();
+                    $tpDestinationInput.prop('disabled', false);
+                    $tpDestinationField.removeClass('is-disabled');
                     $tpDestinationInput.focus();
                     renderTpDestinationMenu($tpDestinationInput.val());
                 });
@@ -2311,7 +2353,12 @@ if (empty($leadSourceOptions)) {
                         applyNightsValue(raw, false);
                     });
 
-                updateNightsButtons();
+                if (readNightsValue() < min) {
+                    applyNightsValue(min, false);
+                } else {
+                    updateNightsButtons();
+                    syncTpTotalDaysFromNights();
+                }
             })();
 
             $form.off('input.leadItineraryNights change.leadItineraryNights', '.js-itinerary-dest-nights')
@@ -3437,25 +3484,64 @@ if (empty($leadSourceOptions)) {
                 }
 
                 var itinDestIds = toArray(prefill.itinerary_dest_id);
-                var itinDestNights = toArray(prefill.itinerary_dest_nights);
-                if (itinDestIds.length) {
-                    itinDestIds.forEach(function (destId, i) {
+                if (!itinDestIds.length) {
+                    itinDestIds = toArray(prefill.tp_destination);
+                }
+                var itinDestNightsRaw = prefill.itinerary_dest_nights;
+                var itinDestNightsMap = {};
+                if (itinDestNightsRaw && typeof itinDestNightsRaw === 'object' && !Array.isArray(itinDestNightsRaw)) {
+                    Object.keys(itinDestNightsRaw).forEach(function (key) {
+                        itinDestNightsMap[String(key)] = itinDestNightsRaw[key];
+                    });
+                } else {
+                    toArray(itinDestNightsRaw).forEach(function (nightVal, i) {
+                        if (itinDestIds[i] != null) {
+                            itinDestNightsMap[String(itinDestIds[i])] = nightVal;
+                        }
+                    });
+                }
+
+                var totalNightsPrefill = 0;
+                if (prefill.itinerary_total_nights != null && prefill.itinerary_total_nights !== '') {
+                    totalNightsPrefill = Math.max(parseInt(prefill.itinerary_total_nights, 10) || 0, 0);
+                }
+                if (totalNightsPrefill < 1) {
+                    Object.keys(itinDestNightsMap).forEach(function (key) {
+                        totalNightsPrefill += Math.max(parseInt(itinDestNightsMap[key], 10) || 0, 0);
+                    });
+                }
+                if (totalNightsPrefill < 1) {
+                    totalNightsPrefill = 1;
+                }
+
+                // Always restore Tour Package nights first so itinerary sync cannot blank the stepper.
+                itineraryNightsManual = false;
+                setItineraryTotalNightsFields(totalNightsPrefill);
+                if (typeof syncItinerary === 'function') {
+                    syncItinerary(true);
+                }
+
+                var hasPerDestNights = Object.keys(itinDestNightsMap).some(function (key) {
+                    return itinDestNightsMap[key] != null && String(itinDestNightsMap[key]).trim() !== '';
+                });
+                if (hasPerDestNights) {
+                    Object.keys(itinDestNightsMap).forEach(function (destId) {
                         var $nights = $form.find('.itinerary-dest-row[data-dest-id="' + destId + '"] .js-itinerary-dest-nights');
-                        if ($nights.length && itinDestNights[i] != null && itinDestNights[i] !== '') {
-                            $nights.val(itinDestNights[i]);
+                        if ($nights.length) {
+                            $nights.val(itinDestNightsMap[destId]);
                         }
                     });
                     if (typeof syncItineraryFromNightsChange === 'function') {
                         syncItineraryFromNightsChange();
                     }
-                } else if (prefill.itinerary_total_nights != null && prefill.itinerary_total_nights !== '') {
-                    var $tn = $form.find('.js-itinerary-total-nights, .js-tp-total-nights');
-                    if ($tn.length) {
-                        $tn.val(prefill.itinerary_total_nights).trigger('change');
-                        if (typeof syncItineraryFromNightsChange === 'function') {
-                            syncItineraryFromNightsChange();
-                        }
-                    }
+                    // Keep the Tour Package nights value in sync with the saved total.
+                    setItineraryTotalNightsFields(totalNightsPrefill);
+                }
+
+                if ($tourType.length && String($tourType.val() || '') !== '') {
+                    setTpDestinationEnabled(true, 'Type to search destination');
+                    renderTpDestinationTags();
+                    syncTpDestinationHiddenInputs();
                 }
             }
             formEl.applyLeadPrefill = applyLeadPrefill;

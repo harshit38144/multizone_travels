@@ -105,6 +105,14 @@ function lcEnsureContactTables(mysqli $conn)
     if ($cityCol && $cityCol->num_rows == 0) {
         $conn->query("ALTER TABLE `crm_contacts` ADD `city` VARCHAR(120) DEFAULT NULL AFTER `address_line1`");
     }
+
+    $profilePhotoTables = ['crm_contacts', 'crm_contact_profiles'];
+    foreach ($profilePhotoTables as $table) {
+        $chk = $conn->query("SHOW COLUMNS FROM `{$table}` LIKE 'profile_photo'");
+        if ($chk && $chk->num_rows == 0) {
+            $conn->query("ALTER TABLE `{$table}` ADD `profile_photo` VARCHAR(255) DEFAULT NULL AFTER `photo`");
+        }
+    }
 }
 
 function lcJson($success, $message = '', $extra = [])
@@ -154,6 +162,32 @@ function lcUploadImage($field, $existing = '')
     }
 
     $filename = 'cd_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $target = lcUploadDir() . $filename;
+    if (!move_uploaded_file($_FILES[$field]['tmp_name'], $target)) {
+        return false;
+    }
+
+    return 'uploads/contact_documents/' . $filename;
+}
+
+/** Profile avatar — images only (no PDF). */
+function lcUploadProfilePhoto($field, $existing = '')
+{
+    if (empty($_FILES[$field]['name']) || !empty($_FILES[$field]['error'])) {
+        return (string) $existing;
+    }
+
+    $ext = strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    if (!in_array($ext, $allowed, true)) {
+        return false;
+    }
+
+    if ($_FILES[$field]['size'] > 5 * 1024 * 1024) {
+        return false;
+    }
+
+    $filename = 'av_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
     $target = lcUploadDir() . $filename;
     if (!move_uploaded_file($_FILES[$field]['tmp_name'], $target)) {
         return false;
@@ -299,7 +333,8 @@ function lcListAllContacts(mysqli $conn)
     if ($leadTable && $leadTable->num_rows > 0) {
         $sql = "SELECT l.id, l.customer_name, l.customer_phone, l.customer_email, l.created_at,
                        (SELECT COUNT(*) FROM crm_contact_family f WHERE f.lead_id = l.id AND f.contact_id = 0) AS family_count,
-                       (SELECT COUNT(*) FROM crm_contact_profiles p WHERE p.lead_id = l.id) AS has_profile
+                       (SELECT COUNT(*) FROM crm_contact_profiles p WHERE p.lead_id = l.id) AS has_profile,
+                       (SELECT p.profile_photo FROM crm_contact_profiles p WHERE p.lead_id = l.id LIMIT 1) AS profile_photo
                 FROM crm_leads l
                 ORDER BY l.id DESC";
         $res = $conn->query($sql);
@@ -313,13 +348,14 @@ function lcListAllContacts(mysqli $conn)
                     'customer_email' => (string) ($row['customer_email'] ?? ''),
                     'family_count' => (int) ($row['family_count'] ?? 0),
                     'has_profile' => (int) ($row['has_profile'] ?? 0) > 0,
+                    'profile_photo' => (string) ($row['profile_photo'] ?? ''),
                     'created_at' => (string) ($row['created_at'] ?? ''),
                 ];
             }
         }
     }
 
-    $manualSql = "SELECT c.id, c.title, c.first_name, c.last_name, c.email, c.mobile, c.created_at,
+    $manualSql = "SELECT c.id, c.title, c.first_name, c.last_name, c.email, c.mobile, c.profile_photo, c.created_at,
                          (SELECT COUNT(*) FROM crm_contact_family f WHERE f.contact_id = c.id) AS family_count
                   FROM crm_contacts c
                   ORDER BY c.id DESC";
@@ -335,6 +371,7 @@ function lcListAllContacts(mysqli $conn)
                 'customer_email' => (string) ($row['email'] ?? ''),
                 'family_count' => (int) ($row['family_count'] ?? 0),
                 'has_profile' => true,
+                'profile_photo' => (string) ($row['profile_photo'] ?? ''),
                 'created_at' => (string) ($row['created_at'] ?? ''),
             ];
         }

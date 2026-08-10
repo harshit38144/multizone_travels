@@ -1786,12 +1786,12 @@ if (mysqli_num_rows($res) > 0) {
                 $(".payment-box").hide();
             } else {
                 $(".payment-box").show();
-                var bVal = parseFloat($("#baseInput").val()) || 0;
-                var tVal = parseFloat($("#taxInput").val()) || 0;
-                var totVal = parseFloat($("#totalInput").val()) || 0;
-                $("#baseAmount").text(bVal.toFixed(2));
-                $("#taxAmount").text(tVal.toFixed(2));
-                $("#totalAmount").text(totVal.toFixed(2));
+                var bVal = Math.round(parseFloat($("#baseInput").val()) || 0);
+                var tVal = Math.round(parseFloat($("#taxInput").val()) || 0);
+                var totVal = Math.round(parseFloat($("#totalInput").val()) || 0);
+                $("#baseAmount").text(bVal.toLocaleString('en-IN'));
+                $("#taxAmount").text(tVal.toLocaleString('en-IN'));
+                $("#totalAmount").text(totVal.toLocaleString('en-IN'));
             }
 
             var onwardTitle = "✈ Onward Flight Details";
@@ -2064,9 +2064,9 @@ if (mysqli_num_rows($res) > 0) {
                         var baseObj = paxFares.base || {};
                         var taxObj = paxFares.tax || {};
 
-                        var base = parseFloat(baseObj.amount || baseObj.baseFare || 3500);
-                        var tax = parseFloat(taxObj.amount || taxObj.taxes || 500);
-                        var tot = parseFloat(totObj.amount || totObj.total || (base + tax));
+                        var base = Math.round(parseFloat(baseObj.amount || baseObj.baseFare || 3500) || 0);
+                        var tax = Math.round(parseFloat(taxObj.amount || taxObj.taxes || 500) || 0);
+                        var tot = Math.round(parseFloat(totObj.amount || totObj.total || (base + tax)) || 0);
 
                         var dTimeRaw = (primaryF.depDetail && primaryF.depDetail.time) ? primaryF.depDetail.time : (primaryF.departureTime || primaryF.depTime || "08:00 AM");
                         var aTimeRaw = (primaryF.arrDetail && primaryF.arrDetail.time) ? primaryF.arrDetail.time : (primaryF.arrivalTime || primaryF.arrTime || "10:30 AM");
@@ -2137,7 +2137,7 @@ if (mysqli_num_rows($res) > 0) {
                                     <div class="col-md-2 text-left" style="padding-left:5px;">
                                         <div style="font-weight:700; font-size:12px; color:#333;">${duration}</div>
                                         <div class="text-muted" style="font-size:11px;">Non Stop</div>
-                                        ${index === 0 ? `<div style="font-weight:bold; font-size:14px; color:#e31b23; margin-top:3px;">₹${tot}</div>` : ''}
+                                        ${index === 0 ? `<div style="font-weight:bold; font-size:14px; color:#e31b23; margin-top:3px;">₹${Math.round(tot).toLocaleString('en-IN')}</div>` : ''}
                                     </div>
                                 </div>`;
                         });

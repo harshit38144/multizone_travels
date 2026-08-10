@@ -6,6 +6,25 @@ function lcRenderPersonFields($formId = 'profile')
 {
     ?>
     <div class="lc-person-fields lc-person-fields--supplier">
+        <div class="lc-profile-photo-row">
+            <div class="lc-profile-photo-preview" id="lcProfilePhotoPreview">
+                <span class="lc-profile-photo-placeholder"><i class="fas fa-user"></i></span>
+                <img src="" alt="Profile" class="lc-profile-photo-img d-none">
+            </div>
+            <div class="lc-profile-photo-meta">
+                <label class="mb-1">Profile Image</label>
+                <div class="lc-profile-photo-actions">
+                    <label class="btn btn-sm btn-outline-secondary mb-0 lc-profile-photo-btn">
+                        <i class="fas fa-camera mr-1"></i> Upload photo
+                        <input type="file" name="profile_photo" id="lcProfilePhotoInput" accept="image/*" hidden>
+                    </label>
+                    <button type="button" class="btn btn-sm btn-link text-danger px-1 d-none" id="lcProfilePhotoClear">Remove</button>
+                </div>
+                <input type="hidden" name="clear_profile_photo" id="lcClearProfilePhoto" value="">
+                <p class="small text-muted mb-0 mt-1">JPG, PNG, WEBP or GIF — max 5MB</p>
+            </div>
+        </div>
+
         <div class="form-row">
             <div class="form-group col-md-6">
                 <label>Name <span class="text-danger">*</span></label>

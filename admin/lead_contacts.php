@@ -169,8 +169,21 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
         .lead-contacts-page .lc-check { width:18px; height:18px; margin:0; vertical-align:middle; }
         .lead-contacts-page .lc-contact-cell { display:flex; align-items:center; gap:.7rem; min-width:200px; }
         .lead-contacts-page .lc-avatar {
-            width:38px; height:38px; flex:0 0 38px; display:inline-flex; align-items:center; justify-content:center;
-            border-radius:50%; font-size:.82rem; font-weight:700;
+            width: 38px; height: 38px; flex: 0 0 38px; display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 50%; font-size: .82rem; font-weight: 700; overflow: hidden; background: #e2e8f0; color: #475569;
+            border: 0; padding: 0;
+        }
+        .lead-contacts-page .lc-avatar.has-photo {
+            cursor: pointer;
+            transition: transform .12s ease, box-shadow .12s ease;
+        }
+        .lead-contacts-page .lc-avatar.has-photo:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(225, 29, 46, .35);
+        }
+        .lead-contacts-page .lc-avatar img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+            pointer-events: none;
         }
         .lead-contacts-page .lc-contact-name { color:var(--lc-text); font-size:.95rem; font-weight:700; line-height:1.25; }
         .lead-contacts-page .lc-contact-email { max-width:220px; overflow:hidden; text-overflow:ellipsis; color:#9ca3af; font-size:.8rem; margin-top:.1rem; }
@@ -289,11 +302,23 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
             pointer-events:none;
         }
         #lcFamilyModal .lc-primary-avatar {
-            position:relative; z-index:1;
-            width:64px; height:64px; flex:0 0 64px; border-radius:50%;
-            display:inline-flex; align-items:center; justify-content:center;
-            background:var(--lc-red); color:#fff; font-size:1.25rem; font-weight:700;
-            box-shadow:0 6px 16px rgba(225,29,46,.3);
+            position: relative; z-index: 1;
+            width: 64px; height: 64px; flex: 0 0 64px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--lc-red); color: #fff; font-size: 1.25rem; font-weight: 700;
+            box-shadow: 0 6px 16px rgba(225,29,46,.3);
+            overflow: hidden;
+            border: 0; padding: 0;
+        }
+        #lcFamilyModal .lc-primary-avatar.has-photo {
+            cursor: pointer;
+        }
+        #lcFamilyModal .lc-primary-avatar.has-photo:hover {
+            box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(225, 29, 46, .35), 0 6px 16px rgba(225,29,46,.3);
+        }
+        #lcFamilyModal .lc-primary-avatar img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+            pointer-events: none;
         }
         #lcFamilyModal .lc-primary-meta { position:relative; z-index:1; flex:1 1 220px; min-width:0; }
         #lcFamilyModal .lc-primary-badge {
@@ -489,6 +514,51 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
             border-color: #94a3b8; box-shadow: none;
         }
         #lcProfileModal .lc-profile-body .form-group { margin-bottom: .95rem; }
+        #lcProfileModal .lc-profile-photo-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.15rem;
+            padding: .85rem 1rem;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+        #lcProfileModal .lc-profile-photo-preview {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex: 0 0 72px;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, .12);
+        }
+        #lcProfileModal .lc-profile-photo-preview img.lc-profile-photo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        #lcProfileModal .lc-profile-photo-placeholder {
+            color: #94a3b8;
+            font-size: 1.55rem;
+        }
+        #lcProfileModal .lc-profile-photo-meta { min-width: 0; flex: 1 1 auto; }
+        #lcProfileModal .lc-profile-photo-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .35rem;
+        }
+        #lcProfileModal .lc-profile-photo-btn {
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+        }
         #lcProfileModal .lc-profile-body .form-control-file {
             font-size: .82rem; color: #64748b;
         }
@@ -757,7 +827,7 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                                             $email = (string) ($c['customer_email'] ?? '');
                                             $createdAt = (string) ($c['created_at'] ?? '');
                                             $initials = strtoupper(substr(preg_replace('/^(Mr|Mrs|Ms|Master|Miss)\.?\s+/i', '', $name !== '' ? $name : 'C'), 0, 1));
-                                            $contactId = ($source === 'manual' ? 'C' : 'L') . str_pad((string) $refId, 5, '0', STR_PAD_LEFT);
+                                            $contactId = 'CT' . str_pad((string) $refId, 5, '0', STR_PAD_LEFT);
                                             $addedOn = $createdAt !== '' ? date('d M Y', strtotime($createdAt)) : '—';
                                             $activity = lcRelativeActivity($createdAt);
                                             $av = $avatarColors[$index % count($avatarColors)];
@@ -765,6 +835,7 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                                             if (strlen($waPhone) === 10) {
                                                 $waPhone = '91' . $waPhone;
                                             }
+                                            $profilePhoto = trim((string) ($c['profile_photo'] ?? ''));
                                             $createdTs = $createdAt !== '' ? (int) strtotime($createdAt) : 0;
                                         ?>
                                             <tr data-source="<?= htmlspecialchars($source, ENT_QUOTES, 'UTF-8') ?>"
@@ -774,12 +845,19 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                                                 data-created="<?= $createdTs ?>"
                                                 data-name="<?= htmlspecialchars(strtolower($name), ENT_QUOTES, 'UTF-8') ?>"
                                                 data-ref-id="<?= $refId ?>"
+                                                data-photo="<?= htmlspecialchars($profilePhoto, ENT_QUOTES, 'UTF-8') ?>"
                                                 data-search="<?= htmlspecialchars(strtolower($name . ' ' . $phone . ' ' . $email . ' ' . $contactId), ENT_QUOTES, 'UTF-8') ?>">
                                                 <td><input type="checkbox" class="lc-check lc-row-check"></td>
                                                 <td><span class="lc-contact-id"><?= htmlspecialchars($contactId) ?></span></td>
                                                 <td>
                                                     <div class="lc-contact-cell">
-                                                        <span class="lc-avatar" style="background:<?= $av['bg'] ?>;color:<?= $av['fg'] ?>;"><?= htmlspecialchars($initials) ?></span>
+                                                        <?php if ($profilePhoto !== '') { ?>
+                                                            <button type="button" class="lc-avatar has-photo js-lc-avatar-view" title="View profile photo" data-photo="<?= htmlspecialchars($profilePhoto, ENT_QUOTES, 'UTF-8') ?>" data-name="<?= htmlspecialchars($name !== '' ? $name : 'Profile photo', ENT_QUOTES, 'UTF-8') ?>">
+                                                                <img src="<?= htmlspecialchars($profilePhoto, ENT_QUOTES, 'UTF-8') ?>" alt="">
+                                                            </button>
+                                                        <?php } else { ?>
+                                                            <span class="lc-avatar" style="background:<?= $av['bg'] ?>;color:<?= $av['fg'] ?>;"><?= htmlspecialchars($initials) ?></span>
+                                                        <?php } ?>
                                                         <div>
                                                             <div class="lc-contact-name"><?= htmlspecialchars($name !== '' ? $name : '—', ENT_QUOTES, 'UTF-8') ?></div>
                                                             <div class="lc-contact-email"><?= htmlspecialchars($email !== '' ? $email : 'No email', ENT_QUOTES, 'UTF-8') ?></div>
@@ -995,7 +1073,7 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
         </div>
 
         <?php include 'includes/footer-links.php'; ?>
-        <script src="assets/lead_contacts.js?v=23"></script>
+        <script src="assets/lead_contacts.js?v=27"></script>
     </div>
 </body>
 </html>

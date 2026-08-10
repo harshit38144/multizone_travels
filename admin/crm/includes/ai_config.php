@@ -143,7 +143,7 @@ function crmAiSanitizeItineraryHtml(string $html): string
     return strip_tags($html, $allowed);
 }
 
-function crmAiNormalizeItineraryDays(array $days, int $expectedDays): array
+function crmAiNormalizeItineraryDays(array $days, int $expectedDays, bool $preserveImages = false): array
 {
     $out = [];
     foreach ($days as $i => $day) {
@@ -155,10 +155,14 @@ function crmAiNormalizeItineraryDays(array $days, int $expectedDays): array
         if ($title === '' && $desc === '') {
             continue;
         }
+        $image = '';
+        if ($preserveImages) {
+            $image = trim((string) ($day['image'] ?? ''));
+        }
         $out[] = [
             'title' => $title !== '' ? $title : ('Day ' . (count($out) + 1)),
             'description' => $desc,
-            'image' => '',
+            'image' => $image,
         ];
         if (count($out) >= $expectedDays) {
             break;

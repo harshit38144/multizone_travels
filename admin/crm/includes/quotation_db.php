@@ -1077,3 +1077,207 @@ function crmLeadsAttachQuotationLines(mysqli $conn, array &$leadRows): void
     }
     unset($lead);
 }
+
+/**
+ * Normalize destination for itinerary matching (case/spacing insensitive).
+ */
+function crmQuotationNormalizeDestinationKey(string $destination): string
+{
+    $destination = strtolower(trim($destination));
+    $destination = preg_replace('/\s+/u', ' ', $destination) ?? $destination;
+    return $destination;
+}
+
+/**
+ * True when two destination strings refer to the same place (exact or containment).
+ */
+function crmQuotationDestinationsMatch(string $a, string $b): bool
+{
+    $a = crmQuotationNormalizeDestinationKey($a);
+    $b = crmQuotationNormalizeDestinationKey($b);
+    if ($a === '' || $b === '') {
+        return false;
+    }
+    if ($a === $b) {
+        return true;
+    }
+    $lenA = function_exists('mb_strlen') ? mb_strlen($a) : strlen($a);
+    $lenB = function_exists('mb_strlen') ? mb_strlen($b) : strlen($b);
+    if ($lenA < 3 || $lenB < 3) {
+        return false;
+    }
+    if (function_exists('mb_strpos')) {
+        return (mb_strpos($a, $b) !== false) || (mb_strpos($b, $a) !== false);
+    }
+    return (strpos($a, $b) !== false) || (strpos($b, $a) !== false);
+}
+
+/**
+ * @param array<int, mixed> $days
+ */
+function crmQuotationItineraryHasContent(array $days): bool
+{
+    foreach ($days as $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        $title = trim((string) ($day['title'] ?? ''));
+        $desc = trim(strip_tags((string) ($day['description'] ?? '')));
+        if ($title !== '' || $desc !== '') {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Find a previously saved itinerary with the same destination + nights.
+ * Checks prior quotations first, then published/draft packages.
+ *
+ * @return array<string, mixed>|null
+ */
+function crmFindMatchingPreviousItinerary(
+    mysqli $conn,
+    string $destination,
+    int $nights,
+    int $excludeQuotationId = 0
+): ?array {
+    crmEnsureQuotationTables($conn);
+
+    $destination = trim($destination);
+    $nights = max(0, $nights);
+    if ($destination === '' || $nights < 1) {
+        return null;
+    }
+
+    $exactMatch = null;
+    $fuzzyMatch = null;
+
+    $sql = 'SELECT `id`, `quotation_uid`, `guest_name`, `destination`, `no_of_nights`, `itinerary_json`, `updated_at`
+            FROM `crm_quotations`
+            WHERE `no_of_nights` = ?
+              AND IFNULL(`without_itinerary`, 0) = 0
+              AND `itinerary_json` IS NOT NULL
+              AND TRIM(`itinerary_json`) NOT IN (\'\', \'[]\', \'null\')';
+    if ($excludeQuotationId > 0) {
+        $sql .= ' AND `id` != ?';
+    }
+    $sql .= ' ORDER BY `updated_at` DESC, `id` DESC LIMIT 80';
+
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        if ($excludeQuotationId > 0) {
+            $stmt->bind_param('ii', $nights, $excludeQuotationId);
+        } else {
+            $stmt->bind_param('i', $nights);
+        }
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($res && ($row = $res->fetch_assoc())) {
+            $rowDest = trim((string) ($row['destination'] ?? ''));
+            if (!crmQuotationDestinationsMatch($destination, $rowDest)) {
+                continue;
+            }
+            $days = json_decode((string) ($row['itinerary_json'] ?? '[]'), true);
+            if (!is_array($days) || !crmQuotationItineraryHasContent($days)) {
+                continue;
+            }
+            $payload = [
+                'match_type' => 'quotation',
+                'match_id' => (int) ($row['id'] ?? 0),
+                'match_label' => trim((string) ($row['quotation_uid'] ?? '')) !== ''
+                    ? (string) $row['quotation_uid']
+                    : ('Quotation #' . (int) ($row['id'] ?? 0)),
+                'match_destination' => $rowDest,
+                'match_nights' => (int) ($row['no_of_nights'] ?? $nights),
+                'itinerary' => $days,
+                'exact_destination' => crmQuotationNormalizeDestinationKey($destination)
+                    === crmQuotationNormalizeDestinationKey($rowDest),
+            ];
+            if ($payload['exact_destination']) {
+                $exactMatch = $payload;
+                break;
+            }
+            if ($fuzzyMatch === null) {
+                $fuzzyMatch = $payload;
+            }
+        }
+        $stmt->close();
+    }
+
+    if ($exactMatch !== null) {
+        return $exactMatch;
+    }
+    if ($fuzzyMatch !== null) {
+        return $fuzzyMatch;
+    }
+
+    if (!function_exists('crmPackageTablesExist')) {
+        $pkgFile = __DIR__ . '/package_quotation.php';
+        if (is_file($pkgFile)) {
+            require_once $pkgFile;
+        }
+    }
+    if (!function_exists('crmPackageTablesExist') || !crmPackageTablesExist($conn)) {
+        return null;
+    }
+
+    $sql = "SELECT p.id, p.title, p.duration_nights,
+            (SELECT GROUP_CONCAT(d.name ORDER BY d.name SEPARATOR ', ')
+             FROM destinations d
+             INNER JOIN package_destination_map pdm ON pdm.destination_id = d.id
+             WHERE pdm.package_id = p.id) AS dest_names
+        FROM packages p
+        WHERE p.status IN ('Published', 'Draft')
+          AND p.duration_nights = ?
+        ORDER BY p.id DESC
+        LIMIT 40";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('i', $nights);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $packageCandidate = null;
+    while ($res && ($row = $res->fetch_assoc())) {
+        $rowDest = trim((string) ($row['dest_names'] ?? ''));
+        if (!crmQuotationDestinationsMatch($destination, $rowDest)
+            && !crmQuotationDestinationsMatch($destination, (string) ($row['title'] ?? ''))
+        ) {
+            continue;
+        }
+        $pkgId = (int) ($row['id'] ?? 0);
+        if ($pkgId <= 0 || !function_exists('crmGetPackageForQuotation')) {
+            continue;
+        }
+        $pkg = crmGetPackageForQuotation($conn, $pkgId);
+        if (!$pkg || empty($pkg['itinerary']) || !is_array($pkg['itinerary'])) {
+            continue;
+        }
+        if (!crmQuotationItineraryHasContent($pkg['itinerary'])) {
+            continue;
+        }
+        $isExact = crmQuotationNormalizeDestinationKey($destination)
+            === crmQuotationNormalizeDestinationKey($rowDest);
+        $payload = [
+            'match_type' => 'package',
+            'match_id' => $pkgId,
+            'match_label' => (string) ($pkg['title'] ?? $row['title'] ?? ('Package #' . $pkgId)),
+            'match_destination' => $rowDest !== '' ? $rowDest : (string) ($pkg['destination'] ?? ''),
+            'match_nights' => (int) ($row['duration_nights'] ?? $nights),
+            'itinerary' => $pkg['itinerary'],
+            'exact_destination' => $isExact,
+        ];
+        if ($isExact) {
+            $packageCandidate = $payload;
+            break;
+        }
+        if ($packageCandidate === null) {
+            $packageCandidate = $payload;
+        }
+    }
+    $stmt->close();
+
+    return $packageCandidate;
+}
