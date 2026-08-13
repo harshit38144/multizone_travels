@@ -5,6 +5,18 @@ if ($_SESSION['role'] != '1') {
 }
 include 'connection.php';
 
+$conn->query("CREATE TABLE IF NOT EXISTS `image_master` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `image` VARCHAR(255) NOT NULL,
+  `status` VARCHAR(50) NOT NULL DEFAULT 'Active',
+  `created_by` VARCHAR(100) DEFAULT NULL,
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
 $msg = "";
 if (isset($_SESSION['msg'])) {
     $msg = $_SESSION['msg'];

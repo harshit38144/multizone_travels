@@ -12,6 +12,31 @@ if (isset($_GET['edit_id'])) {
 
 $banner = "img/a8.png";
 
+// Ensure image_master exists (local/dev DBs may be missing it)
+$conn->query("CREATE TABLE IF NOT EXISTS `image_master` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `image` VARCHAR(255) NOT NULL,
+  `status` VARCHAR(50) NOT NULL DEFAULT 'Active',
+  `created_by` VARCHAR(100) DEFAULT NULL,
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$conn->query("CREATE TABLE IF NOT EXISTS `ticket_settings` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `important_info` TEXT DEFAULT NULL,
+  `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$tsCheck = mysqli_query($conn, "SELECT id FROM ticket_settings LIMIT 1");
+if ($tsCheck && mysqli_num_rows($tsCheck) === 0) {
+    mysqli_query($conn, "INSERT INTO ticket_settings (id, important_info) VALUES (1, '<li>Please carry a valid photo ID.</li><li>Report at the airport at least 2 hours before departure.</li>')");
+}
+
 $sql = "SELECT image FROM image_master 
 WHERE status='Active' 
 AND is_deleted=0
@@ -19,7 +44,7 @@ LIMIT 1";
 
 $res = mysqli_query($conn, $sql);
 
-if (mysqli_num_rows($res) > 0) {
+if ($res && mysqli_num_rows($res) > 0) {
     $row = mysqli_fetch_assoc($res);
     $banner = "uploads/images/" . $row['image'];
 }
@@ -1279,12 +1304,12 @@ if (mysqli_num_rows($res) > 0) {
 
                                 <?php
                                 $q = mysqli_query($conn, "SELECT important_info FROM ticket_settings LIMIT 1");
-                                $data = mysqli_fetch_assoc($q);
+                                $data = ($q) ? mysqli_fetch_assoc($q) : null;
                                 ?>
 
                                 <ul class="important-list">
 
-                                    <?php echo $data['important_info']; ?>
+                                    <?php echo !empty($data['important_info']) ? $data['important_info'] : ''; ?>
 
                                 </ul>
 
@@ -1343,7 +1368,7 @@ if (mysqli_num_rows($res) > 0) {
         AND is_deleted=0";
                             $res = mysqli_query($conn, $sql);
 
-                            while ($row = mysqli_fetch_assoc($res)) {
+                            while ($res && ($row = mysqli_fetch_assoc($res))) {
 
                                 $img = "uploads/images/" . $row['image'];
 
@@ -1786,12 +1811,12 @@ if (mysqli_num_rows($res) > 0) {
                 $(".payment-box").hide();
             } else {
                 $(".payment-box").show();
-                var bVal = Math.round(parseFloat($("#baseInput").val()) || 0);
-                var tVal = Math.round(parseFloat($("#taxInput").val()) || 0);
-                var totVal = Math.round(parseFloat($("#totalInput").val()) || 0);
-                $("#baseAmount").text(bVal.toLocaleString('en-IN'));
-                $("#taxAmount").text(tVal.toLocaleString('en-IN'));
-                $("#totalAmount").text(totVal.toLocaleString('en-IN'));
+                var bVal = parseFloat($("#baseInput").val()) || 0;
+                var tVal = parseFloat($("#taxInput").val()) || 0;
+                var totVal = parseFloat($("#totalInput").val()) || 0;
+                $("#baseAmount").text(bVal.toFixed(2));
+                $("#taxAmount").text(tVal.toFixed(2));
+                $("#totalAmount").text(totVal.toFixed(2));
             }
 
             var onwardTitle = "✈ Onward Flight Details";
