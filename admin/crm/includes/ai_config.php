@@ -465,3 +465,247 @@ function crmAiSuggestItinerary(
         'itinerary' => crmAiNormalizeItineraryDays($daysRaw, $totalDays),
     ];
 }
+
+function crmAiBuildSingleDayPrompt(
+    string $destination,
+    int $dayNumber,
+    int $totalDays,
+    int $nights,
+    int $adults,
+    int $children,
+    string $notes,
+    string $existingTitle = ''
+): string {
+    $travelers = $adults . ' adult' . ($adults !== 1 ? 's' : '');
+    if ($children > 0) {
+        $travelers .= ', ' . $children . ' child' . ($children !== 1 ? 'ren' : '');
+    }
+
+    $role = 'middle sightseeing day';
+    if ($dayNumber === 1) {
+        $role = 'arrival day (meet & greet, transfer, check-in, light evening activity)';
+    } elseif ($dayNumber === $totalDays && $totalDays > 1) {
+        $role = 'departure day (breakfast, check-out, transfer to airport/station)';
+    }
+
+    $prompt = "You are a professional travel itinerary writer for an Indian travel agency (Multizone Travels).\n";
+    $prompt .= "Create content for ONE day only of a multi-day tour.\n\n";
+    $prompt .= "Destination: {$destination}\n";
+    $prompt .= "Full trip duration: {$totalDays} days ({$nights} nights)\n";
+    $prompt .= "Generate Day {$dayNumber} of {$totalDays} — role: {$role}\n";
+    $prompt .= "Travelers: {$travelers}\n";
+    if ($existingTitle !== '') {
+        $prompt .= "Preferred day theme/title hint: {$existingTitle}\n";
+    }
+    if ($notes !== '') {
+        $prompt .= "USER REQUEST FOR THIS DAY (must follow closely): {$notes}\n";
+    }
+    $prompt .= "\nReturn ONLY valid JSON with this exact structure:\n";
+    $prompt .= "{\"title\":\"Short day title\",\"description\":\"<ul><li>Activity</li></ul>\"}\n\n";
+    $prompt .= "Rules:\n";
+    $prompt .= "- description must be HTML using only <ul> and <li> tags, 4-6 bullet points.\n";
+    $prompt .= "- Title must be concise (under 55 characters).\n";
+    if ($notes !== '') {
+        $prompt .= "- Build the day plan primarily from the USER REQUEST above.\n";
+    }
+    $prompt .= "- Write practical plans suitable for Indian holiday travelers visiting {$destination}.\n";
+    $prompt .= "- Do not include prices or specific hotel brand names.\n";
+
+    return $prompt;
+}
+
+/**
+ * Suggest a single itinerary day (0-based day index).
+ *
+ * @return array{ok:bool,error?:string,source?:string,message?:string,day?:array{title:string,description:string,image:string}}
+ */
+function crmAiDayFromUserPrompt(
+    string $destination,
+    int $dayIndex,
+    int $totalDays,
+    string $notes,
+    string $existingTitle = ''
+): array {
+    $destShort = trim(explode(',', $destination)[0]);
+    if ($destShort === '') {
+        $destShort = $destination;
+    }
+    $dayNumber = $dayIndex + 1;
+    $notes = trim($notes);
+
+    $title = trim($existingTitle);
+    if ($title === '') {
+        $short = preg_replace('/\s+/', ' ', $notes);
+        $short = trim((string) $short);
+        if (strlen($short) > 52) {
+            $cut = substr($short, 0, 52);
+            $space = strrpos($cut, ' ');
+            $short = $space !== false ? substr($cut, 0, $space) : $cut;
+            $short = rtrim($short, '.,;:') . '…';
+        }
+        if ($short !== '') {
+            $title = $short;
+        } elseif ($dayIndex === 0) {
+            $title = 'Arrival in ' . $destShort;
+        } elseif ($dayIndex === $totalDays - 1 && $totalDays > 1) {
+            $title = 'Departure from ' . $destShort;
+        } else {
+            $title = 'Day ' . $dayNumber . ' in ' . $destShort;
+        }
+    }
+
+    $parts = preg_split('/[\r\n]+|(?:\s*;\s*)|(?:\s+\band\s+)|,\s+/i', $notes) ?: [];
+    $parts = array_values(array_filter(array_map(static function ($p) {
+        return trim((string) $p);
+    }, $parts), static function ($p) {
+        return $p !== '';
+    }));
+    if (!$parts && $notes !== '') {
+        $parts = [$notes];
+    }
+
+    $lines = [];
+    if ($dayIndex === 0) {
+        $lines[] = 'Arrive at ' . $destShort . ' — meet & greet at airport / railway station';
+        $lines[] = 'Transfer to hotel and complete check-in';
+    } else {
+        $lines[] = 'Breakfast at hotel';
+    }
+
+    foreach (array_slice($parts, 0, 5) as $part) {
+        $lines[] = $part;
+    }
+
+    if ($dayIndex === $totalDays - 1 && $totalDays > 1) {
+        $lines[] = 'Check-out and transfer to airport / railway station for onward journey';
+    } else {
+        $lines[] = 'Overnight stay at ' . $destShort;
+    }
+
+    return [
+        'title' => $title,
+        'description' => crmAiBulletsToHtml($lines),
+        'image' => '',
+    ];
+}
+
+function crmAiSuggestItineraryDay(
+    string $destination,
+    int $dayIndex,
+    int $nights,
+    int $adults,
+    int $children,
+    string $notes = '',
+    string $existingTitle = ''
+): array {
+    $destination = trim($destination);
+    if ($destination === '') {
+        return ['ok' => false, 'error' => 'Please enter a destination on Guest & Tour step.'];
+    }
+
+    $nights = max(0, $nights);
+    $totalDays = $nights + 1;
+    if ($totalDays < 1) {
+        return ['ok' => false, 'error' => 'Set No of Nights (at least 1) on Guest & Tour step.'];
+    }
+    if ($totalDays > 21) {
+        return ['ok' => false, 'error' => 'Itinerary suggest supports up to 21 days (20 nights).'];
+    }
+    if ($dayIndex < 0 || $dayIndex >= $totalDays) {
+        return ['ok' => false, 'error' => 'Invalid day selected.'];
+    }
+
+    $dayNumber = $dayIndex + 1;
+    $notes = trim($notes);
+
+    $pickDay = static function (array $days) use ($dayIndex): array {
+        $day = $days[$dayIndex] ?? ['title' => '', 'description' => '', 'image' => ''];
+        return [
+            'title' => trim((string) ($day['title'] ?? '')),
+            'description' => (string) ($day['description'] ?? ''),
+            'image' => (string) ($day['image'] ?? ''),
+        ];
+    };
+
+    // User typed a day-specific request — prefer that as the main signal.
+    if ($notes !== '' && !crmAiUseGemini()) {
+        return [
+            'ok' => true,
+            'source' => 'instant',
+            'message' => '',
+            'day' => crmAiDayFromUserPrompt($destination, $dayIndex, $totalDays, $notes, $existingTitle),
+        ];
+    }
+
+    if (!crmAiUseGemini()) {
+        $days = crmAiSmartItinerary($destination, $totalDays, $notes);
+        return [
+            'ok' => true,
+            'source' => 'instant',
+            'message' => '',
+            'day' => $pickDay($days),
+        ];
+    }
+
+    $prompt = crmAiBuildSingleDayPrompt(
+        $destination,
+        $dayNumber,
+        $totalDays,
+        $nights,
+        $adults,
+        $children,
+        $notes,
+        $existingTitle
+    );
+    $result = crmAiCallGemini($prompt);
+    if (!$result['ok']) {
+        if (crmAiIsQuotaOrRateError($result['error'] ?? '')) {
+            $day = $notes !== ''
+                ? crmAiDayFromUserPrompt($destination, $dayIndex, $totalDays, $notes, $existingTitle)
+                : $pickDay(crmAiSmartItinerary($destination, $totalDays, $notes));
+            return [
+                'ok' => true,
+                'source' => 'instant',
+                'message' => 'Gemini quota reached — instant day suggestion applied.',
+                'day' => $day,
+            ];
+        }
+        return $result;
+    }
+
+    $data = is_array($result['data'] ?? null) ? $result['data'] : [];
+    $title = trim((string) ($data['title'] ?? ''));
+    $description = (string) ($data['description'] ?? '');
+
+    // Some models wrap a single day inside days[0]
+    if ($title === '' && $description === '' && !empty($data['days']) && is_array($data['days'])) {
+        $first = $data['days'][0] ?? null;
+        if (is_array($first)) {
+            $title = trim((string) ($first['title'] ?? ''));
+            $description = (string) ($first['description'] ?? '');
+        }
+    }
+
+    if ($title === '' && $description === '') {
+        $day = $notes !== ''
+            ? crmAiDayFromUserPrompt($destination, $dayIndex, $totalDays, $notes, $existingTitle)
+            : $pickDay(crmAiSmartItinerary($destination, $totalDays, $notes));
+        return [
+            'ok' => true,
+            'source' => 'instant',
+            'message' => 'AI response invalid — instant day suggestion applied.',
+            'day' => $day,
+        ];
+    }
+
+    $normalized = crmAiNormalizeItineraryDays([
+        ['title' => $title, 'description' => $description],
+    ], 1);
+
+    return [
+        'ok' => true,
+        'source' => 'ai',
+        'message' => '',
+        'day' => $normalized[0] ?? ['title' => $title, 'description' => $description, 'image' => ''],
+    ];
+}

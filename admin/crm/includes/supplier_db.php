@@ -370,6 +370,44 @@ function crmSupplierMatchesDestination(array $places, array $destIds, array $des
     return false;
 }
 
+/** @return array<int, array{id:int,name:string}> */
+function crmSuppliersForHotelSelect(mysqli $conn): array
+{
+    crmEnsureSupplierTables($conn);
+    $out = [];
+    $res = $conn->query('SELECT `id`, `name`, `supplier_of_json`, `supplier_type`
+        FROM `crm_suppliers`
+        WHERE `is_active` = 1
+        ORDER BY `name` ASC');
+    if (!$res) {
+        return $out;
+    }
+
+    while ($row = $res->fetch_assoc()) {
+        $supplierOf = crmSupplierNormalizeSupplierOf(
+            json_decode((string) ($row['supplier_of_json'] ?? '[]'), true) ?: []
+        );
+        $types = crmSupplierNormalizeTypes($row['supplier_type'] ?? '');
+        $isHotelSupplier = in_array('hotels', $supplierOf, true)
+            || in_array('hotels', $types, true)
+            || ($supplierOf === [] && $types === []);
+        if (!$isHotelSupplier) {
+            continue;
+        }
+        $name = trim((string) ($row['name'] ?? ''));
+        $id = (int) ($row['id'] ?? 0);
+        if ($id < 1 || $name === '') {
+            continue;
+        }
+        $out[] = [
+            'id' => $id,
+            'name' => $name,
+        ];
+    }
+
+    return $out;
+}
+
 /** @return array<int, array<string, mixed>> */
 function crmSuppliersMailCatalog(mysqli $conn): array
 {

@@ -46,26 +46,42 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
     if (!is_array($destIds)) {
         $destIds = $destIds !== '' ? [$destIds] : [];
     }
+
+    // Normalize destination IDs while preserving order.
+    $normalizedDestIds = [];
     foreach ($destIds as $destId) {
         $destId = (int) $destId;
-        if ($destId > 0 && isset($destinationLookup[$destId])) {
-            $destName = $destinationLookup[$destId];
-            $destNames[] = $destName;
-            $nightsVal = 0;
-            if (isset($destNightMap[$destId])) {
-                $nightsVal = max(0, (int) $destNightMap[$destId]);
-            } elseif (isset($destNightMap[(string) $destId])) {
-                $nightsVal = max(0, (int) $destNightMap[(string) $destId]);
-            }
-            $destSegments[] = [
-                'name' => $destName,
-                'nights' => $nightsVal,
-            ];
+        if ($destId > 0) {
+            $normalizedDestIds[] = $destId;
         }
+    }
+    $destIds = $normalizedDestIds;
+
+    // Some older payloads stored nights as a plain list ["7"] instead of {"11":"7"}.
+    $destNightMapIsList = $destNightMap !== [] && array_keys($destNightMap) === range(0, count($destNightMap) - 1);
+
+    foreach ($destIds as $destOrder => $destId) {
+        if (!isset($destinationLookup[$destId])) {
+            continue;
+        }
+        $destName = $destinationLookup[$destId];
+        $destNames[] = $destName;
+        $nightsVal = 0;
+        if (isset($destNightMap[$destId])) {
+            $nightsVal = max(0, (int) $destNightMap[$destId]);
+        } elseif (isset($destNightMap[(string) $destId])) {
+            $nightsVal = max(0, (int) $destNightMap[(string) $destId]);
+        } elseif ($destNightMapIsList && isset($destNightMap[$destOrder])) {
+            $nightsVal = max(0, (int) $destNightMap[$destOrder]);
+        }
+        $destSegments[] = [
+            'name' => $destName,
+            'nights' => $nightsVal,
+        ];
     }
 
     $itineraryNights = max(0, (int) ($row['itinerary_total_nights'] ?? 0));
-    if ($itineraryNights === 0 && isset($payload['itinerary_total_nights'])) {
+    if ($itineraryNights === 0 && isset($payload['itinerary_total_nights']) && $payload['itinerary_total_nights'] !== '' && $payload['itinerary_total_nights'] !== null) {
         $itineraryNights = max(0, (int) $payload['itinerary_total_nights']);
     }
     if ($itineraryNights === 0 && !empty($destNightMap) && is_array($destNightMap)) {
@@ -83,11 +99,6 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         ];
     }
 
-    $displayDestNames = array_values(array_filter($destNames, static function ($name) {
-        $name = trim((string) $name);
-        return $name !== '' && strtoupper($name) !== 'N/A';
-    }));
-
     if (empty($destNames)) {
         $destNames[] = 'N/A';
         $destSegments[] = [
@@ -101,14 +112,18 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
     foreach ($destSegments as $seg) {
         $segmentNightsSum += max(0, (int) ($seg['nights'] ?? 0));
     }
-    if ($segmentNightsSum === 0 && $itineraryNights > 0 && count($displayDestNames) === 1) {
+    if ($segmentNightsSum === 0 && $itineraryNights > 0) {
         foreach ($destSegments as $si => $seg) {
             $segName = trim((string) ($seg['name'] ?? ''));
             if ($segName !== '' && strtoupper($segName) !== 'N/A') {
                 $destSegments[$si]['nights'] = $itineraryNights;
+                $segmentNightsSum = $itineraryNights;
                 break;
             }
         }
+    }
+    if ($itineraryNights <= 0 && $segmentNightsSum > 0) {
+        $itineraryNights = $segmentNightsSum;
     }
 
     $travelDate = '';
@@ -128,20 +143,19 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         }
     }
 
+    // Destination names only; nights shown once as trip total (never per destination).
     $destDisplayParts = [];
     foreach ($destSegments as $seg) {
         $segName = trim((string) ($seg['name'] ?? ''));
         if ($segName === '' || strtoupper($segName) === 'N/A') {
             continue;
         }
-        $segLabel = strtoupper($segName);
-        $segNights = max(0, (int) ($seg['nights'] ?? 0));
-        if ($segNights > 0) {
-            $segLabel .= '-' . str_pad((string) $segNights, 2, '0', STR_PAD_LEFT) . ' N';
-        }
-        $destDisplayParts[] = $segLabel;
+        $destDisplayParts[] = strtoupper($segName);
     }
     $destDisplay = !empty($destDisplayParts) ? implode(', ', $destDisplayParts) : '';
+    if ($destDisplay !== '' && $itineraryNights > 0) {
+        $destDisplay .= '-' . str_pad((string) $itineraryNights, 2, '0', STR_PAD_LEFT) . ' N';
+    }
     $departureDisplay = $departure !== '' ? ('Ex-' . $departure) : '';
     $travelDestinationText = '';
     if ($destDisplay !== '' && $departureDisplay !== '') {
@@ -3286,12 +3300,12 @@ foreach ($destinationLookup as $destId => $destName) {
                                 <thead>
                                     <tr>
                                         <th class="col-ld-lead">Lead ID</th>
-                                        <th class="col-ld-assign">Assigned</th>
                                         <th class="col-ld-guest">Guest</th>
-                                        <th class="col-ld-source">Lead Source</th>
                                         <th class="col-ld-dest">Destination</th>
                                         <th class="col-ld-date">Travel Date</th>
                                         <th class="col-ld-services">Services</th>
+                                        <th class="col-ld-source">Lead Source</th>
+                                        <th class="col-ld-assign">Assigned</th>
                                         <th class="col-ld-stage">Stage</th>
                                         <th class="col-actions">Actions</th>
                                     </tr>
@@ -3332,35 +3346,6 @@ foreach ($destinationLookup as $destId => $destName) {
                                                         <span class="lead-id-uid"><?= htmlspecialchars((string) $lead['lead_uid'], ENT_QUOTES, 'UTF-8') ?></span><?php if ($createdText !== '') { ?><span class="lead-id-meta"> | <?= htmlspecialchars($createdText, ENT_QUOTES, 'UTF-8') ?></span><?php } ?>
                                                     </button>
                                                 </td>
-                                                <td class="col-ld-assign">
-                                                    <?php
-                                                    $assignRaw = trim((string) ($lead['assign_to'] ?? ''));
-                                                    $assignee = crmLeadsResolveAssignee($assignRaw, $assignUserLookup);
-                                                    if ($assignee === null) {
-                                                        ?>
-                                                        <span class="cell-assign is-empty">—</span>
-                                                        <?php
-                                                    } else {
-                                                        $assignLabel = (string) $assignee['label'];
-                                                        $assignImage = (string) $assignee['image'];
-                                                        $assignInitial = (string) $assignee['initial'];
-                                                        $assignTone = (string) $assignee['tone_key'];
-                                                        $assignColor = (string) $assignee['tone_color'];
-                                                        ?>
-                                                        <span class="cell-assign" title="<?= htmlspecialchars($assignLabel, ENT_QUOTES, 'UTF-8') ?>">
-                                                            <?php if ($assignImage !== '') { ?>
-                                                                <img class="cell-assign-avatar" src="<?= htmlspecialchars('uploads/users/' . $assignImage, ENT_QUOTES, 'UTF-8') ?>" alt="">
-                                                            <?php } else { ?>
-                                                                <span class="cell-assign-initial tone-<?= htmlspecialchars($assignTone, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($assignInitial, ENT_QUOTES, 'UTF-8') ?></span>
-                                                            <?php } ?>
-                                                            <span class="cell-assign-name" style="color: <?= htmlspecialchars($assignColor, ENT_QUOTES, 'UTF-8') ?>;">
-                                                                <?= htmlspecialchars($assignLabel, ENT_QUOTES, 'UTF-8') ?>
-                                                            </span>
-                                                        </span>
-                                                        <?php
-                                                    }
-                                                    ?>
-                                                </td>
                                                 <td class="col-ld-guest">
                                                     <div class="lead-name">
                                                         <span class="lead-name-text" title="<?= htmlspecialchars($leadHoverInfo, ENT_QUOTES, 'UTF-8') ?>" style="cursor:help;">
@@ -3370,16 +3355,6 @@ foreach ($destinationLookup as $destId => $destName) {
                                                             <span class="badge-trav badge-trav-pax ml-1"><?= htmlspecialchars((string) $lead['pax_text'], ENT_QUOTES, 'UTF-8') ?></span>
                                                         <?php } ?>
                                                     </div>
-                                                </td>
-                                                <td class="col-ld-source">
-                                                    <?php
-                                                    $leadSourceMain = trim((string) ($lead['lead_source'] ?? ''));
-                                                    $leadSourceRef = trim((string) ($lead['referred_by'] ?? ''));
-                                                    $leadSourceDisplay = ($leadSourceMain !== '' ? $leadSourceMain : '—') . ' | ' . ($leadSourceRef !== '' ? $leadSourceRef : '—');
-                                                    ?>
-                                                    <span class="cell-lead-source" title="<?= htmlspecialchars($leadSourceDisplay, ENT_QUOTES, 'UTF-8') ?>">
-                                                        <?= htmlspecialchars($leadSourceMain !== '' ? $leadSourceMain : '—', ENT_QUOTES, 'UTF-8') ?><span class="cell-lead-source-sep"> | </span><?= htmlspecialchars($leadSourceRef !== '' ? $leadSourceRef : '—', ENT_QUOTES, 'UTF-8') ?>
-                                                    </span>
                                                 </td>
                                                 <td class="col-ld-dest">
                                                     <div class="cell-travelers-info">
@@ -3447,6 +3422,45 @@ foreach ($destinationLookup as $destId => $destName) {
                                                             <?php } ?>
                                                         </div>
                                                     <?php } ?>
+                                                </td>
+                                                <td class="col-ld-source">
+                                                    <?php
+                                                    $leadSourceMain = trim((string) ($lead['lead_source'] ?? ''));
+                                                    $leadSourceRef = trim((string) ($lead['referred_by'] ?? ''));
+                                                    $leadSourceDisplay = ($leadSourceMain !== '' ? $leadSourceMain : '—') . ' | ' . ($leadSourceRef !== '' ? $leadSourceRef : '—');
+                                                    ?>
+                                                    <span class="cell-lead-source" title="<?= htmlspecialchars($leadSourceDisplay, ENT_QUOTES, 'UTF-8') ?>">
+                                                        <?= htmlspecialchars($leadSourceMain !== '' ? $leadSourceMain : '—', ENT_QUOTES, 'UTF-8') ?><span class="cell-lead-source-sep"> | </span><?= htmlspecialchars($leadSourceRef !== '' ? $leadSourceRef : '—', ENT_QUOTES, 'UTF-8') ?>
+                                                    </span>
+                                                </td>
+                                                <td class="col-ld-assign">
+                                                    <?php
+                                                    $assignRaw = trim((string) ($lead['assign_to'] ?? ''));
+                                                    $assignee = crmLeadsResolveAssignee($assignRaw, $assignUserLookup);
+                                                    if ($assignee === null) {
+                                                        ?>
+                                                        <span class="cell-assign is-empty">—</span>
+                                                        <?php
+                                                    } else {
+                                                        $assignLabel = (string) $assignee['label'];
+                                                        $assignImage = (string) $assignee['image'];
+                                                        $assignInitial = (string) $assignee['initial'];
+                                                        $assignTone = (string) $assignee['tone_key'];
+                                                        $assignColor = (string) $assignee['tone_color'];
+                                                        ?>
+                                                        <span class="cell-assign" title="<?= htmlspecialchars($assignLabel, ENT_QUOTES, 'UTF-8') ?>">
+                                                            <?php if ($assignImage !== '') { ?>
+                                                                <img class="cell-assign-avatar" src="<?= htmlspecialchars('uploads/users/' . $assignImage, ENT_QUOTES, 'UTF-8') ?>" alt="">
+                                                            <?php } else { ?>
+                                                                <span class="cell-assign-initial tone-<?= htmlspecialchars($assignTone, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($assignInitial, ENT_QUOTES, 'UTF-8') ?></span>
+                                                            <?php } ?>
+                                                            <span class="cell-assign-name" style="color: <?= htmlspecialchars($assignColor, ENT_QUOTES, 'UTF-8') ?>;">
+                                                                <?= htmlspecialchars($assignLabel, ENT_QUOTES, 'UTF-8') ?>
+                                                            </span>
+                                                        </span>
+                                                        <?php
+                                                    }
+                                                    ?>
                                                 </td>
                                                 <td class="col-stage col-ld-stage">
                                                     <?php

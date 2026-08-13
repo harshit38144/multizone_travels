@@ -156,6 +156,7 @@ $qMailSubject = (string) ($qSupplierQuoteMail['subject'] ?? 'Quotation Request')
 $qMailBodyHtml = (string) ($qSupplierQuoteMail['body_html'] ?? '');
 $qMailMeta = is_array($qSupplierQuoteMail['meta'] ?? null) ? $qSupplierQuoteMail['meta'] : [];
 $qSupplierMailCatalog = crmSuppliersMailCatalog($conn);
+$qHotelSuppliers = crmSuppliersForHotelSelect($conn);
 $qDestinationNameToId = [];
 foreach ($destinationLookup as $destId => $destName) {
     $key = strtolower(trim((string) $destName));
@@ -1289,6 +1290,146 @@ $qWizardSteps = [
             font-size: 0.82rem;
             color: var(--q-text);
             border-bottom: 1px solid var(--q-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .crm-quotation-gen .q-day-head-label {
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-day-ai-suggest {
+            flex-shrink: 0;
+            border-radius: 999px;
+            border: 1px solid #99f6e4;
+            background: #f0fdfa;
+            color: #0f766e;
+            font-weight: 600;
+            font-size: 0.72rem;
+            padding: 0.2rem 0.65rem;
+            line-height: 1.3;
+        }
+
+        .crm-quotation-gen .q-day-ai-suggest:hover:not(:disabled) {
+            background: #ccfbf1;
+            border-color: #5eead4;
+            color: #115e59;
+        }
+
+        .crm-quotation-gen .q-day-ai-suggest:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .crm-quotation-gen .q-day-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .crm-quotation-gen .q-day-title-row .q-day-title {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-day-ai-btn {
+            flex: 0 0 auto;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 0;
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(15, 118, 110, 0.28);
+            padding: 0;
+        }
+
+        .crm-quotation-gen .q-day-ai-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+            color: #fff;
+        }
+
+        .crm-quotation-gen .q-day-ai-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .q-day-ai-modal .modal-content {
+            border: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
+        }
+
+        .q-day-ai-modal .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            align-items: flex-start;
+            padding: 1rem 1.15rem;
+        }
+
+        .q-day-ai-modal-hd {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .q-day-ai-modal-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .q-day-ai-modal .modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f766e;
+        }
+
+        .q-day-ai-modal-sub {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 0.15rem;
+        }
+
+        .q-day-ai-modal #qDayAiPrompt {
+            border-radius: 10px;
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .q-day-ai-modal #qDayAiPrompt:focus {
+            border-color: #5eead4;
+            box-shadow: 0 0 0 0.2rem rgba(13, 148, 136, 0.15);
+        }
+
+        .q-day-ai-modal .q-day-ai-generate {
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+            border: 0;
+            color: #fff;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.4rem 1.1rem;
+        }
+
+        .q-day-ai-modal .q-day-ai-generate:hover:not(:disabled) {
+            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+            color: #fff;
+        }
+
+        .q-day-ai-modal .q-day-ai-generate:disabled {
+            opacity: 0.75;
+            cursor: wait;
         }
 
         .crm-quotation-gen .q-day-body {
@@ -1951,6 +2092,20 @@ $qWizardSteps = [
             gap: 0.3rem 0.45rem;
         }
 
+        .crm-quotation-gen .q-hotel-field.q-hotel-field-supplier {
+            flex: 1 1 220px;
+            min-width: 180px;
+            max-width: 320px;
+        }
+
+        .crm-quotation-gen .q-hotel-rate-row {
+            margin-top: 0.15rem;
+        }
+
+        .crm-quotation-gen .q-hotel-rate-row .form-group {
+            width: 100%;
+        }
+
         .crm-quotation-gen .h-rate {
             -moz-appearance: textfield;
             appearance: textfield;
@@ -2471,20 +2626,102 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-lead-sidebar {
-            flex: 0 0 290px;
-            width: 290px;
+            --q-lead-sidebar-width: 290px;
+            --q-lead-sidebar-collapsed: 52px;
+            flex: 0 0 var(--q-lead-sidebar-width);
+            width: var(--q-lead-sidebar-width);
             max-width: 100%;
             position: sticky;
             top: 0.75rem;
             align-self: flex-start;
             max-height: calc(100vh - 5.5rem);
-            overflow-y: auto;
+            overflow: visible;
             padding-right: 0.15rem;
+            transition: width 0.22s ease, flex-basis 0.22s ease;
+            box-sizing: border-box;
+        }
+
+        .crm-quotation-gen .q-lead-sidebar-inner {
+            max-height: calc(100vh - 5.5rem);
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 0.15rem;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+        }
+
+        .crm-quotation-gen .q-lead-sidebar-toggle {
+            position: absolute;
+            top: 0.55rem;
+            right: -12px;
+            z-index: 5;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #475569;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .crm-quotation-gen .q-lead-sidebar-toggle:hover {
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        .crm-quotation-gen .q-lead-sidebar-toggle i {
+            font-size: 0.78rem;
+            transition: transform 0.18s ease;
+        }
+
+        .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar {
+            flex-basis: var(--q-lead-sidebar-collapsed);
+            width: var(--q-lead-sidebar-collapsed);
+            overflow: visible;
+        }
+
+        .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-inner {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            max-height: 0;
+            overflow: hidden;
+        }
+
+        .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-toggle {
+            right: auto;
+            left: 50%;
+            top: 0.85rem;
+            transform: translateX(-50%);
+            width: 34px;
+            height: 34px;
+            background: #1e3a5f;
+            border-color: #1e3a5f;
+            color: #fff;
+        }
+
+        .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-toggle:hover {
+            background: #254a75;
+            border-color: #254a75;
+            color: #fff;
+        }
+
+        .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-toggle i {
+            transform: rotate(180deg);
         }
 
         .crm-quotation-gen .q-main-panel {
             flex: 1 1 auto;
             min-width: 0;
+            transition: margin 0.22s ease;
         }
 
         .crm-quotation-gen .q-side-card {
@@ -2714,7 +2951,30 @@ $qWizardSteps = [
 
             .crm-quotation-gen .q-lead-sidebar {
                 width: 100%;
+                flex-basis: auto;
                 position: static;
+                max-height: none;
+                overflow: visible;
+            }
+
+            .crm-quotation-gen .q-lead-sidebar-inner {
+                max-height: none;
+                overflow: visible;
+            }
+
+            .crm-quotation-gen .q-lead-sidebar-toggle {
+                display: none;
+            }
+
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar {
+                width: 100%;
+                flex-basis: auto;
+            }
+
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-inner {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
                 max-height: none;
                 overflow: visible;
             }
@@ -3230,6 +3490,14 @@ $qWizardSteps = [
             min-width: 0;
             padding: 0.9rem 0.75rem 1rem 1rem;
             background: #f8fafc;
+        }
+
+        .crm-quotation-gen .q-pricing-sheets-host.is-single-option {
+            grid-template-columns: minmax(132px, 150px) minmax(220px, 300px);
+        }
+
+        .crm-quotation-gen .q-pricing-sheets-host.is-single-option .q-pricing-option-sheet {
+            max-width: 300px;
         }
 
         .crm-quotation-gen .q-pricing-sidebar {
@@ -5038,9 +5306,18 @@ $qWizardSteps = [
                         </div>
                     </div>
 
-                    <div class="q-page-layout">
+                    <div class="q-page-layout" id="qPageLayout">
                         <?php if ($leadSidebar) { ?>
-                            <aside class="q-lead-sidebar" aria-label="Lead details">
+                            <aside class="q-lead-sidebar" id="qLeadSidebar" aria-label="Lead details">
+                                <button type="button"
+                                    class="q-lead-sidebar-toggle js-q-lead-sidebar-toggle"
+                                    title="Collapse lead panel"
+                                    aria-expanded="true"
+                                    aria-controls="qLeadSidebarInner">
+                                    <i class="fas fa-angle-left" aria-hidden="true"></i>
+                                    <span class="sr-only">Toggle lead panel</span>
+                                </button>
+                                <div class="q-lead-sidebar-inner" id="qLeadSidebarInner">
                                 <a href="<?= htmlspecialchars((string) $leadSidebar['leads_url'], ENT_QUOTES, 'UTF-8') ?>" class="q-side-back">
                                     <i class="fas fa-arrow-left"></i> Back to Leads
                                 </a>
@@ -5156,6 +5433,7 @@ $qWizardSteps = [
 
                                 <div class="q-side-footer">
                                     Last Modified on <strong><?= htmlspecialchars((string) $leadSidebar['other']['updated_at'], ENT_QUOTES, 'UTF-8') ?></strong>
+                                </div>
                                 </div>
                             </aside>
                         <?php } ?>
@@ -5352,7 +5630,7 @@ $qWizardSteps = [
                                 </button>
                             </div>
                             <div id="qHotelCategories"></div>
-                            <p class="q-hint mt-2 mb-0">Hotel suggestions are filtered by Tour Information destination. Type a city to search City Master, or use <strong>Create new city</strong> if it is missing. For hotels, use <strong>Create new hotel</strong> to add to Hotel Master immediately.</p>
+                            <p class="q-hint mt-2 mb-0">Hotel suggestions are filtered by Tour Information destination. Type a city to search City Master, or use <strong>Create</strong> if it is missing. For hotels, use <strong>Create</strong> to add to Hotel Master immediately.</p>
                         </div>
                         </div>
 
@@ -5361,44 +5639,6 @@ $qWizardSteps = [
                         <div class="q-card">
                             <h3 class="q-section-title">Itinerary</h3>
                             <div class="q-accordion-body" id="qItineraryBody" style="display:none;">
-                                <div class="q-ai-suggest">
-                                    <div class="q-ai-suggest-hd">
-                                        <div class="q-ai-suggest-icon"><i class="fas fa-magic"></i></div>
-                                        <div>
-                                            <div class="q-ai-suggest-title">Suggest Itinerary</div>
-                                            <p class="q-ai-suggest-desc">Instant day-wise plan based on your destination — no wait, works offline.</p>
-                                        </div>
-                                    </div>
-                                    <div class="q-ai-suggest-meta" id="qAiItineraryMeta"></div>
-                                    <div class="form-group mb-2">
-                                        <label class="q-label small mb-1">Preferences <span class="text-muted font-weight-normal">(optional)</span></label>
-                                        <textarea class="form-control q-ai-suggest-notes" id="qAiItineraryNotes" rows="2" placeholder="e.g. family trip with kids, focus on temples &amp; local food, relaxed pace..."></textarea>
-                                    </div>
-                                    <button type="button" class="btn btn-sm" id="qSuggestAIItinerary">
-                                        <i class="fas fa-bolt mr-1"></i> Generate Itinerary Now
-                                    </button>
-                                    <div class="q-ai-itin-preview" id="qAiItineraryPreview" aria-live="polite">
-                                        <div class="q-ai-itin-preview-hd">
-                                            <div>
-                                                <p class="q-ai-itin-preview-title" id="qAiItineraryPreviewTitle">Suggested itinerary</p>
-                                                <p class="q-ai-itin-preview-sub" id="qAiItineraryPreviewSub"></p>
-                                            </div>
-                                            <span class="q-ai-itin-badge" id="qAiItineraryBadge"></span>
-                                        </div>
-                                        <ul class="q-ai-itin-preview-days" id="qAiItineraryPreviewDays"></ul>
-                                        <div class="q-ai-itin-preview-actions">
-                                            <button type="button" class="btn btn-sm" id="qApplyAIItinerary">
-                                                <i class="fas fa-check mr-1"></i> Apply This Itinerary
-                                            </button>
-                                            <button type="button" class="btn btn-link btn-sm text-muted px-1" id="qDismissAIItinerary">
-                                                Dismiss
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="q-suggest-divider">or load from package</div>
-
                                 <div class="q-package-suggest mb-3">
                                     <label class="q-label d-block">Suggest from Package</label>
                                     <div class="row q-row-tight align-items-end">
@@ -5416,7 +5656,7 @@ $qWizardSteps = [
                                         </div>
                                     </div>
                                 </div>
-                                <p class="q-hint">Days are generated from the Tentative Date and No of Nights.</p>
+                                <p class="q-hint">Days are generated from the Tentative Date and No of Nights. Use the AI button on each day to suggest that day.</p>
                                 <div id="qItineraryDays"></div>
                             </div>
                         </div>
@@ -5467,8 +5707,8 @@ $qWizardSteps = [
                                 <div class="q-pricing-compare-hd">
                                     <span class="q-pricing-compare-hd-icon" aria-hidden="true"><i class="fas fa-suitcase-rolling"></i></span>
                                     <div class="q-pricing-compare-hd-text">
-                                        <h4>Cost Sheet &amp; Quotation</h4>
-                                        <p class="q-hint">Compare travel options and pricing</p>
+                                        <h4>Pricing</h4>
+                                        <!-- <p class="q-hint">Compare travel options and pricing</p> -->
                                     </div>
                                 </div>
                                 <div class="q-pricing-compare-body">
@@ -5603,6 +5843,36 @@ $qWizardSteps = [
     <?php include __DIR__ . '/includes/quotation_flight_search_modal.php'; ?>
     <?php include __DIR__ . '/includes/quotation_itinerary_image_modal.php'; ?>
     <?php include __DIR__ . '/includes/quotation_supplier_mail_modal.php'; ?>
+
+    <div class="modal fade q-day-ai-modal" id="qDayAiModal" tabindex="-1" role="dialog" aria-labelledby="qDayAiModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="q-day-ai-modal-hd">
+                        <div class="q-day-ai-modal-icon"><i class="fas fa-magic"></i></div>
+                        <div>
+                            <h5 class="modal-title mb-0" id="qDayAiModalLabel">Suggest Day</h5>
+                            <p class="q-day-ai-modal-sub mb-0" id="qDayAiModalSub">Describe what you want for this day</p>
+                        </div>
+                    </div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-0">
+                        <label class="q-label" for="qDayAiPrompt">What do you need on this day?</label>
+                        <textarea class="form-control" id="qDayAiPrompt" rows="4" placeholder="e.g. Amber Fort in the morning, City Palace &amp; local bazaar in the evening, relaxed pace for family..."></textarea>
+                        <small class="form-text text-muted">The day title and activities will be generated from your request.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn q-day-ai-generate" id="qDayAiGenerate">
+                        <i class="fas fa-bolt mr-1"></i> Generate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade q-city-create-modal" id="qCityCreateModal" tabindex="-1" role="dialog" aria-labelledby="qCityCreateModalLabel" aria-hidden="true" data-backdrop="static">
         <div class="modal-dialog modal-dialog-centered" role="document">
@@ -5747,6 +6017,7 @@ $qWizardSteps = [
         var QUOTATION_DESTINATIONS = <?= json_encode($destinations, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
         var QUOTATION_PREVIEW_META = <?= json_encode($qPreviewMeta, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var Q_SUPPLIER_MAIL_CATALOG = <?= json_encode($qSupplierMailCatalog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
+        var Q_HOTEL_SUPPLIERS = <?= json_encode($qHotelSuppliers, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
         var Q_DESTINATION_NAME_TO_ID = <?= json_encode($qDestinationNameToId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var Q_DESTINATION_COUNTRY_ID_BY_NAME = <?= json_encode($qDestinationCountryIdByName, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var QUOTATION_TERMS_MASTER = <?= json_encode($quotationTermsMaster, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
@@ -5756,7 +6027,7 @@ $qWizardSteps = [
             'meta' => $qMailMeta,
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
-    <script src="crm/assets/quotation_generator.js?v=81"></script>
+    <script src="crm/assets/quotation_generator.js?v=85"></script>
     <script src="crm/assets/quotation_flight_search.js?v=6"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=17"></script>
