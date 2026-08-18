@@ -77,18 +77,53 @@ function crmIntakePublicBasePath()
     return $base;
 }
 
+function crmIntakeIsLocalHost($host)
+{
+    $host = strtolower(trim((string) $host));
+    $host = preg_replace('/:\d+$/', '', $host) ?: $host;
+    return $host === 'localhost' || $host === '127.0.0.1' || $host === '::1';
+}
+
+/**
+ * Guest form lives on the public website, not the admin subdomain.
+ * admin.multizonetravels.com → multizonetravels.com
+ */
+function crmIntakePublicHost()
+{
+    $host = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? 'localhost')));
+    $host = preg_replace('/:\d+$/', '', $host) ?: $host;
+    if (crmIntakeIsLocalHost($host)) {
+        return $_SERVER['HTTP_HOST'] ?? 'localhost';
+    }
+    if ($host === 'admin.multizonetravels.com') {
+        return 'multizonetravels.com';
+    }
+    if (strpos($host, 'admin.') === 0) {
+        return substr($host, 6);
+    }
+    return $_SERVER['HTTP_HOST'] ?? $host;
+}
+
+function crmIntakePublicScheme()
+{
+    $host = crmIntakePublicHost();
+    $hostNoPort = preg_replace('/:\d+$/', '', strtolower((string) $host)) ?: $host;
+    if (crmIntakeIsLocalHost($hostNoPort)) {
+        return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    }
+    return 'https';
+}
+
 function crmBuildIntakePublicUrl($token)
 {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    return $scheme . '://' . $host . crmIntakePublicBasePath() . '/public/lead_intake.php?token=' . rawurlencode($token);
+    $path = crmIntakeIsLocalHost(crmIntakePublicHost()) ? crmIntakePublicBasePath() : '';
+    return crmIntakePublicScheme() . '://' . crmIntakePublicHost() . $path . '/public/lead_intake.php?token=' . rawurlencode($token);
 }
 
 function crmBuildIntakeThanksUrl($token)
 {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    return $scheme . '://' . $host . crmIntakePublicBasePath() . '/public/lead_intake_thanks.php?token=' . rawurlencode($token);
+    $path = crmIntakeIsLocalHost(crmIntakePublicHost()) ? crmIntakePublicBasePath() : '';
+    return crmIntakePublicScheme() . '://' . crmIntakePublicHost() . $path . '/public/lead_intake_thanks.php?token=' . rawurlencode($token);
 }
 
 function crmFormatIntakeInquiryId($submissionId, $createdAt = '')
