@@ -114,6 +114,40 @@ function crmIntakePublicScheme()
     return 'https';
 }
 
+function crmPublicAdminAssetBase()
+{
+    $host = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? 'localhost')));
+    $host = preg_replace('/:\d+$/', '', $host) ?: $host;
+    if (crmIntakeIsLocalHost($host)) {
+        return '../admin/';
+    }
+    $scheme = 'https';
+    if (strpos($host, 'admin.') === 0) {
+        return $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? $host) . '/';
+    }
+    if (preg_match('/(^|\.)multizonetravels\.com$/', $host)) {
+        return 'https://admin.multizonetravels.com/';
+    }
+    return $scheme . '://admin.' . $host . '/';
+}
+
+function crmResolveIntakeLogoUrl($logoPath)
+{
+    $logoPath = str_replace('\\', '/', trim((string) $logoPath));
+    if ($logoPath === '') {
+        $logoPath = 'img/web-logo.png';
+    }
+    if (preg_match('/^https?:\/\//i', $logoPath)) {
+        return $logoPath;
+    }
+    $logoPath = ltrim($logoPath, '/');
+    if (strpos($logoPath, 'admin/') === 0) {
+        $logoPath = substr($logoPath, 6);
+    }
+    $base = crmPublicAdminAssetBase();
+    return rtrim($base, '/') . '/' . $logoPath;
+}
+
 function crmBuildIntakePublicUrl($token)
 {
     $path = crmIntakeIsLocalHost(crmIntakePublicHost()) ? crmIntakePublicBasePath() : '';

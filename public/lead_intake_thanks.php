@@ -12,10 +12,11 @@ $summary = null;
 
 $companyName = 'Multi Zone Travels';
 $companyTagline = 'travel for memories...';
-$logoUrl = 'img/web-logo.png';
+$logoUrl = crmResolveIntakeLogoUrl('img/web-logo.png');
 $supportPhone = '+91 98765 43210';
 $supportEmail = 'support@multizonetravels.com';
 $homeUrl = '../index.php';
+$adminAssetBase = crmPublicAdminAssetBase();
 
 $ssTable = $conn->query("SHOW TABLES LIKE 'site_settings'");
 if ($ssTable && $ssTable->num_rows > 0) {
@@ -28,12 +29,7 @@ if ($ssTable && $ssTable->num_rows > 0) {
             $companyTagline = (string) $ssRow['site_tagline'];
         }
         if (!empty($ssRow['logo_path'])) {
-            $logoPath = str_replace('\\', '/', (string) $ssRow['logo_path']);
-            if (preg_match('/^https?:\/\//i', $logoPath)) {
-                $logoUrl = $logoPath;
-            } else {
-                $logoUrl = ltrim($logoPath, '/');
-            }
+            $logoUrl = crmResolveIntakeLogoUrl($ssRow['logo_path']);
         }
         $fp = trim((string) ($ssRow['footer_phone'] ?? ''));
         $wp = trim((string) ($ssRow['whatsapp_phone'] ?? ''));
@@ -80,7 +76,7 @@ $emailHref = $supportEmail;
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <base href="../admin/">
+    <base href="<?= htmlspecialchars($adminAssetBase, ENT_QUOTES, 'UTF-8') ?>">
     <title>Thank You — <?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -102,12 +98,16 @@ $emailHref = $supportEmail;
         }
 
         .intake-thanks-logo {
-            display: block;
+            display: none;
             max-height: 72px;
             max-width: min(280px, 78vw);
             width: auto;
             margin: 0 auto 1.1rem;
             object-fit: contain;
+        }
+
+        .intake-thanks-logo.is-loaded {
+            display: block;
         }
 
         .intake-thanks-success {
@@ -503,12 +503,12 @@ $emailHref = $supportEmail;
 <div class="intake-thanks-page">
     <?php if ($error) { ?>
         <div class="intake-thanks-error">
-            <img src="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="intake-thanks-logo">
+            <img src="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="intake-thanks-logo" onload="this.classList.add('is-loaded')" onerror="this.classList.add('is-broken')">
             <div class="alert alert-danger mb-3"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
             <a href="<?= htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8') ?>" class="intake-thanks-home-btn"><i class="fas fa-home"></i> Back to Home</a>
         </div>
     <?php } else { ?>
-        <img src="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="intake-thanks-logo">
+        <img src="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="intake-thanks-logo" onload="this.classList.add('is-loaded')" onerror="this.classList.add('is-broken')">
 
         <div class="intake-thanks-success" aria-hidden="true">
             <span class="intake-thanks-deco d1"></span>

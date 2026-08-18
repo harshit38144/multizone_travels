@@ -39,9 +39,10 @@ if ($token === '') {
 
 $companyName = 'Multizone Travels';
 $companyTagline = 'travel for memories...';
-$logoUrl = 'img/web-logo.png';
+$logoUrl = crmResolveIntakeLogoUrl('img/web-logo.png');
 $noteToCustomer = '';
 $intakeFormSubtitle = 'Share your travel plans and we\'ll craft the perfect experience for you.';
+$adminAssetBase = crmPublicAdminAssetBase();
 
 $ssTable = $conn->query("SHOW TABLES LIKE 'site_settings'");
 if ($ssTable && $ssTable->num_rows > 0) {
@@ -54,12 +55,7 @@ if ($ssTable && $ssTable->num_rows > 0) {
             $companyTagline = (string) $ssRow['site_tagline'];
         }
         if (!empty($ssRow['logo_path'])) {
-            $logoPath = str_replace('\\', '/', (string) $ssRow['logo_path']);
-            if (preg_match('/^https?:\/\//i', $logoPath)) {
-                $logoUrl = $logoPath;
-            } else {
-                $logoUrl = ltrim($logoPath, '/');
-            }
+            $logoUrl = crmResolveIntakeLogoUrl($ssRow['logo_path']);
         }
     }
 }
@@ -73,11 +69,13 @@ if ($request) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <base href="../admin/">
+    <base href="<?= htmlspecialchars($adminAssetBase, ENT_QUOTES, 'UTF-8') ?>">
     <title>Travel Inquiry — <?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <?php include __DIR__ . '/../admin/includes/header-links.php'; ?>
     <script src="plugins/jquery/jquery.min.js"></script>
     <script src="plugins/jquery-ui/jquery-ui.min.js"></script>
@@ -112,7 +110,24 @@ if ($request) {
             width: auto;
             object-fit: contain;
             margin: 0 auto 0.85rem;
+            display: none;
+        }
+
+        .crm-lead-intake-logo.is-loaded {
             display: block;
+        }
+
+        .crm-lead-intake-wordmark {
+            display: inline-block;
+            margin: 0 auto 0.85rem;
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: 0.01em;
+        }
+
+        .crm-lead-intake-logo.is-loaded + .crm-lead-intake-wordmark {
+            display: none;
         }
 
         .crm-lead-intake-headline {
@@ -294,18 +309,44 @@ if ($request) {
 
         .crm-lead-intake-public .label-req::after { color: #e11d2e; }
 
+        .crm-lead-intake-public .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .crm-lead-intake-public .form-group > label {
+            display: block;
+            position: static;
+            float: none;
+            margin-bottom: 0.45rem;
+            line-height: 1.3;
+        }
+
         .crm-lead-intake-public .form-control,
         .crm-lead-intake-public .tp-rg-trigger,
         .crm-lead-intake-public .tp-destination-field,
         .crm-lead-intake-public .tp-hotel-cat-field,
         .crm-lead-intake-public .tp-vehicle-type-field {
+            border: 1px solid #d1d5db !important;
             border-radius: 10px;
-            border-color: #d1d5db;
-            background: #fff;
+            background: #fff !important;
             min-height: 44px;
+            height: auto;
             color: #111827;
-            box-shadow: none;
+            box-shadow: none !important;
             font-size: 0.9rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-clip: padding-box;
+            outline: none;
+        }
+
+        .crm-lead-intake-public select.form-control {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1.4.6L6 5.2 10.6.6 12 2 6 8 0 2z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.85rem center;
+            background-size: 12px 8px;
+            padding-right: 2.2rem;
         }
 
         .crm-lead-intake-public .form-control:focus,
@@ -313,9 +354,9 @@ if ($request) {
         .crm-lead-intake-public .tp-hotel-cat-field:focus,
         .crm-lead-intake-public .tp-vehicle-type-field:focus,
         .crm-lead-intake-public .tp-rg-trigger:focus {
-            border-color: #fca5a5;
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
+            border-color: #fca5a5 !important;
+            background: #fff !important;
+            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12) !important;
         }
 
         .crm-lead-intake-public .lead-field-icon > .form-control,
@@ -614,7 +655,8 @@ if ($request) {
 <body class="hold-transition">
 <div class="crm-lead-intake-page">
     <div class="crm-lead-intake-hero">
-        <img src="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="crm-lead-intake-logo">
+        <img src="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="" class="crm-lead-intake-logo" onload="this.classList.add('is-loaded')" onerror="this.classList.add('is-broken')">
+        <div class="crm-lead-intake-wordmark"><?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?></div>
         <h1 class="crm-lead-intake-headline">Explore the World with Us</h1>
         <div class="crm-lead-intake-accent" aria-hidden="true"></div>
         <p class="crm-lead-intake-subhead"><?= htmlspecialchars($intakeFormSubtitle, ENT_QUOTES, 'UTF-8') ?></p>
