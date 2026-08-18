@@ -1372,7 +1372,10 @@ if (empty($leadSourceOptions)) {
             var $destCreateModal = $form.next('.js-tp-dest-create-modal');
             var $destCreateForm = $destCreateModal.find('.js-tp-dest-create-form');
             var destinationSaveUrl = $form.attr('data-destination-save-url') || 'crm/ajax/save_destination.php';
-            var leadSaveUrl = $form.attr('data-save-url') || (isIntake ? 'ajax/submit_lead_intake.php' : 'crm/ajax/save_lead.php');
+            var leadSaveUrl = $form.attr('data-save-url') || (isIntake ? '' : 'crm/ajax/save_lead.php');
+            if (isIntake && !leadSaveUrl) {
+                leadSaveUrl = window.location.origin + window.location.pathname.replace(/[^/]+$/, '') + 'ajax/submit_lead_intake.php';
+            }
             var tpDestinationOptions = [];
             var tpSelectedDestinations = [];
             var leadDestinations = [];

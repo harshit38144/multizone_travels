@@ -160,6 +160,33 @@ function crmBuildIntakeThanksUrl($token)
     return crmIntakePublicScheme() . '://' . crmIntakePublicHost() . $path . '/public/lead_intake_thanks.php?token=' . rawurlencode($token);
 }
 
+/**
+ * Absolute same-origin submit URL. Must not be relative: <base href> on the
+ * public form points at admin.multizonetravels.com, which would steal the POST.
+ */
+function crmBuildIntakeSubmitUrl()
+{
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/public/lead_intake.php'));
+    $dir = rtrim(dirname($script), '/');
+    if ($dir === '' || $dir === '.' || $dir === '\\') {
+        $ajaxPath = '/ajax/submit_lead_intake.php';
+    } else {
+        $ajaxPath = $dir . '/ajax/submit_lead_intake.php';
+    }
+
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $hostNoPort = strtolower(preg_replace('/:\d+$/', '', $host) ?: $host);
+    $scheme = 'https';
+    if (crmIntakeIsLocalHost($hostNoPort)) {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') {
+            $scheme = 'https';
+        }
+    }
+
+    return $scheme . '://' . $host . $ajaxPath;
+}
+
 function crmFormatIntakeInquiryId($submissionId, $createdAt = '')
 {
     $id = max(0, (int) $submissionId);

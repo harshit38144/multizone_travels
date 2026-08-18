@@ -717,8 +717,7 @@ if ($request) {
                 'recipient_phone' => (string) ($request['recipient_phone'] ?? ''),
                 'recipient_email' => (string) ($request['recipient_email'] ?? ''),
             ];
-            $publicDir = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? ''))), '/');
-            $leadFormIntakeSubmitUrl = $publicDir . '/ajax/submit_lead_intake.php';
+            $leadFormIntakeSubmitUrl = crmBuildIntakeSubmitUrl();
             include __DIR__ . '/../admin/crm/includes/lead_form_content.php';
             ?>
         </div>
