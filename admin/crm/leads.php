@@ -188,6 +188,8 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
 
     $customerInitial = crmCustomerInitialFromPayload($payload);
     $customerName = (string) ($row['customer_name'] ?? '');
+    $customerDisplayName = crmFormatCustomerDisplayName($customerName, $customerInitial);
+    $customerNameLetters = crmCustomerNameLetters($customerName !== '' ? $customerName : $customerDisplayName);
     $leadSource = trim((string) ($row['lead_source'] ?? ''));
     $referredBy = trim((string) ($row['referred_by'] ?? ''));
     $leadSourceText = ($leadSource !== '' ? $leadSource : '—') . ' | ' . ($referredBy !== '' ? $referredBy : '—');
@@ -197,7 +199,8 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         'lead_uid' => (string) ($row['lead_uid'] ?? ''),
         'customer_name' => $customerName,
         'customer_initial' => $customerInitial,
-        'customer_display_name' => crmFormatCustomerDisplayName($customerName, $customerInitial),
+        'customer_display_name' => $customerDisplayName,
+        'customer_name_letters' => $customerNameLetters,
         'customer_phone' => (string) ($row['customer_phone'] ?? ''),
         'customer_email' => (string) ($row['customer_email'] ?? ''),
         'lead_source' => $leadSource,
@@ -370,135 +373,8 @@ function crmLeadsPageUrl(int $listPage, int $perPage = 25, string $fy = '', stri
     return 'crm/leads.php?' . http_build_query($params);
 }
 
-function crmLeadsMonthRangeBounds(int $monthsAgo = 0): array
-{
-    $anchor = new DateTimeImmutable('first day of this month 00:00:00');
-    if ($monthsAgo !== 0) {
-        $anchor = $anchor->modify(($monthsAgo > 0 ? '+' : '') . $monthsAgo . ' months');
-    }
-    $start = $anchor->format('Y-m-d H:i:s');
-    $end = $anchor->modify('+1 month')->format('Y-m-d H:i:s');
-
-    return ['start' => $start, 'end' => $end];
-}
-
-function crmLeadsDashboardStageSql(string $metric): string
-{
-    switch ($metric) {
-        case 'new':
-            return "(`stage` IN ('new_lead','new','contacted') OR `stage` IS NULL OR TRIM(`stage`) = '')";
-        case 'quoted':
-            return "`stage` IN ('quoted','proposal','proposal_sent','quote_sent','negotiation')";
-        case 'confirmed':
-            return "`stage` IN ('confirmed','won','booked','closed')";
-        default:
-            return '1=1';
-    }
-}
-
-function crmLeadsDashboardCount(mysqli $conn, ?array $range = null, string $metric = 'total'): int
-{
-    $activeWhere = crmLeadActiveWhereSql();
-    $where = [$activeWhere];
-
-    if ($range) {
-        $where[] = sprintf(
-            "`created_at` >= '%s' AND `created_at` < '%s'",
-            $conn->real_escape_string((string) $range['start']),
-            $conn->real_escape_string((string) $range['end'])
-        );
-    }
-
-    if ($metric !== 'total') {
-        $where[] = crmLeadsDashboardStageSql($metric);
-    }
-
-    $sql = 'SELECT COUNT(*) AS c FROM `crm_leads` WHERE ' . implode(' AND ', $where);
-    $res = $conn->query($sql);
-
-    return $res ? (int) ($res->fetch_assoc()['c'] ?? 0) : 0;
-}
-
-function crmLeadsDashboardConversionRate(int $confirmed, int $total): float
-{
-    if ($total <= 0) {
-        return 0.0;
-    }
-
-    return round(($confirmed / $total) * 100, 1);
-}
-
-function crmLeadsDashboardTrend(float $current, float $previous): array
-{
-    if ($previous <= 0) {
-        if ($current > 0) {
-            return ['pct' => 100.0, 'direction' => 'up'];
-        }
-
-        return ['pct' => 0.0, 'direction' => 'neutral'];
-    }
-
-    $delta = (($current - $previous) / $previous) * 100;
-
-    return [
-        'pct' => round(abs($delta), 1),
-        'direction' => $delta > 0 ? 'up' : ($delta < 0 ? 'down' : 'neutral'),
-    ];
-}
-
-function crmLeadsBuildDashboardStats(mysqli $conn): array
-{
-    $currentMonth = crmLeadsMonthRangeBounds(0);
-    $previousMonth = crmLeadsMonthRangeBounds(-1);
-
-    $metrics = [
-        'total' => ['label' => 'Total Leads', 'icon' => 'fa-user', 'tone' => 'rose'],
-        'new' => ['label' => 'New Leads', 'icon' => 'fa-users', 'tone' => 'orange'],
-        'quoted' => ['label' => 'Quoted', 'icon' => 'fa-file-alt', 'tone' => 'blue'],
-        'confirmed' => ['label' => 'Confirmed', 'icon' => 'fa-shield-alt', 'tone' => 'green'],
-    ];
-
-    $cards = [];
-    foreach ($metrics as $key => $meta) {
-        $allTime = crmLeadsDashboardCount($conn, null, $key);
-        $current = crmLeadsDashboardCount($conn, $currentMonth, $key);
-        $previous = crmLeadsDashboardCount($conn, $previousMonth, $key);
-        $cards[] = array_merge($meta, [
-            'key' => $key,
-            'value' => $allTime,
-            'display' => number_format($allTime),
-            'trend' => crmLeadsDashboardTrend((float) $current, (float) $previous),
-        ]);
-    }
-
-    $totalAll = crmLeadsDashboardCount($conn);
-    $confirmedAll = crmLeadsDashboardCount($conn, null, 'confirmed');
-    $conversionValue = crmLeadsDashboardConversionRate($confirmedAll, $totalAll);
-
-    $totalCurrent = crmLeadsDashboardCount($conn, $currentMonth);
-    $confirmedCurrent = crmLeadsDashboardCount($conn, $currentMonth, 'confirmed');
-    $totalPrevious = crmLeadsDashboardCount($conn, $previousMonth);
-    $confirmedPrevious = crmLeadsDashboardCount($conn, $previousMonth, 'confirmed');
-
-    $conversionCurrent = crmLeadsDashboardConversionRate($confirmedCurrent, $totalCurrent);
-    $conversionPrevious = crmLeadsDashboardConversionRate($confirmedPrevious, $totalPrevious);
-
-    $cards[] = [
-        'key' => 'conversion',
-        'label' => 'Conversion Rate',
-        'icon' => 'fa-expand-arrows-alt',
-        'tone' => 'purple',
-        'value' => $conversionValue,
-        'display' => number_format($conversionValue, 1) . '%',
-        'trend' => crmLeadsDashboardTrend($conversionCurrent, $conversionPrevious),
-    ];
-
-    return $cards;
-}
-
 $leadRows = [];
 $totalLeads = 0;
-$completedBookings = 0;
 $destinationLookup = [];
 $perPage = (int) ($_GET['per_page'] ?? 25);
 if (!in_array($perPage, [10, 25, 50], true)) {
@@ -633,10 +509,6 @@ crmLeadsSyncFeatureStages($conn, $leadRows);
 
 $deletedLeadsCount = $hasLeadsTable ? crmLeadsDeletedCount($conn) : 0;
 
-$dashboardStats = $hasLeadsTable ? crmLeadsBuildDashboardStats($conn) : [];
-$completedBookings = $hasLeadsTable ? crmLeadsDashboardCount($conn, null, 'confirmed') : 0;
-$conversionRate = $totalLeads > 0 ? round(($completedBookings / $totalLeads) * 100, 2) : 0;
-$winRate = $conversionRate;
 
 require_once __DIR__ . '/includes/lead_intake_fields.php';
 require_once __DIR__ . '/includes/lead_intake_db.php';
@@ -797,118 +669,6 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui .leads-create-split .dropdown-toggle-split {
             padding-left: 0.55rem;
             padding-right: 0.65rem;
-        }
-
-        .crm-leads-ui .leads-kpi-row {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 0.85rem;
-            margin-bottom: 1rem;
-            flex-shrink: 0;
-        }
-
-        @media (max-width: 1199px) {
-            .crm-leads-ui .leads-kpi-row {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-        }
-
-        @media (max-width: 767px) {
-            .crm-leads-ui .leads-kpi-row {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        @media (max-width: 575px) {
-            .crm-leads-ui .leads-kpi-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .crm-leads-ui .leads-kpi-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-            padding: 0.95rem 1rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.8rem;
-            min-height: 104px;
-        }
-
-        .crm-leads-ui .leads-kpi-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 42px;
-            font-size: 1rem;
-        }
-
-        .crm-leads-ui .leads-kpi-icon.tone-rose {
-            background: #ffe4e6;
-            color: #e11d48;
-        }
-
-        .crm-leads-ui .leads-kpi-icon.tone-orange {
-            background: #ffedd5;
-            color: #ea580c;
-        }
-
-        .crm-leads-ui .leads-kpi-icon.tone-blue {
-            background: #dbeafe;
-            color: #2563eb;
-        }
-
-        .crm-leads-ui .leads-kpi-icon.tone-green {
-            background: #dcfce7;
-            color: #16a34a;
-        }
-
-        .crm-leads-ui .leads-kpi-icon.tone-purple {
-            background: #ede9fe;
-            color: #7c3aed;
-        }
-
-        .crm-leads-ui .leads-kpi-body {
-            min-width: 0;
-            flex: 1 1 auto;
-        }
-
-        .crm-leads-ui .leads-kpi-label {
-            font-size: 0.8rem;
-            color: #6b7280;
-            margin-bottom: 0.2rem;
-            line-height: 1.3;
-        }
-
-        .crm-leads-ui .leads-kpi-value {
-            font-size: 1.45rem;
-            font-weight: 700;
-            color: #111827;
-            line-height: 1.15;
-            margin-bottom: 0.35rem;
-        }
-
-        .crm-leads-ui .leads-kpi-trend {
-            font-size: 0.74rem;
-            font-weight: 600;
-            line-height: 1.2;
-        }
-
-        .crm-leads-ui .leads-kpi-trend.trend-up {
-            color: #16a34a;
-        }
-
-        .crm-leads-ui .leads-kpi-trend.trend-down {
-            color: #dc2626;
-        }
-
-        .crm-leads-ui .leads-kpi-trend.trend-neutral {
-            color: #6b7280;
         }
 
         .crm-leads-ui .breadcrumbs {
@@ -1424,8 +1184,24 @@ foreach ($destinationLookup as $destId => $destName) {
             max-width: 100%;
         }
 
+        .crm-leads-ui .lead-guest-initials {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            line-height: 1;
+        }
+
         .crm-leads-ui .lead-name-text {
-            text-transform: uppercase;
+            text-transform: capitalize;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1978,19 +1754,6 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #424242 !important;
             border-color: #bdbdbd;
             box-shadow: 0 1px 3px rgba(97, 97, 97, 0.12);
-        }
-
-        .crm-leads-ui .action-btns .btn-expand {
-            background: #eef2ff;
-            border-color: #c7d2fe;
-            color: #4338ca !important;
-        }
-
-        .crm-leads-ui .action-btns .btn-expand:hover {
-            background: #e0e7ff;
-            color: #3730a3 !important;
-            border-color: #a5b4fc;
-            box-shadow: 0 1px 3px rgba(67, 56, 202, 0.15);
         }
 
         .crm-leads-ui .action-btns .btn-more.dropdown-toggle::after {
@@ -3241,29 +3004,6 @@ foreach ($destinationLookup as $destId => $destName) {
                         </div>
                     </div>
 
-                    <?php if (!empty($dashboardStats)) { ?>
-                        <div class="leads-kpi-row">
-                            <?php foreach ($dashboardStats as $kpiCard) {
-                                $trend = $kpiCard['trend'] ?? ['pct' => 0, 'direction' => 'neutral'];
-                                $trendDir = (string) ($trend['direction'] ?? 'neutral');
-                                $trendPct = number_format((float) ($trend['pct'] ?? 0), 1);
-                                $trendArrow = $trendDir === 'down' ? '↓' : ($trendDir === 'up' ? '↑' : '•');
-                                $trendText = $trendArrow . ' ' . $trendPct . '% vs last month';
-                            ?>
-                                <div class="leads-kpi-card">
-                                    <div class="leads-kpi-icon tone-<?= htmlspecialchars((string) ($kpiCard['tone'] ?? 'rose'), ENT_QUOTES, 'UTF-8') ?>">
-                                        <i class="fas <?= htmlspecialchars((string) ($kpiCard['icon'] ?? 'fa-chart-bar'), ENT_QUOTES, 'UTF-8') ?>"></i>
-                                    </div>
-                                    <div class="leads-kpi-body">
-                                        <div class="leads-kpi-label"><?= htmlspecialchars((string) ($kpiCard['label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
-                                        <div class="leads-kpi-value"><?= htmlspecialchars((string) ($kpiCard['display'] ?? '0'), ENT_QUOTES, 'UTF-8') ?></div>
-                                        <div class="leads-kpi-trend trend-<?= htmlspecialchars($trendDir, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($trendText, ENT_QUOTES, 'UTF-8') ?></div>
-                                    </div>
-                                </div>
-                            <?php } ?>
-                        </div>
-                    <?php } ?>
-
                     <div class="leads-panel">
                        
 
@@ -3340,14 +3080,21 @@ foreach ($destinationLookup as $destId => $destName) {
                                         ?>
                                             <tr data-lead-id="<?= (int) $lead['id'] ?>">
                                                 <td class="col-ld-lead">
-                                                    <button type="button" class="lead-id-cell js-lead-open-edit"
+                                                    <button type="button" class="lead-id-cell js-lead-row-expand"
                                                         data-lead-id="<?= (int) $lead['id'] ?>"
-                                                        title="Edit lead details">
+                                                        title="Expand full lead details"
+                                                        aria-label="Expand lead details">
                                                         <span class="lead-id-uid"><?= htmlspecialchars((string) $lead['lead_uid'], ENT_QUOTES, 'UTF-8') ?></span><?php if ($createdText !== '') { ?><span class="lead-id-meta"> | <?= htmlspecialchars($createdText, ENT_QUOTES, 'UTF-8') ?></span><?php } ?>
                                                     </button>
                                                 </td>
                                                 <td class="col-ld-guest">
                                                     <div class="lead-name">
+                                                        <?php
+                                                        $guestLetters = trim((string) ($lead['customer_name_letters'] ?? ''));
+                                                        if ($guestLetters !== '') {
+                                                        ?>
+                                                            <span class="lead-guest-initials" aria-hidden="true"><?= htmlspecialchars($guestLetters, ENT_QUOTES, 'UTF-8') ?></span>
+                                                        <?php } ?>
                                                         <span class="lead-name-text" title="<?= htmlspecialchars($leadHoverInfo, ENT_QUOTES, 'UTF-8') ?>" style="cursor:help;">
                                                             <?= htmlspecialchars((string) ($lead['customer_display_name'] ?? $lead['customer_name']), ENT_QUOTES, 'UTF-8') ?>
                                                         </span>
@@ -3488,13 +3235,6 @@ foreach ($destinationLookup as $destId => $destName) {
                                                 </td>
                                                 <td class="col-actions">
                                                     <div class="action-btns">
-                                                        <button type="button"
-                                                            class="btn-icon btn-expand js-lead-row-expand"
-                                                            data-lead-id="<?= (int) $lead['id'] ?>"
-                                                            title="Expand full lead details"
-                                                            aria-label="Expand lead details">
-                                                            <i class="fas fa-expand-alt"></i>
-                                                        </button>
                                                         <?php if (!empty($lead['latest_quotation_href'])) { ?>
                                                             <a href="<?= htmlspecialchars((string) $lead['latest_quotation_href'], ENT_QUOTES, 'UTF-8') ?>"
                                                                 class="btn-icon btn-view"
@@ -4000,11 +3740,6 @@ foreach ($destinationLookup as $destId => $destName) {
         window.alert('Lead import will be available soon. Please create leads manually or share the customer form link for now.');
     });
 
-    $(document).on('click', '.js-lead-open-edit', function (e) {
-        e.preventDefault();
-        openLeadEditModal(Number($(this).attr('data-lead-id') || 0));
-    });
-
     function buildSendLinkPostData() {
         var data = [];
         (sendLinkDefaultFields || []).forEach(function (field) {
@@ -4466,7 +4201,7 @@ foreach ($destinationLookup as $destId => $destName) {
         $('#leadDetailModal').modal('hide');
         if (leadId > 0) {
             window.setTimeout(function () {
-                $('.js-lead-open-edit[data-lead-id="' + leadId + '"]').first().trigger('click');
+                openLeadEditModal(leadId);
             }, 220);
         }
     });

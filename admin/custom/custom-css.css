@@ -1,6 +1,36 @@
-body{
-	margin:0;
-	padding:0;
+:root {
+	--admin-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-family-sans-serif: var(--admin-font-family);
+	--mz-sidebar-width: 330px;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	font-family: var(--admin-font-family) !important;
+}
+
+.wrapper,
+.content-wrapper,
+.main-header,
+.main-sidebar,
+.main-footer,
+.navbar,
+.nav,
+.card,
+.modal,
+.dropdown-menu,
+.table,
+.form-control,
+.form-control-sm,
+.btn,
+.select2-container,
+.select2-selection,
+.select2-results,
+.swal2-popup,
+.note-editor {
+	font-family: var(--admin-font-family);
 }
 .test{
 	width: 100%;
@@ -77,10 +107,6 @@ body{
 }
 
 /* ——— AdminLTE sidebar: wider than default 250px; avoid clipped labels + chevrons ——— */
-:root {
-	--mz-sidebar-width: 330px;
-}
-
 .main-sidebar,
 .main-sidebar::before {
 	width: var(--mz-sidebar-width);

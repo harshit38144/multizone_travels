@@ -18,10 +18,6 @@
 <link rel="stylesheet" href="plugins/daterangepicker/daterangepicker.css">
 <!-- summernote -->
 <link rel="stylesheet" href="plugins/summernote/summernote-bs4.css">
-<!-- Google Font: Source Sans Pro -->
-<link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
-<!-- Custom JS -->
-<link rel="stylesheet" href="custom/custom-css.css">
 <link rel="stylesheet" href="custom/admin-modals.css">
 <link rel="stylesheet" href="crm/assets/crm-list.css">
 <!-- DataTables -->
@@ -29,6 +25,8 @@
 <link rel="stylesheet" href="plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
+<!-- Custom CSS last: system UI font stack overrides AdminLTE -->
+<link rel="stylesheet" href="custom/custom-css.css">
 <link rel="shortcut icon" href="favicon.ico" type="img/web-logo.png">
 <!-- <script src="ckeditor/ckeditor.js"></script> -->
 <link rel="icon" href="../images/icons1.png" type="image/x-icon">

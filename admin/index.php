@@ -20,12 +20,11 @@ if (isset($_SESSION['msg'])) {
   <?php include 'includes/header-links.php'; ?>
   <?php include 'includes/footer-links.php'; ?>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
     :root {
+      --admin-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
       --primary:   #6366f1;
       --primary-d: #4338ca;
       --accent:    #06b6d4;
@@ -38,7 +37,7 @@ if (isset($_SESSION['msg'])) {
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: var(--admin-font-family);
       background: var(--dark);
       min-height: 100vh;
       display: flex;
@@ -140,7 +139,7 @@ if (isset($_SESSION['msg'])) {
       position:relative; z-index:2;
     }
     .panel-headline h1 {
-      font-family:'Playfair Display', serif;
+      font-family: var(--admin-font-family);
       font-size:38px; font-weight:700;
       line-height:1.2;
       margin-bottom:16px;
@@ -233,7 +232,7 @@ if (isset($_SESSION['msg'])) {
       border:1px solid rgba(255,255,255,0.08);
       border-radius:12px;
       color:#e2e8f0; font-size:14px;
-      font-family:'Inter', sans-serif;
+      font-family: var(--admin-font-family);
       outline:none;
       transition:all .3s ease;
     }
@@ -265,7 +264,7 @@ if (isset($_SESSION['msg'])) {
       background:linear-gradient(135deg, var(--primary) 0%, var(--primary-d) 100%);
       border:none; border-radius:12px;
       color:#fff; font-size:15px; font-weight:600;
-      font-family:'Inter', sans-serif;
+      font-family: var(--admin-font-family);
       cursor:pointer; margin-top:8px;
       position:relative; overflow:hidden;
       transition:all .3s ease;
@@ -349,14 +348,14 @@ if (isset($_SESSION['msg'])) {
     .btn-cancel-modal {
       background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
       color:#94a3b8; border-radius:9px; padding:9px 20px; font-size:13px;
-      cursor:pointer; transition:all .3s; font-family:'Inter',sans-serif;
+      cursor:pointer; transition:all .3s; font-family: var(--admin-font-family);
     }
     .btn-cancel-modal:hover { background:rgba(255,255,255,0.1); color:#fff; }
     .btn-send-reset {
       background:linear-gradient(135deg, var(--primary), var(--primary-d));
       border:none; color:#fff; border-radius:9px; padding:9px 22px;
       font-size:13px; font-weight:600; cursor:pointer;
-      box-shadow:0 6px 16px rgba(99,102,241,0.3); font-family:'Inter',sans-serif;
+      box-shadow:0 6px 16px rgba(99,102,241,0.3); font-family: var(--admin-font-family);
       transition:all .3s;
     }
     .btn-send-reset:hover { transform:translateY(-1px); box-shadow:0 10px 24px rgba(99,102,241,0.4); }

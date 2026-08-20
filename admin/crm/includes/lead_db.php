@@ -288,6 +288,49 @@ function crmFormatCustomerDisplayName(string $name, string $initial = ''): strin
     return $initial . ' ' . $name;
 }
 
+/**
+ * First + last name letters for list avatars (e.g. "Harshit Kumar" → "HK").
+ * Skips salutations like Mr / Mrs when present in the name string.
+ */
+function crmCustomerNameLetters(string $name): string
+{
+    $name = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
+    if ($name === '') {
+        return '';
+    }
+
+    $titles = ['mr', 'mrs', 'ms', 'miss', 'mstr', 'master', 'dr', 'prof', 'sir', 'madam'];
+    $parts = preg_split('/\s+/u', $name) ?: [];
+    $words = [];
+    foreach ($parts as $part) {
+        $plain = preg_replace('/[^\p{L}\p{N}]+/u', '', $part) ?? '';
+        if ($plain === '') {
+            continue;
+        }
+        $key = strtolower(rtrim($part, '.'));
+        $plainKey = strtolower($plain);
+        if (in_array($key, $titles, true) || in_array($plainKey, $titles, true)) {
+            continue;
+        }
+        $words[] = $plain;
+    }
+
+    if ($words === []) {
+        return '';
+    }
+
+    $first = function_exists('mb_substr') ? mb_substr($words[0], 0, 1, 'UTF-8') : substr($words[0], 0, 1);
+    if (count($words) === 1) {
+        return function_exists('mb_strtoupper') ? mb_strtoupper($first, 'UTF-8') : strtoupper($first);
+    }
+
+    $lastWord = $words[count($words) - 1];
+    $last = function_exists('mb_substr') ? mb_substr($lastWord, 0, 1, 'UTF-8') : substr($lastWord, 0, 1);
+    $letters = $first . $last;
+
+    return function_exists('mb_strtoupper') ? mb_strtoupper($letters, 'UTF-8') : strtoupper($letters);
+}
+
 function crmCustomerInitialFromPayload(array $payload): string
 {
     return trim((string) ($payload['customer_initial'] ?? ''));
