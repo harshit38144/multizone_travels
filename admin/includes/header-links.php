@@ -28,7 +28,8 @@
 <!-- Custom CSS last: system UI font stack overrides AdminLTE -->
 <link rel="stylesheet" href="custom/custom-css.css">
 <?php
-$adminFaviconUrl = adminBrandAssetUrl($siteSettings['favicon_path'] ?? '', 'img/icons1.png');
+$adminSiteSettings = isset($siteSettings) && is_array($siteSettings) ? $siteSettings : [];
+$adminFaviconUrl = adminBrandAssetUrl($adminSiteSettings['favicon_path'] ?? '', 'img/icons1.png');
 ?>
 <link rel="icon" href="<?= htmlspecialchars($adminFaviconUrl, ENT_QUOTES, 'UTF-8') ?>" type="image/png">
 <link rel="shortcut icon" href="<?= htmlspecialchars($adminFaviconUrl, ENT_QUOTES, 'UTF-8') ?>" type="image/png">
