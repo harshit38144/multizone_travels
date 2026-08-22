@@ -1,10 +1,14 @@
-/* Confirm Tour modal — quotation list */
+/* Confirm Tour modal — quotation list + leads book */
 (function ($) {
     'use strict';
 
     var serviceMap = {};
     var activeQuotationId = 0;
     var activeRow = null;
+    var supplierSuggestTimer = null;
+    var supplierSuggestXhr = null;
+    var $supplierMenu = null;
+    var $activeSupplierInput = null;
 
     function esc(str) {
         return $('<div>').text(str == null ? '' : str).html();
@@ -23,6 +27,137 @@
         return isNaN(n) ? 0 : n;
     }
 
+    function ensureSupplierSuggestStyles() {
+        if ($('#ctSupplierSuggestStyles').length) {
+            return;
+        }
+        $('head').append(
+            '<style id="ctSupplierSuggestStyles">' +
+            '#confirmTourModal .ct-supplier-wrap{position:relative;}' +
+            '#ctSupplierSuggestMenu{' +
+            'position:absolute;z-index:1080;display:none;max-height:220px;overflow:auto;' +
+            'min-width:180px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;' +
+            'box-shadow:0 10px 28px rgba(15,23,42,.14);padding:.25rem 0;}' +
+            '#ctSupplierSuggestMenu .ct-supplier-item{' +
+            'display:block;width:100%;text-align:left;border:0;background:transparent;' +
+            'padding:.45rem .7rem;font-size:.82rem;color:#1e293b;cursor:pointer;}' +
+            '#ctSupplierSuggestMenu .ct-supplier-item:hover,' +
+            '#ctSupplierSuggestMenu .ct-supplier-item.is-active{background:#eff6ff;color:#1d4ed8;}' +
+            '#ctSupplierSuggestMenu .ct-supplier-item-sub{display:block;font-size:.72rem;color:#94a3b8;margin-top:.1rem;}' +
+            '#ctSupplierSuggestMenu .ct-supplier-empty{padding:.55rem .7rem;font-size:.8rem;color:#94a3b8;}' +
+            '</style>'
+        );
+    }
+
+    function ensureSupplierMenu() {
+        ensureSupplierSuggestStyles();
+        if (!$supplierMenu || !$supplierMenu.length) {
+            $supplierMenu = $('<div id="ctSupplierSuggestMenu" role="listbox" aria-label="Supplier suggestions"></div>');
+            $('body').append($supplierMenu);
+        }
+        return $supplierMenu;
+    }
+
+    function hideSupplierSuggest() {
+        if (supplierSuggestTimer) {
+            window.clearTimeout(supplierSuggestTimer);
+            supplierSuggestTimer = null;
+        }
+        if (supplierSuggestXhr && typeof supplierSuggestXhr.abort === 'function') {
+            try { supplierSuggestXhr.abort(); } catch (err) {}
+            supplierSuggestXhr = null;
+        }
+        if ($supplierMenu && $supplierMenu.length) {
+            $supplierMenu.hide().empty();
+        }
+        $activeSupplierInput = null;
+    }
+
+    function positionSupplierMenu($input) {
+        var $menu = ensureSupplierMenu();
+        var rect = $input[0].getBoundingClientRect();
+        var top = rect.bottom + window.scrollY + 2;
+        var left = rect.left + window.scrollX;
+        var width = Math.max(rect.width, 200);
+        $menu.css({
+            top: top + 'px',
+            left: left + 'px',
+            width: width + 'px'
+        });
+    }
+
+    function renderSupplierSuggest(items, query) {
+        var $menu = ensureSupplierMenu();
+        if (!items.length) {
+            $menu.html('<div class="ct-supplier-empty">No matching suppliers</div>').show();
+            return;
+        }
+        var html = items.map(function (item, idx) {
+            var name = String(item.name || '');
+            var company = String(item.company_name || '');
+            var sub = company && company.toLowerCase() !== name.toLowerCase()
+                ? '<span class="ct-supplier-item-sub">' + esc(company) + '</span>'
+                : '';
+            return '' +
+                '<button type="button" class="ct-supplier-item' + (idx === 0 ? ' is-active' : '') + '"' +
+                ' data-name="' + esc(name) + '" role="option">' +
+                esc(name) + sub +
+                '</button>';
+        }).join('');
+        $menu.html(html).show();
+    }
+
+    function fetchSupplierSuggest($input) {
+        var query = String($input.val() || '').trim();
+        var serviceKey = String($input.closest('.ct-detail-row').attr('data-key') || '');
+        $activeSupplierInput = $input;
+        positionSupplierMenu($input);
+
+        if (supplierSuggestXhr && typeof supplierSuggestXhr.abort === 'function') {
+            try { supplierSuggestXhr.abort(); } catch (err) {}
+        }
+
+        supplierSuggestXhr = $.ajax({
+            url: 'crm/ajax/search_suppliers.php',
+            method: 'GET',
+            dataType: 'json',
+            data: {
+                q: query,
+                service: serviceKey,
+                limit: 20
+            }
+        }).done(function (res) {
+            if (!$activeSupplierInput || !$activeSupplierInput.is($input)) {
+                return;
+            }
+            var list = (res && res.success && Array.isArray(res.suppliers)) ? res.suppliers : [];
+            renderSupplierSuggest(list, query);
+            positionSupplierMenu($input);
+        }).fail(function (xhr) {
+            if (xhr && xhr.statusText === 'abort') {
+                return;
+            }
+            hideSupplierSuggest();
+        });
+    }
+
+    function scheduleSupplierSuggest($input) {
+        if (supplierSuggestTimer) {
+            window.clearTimeout(supplierSuggestTimer);
+        }
+        supplierSuggestTimer = window.setTimeout(function () {
+            supplierSuggestTimer = null;
+            fetchSupplierSuggest($input);
+        }, 160);
+    }
+
+    function selectSupplierSuggestion(name) {
+        if ($activeSupplierInput && $activeSupplierInput.length) {
+            $activeSupplierInput.val(name).trigger('change');
+        }
+        hideSupplierSuggest();
+    }
+
     function rowHtml(row) {
         row = row || {};
         var key = row.key || '';
@@ -34,7 +169,10 @@
         return '' +
             '<div class="ct-detail-row" data-key="' + esc(key) + '">' +
             '<div class="ct-detail-label">' + esc(label) + '</div>' +
-            '<div class="ct-detail-field"><input type="text" class="form-control ct-supplier" placeholder="Supplier" value="' + esc(row.supplier || '') + '"></div>' +
+            '<div class="ct-detail-field ct-supplier-wrap">' +
+            '<input type="text" class="form-control ct-supplier" placeholder="Type supplier name" ' +
+            'autocomplete="off" spellcheck="false" value="' + esc(row.supplier || '') + '">' +
+            '</div>' +
             '<div class="ct-detail-field"><input type="number" step="0.01" class="form-control ct-total" placeholder="Total" value="' + esc(total) + '"></div>' +
             '<div class="ct-detail-field"><input type="number" step="0.01" class="form-control ct-paid" placeholder="Paid" value="' + esc(paid) + '"></div>' +
             '<div class="ct-detail-field ct-balance-wrap">' +
@@ -78,6 +216,7 @@
     }
 
     function renderRows(services) {
+        hideSupplierSuggest();
         $('#ctDetailRows').empty();
         (services || []).forEach(function (svc) {
             $('#ctDetailRows').append(rowHtml(svc));
@@ -121,9 +260,23 @@
         }
         var $bookBtn = activeRow.find('.js-q-book');
         if (parseInt(res.tour_confirmed, 10) === 1) {
-            $bookBtn.removeClass('btn-book').addClass('btn-confirmed').text('Confirmed');
+            if ($bookBtn.hasClass('btn-icon')) {
+                $bookBtn.removeClass('btn-book').addClass('btn-confirmed')
+                    .attr('title', 'Tour Confirmed')
+                    .attr('aria-label', 'Tour Confirmed')
+                    .html('<i class="fas fa-check"></i>');
+            } else {
+                $bookBtn.removeClass('btn-book').addClass('btn-confirmed').text('Confirmed');
+            }
         } else {
-            $bookBtn.removeClass('btn-confirmed').addClass('btn-book').text('Book');
+            if ($bookBtn.hasClass('btn-icon')) {
+                $bookBtn.removeClass('btn-confirmed').addClass('btn-book')
+                    .attr('title', 'Book')
+                    .attr('aria-label', 'Book quotation')
+                    .html('<i class="fas fa-book"></i>');
+            } else {
+                $bookBtn.removeClass('btn-confirmed').addClass('btn-book').text('Book');
+            }
         }
         var guest = $('#ctGuestName').val();
         var mobile = $('#ctMobileNo').val();
@@ -136,6 +289,8 @@
     }
 
     $(function () {
+        ensureSupplierSuggestStyles();
+
         var chipsHtml = '';
         Object.keys({
             visa: 'Visa',
@@ -187,9 +342,71 @@
             recalcRowBalance($(this).closest('.ct-detail-row'));
         });
 
+        $(document).on('focus input', '#confirmTourModal .ct-supplier', function () {
+            scheduleSupplierSuggest($(this));
+        });
+
+        $(document).on('keydown', '#confirmTourModal .ct-supplier', function (e) {
+            var $menu = ensureSupplierMenu();
+            if (!$menu.is(':visible')) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    scheduleSupplierSuggest($(this));
+                }
+                return;
+            }
+            var $items = $menu.find('.ct-supplier-item');
+            if (!$items.length) {
+                return;
+            }
+            var $active = $items.filter('.is-active');
+            var idx = $items.index($active);
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                idx = idx < 0 ? 0 : Math.min($items.length - 1, idx + 1);
+                $items.removeClass('is-active').eq(idx).addClass('is-active');
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                idx = idx <= 0 ? 0 : idx - 1;
+                $items.removeClass('is-active').eq(idx).addClass('is-active');
+            } else if (e.key === 'Enter') {
+                if ($active.length) {
+                    e.preventDefault();
+                    selectSupplierSuggestion(String($active.attr('data-name') || ''));
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                hideSupplierSuggest();
+            }
+        });
+
+        $(document).on('mousedown', '#ctSupplierSuggestMenu .ct-supplier-item', function (e) {
+            e.preventDefault();
+            selectSupplierSuggestion(String($(this).attr('data-name') || ''));
+        });
+
+        $(document).on('blur', '#confirmTourModal .ct-supplier', function () {
+            window.setTimeout(function () {
+                if (!$('#ctSupplierSuggestMenu:hover').length) {
+                    hideSupplierSuggest();
+                }
+            }, 120);
+        });
+
+        $(window).on('resize scroll', function () {
+            if ($activeSupplierInput && $activeSupplierInput.length && $supplierMenu && $supplierMenu.is(':visible')) {
+                positionSupplierMenu($activeSupplierInput);
+            }
+        });
+
+        $('#confirmTourModal').on('hidden.bs.modal', function () {
+            hideSupplierSuggest();
+        });
+
         $(document).on('click', '.ct-remove-row', function () {
             $(this).closest('.ct-detail-row').remove();
             syncChipStates();
+            hideSupplierSuggest();
         });
 
         $(document).on('click', '.ct-reminders', function () {

@@ -3,6 +3,7 @@ require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/includes/quotation_db.php';
 require_once __DIR__ . '/includes/lead_uid.php';
 require_once __DIR__ . '/includes/lead_db.php';
+require_once __DIR__ . '/includes/admin_ui_settings.php';
 require_once __DIR__ . '/includes/supplier_db.php';
 require_once __DIR__ . '/../mail/includes/mail_db.php';
 require_once __DIR__ . '/../mail/includes/mail_service.php';
@@ -10,6 +11,7 @@ require_once __DIR__ . '/../mail/includes/mail_service.php';
 crmEnsureSequentialLeadUids($conn);
 crmEnsureLeadDeleteColumns($conn);
 crmEnsureLeadStageColumn($conn);
+crmEnsureAdminUiSettingsTable($conn);
 
 crmEnsureQuotationTables($conn);
 crmEnsureSupplierTables($conn);
@@ -130,7 +132,7 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
     if (!empty($payload['tp_travel_date'])) {
         $ts = strtotime((string) $payload['tp_travel_date']);
         if ($ts !== false) {
-            $travelDate = date('d', $ts) . '-' . date('F', $ts) . '-' . date('y', $ts);
+            $travelDate = date('d', $ts) . '-' . date('M', $ts) . '-' . date('y', $ts);
         }
     }
 
@@ -508,6 +510,8 @@ crmLeadsAttachQuotationLines($conn, $leadRows);
 crmLeadsSyncFeatureStages($conn, $leadRows);
 
 $deletedLeadsCount = $hasLeadsTable ? crmLeadsDeletedCount($conn) : 0;
+$leadsAdminId = isset($_SESSION['id']) ? (int) $_SESSION['id'] : 0;
+$leadsColumnVisibility = crmLeadsLoadColumnVisibility($conn, $leadsAdminId);
 
 
 require_once __DIR__ . '/includes/lead_intake_fields.php';
@@ -652,23 +656,123 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #111827;
         }
 
-        .crm-leads-ui .leads-create-split > .btn-danger {
+        .crm-leads-ui table.crm-leads-table .is-col-hidden,
+        .crm-leads-ui table.crm-leads-table[data-col-lead="0"] .col-ld-lead,
+        .crm-leads-ui table.crm-leads-table[data-col-guest="0"] .col-ld-guest,
+        .crm-leads-ui table.crm-leads-table[data-col-dest="0"] .col-ld-dest,
+        .crm-leads-ui table.crm-leads-table[data-col-date="0"] .col-ld-date,
+        .crm-leads-ui table.crm-leads-table[data-col-services="0"] .col-ld-services,
+        .crm-leads-ui table.crm-leads-table[data-col-services="0"] .col-services,
+        .crm-leads-ui table.crm-leads-table[data-col-source="0"] .col-ld-source,
+        .crm-leads-ui table.crm-leads-table[data-col-assign="0"] .col-ld-assign,
+        .crm-leads-ui table.crm-leads-table[data-col-stage="0"] .col-ld-stage,
+        .crm-leads-ui table.crm-leads-table[data-col-stage="0"] .col-stage,
+        .crm-leads-ui table.crm-leads-table[data-col-actions="0"] .col-actions {
+            display: none !important;
+        }
+
+        .crm-leads-ui table.crm-leads-table[data-col-lead="1"] .col-ld-lead,
+        .crm-leads-ui table.crm-leads-table[data-col-guest="1"] .col-ld-guest,
+        .crm-leads-ui table.crm-leads-table[data-col-dest="1"] .col-ld-dest,
+        .crm-leads-ui table.crm-leads-table[data-col-date="1"] .col-ld-date,
+        .crm-leads-ui table.crm-leads-table[data-col-services="1"] .col-ld-services,
+        .crm-leads-ui table.crm-leads-table[data-col-services="1"] .col-services,
+        .crm-leads-ui table.crm-leads-table[data-col-source="1"] .col-ld-source,
+        .crm-leads-ui table.crm-leads-table[data-col-assign="1"] .col-ld-assign,
+        .crm-leads-ui table.crm-leads-table[data-col-stage="1"] .col-ld-stage,
+        .crm-leads-ui table.crm-leads-table[data-col-stage="1"] .col-stage,
+        .crm-leads-ui table.crm-leads-table[data-col-actions="1"] .col-actions {
+            display: table-cell !important;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-hint {
+            font-size: 0.875rem;
+            color: #6b7280;
+            line-height: 1.45;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin: 0;
+            padding: 0.65rem 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            user-select: none;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-item:hover {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-item.is-locked {
+            opacity: 0.72;
+            cursor: default;
+            background: #f9fafb;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            flex: 0 0 auto;
+            cursor: pointer;
+            accent-color: #2563eb;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-item.is-locked input[type="checkbox"] {
+            cursor: not-allowed;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #111827;
+            line-height: 1.3;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-lock {
+            margin-left: auto;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.85rem;
+        }
+
+        #leadsColumnSettingsModal .leads-col-settings-actions .btn {
+            flex: 1 1 auto;
+        }
+
+        .crm-leads-ui .leads-create-btn.btn-danger {
             background: #e11d2e;
             border-color: #e11d2e;
             color: #fff;
         }
 
-        .crm-leads-ui .leads-create-split > .btn-danger:hover,
-        .crm-leads-ui .leads-create-split > .btn-danger:focus,
-        .crm-leads-ui .leads-create-split.show > .btn-danger {
+        .crm-leads-ui .leads-create-btn.btn-danger:hover,
+        .crm-leads-ui .leads-create-btn.btn-danger:focus {
             background: #c81a28;
             border-color: #c81a28;
             color: #fff;
-        }
-
-        .crm-leads-ui .leads-create-split .dropdown-toggle-split {
-            padding-left: 0.55rem;
-            padding-right: 0.65rem;
         }
 
         .crm-leads-ui .breadcrumbs {
@@ -1035,16 +1139,17 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui table.crm-leads-table tbody td.col-actions {
-            text-align: left;
+            text-align: center;
             vertical-align: middle;
-            max-width: 8.75rem;
+            max-width: 11.5rem;
             overflow: visible;
         }
 
         .crm-leads-ui table.crm-leads-table thead th.col-actions,
         .crm-leads-ui table.crm-leads-table tbody td.col-actions {
-            width: 8.75rem;
+            width: 11.5rem;
             white-space: nowrap;
+            text-align: center;
         }
 
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-services,
@@ -1059,43 +1164,26 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui table.crm-leads-table thead th.col-ld-lead,
-        .crm-leads-ui table.crm-leads-table tbody td.col-ld-lead {
-            width: 16%;
-        }
-
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-lead,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-guest,
-        .crm-leads-ui table.crm-leads-table tbody td.col-ld-guest {
-            width: 14%;
-        }
-
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-guest,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-dest,
-        .crm-leads-ui table.crm-leads-table tbody td.col-ld-dest {
-            width: 14%;
-        }
-
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-dest,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-source,
-        .crm-leads-ui table.crm-leads-table tbody td.col-ld-source {
-            width: 11%;
-        }
-
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-source,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-services,
-        .crm-leads-ui table.crm-leads-table tbody td.col-ld-services {
-            width: 12%;
-        }
-
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-services,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-stage,
-        .crm-leads-ui table.crm-leads-table tbody td.col-ld-stage {
-            width: 9%;
-        }
-
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-stage,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-date,
-        .crm-leads-ui table.crm-leads-table tbody td.col-ld-date {
-            width: 9%;
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-date,
+        .crm-leads-ui table.crm-leads-table thead th.col-ld-assign,
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-assign {
+            width: auto;
         }
 
         .crm-leads-ui table.crm-leads-table thead th.col-ld-assign,
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-assign {
-            width: 10%;
             text-align: center;
         }
 
@@ -1698,9 +1786,10 @@ foreach ($destinationLookup as $destId => $destName) {
             display: inline-flex;
             gap: 4px;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center;
             flex-wrap: nowrap;
             white-space: nowrap;
+            width: 100%;
         }
 
         .crm-leads-ui .action-btns .btn-icon {
@@ -1741,6 +1830,32 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #1565c0 !important;
             border-color: #90caf9;
             box-shadow: 0 1px 3px rgba(30, 136, 229, 0.15);
+        }
+
+        .crm-leads-ui .action-btns .btn-book {
+            background: #fff7ed;
+            border-color: #fed7aa;
+            color: #c2410c !important;
+        }
+
+        .crm-leads-ui .action-btns .btn-book:hover {
+            background: #ffedd5;
+            color: #9a3412 !important;
+            border-color: #fdba74;
+            box-shadow: 0 1px 3px rgba(194, 65, 12, 0.15);
+        }
+
+        .crm-leads-ui .action-btns .btn-confirmed {
+            background: #dcfce7;
+            border-color: #bbf7d0;
+            color: #15803d !important;
+        }
+
+        .crm-leads-ui .action-btns .btn-confirmed:hover {
+            background: #bbf7d0;
+            color: #166534 !important;
+            border-color: #86efac;
+            box-shadow: 0 1px 3px rgba(22, 163, 74, 0.15);
         }
 
         .crm-leads-ui .action-btns .btn-more {
@@ -1823,6 +1938,7 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui td.col-actions {
             overflow: visible;
             white-space: nowrap;
+            text-align: center;
         }
 
         .crm-leads-ui .pagination-bar {
@@ -2956,6 +3072,146 @@ foreach ($destinationLookup as $destId => $destName) {
             font-weight: 700;
             line-height: 1.2;
         }
+
+        /* Confirm Tour modal (Book from leads actions) */
+        #confirmTourModal .modal-title {
+            color: #64748b;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        #confirmTourModal .ct-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 0.2rem;
+        }
+
+        #confirmTourModal .ct-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #475569;
+            margin: 0.85rem 0 0.45rem;
+        }
+
+        #confirmTourModal .ct-included {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        #confirmTourModal .ct-chip {
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #334155;
+            font-size: 0.78rem;
+            font-weight: 500;
+            padding: 0.25rem 0.55rem;
+            border-radius: 3px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+        }
+
+        #confirmTourModal .ct-chip:hover,
+        #confirmTourModal .ct-chip.active {
+            border-color: #93c5fd;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        #confirmTourModal .ct-detail-head,
+        #confirmTourModal .ct-detail-row {
+            display: grid;
+            grid-template-columns: 100px 1fr 90px 90px 80px 130px;
+            gap: 0.45rem;
+            align-items: end;
+        }
+
+        #confirmTourModal .ct-detail-head {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.65rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        #confirmTourModal .ct-detail-row {
+            padding: 0.45rem 0;
+            border-bottom: 1px dashed #f1f5f9;
+        }
+
+        #confirmTourModal .ct-detail-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #334155;
+            padding-bottom: 0.35rem;
+        }
+
+        #confirmTourModal .ct-detail-field .form-control {
+            font-size: 0.82rem;
+            padding: 0.3rem 0.45rem;
+            height: calc(1.5em + 0.55rem + 2px);
+            border: 0;
+            border-bottom: 1px dotted #cbd5e1;
+            border-radius: 0;
+            background: transparent;
+        }
+
+        #confirmTourModal .ct-detail-field .form-control:focus {
+            box-shadow: none;
+            border-bottom-color: #3b82f6;
+            background: #f8fafc;
+        }
+
+        #confirmTourModal .ct-balance-wrap {
+            text-align: center;
+            padding-bottom: 0.35rem;
+        }
+
+        #confirmTourModal .ct-balance-label {
+            display: block;
+            font-size: 0.72rem;
+            color: #94a3b8;
+        }
+
+        #confirmTourModal .ct-balance-val {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #334155;
+            border-bottom: 1px dotted #cbd5e1;
+            padding-bottom: 0.15rem;
+        }
+
+        #confirmTourModal .ct-detail-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding-bottom: 0.2rem;
+        }
+
+        #confirmTourModal .ct-detail-actions .ct-reminders {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.45rem;
+        }
+
+        #confirmTourModal .ct-detail-actions .ct-remove-row {
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+        }
+
+        @media (max-width: 991.98px) {
+            #confirmTourModal .ct-detail-head {
+                display: none;
+            }
+
+            #confirmTourModal .ct-detail-row {
+                grid-template-columns: 1fr;
+                gap: 0.35rem;
+                border: 1px solid #e2e8f0;
+                border-radius: 4px;
+                padding: 0.5rem;
+                margin-bottom: 0.45rem;
+            }
+        }
     </style>
 </head>
 
@@ -2975,32 +3231,20 @@ foreach ($destinationLookup as $destId => $destName) {
                     <div class="page-title-row">
                         <div class="page-title-copy">
                             <h1 class="page-title">Leads</h1>
-                            <p class="page-subtitle">Manage and track all your inbound travel leads</p>
                         </div>
                         <div class="page-title-actions">
+                            <button type="button" class="btn btn-outline-leads" id="btnOpenLeadsColumnSettings" title="Column settings">
+                                <i class="fas fa-cog mr-1"></i> Settings
+                            </button>
                             <button type="button" class="btn btn-outline-leads" id="btnOpenSendLinkModal">
                                 <i class="fas fa-external-link-alt mr-1"></i> Send Form Link
                             </button>
                             <button type="button" class="btn btn-outline-leads" id="btnImportLeads" title="Import leads from spreadsheet">
                                 <i class="fas fa-file-import mr-1"></i> Import Leads
                             </button>
-                            <div class="btn-group leads-create-split">
-                                <button type="button" class="btn btn-danger" id="btnOpenLeadFormCreate">
-                                    <i class="fas fa-plus mr-1"></i> Create Lead
-                                </button>
-                                <button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    <span class="sr-only">Toggle lead actions</span>
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-right">
-                                    <button type="button" class="dropdown-item js-open-lead-create">Create Lead</button>
-                                    <?php if ($pendingIntakeCount > 0) { ?>
-                                        <a class="dropdown-item" href="crm/lead_intake_pending.php">Pending Intake (<?= (int) $pendingIntakeCount ?>)</a>
-                                    <?php } ?>
-                                    <?php if ($deletedLeadsCount > 0) { ?>
-                                        <button type="button" class="dropdown-item" id="btnOpenDeletedLeadsMenu">Deleted Leads (<?= (int) $deletedLeadsCount ?>)</button>
-                                    <?php } ?>
-                                </div>
-                            </div>
+                            <button type="button" class="btn btn-danger leads-create-btn" id="btnOpenLeadFormCreate">
+                                <i class="fas fa-plus mr-1"></i> Create Lead
+                            </button>
                         </div>
                     </div>
 
@@ -3036,7 +3280,16 @@ foreach ($destinationLookup as $destId => $destName) {
                         </div>
 
                         <div class="table-wrap">
-                            <table class="crm-leads-table">
+                            <table class="crm-leads-table"
+                                data-col-lead="<?= !empty($leadsColumnVisibility['lead']) ? '1' : '0' ?>"
+                                data-col-guest="<?= !empty($leadsColumnVisibility['guest']) ? '1' : '0' ?>"
+                                data-col-dest="<?= !empty($leadsColumnVisibility['dest']) ? '1' : '0' ?>"
+                                data-col-date="<?= !empty($leadsColumnVisibility['date']) ? '1' : '0' ?>"
+                                data-col-services="<?= !empty($leadsColumnVisibility['services']) ? '1' : '0' ?>"
+                                data-col-source="<?= !empty($leadsColumnVisibility['source']) ? '1' : '0' ?>"
+                                data-col-assign="<?= !empty($leadsColumnVisibility['assign']) ? '1' : '0' ?>"
+                                data-col-stage="<?= !empty($leadsColumnVisibility['stage']) ? '1' : '0' ?>"
+                                data-col-actions="<?= !empty($leadsColumnVisibility['actions']) ? '1' : '0' ?>">
                                 <thead>
                                     <tr>
                                         <th class="col-ld-lead">Lead ID</th>
@@ -3077,12 +3330,17 @@ foreach ($destinationLookup as $destId => $destName) {
                                             }
                                             $leadHoverInfo = "Phone: " . ((string) ($lead['customer_phone'] !== '' ? $lead['customer_phone'] : '—')) . "\n"
                                                 . "Email: " . ((string) ($lead['customer_email'] !== '' ? $lead['customer_email'] : '—'));
+                                            $leadSourceHover = trim((string) ($lead['lead_source_text'] ?? ''));
+                                            if ($leadSourceHover === '') {
+                                                $leadSourceHover = '—';
+                                            }
+                                            $leadIdSourceTitle = 'Lead Source: ' . $leadSourceHover;
                                         ?>
                                             <tr data-lead-id="<?= (int) $lead['id'] ?>">
                                                 <td class="col-ld-lead">
                                                     <button type="button" class="lead-id-cell js-lead-row-expand"
                                                         data-lead-id="<?= (int) $lead['id'] ?>"
-                                                        title="Expand full lead details"
+                                                        title="<?= htmlspecialchars($leadIdSourceTitle, ENT_QUOTES, 'UTF-8') ?>"
                                                         aria-label="Expand lead details">
                                                         <span class="lead-id-uid"><?= htmlspecialchars((string) $lead['lead_uid'], ENT_QUOTES, 'UTF-8') ?></span><?php if ($createdText !== '') { ?><span class="lead-id-meta"> | <?= htmlspecialchars($createdText, ENT_QUOTES, 'UTF-8') ?></span><?php } ?>
                                                     </button>
@@ -3241,6 +3499,20 @@ foreach ($destinationLookup as $destId => $destName) {
                                                                 title="View Quotation">
                                                                 <i class="far fa-eye"></i>
                                                             </a>
+                                                            <?php
+                                                            $latestQuotationId = (int) ($lead['latest_quotation_id'] ?? 0);
+                                                            $latestIsDraft = (($lead['latest_quotation_status'] ?? '') === 'draft');
+                                                            $latestTourConfirmed = !empty($lead['latest_is_tour_confirmed']);
+                                                            if ($latestQuotationId > 0 && !$latestIsDraft) {
+                                                            ?>
+                                                                <button type="button"
+                                                                    class="btn-icon js-q-book <?= $latestTourConfirmed ? 'btn-confirmed' : 'btn-book' ?>"
+                                                                    data-id="<?= $latestQuotationId ?>"
+                                                                    title="<?= $latestTourConfirmed ? 'Tour Confirmed' : 'Book' ?>"
+                                                                    aria-label="<?= $latestTourConfirmed ? 'Tour Confirmed' : 'Book quotation' ?>">
+                                                                    <i class="fas <?= $latestTourConfirmed ? 'fa-check' : 'fa-book' ?>"></i>
+                                                                </button>
+                                                            <?php } ?>
                                                         <?php } else { ?>
                                                             <a href="crm/quotation_generator.php?lead_id=<?= (int) $lead['id'] ?>"
                                                                 class="btn-icon btn-create-quote"
@@ -3402,6 +3674,71 @@ foreach ($destinationLookup as $destId => $destName) {
             </div>
         </div>
 
+        <!-- Leads column settings -->
+        <div class="modal fade" id="leadsColumnSettingsModal" tabindex="-1" role="dialog" aria-labelledby="leadsColumnSettingsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content">
+                    <div class="modal-header py-3">
+                        <h5 class="modal-title mb-0" id="leadsColumnSettingsModalLabel">
+                            <i class="fas fa-columns mr-2 text-muted"></i> Column Settings
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="leads-col-settings-hint mb-3">Check a column to show it in the table. Uncheck to hide it.</p>
+                        <div class="leads-col-settings-list" id="leadsColumnSettingsList" role="group" aria-label="Visible columns">
+                            <label class="leads-col-settings-item is-locked">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="lead" checked disabled>
+                                <span class="leads-col-settings-label">Lead ID</span>
+                                <span class="leads-col-settings-lock">Required</span>
+                            </label>
+                            <label class="leads-col-settings-item">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="guest"<?= !empty($leadsColumnVisibility['guest']) ? ' checked' : '' ?>>
+                                <span class="leads-col-settings-label">Guest</span>
+                            </label>
+                            <label class="leads-col-settings-item">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="dest"<?= !empty($leadsColumnVisibility['dest']) ? ' checked' : '' ?>>
+                                <span class="leads-col-settings-label">Destination</span>
+                            </label>
+                            <label class="leads-col-settings-item">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="date"<?= !empty($leadsColumnVisibility['date']) ? ' checked' : '' ?>>
+                                <span class="leads-col-settings-label">Travel Date</span>
+                            </label>
+                            <label class="leads-col-settings-item">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="services"<?= !empty($leadsColumnVisibility['services']) ? ' checked' : '' ?>>
+                                <span class="leads-col-settings-label">Services</span>
+                            </label>
+                            <label class="leads-col-settings-item">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="source"<?= !empty($leadsColumnVisibility['source']) ? ' checked' : '' ?>>
+                                <span class="leads-col-settings-label">Lead Source</span>
+                            </label>
+                            <label class="leads-col-settings-item">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="assign"<?= !empty($leadsColumnVisibility['assign']) ? ' checked' : '' ?>>
+                                <span class="leads-col-settings-label">Assigned</span>
+                            </label>
+                            <label class="leads-col-settings-item">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="stage"<?= !empty($leadsColumnVisibility['stage']) ? ' checked' : '' ?>>
+                                <span class="leads-col-settings-label">Stage</span>
+                            </label>
+                            <label class="leads-col-settings-item is-locked">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="actions" checked disabled>
+                                <span class="leads-col-settings-label">Actions</span>
+                                <span class="leads-col-settings-lock">Required</span>
+                            </label>
+                        </div>
+                        <div class="leads-col-settings-actions">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLeadsColumnsShowAll">Show all</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLeadsColumnsHideOptional">Hide optional</button>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLeadsColumnsReset">Reset</button>
+                        <button type="button" class="btn btn-primary btn-sm" data-dismiss="modal" id="btnLeadsColumnsDone">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Create Lead modal -->
         <div class="modal fade" id="leadFormModal" tabindex="-1" role="dialog" aria-labelledby="leadFormModalLabel" aria-hidden="true" data-backdrop="static">
             <div class="modal-dialog modal-dialog-centered modal-xl lead-form-dialog" role="document">
@@ -3506,6 +3843,51 @@ foreach ($destinationLookup as $destId => $destName) {
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-wa" id="btnSmsTplSendWhatsApp">Send on WhatsApp</button>
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-sms" id="btnSmsTplSendSms">Send SMS</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Tour (Book) modal -->
+        <div class="modal fade" id="confirmTourModal" tabindex="-1" role="dialog" aria-labelledby="confirmTourModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <h5 class="modal-title" id="confirmTourModalLabel">Confirm Tour</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="ctQuotationId" value="">
+                        <div class="row">
+                            <div class="col-md-6 form-group mb-2">
+                                <label class="ct-label" for="ctGuestName">GuestName</label>
+                                <input type="text" class="form-control" id="ctGuestName" autocomplete="off">
+                            </div>
+                            <div class="col-md-6 form-group mb-2">
+                                <label class="ct-label" for="ctMobileNo">Mobile No</label>
+                                <input type="text" class="form-control" id="ctMobileNo" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="ct-section-title">What is Included</div>
+                        <div class="ct-included" id="ctIncludedChips"></div>
+
+                        <div class="ct-section-title">Fill details</div>
+                        <div class="ct-detail-head">
+                            <div></div>
+                            <div>Supplier</div>
+                            <div>Total</div>
+                            <div>Paid</div>
+                            <div>Balance</div>
+                            <div></div>
+                        </div>
+                        <div id="ctDetailRows"></div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-primary" id="ctSaveBtn">Save</button>
+                        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -3726,19 +4108,256 @@ foreach ($destinationLookup as $destId => $destName) {
         openLeadFormModal();
     });
 
-    $(document).on('click', '.js-open-lead-create', function (e) {
-        e.preventDefault();
-        openLeadFormModal();
-    });
-
-    $('#btnOpenDeletedLeadsMenu').on('click', function (e) {
-        e.preventDefault();
-        $('#btnOpenDeletedLeadsModal').trigger('click');
-    });
-
     $('#btnImportLeads').on('click', function () {
         window.alert('Lead import will be available soon. Please create leads manually or share the customer form link for now.');
     });
+
+    var LEADS_COL_SAVE_URL = 'crm/ajax/save_leads_column_settings.php';
+    var LEADS_TABLE_COLUMNS = [
+        { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 18 },
+        { key: 'guest', className: 'col-ld-guest', label: 'Guest', locked: false, weight: 16 },
+        { key: 'dest', className: 'col-ld-dest', label: 'Destination', locked: false, weight: 16 },
+        { key: 'date', className: 'col-ld-date', label: 'Travel Date', locked: false, weight: 10 },
+        { key: 'services', className: 'col-ld-services', label: 'Services', locked: false, weight: 12 },
+        { key: 'source', className: 'col-ld-source', label: 'Lead Source', locked: false, weight: 12 },
+        { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 10 },
+        { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 9 },
+        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '11.5rem' }
+    ];
+    var leadsColumnVisibilityState = <?= json_encode($leadsColumnVisibility, JSON_UNESCAPED_UNICODE) ?>;
+    var leadsColumnSaveTimer = null;
+    var leadsColumnSaveXhr = null;
+
+    function leadsDefaultColumnVisibility() {
+        var vis = {};
+        LEADS_TABLE_COLUMNS.forEach(function (col) {
+            vis[col.key] = true;
+        });
+        return vis;
+    }
+
+    function leadsColumnMeta(key) {
+        for (var i = 0; i < LEADS_TABLE_COLUMNS.length; i++) {
+            if (LEADS_TABLE_COLUMNS[i].key === key) {
+                return LEADS_TABLE_COLUMNS[i];
+            }
+        }
+        return null;
+    }
+
+    function leadsColumnIsVisible(col, state) {
+        if (col.locked) {
+            return true;
+        }
+        return !state || state[col.key] !== false;
+    }
+
+    function leadsRedistributeColumnWidths(state) {
+        var $table = $('.crm-leads-ui table.crm-leads-table');
+        if (!$table.length) {
+            return;
+        }
+
+        var visibleFlexible = [];
+        var totalWeight = 0;
+        LEADS_TABLE_COLUMNS.forEach(function (col) {
+            if (!leadsColumnIsVisible(col, state)) {
+                $table.find('.' + col.className).css({ width: '', maxWidth: '' });
+                if (col.key === 'services') {
+                    $table.find('.col-services').css({ width: '', maxWidth: '' });
+                }
+                if (col.key === 'stage') {
+                    $table.find('.col-stage').css({ width: '', maxWidth: '' });
+                }
+                return;
+            }
+            if (col.fixedWidth) {
+                $table.find('.' + col.className).css({
+                    width: col.fixedWidth,
+                    maxWidth: col.fixedWidth
+                });
+                return;
+            }
+            visibleFlexible.push(col);
+            totalWeight += Number(col.weight) || 1;
+        });
+
+        if (!visibleFlexible.length || totalWeight <= 0) {
+            return;
+        }
+
+        visibleFlexible.forEach(function (col) {
+            var pct = ((Number(col.weight) || 1) / totalWeight) * 100;
+            var widthVal = pct.toFixed(3) + '%';
+            var $cells = $table.find('.' + col.className);
+            if (col.key === 'services') {
+                $cells = $cells.add($table.find('.col-services'));
+            }
+            if (col.key === 'stage') {
+                $cells = $cells.add($table.find('.col-stage'));
+            }
+            $cells.css({
+                width: widthVal,
+                maxWidth: widthVal
+            });
+        });
+    }
+
+    function leadsNormalizeColumnVisibility(raw) {
+        var vis = leadsDefaultColumnVisibility();
+        if (!raw || typeof raw !== 'object') {
+            return vis;
+        }
+        LEADS_TABLE_COLUMNS.forEach(function (col) {
+            if (col.locked) {
+                vis[col.key] = true;
+                return;
+            }
+            if (Object.prototype.hasOwnProperty.call(raw, col.key)) {
+                vis[col.key] = !!raw[col.key];
+            }
+        });
+        return vis;
+    }
+
+    function leadsLoadColumnVisibility() {
+        return leadsNormalizeColumnVisibility(leadsColumnVisibilityState);
+    }
+
+    function leadsSaveColumnVisibility(vis) {
+        var state = leadsNormalizeColumnVisibility(vis || leadsDefaultColumnVisibility());
+        leadsColumnVisibilityState = state;
+        if (leadsColumnSaveTimer) {
+            window.clearTimeout(leadsColumnSaveTimer);
+        }
+        leadsColumnSaveTimer = window.setTimeout(function () {
+            leadsColumnSaveTimer = null;
+            if (leadsColumnSaveXhr && typeof leadsColumnSaveXhr.abort === 'function') {
+                try { leadsColumnSaveXhr.abort(); } catch (err) {}
+            }
+            leadsColumnSaveXhr = $.ajax({
+                url: LEADS_COL_SAVE_URL,
+                method: 'POST',
+                dataType: 'json',
+                data: { visibility: JSON.stringify(state) }
+            }).done(function (res) {
+                if (res && res.success && res.visibility) {
+                    leadsColumnVisibilityState = leadsNormalizeColumnVisibility(res.visibility);
+                }
+            }).fail(function (xhr) {
+                if (xhr && xhr.statusText === 'abort') {
+                    return;
+                }
+                window.console && console.warn && console.warn('Could not save leads column settings.');
+            });
+        }, 180);
+        return state;
+    }
+
+    function leadsReadVisibilityFromCheckboxes() {
+        var vis = leadsDefaultColumnVisibility();
+        $('#leadsColumnSettingsList .js-leads-col-toggle').each(function () {
+            var key = String($(this).attr('data-col-key') || '');
+            var meta = leadsColumnMeta(key);
+            if (!key || !meta) {
+                return;
+            }
+            vis[key] = meta.locked ? true : $(this).prop('checked');
+        });
+        return vis;
+    }
+
+    function leadsSyncColumnCheckboxes(vis) {
+        var state = vis || leadsLoadColumnVisibility();
+        $('#leadsColumnSettingsList .js-leads-col-toggle').each(function () {
+            var $input = $(this);
+            var key = String($input.attr('data-col-key') || '');
+            var meta = leadsColumnMeta(key);
+            if (!key || !meta) {
+                return;
+            }
+            var checked = meta.locked ? true : state[key] !== false;
+            $input.prop('checked', checked);
+            if (meta.locked) {
+                $input.prop('disabled', true);
+                $input.closest('.leads-col-settings-item').addClass('is-locked');
+            }
+        });
+    }
+
+    function leadsApplyColumnVisibility(vis) {
+        var state = vis || leadsLoadColumnVisibility();
+        var $table = $('.crm-leads-ui table.crm-leads-table');
+        if (!$table.length) {
+            return state;
+        }
+        LEADS_TABLE_COLUMNS.forEach(function (col) {
+            var show = leadsColumnIsVisible(col, state);
+            $table.attr('data-col-' + col.key, show ? '1' : '0');
+            $table.find('.' + col.className).toggleClass('is-col-hidden', !show);
+            if (col.key === 'services') {
+                $table.find('.col-services').toggleClass('is-col-hidden', !show);
+            }
+            if (col.key === 'stage') {
+                $table.find('.col-stage').toggleClass('is-col-hidden', !show);
+            }
+        });
+        leadsRedistributeColumnWidths(state);
+        if (typeof scheduleLeadsTablePaneHeight === 'function') {
+            scheduleLeadsTablePaneHeight();
+        }
+        return state;
+    }
+
+    function leadsPersistAndApplyFromCheckboxes() {
+        var vis = leadsReadVisibilityFromCheckboxes();
+        leadsSaveColumnVisibility(vis);
+        leadsApplyColumnVisibility(vis);
+        return vis;
+    }
+
+    $('#btnOpenLeadsColumnSettings').on('click', function () {
+        leadsSyncColumnCheckboxes(leadsLoadColumnVisibility());
+        $('#leadsColumnSettingsModal').modal('show');
+    });
+
+    $(document).on('change', '#leadsColumnSettingsList .js-leads-col-toggle', function () {
+        var meta = leadsColumnMeta(String($(this).attr('data-col-key') || ''));
+        if (meta && meta.locked) {
+            $(this).prop('checked', true);
+            return;
+        }
+        leadsPersistAndApplyFromCheckboxes();
+    });
+
+    $('#btnLeadsColumnsShowAll').on('click', function () {
+        var vis = leadsDefaultColumnVisibility();
+        leadsSaveColumnVisibility(vis);
+        leadsApplyColumnVisibility(vis);
+        leadsSyncColumnCheckboxes(vis);
+    });
+
+    $('#btnLeadsColumnsHideOptional').on('click', function () {
+        var vis = leadsDefaultColumnVisibility();
+        LEADS_TABLE_COLUMNS.forEach(function (col) {
+            if (!col.locked) {
+                vis[col.key] = false;
+            }
+        });
+        leadsSaveColumnVisibility(vis);
+        leadsApplyColumnVisibility(vis);
+        leadsSyncColumnCheckboxes(vis);
+    });
+
+    $('#btnLeadsColumnsReset').on('click', function () {
+        var vis = leadsDefaultColumnVisibility();
+        leadsSaveColumnVisibility(vis);
+        leadsApplyColumnVisibility(vis);
+        leadsSyncColumnCheckboxes(vis);
+    });
+
+    leadsColumnVisibilityState = leadsNormalizeColumnVisibility(leadsColumnVisibilityState);
+    leadsApplyColumnVisibility(leadsColumnVisibilityState);
 
     function buildSendLinkPostData() {
         var data = [];
@@ -5258,6 +5877,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
+<script src="crm/assets/quotation_confirm_tour.js?v=3"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=17"></script>
 <script>
 $(function () {

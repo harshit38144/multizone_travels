@@ -708,12 +708,13 @@ function crmLeadsGroupQuotationLines(array $lines): array
 
 /**
  * @param array<string, mixed> $lead
+ * @return array{ver:int,qid:int,href:string}|null
  */
-function crmLeadLatestQuotationHref(array $lead): string
+function crmLeadLatestQuotationPick(array $lead): ?array
 {
     $groups = $lead['quotation_groups'] ?? [];
     if (empty($groups)) {
-        return '';
+        return null;
     }
 
     $best = null;
@@ -742,7 +743,17 @@ function crmLeadLatestQuotationHref(array $lead): string
         }
     }
 
-    return $best ? $best['href'] : '';
+    return $best;
+}
+
+/**
+ * @param array<string, mixed> $lead
+ */
+function crmLeadLatestQuotationHref(array $lead): string
+{
+    $best = crmLeadLatestQuotationPick($lead);
+
+    return $best ? (string) $best['href'] : '';
 }
 
 /**
@@ -941,6 +952,8 @@ function crmLeadsAttachQuotationLines(mysqli $conn, array &$leadRows): void
         $lead['quotation_lines'] = [];
         $lead['quotation_groups'] = [];
         $lead['latest_quotation_href'] = '';
+        $lead['latest_quotation_id'] = 0;
+        $lead['latest_quotation_status'] = '';
         $lead['has_quotation'] = false;
         $lead['is_tour_confirmed'] = false;
         $lid = (int) ($lead['id'] ?? 0);
@@ -1063,15 +1076,24 @@ function crmLeadsAttachQuotationLines(mysqli $conn, array &$leadRows): void
         });
         $lead['quotation_lines'] = $lines;
         $lead['quotation_groups'] = crmLeadsGroupQuotationLines($lines);
-        $lead['latest_quotation_href'] = crmLeadLatestQuotationHref($lead);
+        $pick = crmLeadLatestQuotationPick($lead);
+        $lead['latest_quotation_href'] = $pick ? (string) $pick['href'] : '';
+        $lead['latest_quotation_id'] = $pick ? (int) $pick['qid'] : 0;
+        $lead['latest_quotation_status'] = '';
 
         $leadQuotations = $byLead[$lid] ?? [];
         $lead['has_quotation'] = !empty($leadQuotations);
         $lead['is_tour_confirmed'] = false;
+        $lead['latest_is_tour_confirmed'] = false;
         foreach ($leadQuotations as $qRow) {
-            if ((int) ($qRow['tour_confirmed'] ?? 0) === 1) {
+            $qid = (int) ($qRow['id'] ?? 0);
+            $rowConfirmed = (int) ($qRow['tour_confirmed'] ?? 0) === 1;
+            if ($lead['latest_quotation_id'] > 0 && $qid === $lead['latest_quotation_id']) {
+                $lead['latest_quotation_status'] = (string) ($qRow['status'] ?? '');
+                $lead['latest_is_tour_confirmed'] = $rowConfirmed;
+            }
+            if ($rowConfirmed) {
                 $lead['is_tour_confirmed'] = true;
-                break;
             }
         }
     }

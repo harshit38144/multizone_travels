@@ -456,3 +456,84 @@ function crmSuppliersForDestination(mysqli $conn, string $destinationText): arra
 
     return $matched;
 }
+
+/**
+ * Active suppliers for autocomplete (optional name query + service key filter).
+ *
+ * @return array<int, array{id:int,name:string,company_name:string,types:array<int,string>}>
+ */
+function crmSuppliersSuggest(mysqli $conn, string $query = '', string $serviceKey = '', int $limit = 25): array
+{
+    crmEnsureSupplierTables($conn);
+
+    $query = trim($query);
+    $serviceKey = trim(strtolower($serviceKey));
+    $limit = max(1, min(50, $limit));
+    $validServices = array_keys(crmSupplierServiceMap());
+
+    $sql = 'SELECT `id`, `name`, `company_name`, `supplier_type`, `supplier_of_json`
+            FROM `crm_suppliers`
+            WHERE `is_active` = 1';
+    $types = '';
+    $params = [];
+
+    if ($query !== '') {
+        $like = '%' . $query . '%';
+        $sql .= ' AND (`name` LIKE ? OR `company_name` LIKE ?)';
+        $types .= 'ss';
+        $params[] = $like;
+        $params[] = $like;
+    }
+
+    $sql .= ' ORDER BY `name` ASC LIMIT ' . (int) $limit;
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return [];
+    }
+
+    if ($types !== '') {
+        $bind = [$types];
+        foreach ($params as $i => $val) {
+            $bind[] = &$params[$i];
+        }
+        call_user_func_array([$stmt, 'bind_param'], $bind);
+    }
+
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return [];
+    }
+
+    $res = $stmt->get_result();
+    $out = [];
+    while ($res && ($row = $res->fetch_assoc())) {
+        $name = trim((string) ($row['name'] ?? ''));
+        $id = (int) ($row['id'] ?? 0);
+        if ($id < 1 || $name === '') {
+            continue;
+        }
+
+        $typesList = crmSupplierNormalizeTypes($row['supplier_type'] ?? '');
+        $supplierOf = crmSupplierNormalizeSupplierOf(
+            json_decode((string) ($row['supplier_of_json'] ?? '[]'), true) ?: []
+        );
+        $combined = array_values(array_unique(array_merge($typesList, $supplierOf)));
+
+        if ($serviceKey !== '' && in_array($serviceKey, $validServices, true)) {
+            if ($combined !== [] && !in_array($serviceKey, $combined, true)) {
+                continue;
+            }
+        }
+
+        $out[] = [
+            'id' => $id,
+            'name' => $name,
+            'company_name' => trim((string) ($row['company_name'] ?? '')),
+            'types' => $combined,
+        ];
+    }
+    $stmt->close();
+
+    return $out;
+}

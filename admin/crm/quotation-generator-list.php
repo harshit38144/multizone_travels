@@ -598,7 +598,7 @@ function qlDestinationLine($destination, $nights)
     </div>
 
     <?php include __DIR__ . '/../includes/footer-links.php'; ?>
-    <script src="crm/assets/quotation_confirm_tour.js?v=1"></script>
+    <script src="crm/assets/quotation_confirm_tour.js?v=3"></script>
 
     <script>
         $(function () {
