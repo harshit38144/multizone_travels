@@ -168,8 +168,12 @@ $crmParentPages = array_merge(
 
     <div class="user-panel mz-sidebar-brand mt-2 pb-2 mb-2">
       <a href="dashboard.php" class="mz-brand-link">
-        <img src="img/web-logo.png" alt="Multi Zone Travels" class="sidebar-logo-xl">
-        <img src="../images/icons1.png" alt="Multi Zone Travels" class="sidebar-logo-xs">
+        <?php
+        $sidebarLogoXl = adminBrandAssetUrl($siteSettings['logo_path'] ?? '', 'img/web-logo.png');
+        $sidebarLogoXs = adminBrandAssetUrl($siteSettings['favicon_path'] ?? '', 'img/icons1.png');
+        ?>
+        <img src="<?= htmlspecialchars($sidebarLogoXl, ENT_QUOTES, 'UTF-8') ?>" alt="Multi Zone Travels" class="sidebar-logo-xl">
+        <img src="<?= htmlspecialchars($sidebarLogoXs, ENT_QUOTES, 'UTF-8') ?>" alt="Multi Zone Travels" class="sidebar-logo-xs">
       </a>
     </div>
 

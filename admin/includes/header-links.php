@@ -27,9 +27,11 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
 <!-- Custom CSS last: system UI font stack overrides AdminLTE -->
 <link rel="stylesheet" href="custom/custom-css.css">
-<link rel="shortcut icon" href="favicon.ico" type="img/web-logo.png">
-<!-- <script src="ckeditor/ckeditor.js"></script> -->
-<link rel="icon" href="../images/icons1.png" type="image/x-icon">
+<?php
+$adminFaviconUrl = adminBrandAssetUrl($siteSettings['favicon_path'] ?? '', 'img/icons1.png');
+?>
+<link rel="icon" href="<?= htmlspecialchars($adminFaviconUrl, ENT_QUOTES, 'UTF-8') ?>" type="image/png">
+<link rel="shortcut icon" href="<?= htmlspecialchars($adminFaviconUrl, ENT_QUOTES, 'UTF-8') ?>" type="image/png">
 <script>
 (function () {
   var storageKey = 'remember.lte.pushmenu';
