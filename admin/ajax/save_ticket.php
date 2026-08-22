@@ -2,6 +2,11 @@
 require '../connection.php';
 header('Content-Type: application/json');
 
+$paxJsonCol = mysqli_query($conn, "SHOW COLUMNS FROM `saved_tickets` LIKE 'passengers_json'");
+if ($paxJsonCol && mysqli_num_rows($paxJsonCol) === 0) {
+    mysqli_query($conn, "ALTER TABLE `saved_tickets` ADD `passengers_json` LONGTEXT NULL AFTER `passenger_names`");
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pnr = mysqli_real_escape_string($conn, $_POST['pnr']);
     $date = mysqli_real_escape_string($conn, $_POST['date']);
@@ -10,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tax = (float)$_POST['tax'];
     $total = (float)$_POST['total'];
     $names = mysqli_real_escape_string($conn, $_POST['passenger_names']);
+    $passengersJson = mysqli_real_escape_string($conn, isset($_POST['passengers_json']) ? $_POST['passengers_json'] : '');
     $sector = mysqli_real_escape_string($conn, isset($_POST['sector']) ? $_POST['sector'] : '');
     $airline = mysqli_real_escape_string($conn, isset($_POST['airline']) ? $_POST['airline'] : '');
     $pdfData = isset($_POST['pdf_data']) ? $_POST['pdf_data'] : '';
@@ -22,8 +28,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mkdir($targetDir, 0777, true);
         }
 
-        $fileName = 'Ticket_' . ($pnr ?: time()) . '_' . uniqid() . '.pdf';
+        $requestedName = isset($_POST['pdf_filename']) ? trim((string) $_POST['pdf_filename']) : '';
+        $requestedName = preg_replace('/[\\\\\\/:*?"<>|]/', '', $requestedName);
+        $requestedName = preg_replace('/\s+/', ' ', $requestedName);
+
+        if ($requestedName !== '') {
+            if (!preg_match('/\.pdf$/i', $requestedName)) {
+                $requestedName .= '.pdf';
+            }
+            $fileName = $requestedName;
+        } else {
+            $fileName = 'Ticket_' . ($pnr ?: time()) . '.pdf';
+        }
+
         $filePath = $targetDir . $fileName;
+        if (file_exists($filePath)) {
+            $baseName = preg_replace('/\.pdf$/i', '', $fileName);
+            $fileName = $baseName . '_' . uniqid() . '.pdf';
+            $filePath = $targetDir . $fileName;
+        }
 
         // Decode and save PDF
         $pdfParts = explode(',', $pdfData);
@@ -47,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sql = "UPDATE saved_tickets SET 
                 pnr='$pnr', booking_date='$date', pax_count=$pax, 
                 base_fare=$base, tax=$tax, total_fare=$total, 
-                passenger_names='$names', sector='$sector', 
+                passenger_names='$names', passengers_json='$passengersJson', sector='$sector', 
                 airline='$airline', flight_html='$flight_html', 
                 return_flight_html='$return_flight_html',
                 departure_date='$departure_date', arrival_date='$arrival_date'";
@@ -67,8 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sql .= " WHERE id=$edit_id";
     } else {
         // Insert to DB
-        $sql = "INSERT INTO saved_tickets (pnr, booking_date, pax_count, base_fare, tax, total_fare, passenger_names, sector, airline, flight_html, return_flight_html, departure_date, arrival_date, pdf_path) 
-                VALUES ('$pnr', '$date', $pax, $base, $tax, $total, '$names', '$sector', '$airline', '$flight_html', '$return_flight_html', '$departure_date', '$arrival_date', '$dbPath')";
+        $sql = "INSERT INTO saved_tickets (pnr, booking_date, pax_count, base_fare, tax, total_fare, passenger_names, passengers_json, sector, airline, flight_html, return_flight_html, departure_date, arrival_date, pdf_path) 
+                VALUES ('$pnr', '$date', $pax, $base, $tax, $total, '$names', '$passengersJson', '$sector', '$airline', '$flight_html', '$return_flight_html', '$departure_date', '$arrival_date', '$dbPath')";
     }
             
     if (mysqli_query($conn, $sql)) {

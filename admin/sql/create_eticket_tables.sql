@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `saved_tickets` (
   `tax` DECIMAL(10,2) DEFAULT NULL,
   `total_fare` DECIMAL(10,2) DEFAULT NULL,
   `passenger_names` TEXT DEFAULT NULL,
+  `passengers_json` LONGTEXT DEFAULT NULL,
   `sector` VARCHAR(255) DEFAULT NULL,
   `airline` VARCHAR(255) DEFAULT NULL,
   `flight_html` LONGTEXT DEFAULT NULL,

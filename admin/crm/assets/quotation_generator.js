@@ -1554,6 +1554,49 @@
         });
     }
 
+    function collectItineraryMeta() {
+        var supplierId = parseInt($('#q_itinerary_supplier').val(), 10) || 0;
+        var supplierName = $.trim($('#q_itinerary_supplier option:selected').text() || '');
+        if (!supplierId) {
+            supplierName = '';
+        }
+        var rateRaw = $.trim($('#q_itinerary_rate').val() || '');
+        var rate = rateRaw;
+        if (rateRaw !== '') {
+            var n = parseFloat(rateRaw);
+            rate = isNaN(n) ? '' : String(Math.round(n));
+        }
+        return {
+            rate: rate,
+            supplier_id: supplierId > 0 ? supplierId : '',
+            supplier: supplierName
+        };
+    }
+
+    function applyItineraryMeta(meta) {
+        meta = meta || {};
+        var rate = meta.rate !== undefined && meta.rate !== '' ? meta.rate : (meta.amount || '');
+        if (rate !== '' && rate != null) {
+            var n = parseFloat(rate);
+            rate = isNaN(n) ? '' : String(Math.round(n));
+        } else {
+            rate = '';
+        }
+        $('#q_itinerary_rate').val(rate);
+
+        var supplierId = String(meta.supplier_id || '').trim();
+        var supplierName = String(meta.supplier || meta.supplier_name || '').trim();
+        var $sel = $('#q_itinerary_supplier');
+        if (supplierId && !$sel.find('option[value="' + supplierId.replace(/"/g, '\\"') + '"]').length) {
+            $sel.append(
+                '<option value="' + esc(supplierId) + '">' +
+                esc(supplierName || ('Supplier #' + supplierId)) +
+                '</option>'
+            );
+        }
+        $sel.val(supplierId);
+    }
+
     function snapshotItinerary() {
         $('#qItineraryDays .q-day-textarea').each(function () {
             var $ta = $(this);
@@ -1615,7 +1658,7 @@
         for (var i = 0; i < totalDays; i++) {
             var editorId = 'q_itin_day_' + rebuildToken + '_' + i;
             itineraryEditorIds.push(editorId);
-            var prev = existing[i] || {};
+            var prev = normalizeItineraryDay(existing[i] || {});
             var dateLabel = fmtDayDate(baseDate, i);
             var heading = (dateLabel ? dateLabel + ' - ' : '') + 'Day ' + (i + 1);
             var imgVal = prev.image || '';
@@ -2746,7 +2789,8 @@
                     });
                     return hc;
                 })()
-            }
+            },
+            itinerary_meta: collectItineraryMeta()
         };
     }
 
@@ -3528,6 +3572,16 @@
             return;
         }
 
+        if (parts[0] === 'itinerary_meta' && parts.length >= 2) {
+            var metaField = parts[1];
+            if (metaField === 'rate') {
+                setInput($('#q_itinerary_rate'), value);
+            } else if (metaField === 'supplier') {
+                setInput($('#q_itinerary_supplier'), value);
+            }
+            return;
+        }
+
         switch (path) {
             case 'guest_name':
                 setInput($('[name=guest_name]'), value);
@@ -3849,6 +3903,32 @@
 
         if (!parseInt(p.without_itinerary, 10)) {
             var itineraryHtml = '';
+            var costSheetPreview = {};
+            try {
+                costSheetPreview = typeof p.cost_sheet_json === 'string'
+                    ? JSON.parse(p.cost_sheet_json || '{}')
+                    : (p.cost_sheet || {});
+            } catch (previewCsErr) {
+                costSheetPreview = {};
+            }
+            var itinMeta = costSheetPreview.itinerary_meta || {};
+            var itinRate = itinMeta.rate !== undefined && itinMeta.rate !== '' ? String(itinMeta.rate).trim() : '';
+            var itinSupplier = itinMeta.supplier ? String(itinMeta.supplier).trim() : '';
+            if (itinRate || itinSupplier) {
+                itineraryHtml += '<div class="q-preview-itinerary-meta small text-muted mb-2">';
+                if (itinRate) {
+                    itineraryHtml += 'Rate: ' + previewEditable(itinRate, 'itinerary_meta.rate', {
+                        placeholder: 'Rate'
+                    });
+                }
+                if (itinRate && itinSupplier) {
+                    itineraryHtml += ' &nbsp;|&nbsp; ';
+                }
+                if (itinSupplier) {
+                    itineraryHtml += 'Supplier: ' + esc(itinSupplier);
+                }
+                itineraryHtml += '</div>';
+            }
             itinerary.forEach(function (day, di) {
                 var dayTitle = day && day.title ? String(day.title).trim() : '';
                 var dayDesc = day && day.description ? String(day.description).replace(/<[^>]*>/g, '').trim() : '';
@@ -4352,6 +4432,12 @@
             notesVal = draft.pricing_notes;
         }
         applyPricingNotes(notesVal);
+
+        var itineraryMeta = cs.itinerary_meta || {};
+        if (draft && draft.cost_sheet && draft.cost_sheet.itinerary_meta) {
+            itineraryMeta = draft.cost_sheet.itinerary_meta;
+        }
+        applyItineraryMeta(itineraryMeta);
 
         var itinerary = Array.isArray(p.itinerary) ? p.itinerary : [];
         if ((!itinerary || !itinerary.length) && draft && Array.isArray(draft.itinerary) && draft.itinerary.length) {

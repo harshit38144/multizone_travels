@@ -5,6 +5,7 @@
     var selectedPlaces = [];
     var cityTimer = null;
     var placeTimer = null;
+    var cityRequest = null;
     var table = null;
 
     // admin root URL (page lives at .../admin/crm/suppliers.php)
@@ -194,7 +195,8 @@
         renderServiceSummary();
         renderPlaceTags();
         updateCityClearState();
-        $('#citySearchDropdown, #placeSearchDropdown').hide().empty();
+        hideSearchDropdown($('#citySearchDropdown'));
+        hideSearchDropdown($('#placeSearchDropdown'));
         $('#supplierOfPanel').removeClass('is-open');
         $('#supplierServicesToggle').attr('aria-expanded', 'false');
     }
@@ -368,56 +370,159 @@
             });
     }
 
+    function formatCityLabel(row) {
+        var label = row.name || '';
+        if (row.state_name) {
+            label += ', ' + row.state_name;
+        }
+        if (row.country_name) {
+            label += ', ' + row.country_name;
+        }
+        return label;
+    }
+
+    function highlightMatch(text, query) {
+        var safeText = escapeHtml(text || '');
+        var term = String(query || '').trim();
+        if (!term) {
+            return safeText;
+        }
+        var re = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+        return safeText.replace(re, '<strong>$1</strong>');
+    }
+
+    function restoreSearchDropdown($dd) {
+        if (!$dd || !$dd.length) {
+            return;
+        }
+        var $origin = $dd.data('origin-parent');
+        if ($origin && $origin.length) {
+            $dd.appendTo($origin);
+        }
+        $dd.removeClass('is-floating').css({ top: '', left: '', width: '', right: '' });
+    }
+
+    function positionSearchDropdown($input, $dd) {
+        if (!$input.length || !$dd.length || !$dd.is(':visible')) {
+            return;
+        }
+        var el = $input[0];
+        if (!el || typeof el.getBoundingClientRect !== 'function') {
+            return;
+        }
+
+        if (!$dd.data('origin-parent')) {
+            $dd.data('origin-parent', $dd.parent());
+        }
+        if (!$dd.parent().is('body')) {
+            $dd.appendTo('body');
+        }
+
+        var rect = el.getBoundingClientRect();
+        $dd.addClass('is-floating').css({
+            top: Math.round(rect.bottom + 2) + 'px',
+            left: Math.round(rect.left) + 'px',
+            width: Math.max(Math.round(rect.width), 220) + 'px',
+            right: 'auto'
+        });
+    }
+
+    function hideSearchDropdown($dd) {
+        if ($dd && $dd.length) {
+            $dd.hide().empty();
+            restoreSearchDropdown($dd);
+        }
+    }
+
     function searchCities(q) {
-        $.getJSON(absUrl('crm/ajax/search_cities.php'), { q: q, limit: 20 })
-            .done(function (res) {
-                var $dd = $('#citySearchDropdown');
-                $dd.empty();
-                if (!res || !res.success || !res.data || !res.data.length) {
-                    $dd.hide();
-                    return;
-                }
-                res.data.forEach(function (row) {
-                    var label = row.name;
-                    if (row.country_name) {
-                        label += ', ' + row.country_name;
-                    }
-                    $dd.append(
-                        '<div class="item" data-id="' + row.id + '" data-name="' + escapeHtml(row.name) + '" data-country="' + escapeHtml(row.country_name || '') + '">' +
-                        escapeHtml(label) + '</div>'
-                    );
-                });
+        if (cityRequest) {
+            cityRequest.abort();
+            cityRequest = null;
+        }
+
+        var $dd = $('#citySearchDropdown');
+        var $input = $('#supplierCitySearch');
+
+        cityRequest = $.getJSON(absUrl('crm/ajax/search_cities.php'), { q: q, limit: 20 });
+
+        cityRequest.done(function (res) {
+            $dd.empty();
+            if (!res || !res.success || !res.data || !res.data.length) {
+                $dd.append('<div class="item is-empty">No cities found</div>');
                 $dd.show();
+                positionSearchDropdown($input, $dd);
+                return;
+            }
+            res.data.forEach(function (row) {
+                var label = formatCityLabel(row);
+                $dd.append(
+                    '<div class="item" data-id="' + row.id + '" data-name="' + escapeHtml(row.name) + '" data-country="' + escapeHtml(row.country_name || '') + '">' +
+                    highlightMatch(label, q) + '</div>'
+                );
             });
+            $dd.show();
+            positionSearchDropdown($input, $dd);
+        }).fail(function (xhr) {
+            if (xhr && xhr.statusText === 'abort') {
+                return;
+            }
+            $dd.empty().append('<div class="item is-empty">' + escapeHtml(ajaxErrorMessage(xhr, 'City search failed.')) + '</div>');
+            $dd.show();
+            positionSearchDropdown($input, $dd);
+        }).always(function () {
+            cityRequest = null;
+        });
     }
 
     function searchPlaces(q) {
-        $.getJSON(absUrl('crm/ajax/search_places.php'), { q: q, limit: 20 })
-            .done(function (res) {
-                var $dd = $('#placeSearchDropdown');
-                $dd.empty();
-                if (!res || !res.success || !res.data || !res.data.length) {
-                    $dd.hide();
+        $.ajax({
+            url: absUrl('crm/ajax/search_places.php'),
+            type: 'GET',
+            dataType: 'json',
+            data: { q: q, limit: 20 },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).done(function (res) {
+            var $dd = $('#placeSearchDropdown');
+            var $input = $('#placeSearch');
+            $dd.empty();
+            if (!res || !res.success) {
+                $dd.append('<div class="item is-empty">' + escapeHtml((res && res.message) || 'Could not search places.') + '</div>');
+                $dd.show();
+                positionSearchDropdown($input, $dd);
+                return;
+            }
+            if (!res.data || !res.data.length) {
+                $dd.append('<div class="item is-empty">No places found</div>');
+                $dd.show();
+                positionSearchDropdown($input, $dd);
+                return;
+            }
+            var added = 0;
+            res.data.forEach(function (row) {
+                var exists = selectedPlaces.some(function (p) {
+                    return String(p.id) === String(row.id);
+                });
+                if (exists) {
                     return;
                 }
-                res.data.forEach(function (row) {
-                    var exists = selectedPlaces.some(function (p) {
-                        return String(p.id) === String(row.id);
-                    });
-                    if (exists) {
-                        return;
-                    }
-                    $dd.append(
-                        '<div class="item" data-id="' + row.id + '" data-name="' + escapeHtml(row.name) + '" data-country="' + escapeHtml(row.country || '') + '" data-label="' + escapeHtml(row.label || row.name) + '">' +
-                        escapeHtml(row.label || row.name) + '</div>'
-                    );
-                });
-                if ($dd.children().length) {
-                    $dd.show();
-                } else {
-                    $dd.hide();
-                }
+                added += 1;
+                $dd.append(
+                    '<div class="item" data-id="' + row.id + '" data-name="' + escapeHtml(row.name) + '" data-country="' + escapeHtml(row.country || '') + '" data-label="' + escapeHtml(row.label || row.name) + '">' +
+                    escapeHtml(row.label || row.name) + '</div>'
+                );
             });
+            if (!added) {
+                $dd.append('<div class="item is-empty">No places found</div>');
+            }
+            $dd.show();
+            positionSearchDropdown($input, $dd);
+        }).fail(function (xhr) {
+            var $dd = $('#placeSearchDropdown');
+            var $input = $('#placeSearch');
+            $dd.empty().append('<div class="item is-empty">' + escapeHtml(ajaxErrorMessage(xhr, 'Place search failed.')) + '</div>');
+            $dd.show();
+            positionSearchDropdown($input, $dd);
+        });
     }
 
     function initDataTable() {
@@ -541,6 +646,13 @@
             renderContactRows();
         });
 
+        $('#supplierCitySearch').on('focus', function () {
+            var q = $(this).val().trim();
+            if (q.length >= 2) {
+                searchCities(q);
+            }
+        });
+
         $('#supplierCitySearch').on('input', function () {
             var q = $(this).val().trim();
             $('#supplierCityId').val('0');
@@ -549,10 +661,22 @@
             updateCityClearState();
             clearTimeout(cityTimer);
             if (q.length < 2) {
-                $('#citySearchDropdown').hide().empty();
+                hideSearchDropdown($('#citySearchDropdown'));
                 return;
             }
             cityTimer = setTimeout(function () { searchCities(q); }, 250);
+        });
+
+        $('#supplierModal .supplier-modal-body').on('scroll', function () {
+            positionSearchDropdown($('#supplierCitySearch'), $('#citySearchDropdown'));
+            positionSearchDropdown($('#placeSearch'), $('#placeSearchDropdown'));
+        });
+
+        $(window).on('resize scroll', function () {
+            if ($('#supplierModal').hasClass('show')) {
+                positionSearchDropdown($('#supplierCitySearch'), $('#citySearchDropdown'));
+                positionSearchDropdown($('#placeSearch'), $('#placeSearchDropdown'));
+            }
         });
 
         $('#supplierCityClear').on('click', function () {
@@ -560,17 +684,18 @@
             $('#supplierCityId').val('0');
             $('#supplierCityName').val('');
             $('#supplierCountryName').val('');
-            $('#citySearchDropdown').hide().empty();
+            hideSearchDropdown($('#citySearchDropdown'));
             updateCityClearState();
         });
 
-        $(document).on('click', '#citySearchDropdown .item', function () {
-            $('#supplierCityId').val($(this).data('id'));
-            $('#supplierCityName').val($(this).data('name'));
-            $('#supplierCountryName').val($(this).data('country'));
-            var label = $(this).text();
-            $('#supplierCitySearch').val(label);
-            $('#citySearchDropdown').hide().empty();
+        $(document).on('mousedown', '#citySearchDropdown .item:not(.is-empty)', function (e) {
+            e.preventDefault();
+            var $item = $(this);
+            $('#supplierCityId').val($item.data('id'));
+            $('#supplierCityName').val($item.data('name'));
+            $('#supplierCountryName').val($item.data('country'));
+            $('#supplierCitySearch').val($item.text());
+            hideSearchDropdown($('#citySearchDropdown'));
             updateCityClearState();
         });
 
@@ -584,7 +709,8 @@
             placeTimer = setTimeout(function () { searchPlaces(q); }, 250);
         });
 
-        $(document).on('click', '#placeSearchDropdown .item', function () {
+        $(document).on('mousedown', '#placeSearchDropdown .item:not(.is-empty)', function (e) {
+            e.preventDefault();
             selectedPlaces.push({
                 id: parseInt($(this).data('id'), 10) || 0,
                 name: String($(this).data('name') || ''),
@@ -592,7 +718,7 @@
                 label: String($(this).data('label') || $(this).data('name') || '')
             });
             $('#placeSearch').val('');
-            $('#placeSearchDropdown').hide().empty();
+            hideSearchDropdown($('#placeSearchDropdown'));
             renderPlaceTags();
         });
 
@@ -669,8 +795,9 @@
         });
 
         $(document).on('click', function (e) {
-            if (!$(e.target).closest('.search-wrap').length) {
-                $('#citySearchDropdown, #placeSearchDropdown').hide();
+            if (!$(e.target).closest('.search-wrap, #citySearchDropdown, #placeSearchDropdown').length) {
+                hideSearchDropdown($('#citySearchDropdown'));
+                hideSearchDropdown($('#placeSearchDropdown'));
             }
             if (!$(e.target).closest('.supplier-of-field').length) {
                 $('#supplierOfPanel').removeClass('is-open');
@@ -679,7 +806,12 @@
         });
 
         $('#supplierModal').on('hidden.bs.modal', function () {
-            $('#citySearchDropdown, #placeSearchDropdown').hide().empty();
+            if (cityRequest) {
+                cityRequest.abort();
+                cityRequest = null;
+            }
+            hideSearchDropdown($('#citySearchDropdown'));
+            hideSearchDropdown($('#placeSearchDropdown'));
             $('#supplierOfPanel').removeClass('is-open');
             $('#supplierServicesToggle').attr('aria-expanded', 'false');
         });

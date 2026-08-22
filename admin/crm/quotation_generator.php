@@ -1334,6 +1334,25 @@ $qWizardSteps = [
             min-width: 0;
         }
 
+        .crm-quotation-gen .q-itinerary-rate-row {
+            margin-top: 0.15rem;
+        }
+
+        .crm-quotation-gen .q-itinerary-rate-row .form-group {
+            width: 100%;
+        }
+
+        .crm-quotation-gen #q_itinerary_rate {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .crm-quotation-gen #q_itinerary_rate::-webkit-outer-spin-button,
+        .crm-quotation-gen #q_itinerary_rate::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
         .crm-quotation-gen .q-day-ai-btn {
             flex: 0 0 auto;
             width: 36px;
@@ -5657,6 +5676,32 @@ $qWizardSteps = [
                                     </div>
                                 </div>
                                 <p class="q-hint">Days are generated from the Tentative Date and No of Nights. Use the AI button on each day to suggest that day.</p>
+                                <div class="row q-row-tight align-items-end q-itinerary-rate-row mb-3">
+                                    <div class="col-md-3 col-lg-2">
+                                        <div class="form-group mb-0">
+                                            <label class="q-label" for="q_itinerary_rate">Rate</label>
+                                            <input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm" id="q_itinerary_rate" placeholder="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5 col-lg-4">
+                                        <div class="form-group mb-0">
+                                            <label class="q-label" for="q_itinerary_supplier">Supplier</label>
+                                            <select class="form-control form-control-sm" id="q_itinerary_supplier">
+                                                <option value="">Select supplier</option>
+                                                <?php foreach ($qHotelSuppliers as $qSup): ?>
+                                                    <?php
+                                                    $qSupId = (int) ($qSup['id'] ?? 0);
+                                                    $qSupName = trim((string) ($qSup['name'] ?? ''));
+                                                    if ($qSupId < 1 || $qSupName === '') {
+                                                        continue;
+                                                    }
+                                                    ?>
+                                                    <option value="<?= (int) $qSupId ?>"><?= htmlspecialchars($qSupName, ENT_QUOTES, 'UTF-8') ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div id="qItineraryDays"></div>
                             </div>
                         </div>
@@ -6027,7 +6072,7 @@ $qWizardSteps = [
             'meta' => $qMailMeta,
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
-    <script src="crm/assets/quotation_generator.js?v=85"></script>
+    <script src="crm/assets/quotation_generator.js?v=87"></script>
     <script src="crm/assets/quotation_flight_search.js?v=6"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=17"></script>

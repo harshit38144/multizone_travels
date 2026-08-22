@@ -37,6 +37,19 @@ if ($tsCheck && mysqli_num_rows($tsCheck) === 0) {
     mysqli_query($conn, "INSERT INTO ticket_settings (id, important_info) VALUES (1, '<li>Please carry a valid photo ID.</li><li>Report at the airport at least 2 hours before departure.</li>')");
 }
 
+$paxJsonCol = mysqli_query($conn, "SHOW COLUMNS FROM `saved_tickets` LIKE 'passengers_json'");
+if ($paxJsonCol && mysqli_num_rows($paxJsonCol) === 0) {
+    mysqli_query($conn, "ALTER TABLE `saved_tickets` ADD `passengers_json` LONGTEXT NULL AFTER `passenger_names`");
+}
+
+$editPassengers = [];
+if ($editData && !empty($editData['passengers_json'])) {
+    $decodedPassengers = json_decode((string) $editData['passengers_json'], true);
+    if (is_array($decodedPassengers)) {
+        $editPassengers = $decodedPassengers;
+    }
+}
+
 $sql = "SELECT image FROM image_master 
 WHERE status='Active' 
 AND is_deleted=0
@@ -778,6 +791,85 @@ if ($res && mysqli_num_rows($res) > 0) {
             margin: 6mm 8mm 12mm 8mm;
         }
 
+        /* PDF capture clone — mirror @media print layout */
+        .ticket-pdf-capture {
+            margin: 0 !important;
+            padding: 8px 8px 18mm 8px !important;
+            box-sizing: border-box !important;
+            box-shadow: none !important;
+            border: none !important;
+            width: 194mm !important;
+            max-width: 194mm !important;
+            min-height: auto !important;
+            display: block !important;
+            background: #fff !important;
+        }
+
+        .ticket-pdf-capture .header {
+            padding-bottom: 5px !important;
+            margin-bottom: 10px !important;
+        }
+
+        .ticket-pdf-capture .support-row {
+            margin-bottom: 10px !important;
+        }
+
+        .ticket-pdf-capture .two-columns {
+            margin: 10px 0 !important;
+            gap: 25px !important;
+        }
+
+        .ticket-pdf-capture .hotel-banner {
+            margin: 10px 0 !important;
+            padding: 10px !important;
+            min-height: 110px !important;
+        }
+
+        .ticket-pdf-capture .passenger-head {
+            margin-top: 10px !important;
+        }
+
+        .ticket-pdf-capture .important-title {
+            margin: 10px 0 5px 0 !important;
+        }
+
+        .ticket-pdf-capture .important-list {
+            font-size: 11px !important;
+            margin-bottom: 5px !important;
+        }
+
+        .ticket-pdf-capture .important-list li {
+            margin: 2px 0 !important;
+        }
+
+        .ticket-pdf-capture .phone {
+            white-space: nowrap !important;
+            display: inline-block !important;
+        }
+
+        .ticket-pdf-capture .footer {
+            position: static !important;
+            width: 100% !important;
+            margin-top: 0 !important;
+            padding: 5px 8px !important;
+            box-sizing: border-box !important;
+        }
+
+        .ticket-pdf-capture .flight-title,
+        .ticket-pdf-capture .hotel-banner,
+        .ticket-pdf-capture .passenger-head,
+        .ticket-pdf-capture .header,
+        .ticket-pdf-capture .flight-card-header,
+        .ticket-pdf-capture .data-table th,
+        .ticket-pdf-capture .footer {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .ticket-pdf-capture .fa-trash {
+            display: none !important;
+        }
+
         .hotel-banner {
             page-break-inside: avoid;
             break-inside: avoid;
@@ -1192,6 +1284,8 @@ if ($res && mysqli_num_rows($res) > 0) {
 
                                 <button class="btn btn-success" onclick="saveTicketOnPrint()"
                                     style="margin-left: 0;">Print Ticket</button>
+                                <button class="btn btn-primary" onclick="downloadTicket()"
+                                    style="margin-left: 8px;">Download Ticket</button>
 
                             </div>
                         </div>
@@ -1875,98 +1969,238 @@ if ($res && mysqli_num_rows($res) > 0) {
 
         // Refresh page after each print is completed/cancelled.
         window.addEventListener("afterprint", function () {
-            window.location.reload();
+            if (window._ticketPrintTriggered) {
+                window._ticketPrintTriggered = false;
+                window.location.reload();
+            }
         });
 
-        function saveTicketOnPrint() {
-            updateTicketData();
-            var names = [];
-            $(".pax-group").each(function () {
-                var initial = $(this).find(".pax-initial").val() || "";
-                var n = $(this).find(".pax-name").val();
-                if (n) names.push(initial + " " + n);
-            });
+        function formatTicketTravelDate(dateVal) {
+            if (!dateVal) {
+                return "";
+            }
+            if (typeof moment !== "undefined" && moment(dateVal).isValid()) {
+                return moment(dateVal).format("DD MMM").toUpperCase();
+            }
+            var parsed = new Date(dateVal);
+            if (isNaN(parsed.getTime())) {
+                return "";
+            }
+            var months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            return String(parsed.getDate()).padStart(2, "0") + " " + months[parsed.getMonth()];
+        }
 
-            const element = document.getElementById("ticket");
-            const opt = {
-                // Match saved PDF layout with print layout.
+        function getAirportCode($input, fallback) {
+            var code = ($input.attr("data-code") || $input.val() || fallback || "").toString().trim().toUpperCase();
+            if (code.indexOf("(") !== -1) {
+                var match = code.match(/\(([A-Z0-9]{3})\)/);
+                if (match) {
+                    code = match[1];
+                }
+            }
+            return code.substring(0, 3);
+        }
+
+        function buildTicketFilename() {
+            var firstPax = $(".pax-group").first();
+            var title = (($(firstPax).find(".pax-initial").val() || "Mr") + "").trim().toUpperCase();
+            var fullName = (($(firstPax).find(".pax-name").val() || "") + "").trim().toUpperCase();
+            var nameParts = fullName.split(/\s+/).filter(Boolean);
+            var nameAbbr = (nameParts[0] || "PAX").substring(0, 3);
+
+            var pax = parseInt($("#paxCount").val(), 10) || 1;
+            var paxPadded = String(pax).padStart(2, "0");
+
+            var from = getAirportCode($("#apiFrom"), "DEL");
+            var to = getAirportCode($("#apiTo"), "CCU");
+            var travelDate = formatTicketTravelDate($("#apiDate").val());
+
+            var filename = title + " " + nameAbbr + "-" + paxPadded + " " + from + "–" + to;
+            if (travelDate) {
+                filename += " " + travelDate;
+            }
+
+            filename = filename.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
+            return filename + ".pdf";
+        }
+
+        var TICKET_PDF_CONTENT_WIDTH_MM = 194;
+
+        function createTicketPdfCaptureNode() {
+            var existingStage = document.getElementById("ticketPdfCaptureStage");
+            if (existingStage) {
+                existingStage.remove();
+            }
+
+            var source = document.getElementById("ticket");
+            var stage = document.createElement("div");
+            stage.id = "ticketPdfCaptureStage";
+            stage.style.cssText = "position:fixed;left:-20000px;top:0;z-index:-1;width:" + TICKET_PDF_CONTENT_WIDTH_MM + "mm;overflow:visible;background:#fff;";
+
+            var clone = source.cloneNode(true);
+            clone.removeAttribute("id");
+            clone.classList.add("ticket-pdf-capture");
+            clone.style.width = TICKET_PDF_CONTENT_WIDTH_MM + "mm";
+            clone.style.maxWidth = TICKET_PDF_CONTENT_WIDTH_MM + "mm";
+            clone.style.margin = "0";
+            clone.style.boxShadow = "none";
+
+            stage.appendChild(clone);
+            document.body.appendChild(stage);
+
+            return { stage: stage, element: clone };
+        }
+
+        function removeTicketPdfCaptureNode(capture) {
+            if (capture && capture.stage && capture.stage.parentNode) {
+                capture.stage.parentNode.removeChild(capture.stage);
+            }
+        }
+
+        function getTicketPdfOptions(filename) {
+            return {
                 margin: [6, 8, 12, 8],
-                filename: 'flight-ticket.pdf',
-                image: { type: 'jpeg', quality: 1 },
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: {
-                    scale: 3,
+                    scale: 2,
                     useCORS: true,
+                    allowTaint: true,
+                    scrollX: 0,
                     scrollY: 0,
+                    backgroundColor: '#ffffff',
+                    logging: false,
                     onclone: function (clonedDoc) {
-                        var clonedTicket = clonedDoc.getElementById("ticket");
-                        if (clonedTicket) {
-                            var styleEl = clonedDoc.createElement("style");
-                            styleEl.innerHTML = `
-                                #ticket {
-                                    margin: 0 auto !important;
-                                    padding: 8px 8px 18mm 8px !important;
-                                    box-sizing: border-box !important;
-                                    box-shadow: none !important;
-                                    border: none !important;
-                                    width: 100% !important;
-                                    max-width: 100% !important;
-                                    display: flex !important;
-                                    flex-direction: column !important;
-                                }
-                                #ticket .phone {
-                                    white-space: nowrap !important;
-                                    display: inline-block !important;
-                                }
-                                #ticket, #ticket * {
-                                    font-size: 90% !important;
-                                }
-                                #ticket .ticket-footer {
-                                    margin-top: auto !important;
-                                    position: static !important;
-                                    width: 100% !important;
-                                }
-                            `;
-                            clonedDoc.head.appendChild(styleEl);
+                        var ticket = clonedDoc.querySelector(".ticket-pdf-capture");
+                        if (!ticket) {
+                            return;
                         }
+                        ticket.style.width = TICKET_PDF_CONTENT_WIDTH_MM + "mm";
+                        ticket.style.maxWidth = TICKET_PDF_CONTENT_WIDTH_MM + "mm";
+                        ticket.style.margin = "0";
+                        ticket.style.padding = "8px 8px 18mm 8px";
+                        ticket.style.boxSizing = "border-box";
+                        ticket.style.boxShadow = "none";
+                        ticket.style.display = "block";
+                        ticket.style.background = "#fff";
                     }
                 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
+        }
 
-            html2pdf().set(opt).from(element).output('blob').then(function (pdfBlob) {
-                var reader = new FileReader();
-                reader.readAsDataURL(pdfBlob);
-                reader.onloadend = function () {
-                    var pdfBase64 = reader.result;
+        function collectPassengerNames() {
+            return collectPassengerDetails().map(function (p) {
+                if (!p.name) {
+                    return "";
+                }
+                return ((p.initial || "") + " " + p.name).trim();
+            }).filter(Boolean);
+        }
 
-                    var sector = ($("#apiFrom").attr("data-code") || ($("#apiFrom").val() || "IXR").substring(0,3).toUpperCase()) + " - " + ($("#apiTo").attr("data-code") || ($("#apiTo").val() || "DEL").substring(0,3).toUpperCase());
-                    var airlines = [];
-                    $(".airline-name").each(function () {
-                        var txt = $(this).text().trim();
-                        if (txt && airlines.indexOf(txt) === -1) airlines.push(txt);
+        function collectPassengerDetails() {
+            var rows = [];
+            $(".pax-group").each(function () {
+                rows.push({
+                    initial: ($(this).find(".pax-initial").val() || "").trim(),
+                    name: ($(this).find(".pax-name").val() || "").trim(),
+                    type: ($(this).find(".pax-type").val() || "").trim(),
+                    meal: ($(this).find(".pax-meal").val() || "").trim(),
+                    seat: ($(this).find(".pax-seat").val() || "").trim(),
+                    ticket: ($(this).find(".pax-ticket").val() || "").trim(),
+                    services: ($(this).find(".pax-services").val() || "").trim()
+                });
+            });
+            return rows;
+        }
+
+        function persistTicketPdf(pdfBlob, filename, done) {
+            var reader = new FileReader();
+            reader.readAsDataURL(pdfBlob);
+            reader.onloadend = function () {
+                var pdfBase64 = reader.result;
+                var names = collectPassengerNames();
+                var from = getAirportCode($("#apiFrom"), "DEL");
+                var to = getAirportCode($("#apiTo"), "CCU");
+                var sector = from + " - " + to;
+                var airlines = [];
+                $(".airline-name").each(function () {
+                    var txt = $(this).text().trim();
+                    if (txt && airlines.indexOf(txt) === -1) {
+                        airlines.push(txt);
+                    }
+                });
+                var airline = airlines.length > 0 ? airlines.join(", ") : "-";
+
+                $.post("ajax/save_ticket.php", {
+                    edit_id: typeof window.editTicketId !== 'undefined' ? window.editTicketId : 0,
+                    pnr: $("#pnrInput").val(),
+                    date: $("#bookingDate").val(),
+                    pax: $("#paxCount").val(),
+                    base: $("#baseInput").val(),
+                    tax: $("#taxInput").val(),
+                    total: $("#totalInput").val(),
+                    passenger_names: names.join(", "),
+                    passengers_json: JSON.stringify(collectPassengerDetails()),
+                    sector: sector,
+                    airline: airline,
+                    departure_date: $("#apiDate").val(),
+                    arrival_date: $("#apiReturnDate").val(),
+                    flight_html: $("#flightDetailsContainer").html(),
+                    return_flight_html: $("input[name='tripType']:checked").val() === "roundtrip" ? $("#returnFlightDetailsContainer").html() : "",
+                    pdf_data: pdfBase64,
+                    pdf_filename: filename
+                }).always(function () {
+                    if (typeof done === "function") {
+                        done();
+                    }
+                });
+            };
+        }
+
+        function generateTicketPdfBlob(done) {
+            updateTicketData();
+            var filename = buildTicketFilename();
+            var capture = createTicketPdfCaptureNode();
+
+            window.requestAnimationFrame(function () {
+                window.requestAnimationFrame(function () {
+                    html2pdf().set(getTicketPdfOptions(filename)).from(capture.element).output('blob').then(function (pdfBlob) {
+                        removeTicketPdfCaptureNode(capture);
+                        done(pdfBlob, filename);
+                    }).catch(function (err) {
+                        removeTicketPdfCaptureNode(capture);
+                        console.error("Ticket PDF generation failed:", err);
+                        alert("Could not generate ticket PDF. Please try again.");
                     });
-                    var airline = airlines.length > 0 ? airlines.join(", ") : "-";
+                });
+            });
+        }
 
-                    $.post("ajax/save_ticket.php", {
-                        edit_id: typeof window.editTicketId !== 'undefined' ? window.editTicketId : 0,
-                        pnr: $("#pnrInput").val(),
-                        date: $("#bookingDate").val(),
-                        pax: $("#paxCount").val(),
-                        base: $("#baseInput").val(),
-                        tax: $("#taxInput").val(),
-                        total: $("#totalInput").val(),
-                        passenger_names: names.join(", "),
-                        sector: sector,
-                        airline: airline,
-                        departure_date: $("#apiDate").val(),
-                        arrival_date: $("#apiReturnDate").val(),
-                        flight_html: $("#flightDetailsContainer").html(),
-                        return_flight_html: $("input[name='tripType']:checked").val() === "roundtrip" ? $("#returnFlightDetailsContainer").html() : "",
-                        pdf_data: pdfBase64
-                    });
-                    
+        function saveTicketOnPrint() {
+            generateTicketPdfBlob(function (pdfBlob, filename) {
+                persistTicketPdf(pdfBlob, filename, function () {
+                    document.title = filename.replace(/\.pdf$/i, "");
+                    window._ticketPrintTriggered = true;
                     window.print();
-                };
+                });
+            });
+        }
+
+        function downloadTicket() {
+            generateTicketPdfBlob(function (pdfBlob, filename) {
+                persistTicketPdf(pdfBlob, filename, function () {
+                    var link = document.createElement("a");
+                    link.href = URL.createObjectURL(pdfBlob);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(function () {
+                        URL.revokeObjectURL(link.href);
+                    }, 1000);
+                });
             });
         }
 
@@ -1986,6 +2220,59 @@ if ($res && mysqli_num_rows($res) > 0) {
             }
         });
 
+        function parseViaSearchResponse(res) {
+            if (typeof res === "string") {
+                try { res = JSON.parse(res); } catch (err) { res = null; }
+            }
+
+            var flights = [];
+            var rFlights = [];
+            if (!res) {
+                return { flights: flights, rFlights: rFlights };
+            }
+
+            var source = (res.data && (res.data.onwardJourneys || res.data.returnJourneys || res.data.combinedJourneys))
+                ? res.data
+                : res;
+
+            if (source.onwardJourneys && source.onwardJourneys.length > 0) {
+                source.onwardJourneys.forEach(function (journey) {
+                    flights.push({ journey: journey, primaryFlight: (journey.flights && journey.flights.length > 0) ? journey.flights[0] : {} });
+                });
+            }
+            if (source.returnJourneys && source.returnJourneys.length > 0) {
+                source.returnJourneys.forEach(function (journey) {
+                    rFlights.push({ journey: journey, primaryFlight: (journey.flights && journey.flights.length > 0) ? journey.flights[0] : {} });
+                });
+            } else if (source.combinedJourneys && source.combinedJourneys.length > 0) {
+                source.combinedJourneys.forEach(function (journey) {
+                    flights.push({ journey: journey, primaryFlight: (journey.flights && journey.flights.length > 0) ? journey.flights[0] : {} });
+                });
+            } else if (res.flights) {
+                flights = res.flights;
+            }
+
+            return { flights: flights, rFlights: rFlights };
+        }
+
+        function buildViaSearchPayload(sectorInfos, isDomestic, pax) {
+            return {
+                sectorInfos: sectorInfos,
+                prefAirlines: [{ code: 'ALL', name: 'ALL' }],
+                "class": 'ALL',
+                paxCount: { adt: parseInt(pax, 10) || 1, chd: 0, inf: 0 },
+                route: 'ALL',
+                disc: false,
+                multiHop: false,
+                multiCity: false,
+                senior: false,
+                special: false,
+                domestic: !!isDomestic,
+                isOfflineSearch: false,
+                isPaxWiseCommission: false
+            };
+        }
+
         // Also update when clicking Search to ensure it's synced
         $("#searchFlightsBtn").click(function (e) {
             e.preventDefault();
@@ -1999,9 +2286,9 @@ if ($res && mysqli_num_rows($res) > 0) {
                 $("#hotelCity").text(city.toUpperCase());
             }
             var date = $("#apiDate").val().trim();
-
-            var from = $("#apiFrom").attr("data-code") || fromVal;
-            var to = $("#apiTo").attr("data-code") || toVal;
+            var isInternational = $("input[name='flightType']:checked").val() === "international";
+            var from = getAirportCode($("#apiFrom"), "");
+            var to = getAirportCode($("#apiTo"), "");
 
             var fromCity = $("#apiFrom").attr("data-city") || fromVal;
             fromCity = fromCity.split(',')[0].replace(/\(.*?\)/g, '').trim();
@@ -2012,61 +2299,31 @@ if ($res && mysqli_num_rows($res) > 0) {
             var tType = $("input[name='tripType']:checked").val() === "roundtrip" ? "ROUNDTRIP" : "ONEWAY";
             var returnDate = $("#apiReturnDate").val().trim();
 
-            if (!from || !to || !date || (tType === "ROUNDTRIP" && !returnDate)) {
-                alert("Please fill all required search fields");
+            if (!from || !to || from.length !== 3 || to.length !== 3 || !date || (tType === "ROUNDTRIP" && !returnDate)) {
+                alert("Please fill all required search fields and select airports from the suggestions");
                 return;
             }
 
             var sectorInfos = [{
-                src: { code: from, name: from, city: from },
-                dest: { code: to, name: to, city: to },
+                src: { code: from, name: fromCity || from, city: fromCity || from },
+                dest: { code: to, name: toCity || to, city: toCity || to },
                 date: moment(date).format('YYYY-MM-DD'),
                 debug: false
             }];
 
             if (tType === "ROUNDTRIP") {
                 sectorInfos.push({
-                    src: { code: to, name: to, city: to },
-                    dest: { code: from, name: from, city: from },
+                    src: { code: to, name: toCity || to, city: toCity || to },
+                    dest: { code: from, name: fromCity || from, city: fromCity || from },
                     date: moment(returnDate).format('YYYY-MM-DD'),
                     debug: false
                 });
             }
 
-            // Create exact payload structure from Angular source code
-            var payload = {
-                sectorInfos: sectorInfos,
-                prefAirlines: [{ code: 'ALL', name: 'ALL' }],
-                "class": 'ALL',
-                paxCount: { adt: parseInt(pax), chd: 0, inf: 0 },
-                route: 'ALL',
-                disc: false,
-                multiHop: false,
-                multiCity: false,
-                senior: false,
-                special: false,
-                domestic: true,
-                isOfflineSearch: false,
-                isPaxWiseCommission: false
-            };
+            var isDomesticSearch = !isInternational;
+            var useDualIntlRoundTrip = tType === "ROUNDTRIP" && isInternational;
 
-            $("#searchFlightsBtn").text("Searching...").prop("disabled", true);
-            $("#searchLoadingIndicator").show();
-
-            $.ajax({
-                url: "ajax/via_search.php",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify(payload),
-                success: function (res) {
-                    $("#searchFlightsBtn").text("Search").prop("disabled", false);
-                    $("#searchLoadingIndicator").hide();
-
-                    if (typeof res === "string") {
-                        try { res = JSON.parse(res); } catch (err) { }
-                    }
-
-                    console.log("API Result:", res);
+            function handleFlightSearchSuccess(res, preParsed) {
 
                     function createFlightCard(item, overallDepCode, overallArrCode, overallDepCityName, overallArrCityName) {
                         var journey = item.journey || item;
@@ -2171,32 +2428,10 @@ if ($res && mysqli_num_rows($res) > 0) {
                         return cardHtml;
                     }
 
-                    var flights = [];
-                    var rFlights = [];
-
-                    if (res && res.data) {
-                        if (res.data.onwardJourneys && res.data.onwardJourneys.length > 0) {
-                            res.data.onwardJourneys.forEach(function (journey) {
-                                flights.push({ journey: journey, primaryFlight: (journey.flights && journey.flights.length > 0) ? journey.flights[0] : {} });
-                            });
-                        }
-                        if (res.data.returnJourneys && res.data.returnJourneys.length > 0) {
-                            res.data.returnJourneys.forEach(function (journey) {
-                                rFlights.push({ journey: journey, primaryFlight: (journey.flights && journey.flights.length > 0) ? journey.flights[0] : {} });
-                            });
-                        }
-                    } else if (res && res.onwardJourneys) {
-                        res.onwardJourneys.forEach(function (journey) {
-                            flights.push({ journey: journey, primaryFlight: (journey.flights && journey.flights.length > 0) ? journey.flights[0] : {} });
-                        });
-                        if (res.returnJourneys) {
-                            res.returnJourneys.forEach(function (journey) {
-                                rFlights.push({ journey: journey, primaryFlight: (journey.flights && journey.flights.length > 0) ? journey.flights[0] : {} });
-                            });
-                        }
-                    } else if (res && res.flights) {
-                        flights = res.flights;
-                    }
+                    console.log("API Result:", res);
+                    var parsedResult = preParsed || parseViaSearchResponse(res);
+                    var flights = parsedResult.flights || [];
+                    var rFlights = parsedResult.rFlights || [];
 
                     var modalBody = $("#flightsModalBody");
                     modalBody.empty();
@@ -2267,8 +2502,9 @@ if ($res && mysqli_num_rows($res) > 0) {
                     }
 
                     $("#flightsModal").modal("show");
-                },
-                error: function (err) {
+            }
+
+            function handleFlightSearchError(err) {
                     $("#searchFlightsBtn").text("Search").prop("disabled", false);
                     $("#searchLoadingIndicator").hide();
 
@@ -2289,7 +2525,55 @@ if ($res && mysqli_num_rows($res) > 0) {
 
                     $("#flightsModal").modal("show");
                     console.error("API proxy failed:", err);
-                }
+            }
+
+            $("#searchFlightsBtn").text("Searching...").prop("disabled", true);
+            $("#searchLoadingIndicator").show();
+
+            if (useDualIntlRoundTrip) {
+                var onwardPayload = buildViaSearchPayload([sectorInfos[0]], false, pax);
+                var returnPayload = buildViaSearchPayload([sectorInfos[1]], false, pax);
+
+                $.when(
+                    $.ajax({
+                        url: "ajax/via_search.php",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify(onwardPayload)
+                    }),
+                    $.ajax({
+                        url: "ajax/via_search.php",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify(returnPayload)
+                    })
+                ).done(function (onwardRes, returnRes) {
+                    $("#searchFlightsBtn").text("Search").prop("disabled", false);
+                    $("#searchLoadingIndicator").hide();
+
+                    var onwardParsed = parseViaSearchResponse(onwardRes[0]);
+                    var returnParsed = parseViaSearchResponse(returnRes[0]);
+                    handleFlightSearchSuccess(null, {
+                        flights: onwardParsed.flights,
+                        rFlights: returnParsed.flights
+                    });
+                }).fail(function (err) {
+                    handleFlightSearchError(err);
+                });
+                return;
+            }
+
+            $.ajax({
+                url: "ajax/via_search.php",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(buildViaSearchPayload(sectorInfos, isDomesticSearch, pax)),
+                success: function (res) {
+                    $("#searchFlightsBtn").text("Search").prop("disabled", false);
+                    $("#searchLoadingIndicator").hide();
+                    handleFlightSearchSuccess(res);
+                },
+                error: handleFlightSearchError
             });
         });
 
@@ -2392,8 +2676,8 @@ if ($res && mysqli_num_rows($res) > 0) {
             var isRoundTrip = $("input[name='tripType']:checked").val() === "roundtrip";
 
             var container = isReturn ? $("#returnFlightDetailsContainer") : $("#flightDetailsContainer");
-            var depCode = isReturn ? ($("#apiTo").val() || "BOM") : ($("#apiFrom").val() || "DEL");
-            var arrCode = isReturn ? ($("#apiFrom").val() || "DEL") : ($("#apiTo").val() || "BOM");
+            var depCode = isReturn ? getAirportCode($("#apiTo"), "BOM") : getAirportCode($("#apiFrom"), "DEL");
+            var arrCode = isReturn ? getAirportCode($("#apiFrom"), "DEL") : getAirportCode($("#apiTo"), "BOM");
 
             var cardHtml = "";
             var segments = f.segments && f.segments.length > 0 ? f.segments : null;
@@ -2727,19 +3011,37 @@ if ($res && mysqli_num_rows($res) > 0) {
             $("#taxInput").val("<?php echo $editData['tax']; ?>").trigger('input');
             $("#totalInput").val("<?php echo $editData['total_fare']; ?>").trigger('input');
 
-            // Fill passenger names
+            // Fill passenger details
+            var savedPassengers = <?php echo json_encode($editPassengers, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+            if (savedPassengers.length) {
+                savedPassengers.forEach(function (p, index) {
+                    var $row = $(".pax-group").eq(index);
+                    if (!$row.length) {
+                        return;
+                    }
+                    $row.find(".pax-initial").val(p.initial || "Mr");
+                    $row.find(".pax-name").val(p.name || "");
+                    $row.find(".pax-type").val(p.type || "Adult");
+                    $row.find(".pax-meal").val(p.meal || "");
+                    $row.find(".pax-seat").val(p.seat || "");
+                    $row.find(".pax-ticket").val(p.ticket || "");
+                    $row.find(".pax-services").val(p.services || "");
+                });
+            } else {
             <?php
             if (!empty($editData['passenger_names'])) {
                 $names = array_map('trim', explode(',', $editData['passenger_names']));
                 foreach ($names as $index => $fullName) {
-                    $parts = explode(' ', $fullName, 2);
+                    $parts = preg_split('/\s+/', trim($fullName), 2);
                     $initial = isset($parts[0]) ? $parts[0] : '';
                     $name = isset($parts[1]) ? $parts[1] : '';
                     echo "$('.pax-group').eq($index).find('.pax-initial').val('".addslashes($initial)."');\n";
-                    echo "$('.pax-group').eq($index).find('.pax-name').val('".addslashes($name)."').trigger('input');\n";
+                    echo "$('.pax-group').eq($index).find('.pax-name').val('".addslashes($name)."');\n";
                 }
             }
             ?>
+            }
+            updateTicketData();
 
             // Extract Sector if possible
             <?php

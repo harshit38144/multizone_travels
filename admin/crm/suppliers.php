@@ -406,14 +406,40 @@ function crmSupplierUpdatedLabel($value)
             background: #be123c; border-color: #be123c; color: #fff;
         }
         #supplierModal .search-wrap { position: relative; }
-        #supplierModal .search-dropdown {
-            position: absolute; z-index: 1070; left: 0; right: 0; top: 100%;
-            background: #fff; border: 1px solid #e2e8f0; border-radius: 4px;
-            max-height: 190px; overflow-y: auto; display: none;
+        #supplierModal .search-dropdown,
+        #citySearchDropdown,
+        #placeSearchDropdown {
+            position: absolute;
+            z-index: 20050;
+            left: 0;
+            right: 0;
+            top: 100%;
+            margin-top: 2px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            max-height: 190px;
+            overflow-y: auto;
+            display: none;
             box-shadow: 0 10px 25px rgba(15,23,42,.12);
+        }
+        #citySearchDropdown.is-floating,
+        #placeSearchDropdown.is-floating {
+            position: fixed;
+            right: auto;
+            margin-top: 0;
         }
         #supplierModal .search-dropdown .item {
             padding: .45rem .65rem; cursor: pointer; font-size: .875rem; color: #334155;
+        }
+        #supplierModal .search-dropdown .item strong,
+        #citySearchDropdown .item strong,
+        #placeSearchDropdown .item strong {
+            font-weight: 700;
+            color: #0f172a;
+        }
+        #supplierModal .search-dropdown .item.is-empty {
+            cursor: default; color: #94a3b8; font-style: italic;
         }
         #supplierModal .search-dropdown .item:hover { background: #f1f5f9; }
         #supplierModal .city-clear {
@@ -690,7 +716,7 @@ function crmSupplierUpdatedLabel($value)
                         <div class="form-row">
                             <div class="form-group col-md-6 search-wrap" id="supplierCityWrap">
                                 <label for="supplierCitySearch">City</label>
-                                <input type="text" class="form-control" id="supplierCitySearch" placeholder="Search City" autocomplete="off">
+                                <input type="text" class="form-control" id="supplierCitySearch" placeholder="Type city name..." autocomplete="off">
                                 <button type="button" class="city-clear" id="supplierCityClear" title="Clear">&times;</button>
                                 <div class="search-dropdown" id="citySearchDropdown"></div>
                             </div>
@@ -745,6 +771,6 @@ function crmSupplierUpdatedLabel($value)
         window.SUPPLIER_SERVICE_MAP = <?= json_encode($serviceMap, JSON_UNESCAPED_UNICODE) ?>;
         window.SUPPLIER_TYPE_MAP = <?= json_encode($supplierTypeMap, JSON_UNESCAPED_UNICODE) ?>;
     </script>
-    <script src="crm/assets/suppliers.js?v=12"></script>
+    <script src="crm/assets/suppliers.js?v=19"></script>
 </body>
 </html>

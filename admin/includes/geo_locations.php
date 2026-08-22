@@ -400,3 +400,276 @@ if (!function_exists('geoLocationCounts')) {
         return $counts;
     }
 }
+
+if (!function_exists('geoCitiesCacheDir')) {
+    function geoCitiesCacheDir(): string
+    {
+        $dir = dirname(__DIR__) . '/cache/geo_cities';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        return $dir;
+    }
+}
+
+if (!function_exists('geoFetchCitiesForCountry')) {
+    /**
+     * @return list<string>
+     */
+    function geoFetchCitiesForCountry(string $country): array
+    {
+        static $memoryCache = [];
+        $country = trim($country);
+        if ($country === '') {
+            return [];
+        }
+        if (isset($memoryCache[$country])) {
+            return $memoryCache[$country];
+        }
+
+        $cacheFile = geoCitiesCacheDir() . '/' . md5(mb_strtolower($country)) . '.json';
+        $cacheTtl = 7 * 86400;
+        if (is_file($cacheFile) && (time() - (int) filemtime($cacheFile)) < $cacheTtl) {
+            $cached = json_decode((string) file_get_contents($cacheFile), true);
+            if (is_array($cached)) {
+                $memoryCache[$country] = $cached;
+
+                return $cached;
+            }
+        }
+
+        $cities = [];
+        try {
+            $payload = geoCountriesNowGet('/cities/q?country=' . rawurlencode($country));
+            if (is_array($payload['data'] ?? null)) {
+                $cities = $payload['data'];
+            }
+        } catch (Throwable $e) {
+            try {
+                $payload = geoCountriesNowPost('/cities', ['country' => $country]);
+                if (is_array($payload['data'] ?? null)) {
+                    $cities = $payload['data'];
+                }
+            } catch (Throwable $e2) {
+                $cities = [];
+            }
+        }
+
+        if ($cities) {
+            @file_put_contents($cacheFile, json_encode($cities, JSON_UNESCAPED_UNICODE));
+        }
+
+        $memoryCache[$country] = $cities;
+
+        return $cities;
+    }
+}
+
+if (!function_exists('geoFetchCountriesList')) {
+    /**
+     * @return list<string>
+     */
+    function geoFetchCountriesList(): array
+    {
+        static $memoryCache = null;
+        if (is_array($memoryCache)) {
+            return $memoryCache;
+        }
+
+        $cacheFile = geoCitiesCacheDir() . '/_countries.json';
+        $cacheTtl = 30 * 86400;
+        if (is_file($cacheFile) && (time() - (int) filemtime($cacheFile)) < $cacheTtl) {
+            $cached = json_decode((string) file_get_contents($cacheFile), true);
+            if (is_array($cached)) {
+                $memoryCache = $cached;
+
+                return $cached;
+            }
+        }
+
+        $countries = [];
+        try {
+            $payload = geoCountriesNowGet('');
+            foreach ($payload['data'] ?? [] as $row) {
+                $name = trim((string) ($row['country'] ?? ''));
+                if ($name !== '') {
+                    $countries[] = $name;
+                }
+            }
+        } catch (Throwable $e) {
+            $countries = ['India'];
+        }
+
+        if ($countries) {
+            sort($countries, SORT_NATURAL | SORT_FLAG_CASE);
+            @file_put_contents($cacheFile, json_encode($countries, JSON_UNESCAPED_UNICODE));
+        }
+
+        $memoryCache = $countries;
+
+        return $countries;
+    }
+}
+
+if (!function_exists('geoSearchCitiesApiResolveCountries')) {
+    /**
+     * @return list<string>
+     */
+    function geoSearchCitiesApiResolveCountries(string $query, ?string $countryName = null, int $maxCountries = 3): array
+    {
+        if ($countryName !== null && trim($countryName) !== '') {
+            return [trim($countryName)];
+        }
+
+        $countries = [];
+        $query = trim($query);
+
+        foreach (geoFetchCountriesList() as $name) {
+            if ($query !== '' && mb_stripos($name, $query) !== false) {
+                $countries[] = $name;
+            }
+        }
+
+        $priority = [
+            'India',
+            'United Arab Emirates',
+            'Thailand',
+            'Singapore',
+            'Malaysia',
+            'Nepal',
+            'Sri Lanka',
+            'Indonesia',
+            'Vietnam',
+            'Maldives',
+        ];
+        foreach ($priority as $name) {
+            if (!in_array($name, $countries, true)) {
+                $countries[] = $name;
+            }
+        }
+
+        return array_slice(array_values(array_unique($countries)), 0, max(1, $maxCountries));
+    }
+}
+
+if (!function_exists('geoCityMatchScore')) {
+    function geoCityMatchScore(string $cityName, string $query): ?int
+    {
+        $cityLower = mb_strtolower(trim($cityName));
+        $queryLower = mb_strtolower(trim($query));
+        if ($queryLower === '' || $cityLower === '') {
+            return null;
+        }
+        if ($cityLower === $queryLower) {
+            return 0;
+        }
+        if (mb_strpos($cityLower, $queryLower) === 0) {
+            return 1;
+        }
+        if (preg_match('/(?:^|[\s,(-])' . preg_quote($queryLower, '/') . '/u', $cityLower)) {
+            return 2;
+        }
+        if (mb_strpos($cityLower, $queryLower) !== false) {
+            return 3;
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('geoSearchCitiesFromApi')) {
+    /**
+     * Search cities via CountriesNow API (no API key required).
+     *
+     * @return list<array{id:int,name:string,country_name:string,state_name:string,airport_code:string,source:string}>
+     */
+    function geoSearchCitiesFromApi(string $query, ?string $countryName = null, int $limit = 20): array
+    {
+        $query = trim($query);
+        if ($query === '' || $limit <= 0) {
+            return [];
+        }
+
+        $countriesToSearch = [];
+        if ($countryName !== null && trim($countryName) !== '') {
+            $countriesToSearch = [trim($countryName)];
+        } else {
+            $countriesToSearch = geoSearchCitiesApiResolveCountries($query, null, 1);
+        }
+
+        $candidates = [];
+        $seen = [];
+
+        $collectMatches = static function (string $country) use (&$candidates, &$seen, $query, $limit): void {
+            foreach (geoFetchCitiesForCountry($country) as $cityName) {
+                if (count($candidates) >= $limit * 3) {
+                    break;
+                }
+                $cityName = trim((string) $cityName);
+                if ($cityName === '') {
+                    continue;
+                }
+                if (mb_stripos($cityName, $query) === false) {
+                    continue;
+                }
+                $score = geoCityMatchScore($cityName, $query);
+                if ($score === null) {
+                    continue;
+                }
+                $key = mb_strtolower($cityName . "\0" . $country);
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $candidates[] = [
+                    'score' => $score,
+                    'id' => 0,
+                    'name' => $cityName,
+                    'country_name' => $country,
+                    'state_name' => '',
+                    'airport_code' => '',
+                    'source' => 'api',
+                ];
+            }
+        };
+
+        foreach ($countriesToSearch as $country) {
+            $collectMatches($country);
+            if (count($candidates) >= $limit) {
+                break;
+            }
+        }
+
+        if (count($candidates) < $limit && ($countryName === null || trim($countryName) === '')) {
+            foreach (geoSearchCitiesApiResolveCountries($query, null, 5) as $country) {
+                if (in_array($country, $countriesToSearch, true)) {
+                    continue;
+                }
+                $collectMatches($country);
+                if (count($candidates) >= $limit) {
+                    break;
+                }
+            }
+        }
+
+        usort($candidates, static function (array $a, array $b): int {
+            if ($a['score'] !== $b['score']) {
+                return $a['score'] <=> $b['score'];
+            }
+
+            return strcasecmp($a['name'], $b['name']);
+        });
+
+        $results = [];
+        foreach ($candidates as $row) {
+            if (count($results) >= $limit) {
+                break;
+            }
+            unset($row['score']);
+            $results[] = $row;
+        }
+
+        return $results;
+    }
+}
