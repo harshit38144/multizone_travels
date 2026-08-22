@@ -362,8 +362,14 @@ if (isset($_POST['update_ticket'])) {
                                         $sector = isset($row['sector']) && !empty($row['sector']) ? htmlspecialchars($row['sector']) : 'IXR - DEL';
                                         $airline = isset($row['airline']) ? htmlspecialchars($row['airline']) : '-';
 
-                                        // Booking Date & Time (using created_at or fallback to booking_date)
-                                        $bookingDateTime = !empty($row['created_at']) ? date('d-m-Y h:i A', strtotime($row['created_at'])) : date('d-m-Y', strtotime($row['booking_date']));
+                                        // Booking Date & Time (saved timestamp in IST)
+                                        $bookingDateTime = format_app_datetime($row['created_at'] ?? '');
+                                        if ($bookingDateTime === '' && !empty($row['booking_date'])) {
+                                            $bookingDateTime = format_app_datetime($row['booking_date'], 'd-m-Y');
+                                        }
+                                        if ($bookingDateTime === '') {
+                                            $bookingDateTime = '-';
+                                        }
 
                                         // Format Dep/Arr dates
                                         $depDateStr = !empty($row['departure_date']) ? date('d-m-Y', strtotime($row['departure_date'])) : '-';

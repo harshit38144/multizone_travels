@@ -9,6 +9,23 @@ if ($conn->connect_errno) {
 }
 date_default_timezone_set('Asia/Kolkata');
 
+if (!function_exists('format_app_datetime')) {
+	function format_app_datetime($value, $format = 'd-m-Y h:i A')
+	{
+		if ($value === null || $value === '' || $value === '0000-00-00 00:00:00') {
+			return '';
+		}
+
+		try {
+			$dt = new DateTimeImmutable((string) $value, new DateTimeZone('Asia/Kolkata'));
+			return $dt->format($format);
+		} catch (Exception $e) {
+			$ts = strtotime((string) $value);
+			return $ts ? date($format, $ts) : '';
+		}
+	}
+}
+
 // Footer / WhatsApp columns (only if site_settings exists — avoids uncaught mysqli exceptions on strict hosts)
 $ssTable = $conn->query("SHOW TABLES LIKE 'site_settings'");
 if ($ssTable && $ssTable->num_rows > 0) {
