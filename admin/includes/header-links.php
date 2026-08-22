@@ -29,10 +29,11 @@
 <link rel="stylesheet" href="custom/custom-css.css">
 <?php
 $adminSiteSettings = isset($siteSettings) && is_array($siteSettings) ? $siteSettings : [];
-$adminFaviconUrl = adminBrandAssetUrl($adminSiteSettings['favicon_path'] ?? '', 'img/icons1.png');
+$adminFaviconUrl = adminPanelBrandFromSettings($adminSiteSettings['favicon_path'] ?? '', 'img/icons1.png');
+$adminFaviconFallback = adminPanelBrandUrl('img/icons1.png');
 ?>
 <link rel="icon" href="<?= htmlspecialchars($adminFaviconUrl, ENT_QUOTES, 'UTF-8') ?>" type="image/png">
-<link rel="shortcut icon" href="<?= htmlspecialchars($adminFaviconUrl, ENT_QUOTES, 'UTF-8') ?>" type="image/png">
+<link rel="shortcut icon" href="<?= htmlspecialchars($adminFaviconFallback, ENT_QUOTES, 'UTF-8') ?>" type="image/png">
 <script>
 (function () {
   var storageKey = 'remember.lte.pushmenu';

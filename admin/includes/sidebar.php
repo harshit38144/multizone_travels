@@ -170,11 +170,15 @@ $crmParentPages = array_merge(
       <a href="dashboard.php" class="mz-brand-link">
         <?php
         $adminSiteSettings = isset($siteSettings) && is_array($siteSettings) ? $siteSettings : [];
-        $sidebarLogoXl = adminBrandAssetUrl($adminSiteSettings['logo_path'] ?? '', 'img/web-logo.png');
-        $sidebarLogoXs = adminBrandAssetUrl($adminSiteSettings['favicon_path'] ?? '', 'img/icons1.png');
+        $sidebarLogoXl = adminPanelBrandFromSettings($adminSiteSettings['logo_path'] ?? '', 'img/web-logo.png');
+        $sidebarLogoXs = adminPanelBrandFromSettings($adminSiteSettings['favicon_path'] ?? '', 'img/icons1.png');
+        $sidebarLogoFallbackXl = adminPanelBrandUrl('img/web-logo.png');
+        $sidebarLogoFallbackXs = adminPanelBrandUrl('img/icons1.png');
         ?>
-        <img src="<?= htmlspecialchars($sidebarLogoXl, ENT_QUOTES, 'UTF-8') ?>" alt="Multi Zone Travels" class="sidebar-logo-xl">
-        <img src="<?= htmlspecialchars($sidebarLogoXs, ENT_QUOTES, 'UTF-8') ?>" alt="Multi Zone Travels" class="sidebar-logo-xs">
+        <img src="<?= htmlspecialchars($sidebarLogoXl, ENT_QUOTES, 'UTF-8') ?>" alt="Multi Zone Travels" class="sidebar-logo-xl"
+            onerror="if(this.dataset.fb!=='1'){this.dataset.fb='1';this.src='<?= htmlspecialchars($sidebarLogoFallbackXl, ENT_QUOTES, 'UTF-8') ?>';}">
+        <img src="<?= htmlspecialchars($sidebarLogoXs, ENT_QUOTES, 'UTF-8') ?>" alt="Multi Zone Travels" class="sidebar-logo-xs"
+            onerror="if(this.dataset.fb!=='1'){this.dataset.fb='1';this.src='<?= htmlspecialchars($sidebarLogoFallbackXs, ENT_QUOTES, 'UTF-8') ?>';}">
       </a>
     </div>
 

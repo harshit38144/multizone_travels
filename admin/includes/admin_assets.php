@@ -28,9 +28,6 @@ function adminScheme(): string
     return 'https';
 }
 
-/**
- * Public website host (multizonetravels.com) when admin runs on admin.* subdomain.
- */
 function adminPublicSiteHost(): string
 {
     $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
@@ -78,45 +75,48 @@ function adminAssetUrl(string $relativePath): string
     return adminScheme() . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/' . $relativePath;
 }
 
-/**
- * Main-site mirror for admin uploads when admin.* docroot has no copy of the file.
- * DB paths like uploads/settings/logo.png may exist only under multizonetravels.com/admin/.
- */
-function adminMainSiteAdminUploadUrl(string $relativePath): string
+function adminAssetFileExists(string $relativePath): bool
 {
     $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
 
-    return adminPublicSiteUrl('admin/' . $relativePath);
+    return is_file(__DIR__ . '/../' . $relativePath);
 }
 
-function adminDefaultBrandUrl(string $fallbackRelative): string
+/**
+ * Built-in admin panel logo/favicon (admin/img/*). Never uses website-only paths.
+ */
+function adminPanelBrandUrl(string $fallbackRelative): string
 {
     $fallbackRelative = ltrim(str_replace('\\', '/', $fallbackRelative), '/');
-    $localFile = __DIR__ . '/../' . $fallbackRelative;
-    if (is_file($localFile)) {
-        return adminAssetUrl($fallbackRelative);
-    }
-
-    if ($fallbackRelative === 'img/icons1.png') {
-        return adminPublicSiteUrl('images/icons1.png');
-    }
-    if ($fallbackRelative === 'img/web-logo.png') {
-        return adminPublicSiteUrl('admin/img/web-logo.png');
-    }
 
     return adminAssetUrl($fallbackRelative);
 }
 
 /**
- * Logo / favicon from site_settings for split-domain setup:
- * - admin.multizonetravels.com → admin files + multizonetravels.com/images|admin/uploads
- * - localhost/.../admin → local paths
+ * Admin sidebar / favicon: only use site_settings when the file exists on THIS admin server.
+ * Otherwise use bundled admin/img assets (works on admin.multizonetravels.com).
+ */
+function adminPanelBrandFromSettings(?string $storedPath, string $fallbackRelative): string
+{
+    $storedPath = trim((string) $storedPath);
+    if ($storedPath !== '' && !preg_match('#^https?://#i', $storedPath)) {
+        $storedPath = ltrim(str_replace('\\', '/', $storedPath), '/');
+        if (adminAssetFileExists($storedPath)) {
+            return adminAssetUrl($storedPath);
+        }
+    }
+
+    return adminPanelBrandUrl($fallbackRelative);
+}
+
+/**
+ * Public website assets (lead intake etc.) — may load from multizonetravels.com.
  */
 function adminBrandAssetUrl(?string $storedPath, string $fallbackRelative): string
 {
     $storedPath = trim((string) $storedPath);
     if ($storedPath === '') {
-        return adminDefaultBrandUrl($fallbackRelative);
+        return adminPanelBrandUrl($fallbackRelative);
     }
     if (preg_match('#^https?://#i', $storedPath)) {
         return $storedPath;
@@ -128,14 +128,9 @@ function adminBrandAssetUrl(?string $storedPath, string $fallbackRelative): stri
         return adminPublicSiteUrl($storedPath);
     }
 
-    $localFile = __DIR__ . '/../' . $storedPath;
-    if (is_file($localFile)) {
+    if (adminAssetFileExists($storedPath)) {
         return adminAssetUrl($storedPath);
     }
 
-    if (adminIsAdminSubdomain()) {
-        return adminMainSiteAdminUploadUrl($storedPath);
-    }
-
-    return adminDefaultBrandUrl($fallbackRelative);
+    return adminPanelBrandUrl($fallbackRelative);
 }
