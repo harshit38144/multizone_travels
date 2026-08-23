@@ -86,7 +86,7 @@
 [data-theme="dark"] .content-wrapper .table-hover tbody tr:hover > td,
 [data-theme="dark"] .content-wrapper table tbody tr:hover,
 [data-theme="dark"] .content-wrapper table tbody tr:hover > td {
-    background: rgba(255, 255, 255, 0.03) !important;
+    background: var(--mz-theme-bg-muted) !important;
     color: var(--mz-theme-text) !important;
 }
 
@@ -705,10 +705,52 @@
     border-color: var(--mz-theme-border-light) !important;
 }
 
+[data-theme="dark"] .content-wrapper table tbody tr,
+[data-theme="dark"] .content-wrapper .table tbody tr,
+[data-theme="dark"] .content-wrapper table tbody tr:nth-child(even),
+[data-theme="dark"] .content-wrapper table tbody tr:nth-child(odd),
+[data-theme="dark"] .content-wrapper .table tbody tr:nth-child(even),
+[data-theme="dark"] .content-wrapper .table tbody tr:nth-child(odd) {
+    background: var(--mz-theme-bg-surface) !important;
+}
+
+[data-theme="dark"] .content-wrapper table tbody tr:nth-child(even) td,
+[data-theme="dark"] .content-wrapper .table tbody tr:nth-child(even) td {
+    background: var(--mz-theme-bg-elevated) !important;
+}
+
 [data-theme="dark"] .content-wrapper table tbody tr:hover td,
 [data-theme="dark"] .content-wrapper .table tbody tr:hover td,
-[data-theme="dark"] .content-wrapper table tbody tr:nth-child(even) td {
-    background: rgba(255, 255, 255, 0.025) !important;
+[data-theme="dark"] .content-wrapper table tbody tr:hover,
+[data-theme="dark"] .content-wrapper .table tbody tr:hover {
+    background: var(--mz-theme-bg-muted) !important;
+}
+
+/* Leads table — beat page <style> white backgrounds */
+[data-theme="dark"] .crm-leads-ui .table-wrap,
+[data-theme="dark"] .crm-leads-ui .leads-panel,
+[data-theme="dark"] .crm-leads-ui table.crm-leads-table {
+    background: var(--mz-theme-bg-surface) !important;
+}
+
+[data-theme="dark"] .crm-leads-ui table.crm-leads-table tbody tr,
+[data-theme="dark"] .crm-leads-ui table.crm-leads-table tbody tr:nth-child(even),
+[data-theme="dark"] .crm-leads-ui table.crm-leads-table tbody tr:nth-child(odd) {
+    background: var(--mz-theme-bg-surface) !important;
+}
+
+[data-theme="dark"] .crm-leads-ui table.crm-leads-table tbody td {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border-light) !important;
+}
+
+[data-theme="dark"] .crm-leads-ui table.crm-leads-table tbody tr:nth-child(even) td {
+    background: var(--mz-theme-bg-elevated) !important;
+}
+
+[data-theme="dark"] .crm-leads-ui table.crm-leads-table tbody tr:hover td {
+    background: var(--mz-theme-bg-muted) !important;
 }
 
 [data-theme="dark"] .content-wrapper .thumb-placeholder {
@@ -781,7 +823,7 @@
 }
 
 [data-theme="dark"] #leadDetailModal .lead-detail-table tbody tr:nth-child(even) td {
-    background: rgba(255, 255, 255, 0.02) !important;
+    background: var(--mz-theme-bg-elevated) !important;
 }
 
 /* ——— Hotel / Cruise / master modals ——— */

@@ -1243,11 +1243,11 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui table.crm-leads-table tbody tr:nth-child(even) {
-            background: #fff;
+            background: transparent;
         }
 
         .crm-leads-ui table.crm-leads-table tbody tr:nth-child(odd) {
-            background: #fff;
+            background: transparent;
         }
 
         .crm-leads-ui table.crm-leads-table tbody tr:hover td {
