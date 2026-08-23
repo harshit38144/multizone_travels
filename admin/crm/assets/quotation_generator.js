@@ -2531,31 +2531,19 @@
             '<button type="button" class="btn btn-outline-secondary btn-sm q-add-cost-row" title="Add extra cost"><i class="fas fa-plus"></i></button>' +
             '</div>';
 
-        html += '<div class="q-pricing-summary-card q-pricing-summary-values">';
-        html += '<div class="q-sum-row q-sum-total-row">' +
-            '<span class="q-sum-val q-sum-total" data-display="total">₹ 0</span>' +
-            '<input type="hidden" class="q-sheet-total-cost" value="0">' +
-            '</div>';
-        html += '<div class="q-sum-row q-sum-profit-row">' +
-            '<div class="q-sum-profit-value">' +
+        html += '<div class="q-sheet-profit-compact">' +
+            '<span class="q-sheet-profit-compact-label">Profit %</span>' +
             '<input type="number" step="0.01" class="q-sheet-profit-percent q-sum-pct" placeholder="0" value="' + esc(state.profit_percent || '') + '" title="Profit %">' +
-            '<span class="q-sum-pct-sign">%</span>' +
-            '<span class="q-sum-val q-sum-profit" data-display="profit">₹ 0</span>' +
-            '</div>' +
-            '<input type="hidden" class="q-sheet-profit-amount" value="' + esc(state.profit_amount || '') + '">' +
+            '<span class="q-sheet-total-mini q-sum-total" data-display="total">₹ 0</span>' +
             '</div>';
-        html += '<div class="q-sum-row q-sum-selling-row">' +
-            '<span class="q-sum-val q-sum-selling" data-display="selling">₹ 0</span>' +
-            '<input type="hidden" class="q-sheet-package-total" value="0">' +
-            '</div>';
-        html += '<div class="q-sum-row q-sum-ppa-row">' +
-            '<div class="q-sum-ppa-wrap">' +
-            '<span class="q-sum-rupee">₹</span>' +
-            '<input type="number" step="0.01" class="form-control q-sheet-price-per-adult" value="' + esc(state.price_per_adult || '') + '"' +
-            (parseInt(state.price_per_adult_edited, 10) === 1 ? ' data-user-edited="1"' : '') + '>' +
-            '</div></div>';
+        html += '<input type="hidden" class="q-sheet-total-cost" value="0">';
+        html += '<input type="hidden" class="q-sheet-profit-amount" value="' + esc(state.profit_amount || '') + '">';
+        html += '<span class="q-sum-profit d-none" data-display="profit">₹ 0</span>';
+        html += '<span class="q-sum-selling d-none" data-display="selling">₹ 0</span>';
+        html += '<input type="hidden" class="q-sheet-package-total" value="0">';
+        html += '<input type="hidden" class="q-sheet-price-per-adult" value="' + esc(state.price_per_adult || '') + '"' +
+            (parseInt(state.price_per_adult_edited, 10) === 1 ? ' data-user-edited="1"' : '') + '>';
         html += '<input type="hidden" class="q-sheet-quotation-total" value="0">';
-        html += '</div>';
         html += '<span class="q-sheet-adult-lbl d-none">1</span>';
         html += '</div></div>';
         return html;
@@ -2575,12 +2563,6 @@
                 '</div>';
         }
         html += '<div class="q-pricing-row-label q-pricing-add-label"></div>';
-        html += '<div class="q-pricing-labels-summary">';
-        html += '<div class="q-pricing-row-label q-sum-label-row"><i class="fas fa-coins" aria-hidden="true"></i><span>Total Cost</span></div>';
-        html += '<div class="q-pricing-row-label q-sum-label-row q-sum-label-profit"><i class="fas fa-arrow-up" aria-hidden="true"></i><span>Profit (%)</span></div>';
-        html += '<div class="q-pricing-row-label q-sum-label-row"><i class="fas fa-tag" aria-hidden="true"></i><span>Selling Price</span></div>';
-        html += '<div class="q-pricing-row-label q-sum-label-row q-sum-label-ppa"><i class="fas fa-user" aria-hidden="true"></i><span>Price per Adult</span></div>';
-        html += '</div>';
         html += '</div></div>';
         return html;
     }
@@ -2662,6 +2644,263 @@
         return '₹ ' + money(num);
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Tour Cost Pricing card (separate Total Cost)                        */
+    /* ------------------------------------------------------------------ */
+    var qTourCostState = {
+        adult_rate: '',
+        adult_rate_edited: 0,
+        child_rates: [],
+        infant_rate: '',
+        gst_percent: 5
+    };
+    var qTourCostAutoSaveTimer = null;
+
+    function pad2(n) {
+        return (n < 10 ? '0' : '') + n;
+    }
+
+    function defaultTourCostState() {
+        return {
+            adult_rate: '',
+            adult_rate_edited: 0,
+            child_rates: [],
+            infant_rate: '',
+            gst_percent: 5
+        };
+    }
+
+    function readGuestCounts() {
+        var adults = parseInt($('#q_adults').val(), 10);
+        var children = parseInt($('#q_children').val(), 10);
+        if (isNaN(adults) || adults < 1) adults = 1;
+        if (isNaN(children) || children < 0) children = 0;
+        return { adults: adults, children: children };
+    }
+
+    function ensureTourCostChildRates(childCount) {
+        childCount = Math.max(0, parseInt(childCount, 10) || 0);
+        if (!Array.isArray(qTourCostState.child_rates)) {
+            qTourCostState.child_rates = [];
+        }
+        while (qTourCostState.child_rates.length < childCount) {
+            qTourCostState.child_rates.push('');
+        }
+        if (qTourCostState.child_rates.length > childCount) {
+            qTourCostState.child_rates = qTourCostState.child_rates.slice(0, childCount);
+        }
+    }
+
+    function tourCostRowHtml(opts) {
+        opts = opts || {};
+        var icon = opts.icon || 'fas fa-user';
+        var name = opts.name || '';
+        var meta = opts.meta || '';
+        var key = opts.key || '';
+        var rate = opts.rate != null ? opts.rate : '';
+        var amountText = opts.amountText || '₹ 0.00';
+        return '' +
+            '<div class="q-tour-cost-row" data-tour-key="' + esc(key) + '">' +
+            '<div class="q-tour-cost-traveller">' +
+            '<span class="q-tour-cost-avatar" aria-hidden="true"><i class="' + icon + '"></i></span>' +
+            '<div class="q-tour-cost-traveller-text">' +
+            '<span class="q-tour-cost-traveller-name">' + esc(name) + '</span>' +
+            (meta ? '<span class="q-tour-cost-traveller-meta">' + esc(meta) + '</span>' : '') +
+            '</div></div>' +
+            '<div class="q-tour-cost-rate">' +
+            '<span class="q-tour-cost-rate-prefix">₹</span>' +
+            '<input type="number" step="0.01" min="0" class="form-control q-tour-rate-input" data-tour-key="' + esc(key) + '" value="' + esc(rate) + '" placeholder="0.00">' +
+            '</div>' +
+            '<div class="q-tour-cost-amount" data-tour-amount="' + esc(key) + '">' + esc(amountText) + '</div>' +
+            '</div>';
+    }
+
+    function renderTourCostRows() {
+        var $host = $('#qTourCostRows');
+        if (!$host.length) return;
+        var counts = readGuestCounts();
+        ensureTourCostChildRates(counts.children);
+        var html = '';
+        html += tourCostRowHtml({
+            key: 'adult',
+            icon: 'fas fa-user',
+            name: 'Adults',
+            meta: '(' + pad2(counts.adults) + ' Pax)',
+            rate: qTourCostState.adult_rate,
+            amountText: '₹ 0.00'
+        });
+        for (var i = 0; i < counts.children; i++) {
+            html += tourCostRowHtml({
+                key: 'child_' + i,
+                icon: 'fas fa-child',
+                name: 'Child ' + pad2(i + 1),
+                meta: '',
+                rate: qTourCostState.child_rates[i] || '',
+                amountText: '₹ 0.00'
+            });
+        }
+        html += tourCostRowHtml({
+            key: 'infant',
+            icon: 'fas fa-baby',
+            name: 'Infant',
+            meta: '',
+            rate: qTourCostState.infant_rate,
+            amountText: '₹ 0.00'
+        });
+        $host.html(html);
+        recalcTourCostCard();
+    }
+
+    function formatTourMoney(n) {
+        var num = parseFloat(n);
+        if (isNaN(num)) num = 0;
+        return '₹ ' + num.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function snapshotTourCostFromDom() {
+        var counts = readGuestCounts();
+        ensureTourCostChildRates(counts.children);
+        var $adult = $('#qTourCostRows .q-tour-rate-input[data-tour-key="adult"]');
+        if ($adult.length) {
+            qTourCostState.adult_rate = $adult.val() || '';
+        }
+        for (var i = 0; i < counts.children; i++) {
+            var $c = $('#qTourCostRows .q-tour-rate-input[data-tour-key="child_' + i + '"]');
+            if ($c.length) {
+                qTourCostState.child_rates[i] = $c.val() || '';
+            }
+        }
+        var $inf = $('#qTourCostRows .q-tour-rate-input[data-tour-key="infant"]');
+        if ($inf.length) {
+            qTourCostState.infant_rate = $inf.val() || '';
+        }
+    }
+
+    function collectTourCostPayload() {
+        snapshotTourCostFromDom();
+        var counts = readGuestCounts();
+        var adultRate = parseFloat(qTourCostState.adult_rate);
+        if (isNaN(adultRate)) adultRate = 0;
+        var infantRate = parseFloat(qTourCostState.infant_rate);
+        if (isNaN(infantRate)) infantRate = 0;
+        var childRates = [];
+        var childTotal = 0;
+        for (var i = 0; i < counts.children; i++) {
+            var cr = parseFloat(qTourCostState.child_rates[i]);
+            if (isNaN(cr)) cr = 0;
+            childRates.push(cr);
+            childTotal += cr;
+        }
+        var adultTotal = adultRate * counts.adults;
+        var infantTotal = infantRate > 0 ? infantRate : 0;
+        var subtotal = adultTotal + childTotal + infantTotal;
+        var hideGst = $('#q_hide_gst_note').is(':checked');
+        var gstPct = hideGst ? 0 : (parseFloat(qTourCostState.gst_percent) || 5);
+        var gst = subtotal * gstPct / 100;
+        var grand = subtotal + gst;
+        return {
+            adult_rate: qTourCostState.adult_rate,
+            adult_rate_edited: qTourCostState.adult_rate_edited || 0,
+            child_rates: qTourCostState.child_rates.slice(),
+            infant_rate: qTourCostState.infant_rate,
+            adults: counts.adults,
+            children: counts.children,
+            adult_amount: adultTotal,
+            child_amount: childTotal,
+            infant_amount: infantTotal,
+            subtotal: subtotal,
+            gst_percent: gstPct,
+            gst_amount: gst,
+            grand_total: grand,
+            hide_gst: hideGst ? 1 : 0
+        };
+    }
+
+    function recalcTourCostCard() {
+        var payload = collectTourCostPayload();
+        var counts = readGuestCounts();
+        $('#qTourCostRows [data-tour-amount="adult"]').text(formatTourMoney(payload.adult_amount));
+        for (var i = 0; i < counts.children; i++) {
+            var cr = parseFloat(qTourCostState.child_rates[i]);
+            if (isNaN(cr)) cr = 0;
+            $('#qTourCostRows [data-tour-amount="child_' + i + '"]').text(formatTourMoney(cr));
+        }
+        $('#qTourCostRows [data-tour-amount="infant"]').text(formatTourMoney(payload.infant_amount));
+        $('#qTourCostSubtotal').text(formatTourMoney(payload.subtotal));
+        if (payload.hide_gst) {
+            $('#qTourCostGstRow').hide();
+        } else {
+            $('#qTourCostGstRow').show();
+            $('#qTourCostGstPct').text(String(payload.gst_percent || 5));
+            $('#qTourCostGst').text(formatTourMoney(payload.gst_amount));
+        }
+        $('#qTourCostGrand').text(formatTourMoney(payload.grand_total));
+        $('#q_quotation_total').val(money(payload.grand_total));
+        $('#q_package_total').val(money(payload.subtotal));
+        $('#q_price_per_adult').val(qTourCostState.adult_rate || '');
+        $('#q_tour_cost_json').val(JSON.stringify(payload));
+
+        var $active = $('#qPricingSheetsHost .q-pricing-option-sheet.is-active');
+        if (!$active.length) {
+            $active = $('#qPricingSheetsHost .q-pricing-option-sheet').first();
+        }
+        if ($active.length) {
+            $active.find('.q-sheet-price-per-adult').val(qTourCostState.adult_rate || '');
+            if (qTourCostState.adult_rate_edited) {
+                $active.find('.q-sheet-price-per-adult').attr('data-user-edited', '1');
+            }
+            $active.find('.q-sheet-quotation-total').val(money(payload.grand_total));
+            $active.find('.q-sheet-package-total').val(money(payload.subtotal));
+        }
+        return payload;
+    }
+
+    function syncTourCostAdultRateFromSheet(force) {
+        if (!force && parseInt(qTourCostState.adult_rate_edited, 10) === 1) {
+            return;
+        }
+        var $active = $('#qPricingSheetsHost .q-pricing-option-sheet.is-active');
+        if (!$active.length) {
+            $active = $('#qPricingSheetsHost .q-pricing-option-sheet').first();
+        }
+        if (!$active.length) return;
+        var ppa = parseFloat($active.find('.q-sheet-price-per-adult').val());
+        if (isNaN(ppa) || ppa < 0) {
+            return;
+        }
+        qTourCostState.adult_rate = ppa > 0 ? String(ppa) : '';
+        var $input = $('#qTourCostRows .q-tour-rate-input[data-tour-key="adult"]');
+        if ($input.length) {
+            $input.val(qTourCostState.adult_rate);
+        }
+    }
+
+    function markTourCostAutoSaved() {
+        var $badge = $('#qTourCostAutoSave');
+        if (!$badge.length) return;
+        $badge.addClass('is-on');
+        if (qTourCostAutoSaveTimer) {
+            clearTimeout(qTourCostAutoSaveTimer);
+        }
+        qTourCostAutoSaveTimer = setTimeout(function () {
+            $badge.removeClass('is-on');
+        }, 4000);
+    }
+
+    function applyTourCostState(state) {
+        state = state || {};
+        qTourCostState = defaultTourCostState();
+        if (state.adult_rate != null) qTourCostState.adult_rate = state.adult_rate;
+        if (state.adult_rate_edited != null) qTourCostState.adult_rate_edited = parseInt(state.adult_rate_edited, 10) ? 1 : 0;
+        if (Array.isArray(state.child_rates)) qTourCostState.child_rates = state.child_rates.slice();
+        if (state.infant_rate != null) qTourCostState.infant_rate = state.infant_rate;
+        if (state.gst_percent != null) qTourCostState.gst_percent = state.gst_percent;
+        renderTourCostRows();
+    }
+
     function recalcOnePricingSheet($sheet, adults) {
         syncSheetFlightFromServices($sheet);
         syncSheetHotelFromCategory($sheet);
@@ -2686,22 +2925,22 @@
         $sheet.find('.q-sum-profit').text(formatInrDisplay(profit));
         $sheet.find('.q-sheet-adult-lbl').text(adults);
         $('#qPricingSheetsHost .q-matrix-adult-lbl').text(adults);
-        // Selling Price = cost + profit (matches cost sheet UI); package total keeps guest multiplier for save/preview.
         $sheet.find('.q-sum-selling').text(formatInrDisplay(pkgBase));
-        $sheet.find('.q-sheet-package-total').val(money(pkgBase * adults));
+        $sheet.find('.q-sheet-package-total').val(money(pkgBase));
 
         var $ppa = $sheet.find('.q-sheet-price-per-adult');
         var perAdult;
         if ($ppa.attr('data-user-edited') !== '1') {
-            perAdult = pkgBase;
-            $ppa.val(pkgBase > 0 ? Math.round(pkgBase * 100) / 100 : '');
+            perAdult = adults > 0 ? (pkgBase / adults) : pkgBase;
+            perAdult = Math.round(perAdult * 100) / 100;
+            $ppa.val(pkgBase > 0 ? perAdult : '');
         } else {
             perAdult = parseFloat($ppa.val());
         }
         if (!isNaN(perAdult) && perAdult > 0) {
             $sheet.find('.q-sheet-quotation-total').val(money(perAdult * adults));
         } else {
-            $sheet.find('.q-sheet-quotation-total').val(money(pkgBase * adults));
+            $sheet.find('.q-sheet-quotation-total').val(money(pkgBase));
         }
     }
 
@@ -2714,23 +2953,17 @@
             return;
         }
         $('#q_total_cost').val($active.find('.q-sheet-total-cost').val() || '0');
-        $('#q_package_total').val($active.find('.q-sheet-package-total').val() || '0');
-        $('#q_price_per_adult').val($active.find('.q-sheet-price-per-adult').val() || '');
-        if ($active.find('.q-sheet-price-per-adult').attr('data-user-edited') === '1') {
-            $('#q_price_per_adult').attr('data-user-edited', '1');
-        } else {
-            $('#q_price_per_adult').removeAttr('data-user-edited');
-        }
-        $('#q_quotation_total').val(String($active.find('.q-sheet-quotation-total').val() || '0').replace(/,/g, ''));
         $('#q_profit_percent').val($active.find('.q-sheet-profit-percent').val() || '');
         $('#q_profit_amount').val($active.find('.q-sheet-profit-amount').val() || '');
+        syncTourCostAdultRateFromSheet(false);
+        recalcTourCostCard();
     }
 
     function recalcCosts() {
-        var adults = parseInt($('#q_adults').val(), 10);
-        if (isNaN(adults) || adults < 1) adults = 1;
+        var adults = readGuestCounts().adults;
         var $sheets = $('#qPricingSheetsHost .q-pricing-option-sheet');
         if (!$sheets.length) {
+            renderTourCostRows();
             return;
         }
         $sheets.each(function () {
@@ -2776,6 +3009,7 @@
             options: options,
             active_option_id: active ? active.category_id : activeId,
             pricing_notes: $.trim($('#q_pricing_notes').val() || ''),
+            tour_cost: collectTourCostPayload(),
             hotel_categories: {
                 active_category_id: data.active_category_id,
                 options: (function () {
@@ -2808,9 +3042,35 @@
     /* USD converter                                                       */
     /* ------------------------------------------------------------------ */
     var $lastFocusedCost = null;
-    $(document).on('focus', '#qPricingSheetsHost .q-cost, #qPricingSheetsHost .q-sheet-profit-percent, #qPricingSheetsHost .q-sheet-profit-amount, #qPricingSheetsHost .q-sheet-price-per-adult', function () {
+    $(document).on('focus', '#qPricingSheetsHost .q-cost, #qPricingSheetsHost .q-sheet-profit-percent, #qPricingSheetsHost .q-sheet-profit-amount, #qPricingSheetsHost .q-sheet-price-per-adult, #qTourCostRows .q-tour-rate-input', function () {
         $lastFocusedCost = $(this);
         qCalcUpdateTargetLabel();
+    });
+
+    $(document).on('input change', '#qTourCostRows .q-tour-rate-input', function () {
+        var key = String($(this).attr('data-tour-key') || '');
+        snapshotTourCostFromDom();
+        if (key === 'adult') {
+            qTourCostState.adult_rate_edited = 1;
+            var $active = $('#qPricingSheetsHost .q-pricing-option-sheet.is-active');
+            if (!$active.length) {
+                $active = $('#qPricingSheetsHost .q-pricing-option-sheet').first();
+            }
+            if ($active.length) {
+                $active.find('.q-sheet-price-per-adult').val($(this).val() || '').attr('data-user-edited', '1');
+            }
+        }
+        recalcTourCostCard();
+    });
+
+    $(document).on('change input', '#q_adults, #q_children', function () {
+        snapshotTourCostFromDom();
+        renderTourCostRows();
+        recalcCosts();
+    });
+
+    $(document).on('change', '#q_hide_gst_note', function () {
+        recalcTourCostCard();
     });
 
     /* ------------------------------------------------------------------ */
@@ -2918,6 +3178,13 @@
         if ($el.hasClass('q-sheet-profit-percent')) return 'Profit %';
         if ($el.hasClass('q-sheet-profit-amount')) return 'Profit amt';
         if ($el.hasClass('q-sheet-price-per-adult')) return 'Price/Adult';
+        if ($el.hasClass('q-tour-rate-input')) {
+            var tk = String($el.attr('data-tour-key') || '');
+            if (tk === 'adult') return 'Adult rate';
+            if (tk.indexOf('child_') === 0) return 'Child rate';
+            if (tk === 'infant') return 'Infant rate';
+            return 'Tour rate';
+        }
         return key ? key.replace(/_/g, ' ') : 'Cost field';
     }
 
@@ -2925,7 +3192,7 @@
         var $target = $lastFocusedCost && $lastFocusedCost.length && $lastFocusedCost.closest('body').length
             ? $lastFocusedCost
             : $();
-        if ($target.length && !$target.closest('#qPricingSheetsHost').length) {
+        if ($target.length && !$target.closest('#qPricingSheetsHost, #qTourCostRows').length) {
             $target = $();
         }
         if (!$target.length) {
@@ -3814,6 +4081,39 @@
         function buildPreviewTourCostTable(opt, opts) {
             opts = opts || {};
             var editable = !!opts.editable;
+            var tourCost = null;
+            try {
+                var csFull = typeof p.cost_sheet_json === 'string' ? JSON.parse(p.cost_sheet_json || '{}') : (p.cost_sheet || {});
+                if (csFull && csFull.tour_cost) tourCost = csFull.tour_cost;
+            } catch (e) { /* ignore */ }
+            if (tourCost && parseFloat(tourCost.grand_total) > 0) {
+                var blockTc = '<div class="q-preview-section-title">Tour Cost</div>';
+                blockTc += '<table class="q-preview-table q-preview-cost"><tbody>';
+                var adultRate = parseFloat(tourCost.adult_rate) || 0;
+                var adultQty = parseInt(tourCost.adults, 10) || adults;
+                if (adultRate > 0) {
+                    blockTc += '<tr><td>INR ' + esc(money(adultRate)) + ' X ' + esc(adultQty) + ' Adults</td><td>' + esc(money(adultRate * adultQty)) + '</td></tr>';
+                }
+                (tourCost.child_rates || []).forEach(function (cr, ci) {
+                    var rate = parseFloat(cr) || 0;
+                    if (rate > 0) {
+                        blockTc += '<tr><td>INR ' + esc(money(rate)) + ' X Child ' + pad2(ci + 1) + '</td><td>' + esc(money(rate)) + '</td></tr>';
+                    }
+                });
+                var infantRate = parseFloat(tourCost.infant_rate) || 0;
+                if (infantRate > 0) {
+                    blockTc += '<tr><td>INR ' + esc(money(infantRate)) + ' X Infant</td><td>' + esc(money(infantRate)) + '</td></tr>';
+                }
+                if (!parseInt(tourCost.hide_gst, 10) && parseFloat(tourCost.gst_amount) > 0) {
+                    blockTc += '<tr><td>GST (' + esc(String(tourCost.gst_percent || 5)) + '%)</td><td>' + esc(money(tourCost.gst_amount)) + '</td></tr>';
+                }
+                blockTc += '<tr><td><strong>Grand Total</strong></td><td><strong>' + esc(money(tourCost.grand_total)) + '</strong></td></tr>';
+                blockTc += '</tbody></table>';
+                if (opts.showGst && !parseInt(p.hide_gst_note, 10)) {
+                    blockTc += '<div class="q-preview-gst-note">* GST as applicable will be charged extra.</div>';
+                }
+                return blockTc;
+            }
             var ppa = parseFloat(opt && opt.price_per_adult);
             var qt = parseFloat(String((opt && opt.quotation_total) || '').replace(/,/g, ''));
             var pkg = parseFloat(String((opt && opt.package_total) || '').replace(/,/g, ''));
@@ -4433,6 +4733,25 @@
         }
         applyPricingNotes(notesVal);
 
+        var tourCostSrc = null;
+        if (cs.tour_cost && typeof cs.tour_cost === 'object') {
+            tourCostSrc = cs.tour_cost;
+        } else if (draft && draft.cost_sheet && draft.cost_sheet.tour_cost) {
+            tourCostSrc = draft.cost_sheet.tour_cost;
+        } else if (parseFloat(p.price_per_adult) > 0) {
+            tourCostSrc = {
+                adult_rate: p.price_per_adult,
+                adult_rate_edited: 1,
+                child_rates: [],
+                infant_rate: ''
+            };
+        }
+        if (tourCostSrc) {
+            applyTourCostState(tourCostSrc);
+        } else {
+            renderTourCostRows();
+        }
+
         var itineraryMeta = cs.itinerary_meta || {};
         if (draft && draft.cost_sheet && draft.cost_sheet.itinerary_meta) {
             itineraryMeta = draft.cost_sheet.itinerary_meta;
@@ -4450,6 +4769,10 @@
             }
         });
         resumeItineraryRebuild();
+        if (!$('#qTourCostRows .q-tour-cost-row').length) {
+            renderTourCostRows();
+        }
+        recalcCosts();
         saveFormDraftToStorage();
     }
 
@@ -5688,6 +6011,7 @@
                 if (res.id) {
                     $('#q_id').val(res.id);
                 }
+                markTourCostAutoSaved();
                 saveFormDraftToStorage();
                 if (res.id && !window.location.search.match(/[?&]id=/)) {
                     var nextUrl = absUrl('crm/quotation_generator.php?id=' + encodeURIComponent(res.id));
@@ -5865,6 +6189,9 @@
                 } else if (localDraft.pricing_notes != null) {
                     applyPricingNotes(localDraft.pricing_notes);
                 }
+                if (localDraft.cost_sheet && localDraft.cost_sheet.tour_cost) {
+                    applyTourCostState(localDraft.cost_sheet.tour_cost);
+                }
                 renderHotelCategories(resolveHotelsForLoad((localDraft && localDraft.hotels) || []));
                 if (Array.isArray(localDraft.itinerary) && localDraft.itinerary.length) {
                     rebuildItinerary(localDraft.itinerary);
@@ -5876,6 +6203,9 @@
             }
             ensureHotelCategoriesReady();
             renderPricingSheets();
+            if (!$('#qTourCostRows .q-tour-cost-row').length) {
+                renderTourCostRows();
+            }
             recalcCosts();
             restoreWizardStepOnLoad();
             saveFormDraftToStorage();
@@ -5883,6 +6213,9 @@
         ensureHotelCategoriesReady();
         if (!$('#qPricingSheetsHost .q-pricing-option-sheet').length) {
             renderPricingSheets();
+        }
+        if (!$('#qTourCostRows .q-tour-cost-row').length) {
+            renderTourCostRows();
         }
     });
 
