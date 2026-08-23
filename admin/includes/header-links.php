@@ -1,3 +1,35 @@
+<?php
+if (!function_exists('adminThemeResolveForRequest')) {
+    require_once __DIR__ . '/admin_theme.php';
+}
+$mzAdminThemeMode = adminThemeResolveForRequest();
+$mzAdminThemeLoggedIn = !empty($_SESSION['role']) && (string) $_SESSION['role'] === '1';
+if (!function_exists('admin_url') && is_file(__DIR__ . '/../bootstrap.php')) {
+    require_once __DIR__ . '/../bootstrap.php';
+}
+$mzAdminThemeSaveUrl = function_exists('admin_url') ? admin_url('ajax/save_theme_preference.php') : 'ajax/save_theme_preference.php';
+?>
+<script>
+(function () {
+  var storageKey = 'mz.admin.theme';
+  var serverTheme = <?= json_encode($mzAdminThemeMode) ?>;
+  var theme = serverTheme === 'dark' ? 'dark' : 'light';
+  try {
+    var stored = localStorage.getItem(storageKey);
+    if (stored === 'dark' || stored === 'light') {
+      theme = stored;
+    } else {
+      localStorage.setItem(storageKey, theme);
+    }
+  } catch (e) {}
+  document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.style.colorScheme = theme;
+  window.MZ_ADMIN = window.MZ_ADMIN || {};
+  window.MZ_ADMIN.themeSaveUrl = <?= json_encode($mzAdminThemeSaveUrl) ?>;
+  window.MZ_ADMIN.serverTheme = serverTheme === 'dark' ? 'dark' : 'light';
+  window.MZ_ADMIN.loggedIn = <?= json_encode($mzAdminThemeLoggedIn) ?>;
+})();
+</script>
 <!-- Tell the browser to be responsive to screen width -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Font Awesome -->
@@ -27,6 +59,7 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
 <!-- Custom CSS last: system UI font stack overrides AdminLTE -->
 <link rel="stylesheet" href="custom/custom-css.css">
+<link rel="stylesheet" href="custom/theme.css">
 <?php
 $adminSiteSettings = isset($siteSettings) && is_array($siteSettings) ? $siteSettings : [];
 $adminFaviconUrl = adminPanelBrandFromSettings($adminSiteSettings['favicon_path'] ?? '', 'img/icons1.png');

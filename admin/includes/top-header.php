@@ -339,6 +339,11 @@ $mzHeaderRoleLabel = ((string) ($_SESSION['role'] ?? '') === '1') ? 'Administrat
 
   <!-- Right -->
   <ul class="navbar-nav ml-auto">
+    <li class="nav-item d-flex align-items-center">
+      <button type="button" class="nav-link mz-theme-toggle" id="mzThemeToggle" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false">
+        <i class="fas fa-moon"></i>
+      </button>
+    </li>
     <li class="nav-item dropdown profile-dropdown">
       <a href="#" class="nav-link mz-user-trigger" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" title="Account">
         <span class="mz-user-avatar"><?= htmlspecialchars($mzHeaderInitials, ENT_QUOTES, 'UTF-8') ?></span>

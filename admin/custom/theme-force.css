@@ -1,0 +1,1363 @@
+/**
+ * Late-loaded dark theme force overrides.
+ * Wins over page-specific <style> blocks that hardcode light backgrounds.
+ */
+
+[data-theme="dark"] body,
+[data-theme="dark"] .wrapper,
+[data-theme="dark"] .content-wrapper,
+[data-theme="dark"] .content-wrapper > .content,
+[data-theme="dark"] .page-bg,
+[data-theme="dark"] .privilege-page,
+[data-theme="dark"] .privilege-page .content-wrapper,
+[data-theme="dark"] .org-dashboard .content-wrapper > .content {
+    background: var(--mz-theme-bg-page) !important;
+    background-color: var(--mz-theme-bg-page) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper h1,
+[data-theme="dark"] .content-wrapper h2,
+[data-theme="dark"] .content-wrapper h3,
+[data-theme="dark"] .content-wrapper h4,
+[data-theme="dark"] .content-wrapper h5,
+[data-theme="dark"] .content-wrapper .page-title,
+[data-theme="dark"] .content-wrapper .dash-head h1,
+[data-theme="dark"] .content-wrapper .section-head h3 {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .page-subtitle,
+[data-theme="dark"] .content-wrapper .text-muted,
+[data-theme="dark"] .content-wrapper .dash-head .sub,
+[data-theme="dark"] .content-wrapper .section-head p {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+/* Surfaces commonly hardcoded as white */
+[data-theme="dark"] .content-wrapper .card,
+[data-theme="dark"] .content-wrapper .card-header,
+[data-theme="dark"] .content-wrapper .card-body,
+[data-theme="dark"] .content-wrapper .card-footer,
+[data-theme="dark"] .content-wrapper .box,
+[data-theme="dark"] .content-wrapper .box-header,
+[data-theme="dark"] .content-wrapper .box-body,
+[data-theme="dark"] .content-wrapper .small-box,
+[data-theme="dark"] .content-wrapper .info-box,
+[data-theme="dark"] .content-wrapper .callout,
+[data-theme="dark"] .content-wrapper .well,
+[data-theme="dark"] .content-wrapper .jumbotron,
+[data-theme="dark"] .content-wrapper .bg-white,
+[data-theme="dark"] .content-wrapper .bg-light {
+    background: var(--mz-theme-bg-surface) !important;
+    background-color: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .content-wrapper .card-header,
+[data-theme="dark"] .content-wrapper .card-footer,
+[data-theme="dark"] .content-wrapper .box-header {
+    background: var(--mz-theme-bg-elevated) !important;
+}
+
+[data-theme="dark"] .content-wrapper .table,
+[data-theme="dark"] .content-wrapper table {
+    color: var(--mz-theme-text) !important;
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .content-wrapper .table thead th,
+[data-theme="dark"] .content-wrapper table thead th {
+    background: var(--mz-theme-bg-elevated) !important;
+    color: var(--mz-theme-text-muted) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .content-wrapper .table tbody td,
+[data-theme="dark"] .content-wrapper table tbody td {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border-light) !important;
+}
+
+[data-theme="dark"] .content-wrapper .table-hover tbody tr:hover,
+[data-theme="dark"] .content-wrapper .table-hover tbody tr:hover > td,
+[data-theme="dark"] .content-wrapper table tbody tr:hover,
+[data-theme="dark"] .content-wrapper table tbody tr:hover > td {
+    background: rgba(255, 255, 255, 0.03) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .form-control,
+[data-theme="dark"] .content-wrapper .form-control-sm,
+[data-theme="dark"] .content-wrapper .custom-select,
+[data-theme="dark"] .content-wrapper select,
+[data-theme="dark"] .content-wrapper textarea,
+[data-theme="dark"] .content-wrapper input[type="text"],
+[data-theme="dark"] .content-wrapper input[type="email"],
+[data-theme="dark"] .content-wrapper input[type="password"],
+[data-theme="dark"] .content-wrapper input[type="number"],
+[data-theme="dark"] .content-wrapper input[type="search"],
+[data-theme="dark"] .content-wrapper input[type="tel"],
+[data-theme="dark"] .content-wrapper input[type="url"],
+[data-theme="dark"] .content-wrapper input[type="date"],
+[data-theme="dark"] .content-wrapper input[type="datetime-local"],
+[data-theme="dark"] .content-wrapper input[type="time"] {
+    background: var(--mz-theme-input-bg) !important;
+    background-color: var(--mz-theme-input-bg) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .input-group-text,
+[data-theme="dark"] .content-wrapper .custom-file-label {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .content-wrapper label,
+[data-theme="dark"] .content-wrapper .col-form-label {
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .content-wrapper .btn-default,
+[data-theme="dark"] .content-wrapper .btn-light,
+[data-theme="dark"] .content-wrapper .btn-outline-secondary {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .list-group-item {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .nav-tabs .nav-link.active {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .page-link {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .modal-content:not(.bg-black):not(.bg-dark),
+[data-theme="dark"] .modal-content:not(.bg-black):not(.bg-dark) {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal .modal-header:not(.lead-form-hd):not(.modal-header--inverse),
+[data-theme="dark"] .modal .modal-body,
+[data-theme="dark"] .modal .modal-footer {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .modal .modal-title {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal .modal-header.lead-form-hd .modal-title {
+    color: #fff !important;
+}
+
+/* Create Lead modal shell */
+[data-theme="dark"] #leadFormModal .modal-content.lead-form-shell {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] #leadFormModal .modal-body.lead-form-bd {
+    background: var(--mz-theme-bg-page) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadFormModal .lead-form-loading {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] #leadFormModal .crm-card,
+[data-theme="dark"] #leadFormModal .crm-card-hd-blue,
+[data-theme="dark"] #leadFormModal .crm-card-hd-teal,
+[data-theme="dark"] #leadFormModal .crm-card-hd-green,
+[data-theme="dark"] #leadFormModal .form-actions,
+[data-theme="dark"] #leadFormModal .svc-detail-panel {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] #leadFormModal .crm-card-hd-blue,
+[data-theme="dark"] #leadFormModal .crm-card-hd-teal,
+[data-theme="dark"] #leadFormModal .crm-card-hd-green {
+    border-bottom-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] #leadFormModal .crm-card-hd-title,
+[data-theme="dark"] #leadFormModal .svc-detail-hd,
+[data-theme="dark"] #leadFormModal .form-group > label {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadFormModal .crm-card-hd-sub,
+[data-theme="dark"] #leadFormModal .travel-details-empty,
+[data-theme="dark"] #leadFormModal .text-hint {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] #leadFormModal .travel-details-empty {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] #leadFormModal .svc-tile-label {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadFormModal .svc-tile-box {
+    background: var(--mz-theme-input-bg) !important;
+    border-color: var(--mz-theme-input-border) !important;
+}
+
+[data-theme="dark"] #leadFormModal .svc-tile-input:checked + .svc-tile-label {
+    background: rgba(201, 136, 130, 0.1) !important;
+    border-color: rgba(201, 136, 130, 0.4) !important;
+}
+
+[data-theme="dark"] #leadFormModal .form-actions .btn-cancel,
+[data-theme="dark"] #leadFormModal .btn-outline-secondary,
+[data-theme="dark"] .modal .btn-outline-secondary,
+[data-theme="dark"] .modal .btn-secondary,
+[data-theme="dark"] .modal .btn-light,
+[data-theme="dark"] .modal .btn-default {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadFormModal .form-control,
+[data-theme="dark"] #leadFormModal select.form-control,
+[data-theme="dark"] .modal .form-control,
+[data-theme="dark"] .modal .custom-select,
+[data-theme="dark"] .modal select,
+[data-theme="dark"] .modal textarea,
+[data-theme="dark"] .modal input[type="text"],
+[data-theme="dark"] .modal input[type="email"],
+[data-theme="dark"] .modal input[type="number"],
+[data-theme="dark"] .modal input[type="search"],
+[data-theme="dark"] .modal input[type="tel"],
+[data-theme="dark"] .modal input[type="date"],
+[data-theme="dark"] .modal input[type="password"] {
+    background: var(--mz-theme-input-bg) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal label,
+[data-theme="dark"] .modal .col-form-label,
+[data-theme="dark"] .modal .form-group > label {
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .modal .table,
+[data-theme="dark"] .modal .table thead th,
+[data-theme="dark"] .modal .table tbody td,
+[data-theme="dark"] .modal .list-group-item,
+[data-theme="dark"] .modal .card,
+[data-theme="dark"] .modal .card-body,
+[data-theme="dark"] .modal .card-header {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .modal .close {
+    color: var(--mz-theme-text) !important;
+    text-shadow: none !important;
+    opacity: 0.75;
+}
+
+[data-theme="dark"] .modal .modal-header.lead-form-hd .close {
+    color: #fff !important;
+    opacity: 0.95;
+}
+
+[data-theme="dark"] .modal .text-muted,
+[data-theme="dark"] .modal .small.text-muted {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+/* Other common admin modals on Leads */
+[data-theme="dark"] #leadDetailModal .modal-content,
+[data-theme="dark"] #leadAttachmentsModal .modal-content,
+[data-theme="dark"] #leadsColumnSettingsModal .modal-content,
+[data-theme="dark"] #confirmTourModal .modal-content,
+[data-theme="dark"] #deletedLeadsModal .modal-content {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* ——— Lead Contacts ——— */
+[data-theme="dark"] .lead-contacts-page {
+    --lc-border: var(--mz-theme-border);
+    --lc-muted: var(--mz-theme-text-muted);
+    --lc-text: var(--mz-theme-text);
+}
+
+[data-theme="dark"] .lead-contacts-page .content-wrapper,
+[data-theme="dark"] .lead-contacts-page .content-wrapper > .content {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .page-title {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .page-subtitle {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .contacts-card,
+[data-theme="dark"] .lead-contacts-page .lc-toolbar,
+[data-theme="dark"] .lead-contacts-page .table-wrap,
+[data-theme="dark"] .lead-contacts-page .lc-pagination,
+[data-theme="dark"] .lead-contacts-page table.contacts-table {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-summary-strip {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-summary-item {
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-summary-label {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-summary-value {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-summary-item > i {
+    background: rgba(201, 136, 130, 0.16) !important;
+    color: #c98882 !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-summary-item:nth-child(2) > i {
+    background: rgba(167, 139, 212, 0.16) !important;
+    color: #a78bd4 !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-summary-item:nth-child(3) > i {
+    background: rgba(94, 166, 127, 0.16) !important;
+    color: #7fb8a0 !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-summary-item:nth-child(4) > i {
+    background: rgba(201, 165, 110, 0.16) !important;
+    color: #c9a56e !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-filter label {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-toolbar .form-control,
+[data-theme="dark"] .lead-contacts-page .lc-export-btn,
+[data-theme="dark"] .lead-contacts-page .lc-refresh-btn {
+    background: var(--mz-theme-input-bg) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-refresh-btn {
+    color: #c98882 !important;
+    border-color: rgba(201, 136, 130, 0.35) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-export-btn:hover,
+[data-theme="dark"] .lead-contacts-page .lc-refresh-btn:hover {
+    background: var(--mz-theme-bg-elevated) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page table.contacts-table thead th {
+    background: var(--mz-theme-bg-elevated) !important;
+    color: var(--mz-theme-text-muted) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page table.contacts-table tbody td {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border-light) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page table.contacts-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-contact-name,
+[data-theme="dark"] .lead-contacts-page .lc-contact-id {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-contact-email,
+[data-theme="dark"] .lead-contacts-page .lc-family-count {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-avatar {
+    background: var(--mz-theme-bg-muted) !important;
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-badge {
+    background: rgba(94, 166, 127, 0.14) !important;
+    color: #7fb8a0 !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-badge.source-lead {
+    background: rgba(139, 175, 212, 0.14) !important;
+    color: #8bafd4 !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-badge.source-manual {
+    background: rgba(201, 165, 110, 0.14) !important;
+    color: #c9a56e !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-profile-status {
+    background: rgba(94, 166, 127, 0.14) !important;
+    color: #7fb8a0 !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-profile-status.pending {
+    background: rgba(201, 165, 110, 0.14) !important;
+    color: #c9a56e !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-actions .btn {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .lead-contacts-page .lc-actions .btn:hover {
+    background: rgba(201, 136, 130, 0.12) !important;
+    color: #c98882 !important;
+}
+
+[data-theme="dark"] #lcFamilyModal .modal-content,
+[data-theme="dark"] #lcFamilyModal .modal-header,
+[data-theme="dark"] #lcFamilyModal .modal-body,
+[data-theme="dark"] #lcFamilyModal .modal-footer,
+[data-theme="dark"] #lcAttachModal .modal-content,
+[data-theme="dark"] #lcAttachModal .modal-header,
+[data-theme="dark"] #lcAttachModal .modal-body,
+[data-theme="dark"] #lcAttachModal .modal-footer,
+[data-theme="dark"] #lcContactModal .modal-content,
+[data-theme="dark"] #lcContactModal .modal-header,
+[data-theme="dark"] #lcContactModal .modal-body,
+[data-theme="dark"] #lcContactModal .modal-footer {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+/* ——— CRM common pages ——— */
+[data-theme="dark"] .crm-email-master .content-wrapper > .content,
+[data-theme="dark"] .crm-list-page .content-wrapper > .content {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] .dash-card,
+[data-theme="dark"] .dash-panel,
+[data-theme="dark"] .dash-table-card {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .dash-card .card-value {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .dash-filter-select {
+    background: var(--mz-theme-input-bg) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* CRM Users page (.ls-card is custom, not Bootstrap .card) */
+[data-theme="dark"] .crm-users .content-wrapper,
+[data-theme="dark"] .crm-users .content-wrapper > .content {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] .crm-users .ls-card,
+[data-theme="dark"] .crm-users .ls-card-hd,
+[data-theme="dark"] .crm-users .ls-footer,
+[data-theme="dark"] .crm-users .table-wrap,
+[data-theme="dark"] .crm-users table.ls-table,
+[data-theme="dark"] .crm-users table.ls-table tbody td {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .crm-users .ls-card-title,
+[data-theme="dark"] .crm-users .page-title {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .crm-users .ls-card-sub,
+[data-theme="dark"] .crm-users .page-subtitle,
+[data-theme="dark"] .crm-users .ls-footer-summary {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .crm-users table.ls-table thead th {
+    background: var(--mz-theme-bg-elevated) !important;
+    color: var(--mz-theme-text-muted) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .crm-users .btn-ls-filter,
+[data-theme="dark"] .crm-users .btn-user-edit,
+[data-theme="dark"] .crm-users .ls-pager .btn {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .crm-users .user-modal-bd,
+[data-theme="dark"] .crm-users .user-modal-ft {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* ============================================================
+   Universal CRM + admin page dark mode (custom inline styles)
+   ============================================================ */
+
+[data-theme="dark"] .wrapper[class*="crm-"] .content-wrapper,
+[data-theme="dark"] .wrapper[class*="crm-"] .content-wrapper > .content,
+[data-theme="dark"] body[class*="crm-"] .content-wrapper,
+[data-theme="dark"] body[class*="crm-"] .content-wrapper > .content,
+[data-theme="dark"] body.crm-suppliers-page .content-wrapper,
+[data-theme="dark"] body.crm-suppliers-page .content-wrapper > .content {
+    background: var(--mz-theme-bg-page) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .page-bg,
+[data-theme="dark"] .content-wrapper .main-card,
+[data-theme="dark"] .content-wrapper .stat-block {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+    box-shadow: none !important;
+}
+
+/* Common custom card / panel classes */
+[data-theme="dark"] .content-wrapper .ls-card,
+[data-theme="dark"] .content-wrapper .ls-card-hd,
+[data-theme="dark"] .content-wrapper .ls-footer,
+[data-theme="dark"] .content-wrapper .list-card,
+[data-theme="dark"] .content-wrapper .list-card-head,
+[data-theme="dark"] .content-wrapper .list-card-body,
+[data-theme="dark"] .content-wrapper .panel-card,
+[data-theme="dark"] .content-wrapper .filters-head,
+[data-theme="dark"] .content-wrapper .filters-row,
+[data-theme="dark"] .content-wrapper .toolbar-row,
+[data-theme="dark"] .content-wrapper .page-head-block,
+[data-theme="dark"] .content-wrapper .page-head-row,
+[data-theme="dark"] .content-wrapper .dest-row,
+[data-theme="dark"] .content-wrapper .dest-row-head,
+[data-theme="dark"] .content-wrapper .dest-collapse-in,
+[data-theme="dark"] .content-wrapper .dest-city-empty,
+[data-theme="dark"] .content-wrapper .dest-list,
+[data-theme="dark"] .content-wrapper .hotel-card,
+[data-theme="dark"] .content-wrapper .hotel-card-body,
+[data-theme="dark"] .content-wrapper .hotel-card-footer,
+[data-theme="dark"] .content-wrapper .contacts-card,
+[data-theme="dark"] .content-wrapper .lc-toolbar,
+[data-theme="dark"] .content-wrapper .lc-summary-strip,
+[data-theme="dark"] .content-wrapper .supplier-panel,
+[data-theme="dark"] .content-wrapper .supplier-card,
+[data-theme="dark"] .content-wrapper .intake-panel,
+[data-theme="dark"] .content-wrapper .intake-card,
+[data-theme="dark"] .content-wrapper .quotation-panel,
+[data-theme="dark"] .content-wrapper .q-list-card,
+[data-theme="dark"] .content-wrapper .master-panel,
+[data-theme="dark"] .content-wrapper .master-card,
+[data-theme="dark"] .content-wrapper .ss-dest-card,
+[data-theme="dark"] .content-wrapper .addon-card,
+[data-theme="dark"] .content-wrapper .vehicle-card,
+[data-theme="dark"] .content-wrapper .table-wrap,
+[data-theme="dark"] .content-wrapper .dest-hotels-heading {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .content-wrapper .filters-head,
+[data-theme="dark"] .content-wrapper .list-card-head,
+[data-theme="dark"] .content-wrapper .lc-summary-strip,
+[data-theme="dark"] .content-wrapper .hotel-card-footer,
+[data-theme="dark"] .content-wrapper .dest-collapse-in {
+    background: var(--mz-theme-bg-elevated) !important;
+}
+
+[data-theme="dark"] .content-wrapper .page-head-block h1,
+[data-theme="dark"] .content-wrapper .page-head-row h1,
+[data-theme="dark"] .content-wrapper .page-title,
+[data-theme="dark"] .content-wrapper .filters-title,
+[data-theme="dark"] .content-wrapper .list-card-head .card-title,
+[data-theme="dark"] .content-wrapper .ls-card-title,
+[data-theme="dark"] .content-wrapper .dest-name,
+[data-theme="dark"] .content-wrapper .hotel-card-title,
+[data-theme="dark"] .content-wrapper .cruise-name-cell,
+[data-theme="dark"] .content-wrapper .hotel-detail-name {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper .page-head-block .subtitle,
+[data-theme="dark"] .content-wrapper .page-subtitle,
+[data-theme="dark"] .content-wrapper .ls-card-sub,
+[data-theme="dark"] .content-wrapper .dest-stats,
+[data-theme="dark"] .content-wrapper .showing-meta,
+[data-theme="dark"] .content-wrapper .desc-cell,
+[data-theme="dark"] .content-wrapper .hotel-card-meta,
+[data-theme="dark"] .content-wrapper .hotel-card-address,
+[data-theme="dark"] .content-wrapper .breadcrumbs,
+[data-theme="dark"] .content-wrapper .breadcrumbs .bc-muted,
+[data-theme="dark"] .content-wrapper .breadcrumbs a {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .content-wrapper .breadcrumbs a:hover {
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .content-wrapper .dest-toggle,
+[data-theme="dark"] .content-wrapper .btn-ls-filter,
+[data-theme="dark"] .content-wrapper .btn-ls-export,
+[data-theme="dark"] .content-wrapper .lc-export-btn,
+[data-theme="dark"] .content-wrapper .lc-refresh-btn,
+[data-theme="dark"] .content-wrapper .supplier-tool-btn,
+[data-theme="dark"] .content-wrapper .btn-view-city-hotels,
+[data-theme="dark"] .content-wrapper .search-wrap .btn-search-ico {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .content-wrapper .dest-toggle:hover,
+[data-theme="dark"] .content-wrapper .btn-ls-filter:hover,
+[data-theme="dark"] .content-wrapper .supplier-tool-btn:hover {
+    background: var(--mz-theme-bg-muted) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .content-wrapper table,
+[data-theme="dark"] .content-wrapper .table,
+[data-theme="dark"] .content-wrapper table.ls-table,
+[data-theme="dark"] .content-wrapper table.city-master-table,
+[data-theme="dark"] .content-wrapper .table-cruises,
+[data-theme="dark"] .content-wrapper .master-table {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .content-wrapper table thead th,
+[data-theme="dark"] .content-wrapper .table thead th {
+    background: var(--mz-theme-bg-elevated) !important;
+    color: var(--mz-theme-text-muted) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .content-wrapper table tbody td,
+[data-theme="dark"] .content-wrapper .table tbody td {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border-light) !important;
+}
+
+[data-theme="dark"] .content-wrapper table tbody tr:hover td,
+[data-theme="dark"] .content-wrapper .table tbody tr:hover td,
+[data-theme="dark"] .content-wrapper table tbody tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.025) !important;
+}
+
+[data-theme="dark"] .content-wrapper .thumb-placeholder {
+    background: var(--mz-theme-bg-muted) !important;
+    color: var(--mz-theme-text-muted) !important;
+}
+
+/* ——— Lead detail drawer ——— */
+[data-theme="dark"] #leadDetailModal.lead-expand-drawer .modal-content,
+[data-theme="dark"] #leadDetailModal .modal-content {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadDetailModal.lead-expand-drawer .modal-header,
+[data-theme="dark"] #leadDetailModal .modal-header {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadDetailModal.lead-expand-drawer .modal-body,
+[data-theme="dark"] #leadDetailModal .modal-body {
+    background: var(--mz-theme-bg-page) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadDetailModal.lead-expand-drawer .modal-footer,
+[data-theme="dark"] #leadDetailModal .modal-footer {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] #leadDetailModal .lead-detail-block {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] #leadDetailModal .lead-detail-block-hd {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadDetailModal .lead-detail-sub,
+[data-theme="dark"] #leadDetailModal .lead-detail-item-label {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] #leadDetailModal .lead-detail-item {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] #leadDetailModal .lead-detail-item-value,
+[data-theme="dark"] #leadDetailModal .lead-detail-key {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadDetailModal .lead-detail-table th,
+[data-theme="dark"] #leadDetailModal .lead-detail-table td {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border-light) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #leadDetailModal .lead-detail-table th {
+    background: var(--mz-theme-bg-elevated) !important;
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] #leadDetailModal .lead-detail-table tbody tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* ——— Hotel / Cruise / master modals ——— */
+[data-theme="dark"] #hotelDetailModal .hotel-detail-bd,
+[data-theme="dark"] #hotelDetailModal .hotel-detail-section,
+[data-theme="dark"] #hotelDetailModal .hotel-detail-ft,
+[data-theme="dark"] #cruiseFormModal .modal-body.cruise-modal-bd,
+[data-theme="dark"] #cruiseFormModal .cruise-info-panel,
+[data-theme="dark"] #cruiseFormModal .cruise-empty-box,
+[data-theme="dark"] #cruiseFormModal .modal-footer.cruise-form-ft,
+[data-theme="dark"] #cruiseViewModal .modal-body.cruise-view-bd,
+[data-theme="dark"] #cruiseViewModal .modal-footer.cruise-view-ft,
+[data-theme="dark"] #deletedLeadsModal .modal-content,
+[data-theme="dark"] #deletedLeadsModal .deleted-leads-toolbar,
+[data-theme="dark"] #leadAttachmentsModal .lead-attachments-upload,
+[data-theme="dark"] #leadAttachmentsModal .lead-attachments-list {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #hotelDetailModal .hotel-detail-chip {
+    background: var(--mz-theme-bg-muted) !important;
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] #cruiseFormModal .cruise-modal-bd label,
+[data-theme="dark"] #cruiseViewModal .cruise-view-table th,
+[data-theme="dark"] #cruiseViewModal .cruise-view-desc {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #cruiseViewModal .cruise-view-table th {
+    background: var(--mz-theme-bg-elevated) !important;
+}
+
+[data-theme="dark"] #cruiseViewModal .cruise-view-table td {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border-light) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #cruiseFormModal .cruise-room-line,
+[data-theme="dark"] #cruiseFormModal .cruise-room-line .input-group-text,
+[data-theme="dark"] #cruiseFormModal .btn-cruise-ghost,
+[data-theme="dark"] #cruiseViewModal .btn-cruise-ghost {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal .alert {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal .alert-danger {
+    background: rgba(201, 136, 130, 0.12) !important;
+    border-color: rgba(201, 136, 130, 0.3) !important;
+    color: #d9a39d !important;
+}
+
+[data-theme="dark"] .modal .alert-success {
+    background: rgba(94, 166, 127, 0.12) !important;
+    border-color: rgba(94, 166, 127, 0.28) !important;
+    color: #7fb8a0 !important;
+}
+
+[data-theme="dark"] .modal .alert-warning {
+    background: rgba(201, 165, 110, 0.12) !important;
+    border-color: rgba(201, 165, 110, 0.28) !important;
+    color: #c9a56e !important;
+}
+
+[data-theme="dark"] .modal .alert-info {
+    background: rgba(139, 175, 212, 0.12) !important;
+    border-color: rgba(139, 175, 212, 0.28) !important;
+    color: #8bafd4 !important;
+}
+
+/* ——— Suppliers page (class on body) ——— */
+[data-theme="dark"] .crm-suppliers-page .supplier-title {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .crm-suppliers-page .supplier-subtitle,
+[data-theme="dark"] .crm-suppliers-page .supplier-kpi-label {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .crm-suppliers-page .supplier-kpi,
+[data-theme="dark"] .crm-suppliers-page .supplier-table-footer,
+[data-theme="dark"] .crm-suppliers-page .supplier-table-scroll,
+[data-theme="dark"] .crm-suppliers-page table,
+[data-theme="dark"] .crm-suppliers-page table tbody td,
+[data-theme="dark"] .crm-suppliers-page table thead th {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .crm-suppliers-page table thead th {
+    background: var(--mz-theme-bg-elevated) !important;
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .crm-suppliers-page .supplier-search input,
+[data-theme="dark"] .crm-suppliers-page .supplier-filter,
+[data-theme="dark"] .crm-suppliers-page .supplier-tool-btn {
+    background: var(--mz-theme-input-bg) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .crm-suppliers-page .supplier-status.active {
+    background: rgba(94, 166, 127, 0.14) !important;
+    color: #7fb8a0 !important;
+}
+
+[data-theme="dark"] .crm-suppliers-page .supplier-status.inactive {
+    background: rgba(201, 136, 130, 0.14) !important;
+    color: #c98882 !important;
+}
+
+[data-theme="dark"] #supplierModal .supplier-modal-content,
+[data-theme="dark"] #supplierModal .supplier-modal-body,
+[data-theme="dark"] #supplierModal .supplier-modal-footer,
+[data-theme="dark"] #supplierModal .supplier-services-control,
+[data-theme="dark"] #supplierModal .supplier-of-panel,
+[data-theme="dark"] #supplierModal .btn-supplier-cancel {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #supplierModal .supplier-modal-header {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #supplierModal .supplier-modal-body label {
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .privilege-page .content-wrapper,
+[data-theme="dark"] .privilege-page .content-wrapper > .content {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] .privilege-page .priv-card,
+[data-theme="dark"] .privilege-page .priv-table-wrap,
+[data-theme="dark"] .privilege-page .priv-filter-bar {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* ============================================================
+   UNIVERSAL MODAL DARK MODE — all admin / CRM modals
+   ============================================================ */
+
+[data-theme="dark"] .modal .modal-content:not(.bg-black):not(.bg-dark),
+[data-theme="dark"] .modal .modal-dialog > .modal-content {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .modal .modal-body,
+[data-theme="dark"] .modal [class*="-modal-bd"],
+[data-theme="dark"] .modal [class*="-form-bd"],
+[data-theme="dark"] .modal [class*="-view-bd"] {
+    background: var(--mz-theme-bg-page) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal .modal-footer,
+[data-theme="dark"] .modal [class*="-form-ft"],
+[data-theme="dark"] .modal [class*="-view-ft"],
+[data-theme="dark"] .modal [class*="-modal-ft"],
+[data-theme="dark"] .modal [class*="-modal-footer"] {
+    background: var(--mz-theme-bg-surface) !important;
+    border-top-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* Keep colored gradient headers readable */
+[data-theme="dark"] .modal .modal-header[class*="-form-hd"],
+[data-theme="dark"] .modal .modal-header[class*="-view-hd"],
+[data-theme="dark"] .modal .modal-header[class*="-modal-hd"],
+[data-theme="dark"] .modal .modal-header.lead-form-hd,
+[data-theme="dark"] .modal .modal-header.hotel-form-hd,
+[data-theme="dark"] .modal .modal-header.cruise-form-hd,
+[data-theme="dark"] .modal .modal-header.cruise-view-hd,
+[data-theme="dark"] .modal .modal-header.ss-form-hd,
+[data-theme="dark"] .modal .modal-header.user-modal-hd {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .modal .modal-header[class*="-form-hd"] .modal-title,
+[data-theme="dark"] .modal .modal-header[class*="-view-hd"] .modal-title,
+[data-theme="dark"] .modal .modal-header[class*="-modal-hd"] .modal-title,
+[data-theme="dark"] .modal .modal-header[class*="-form-hd"] .close,
+[data-theme="dark"] .modal .modal-header[class*="-view-hd"] .close,
+[data-theme="dark"] .modal .modal-header[class*="-modal-hd"] .close,
+[data-theme="dark"] .modal .modal-header.lead-form-hd .modal-title,
+[data-theme="dark"] .modal .modal-header.lead-form-hd .close {
+    color: #fff !important;
+}
+
+/* Inner white cards / panels / empty states */
+[data-theme="dark"] .modal [class*="-info-card"],
+[data-theme="dark"] .modal [class*="-info-panel"],
+[data-theme="dark"] .modal [class*="-sub-card"],
+[data-theme="dark"] .modal [class*="-empty-box"],
+[data-theme="dark"] .modal [class*="-line-item"],
+[data-theme="dark"] .modal [class*="-detail-section"],
+[data-theme="dark"] .modal [class*="-detail-block"],
+[data-theme="dark"] .modal [class*="-detail-item"],
+[data-theme="dark"] .modal .crm-card,
+[data-theme="dark"] .modal .card,
+[data-theme="dark"] .modal .card-body,
+[data-theme="dark"] .modal .card-header,
+[data-theme="dark"] .modal .card-footer,
+[data-theme="dark"] .modal .list-group-item,
+[data-theme="dark"] .modal .well,
+[data-theme="dark"] .modal .bg-white,
+[data-theme="dark"] .modal .bg-light {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .modal [class*="-info-card-bd"],
+[data-theme="dark"] .modal [class*="-sub-card-bd"],
+[data-theme="dark"] .modal [class*="-info-panel-bd"] {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* Keep colored section headers (blue/green/teal bars) */
+[data-theme="dark"] .modal [class*="-panel-hd-blue"],
+[data-theme="dark"] .modal [class*="-panel-hd-green"],
+[data-theme="dark"] .modal [class*="-panel-hd-teal"],
+[data-theme="dark"] .modal [class*="panel-hd-blue"],
+[data-theme="dark"] .modal [class*="panel-hd-green"],
+[data-theme="dark"] .modal [class*="panel-hd-teal"] {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .modal [class*="-panel-hd-blue"] {
+    background: #2563eb !important;
+}
+
+[data-theme="dark"] .modal [class*="-panel-hd-green"] {
+    background: #16a34a !important;
+}
+
+[data-theme="dark"] .modal [class*="-panel-hd-teal"] {
+    background: #0d9488 !important;
+}
+
+/* Labels, hints, help text */
+[data-theme="dark"] .modal label,
+[data-theme="dark"] .modal .col-form-label,
+[data-theme="dark"] .modal .form-group > label,
+[data-theme="dark"] .modal [class*="-modal-bd"] label,
+[data-theme="dark"] .modal [class*="-form-bd"] label {
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .modal .text-help,
+[data-theme="dark"] .modal .text-hint,
+[data-theme="dark"] .modal .text-muted,
+[data-theme="dark"] .modal .form-text,
+[data-theme="dark"] .modal .small,
+[data-theme="dark"] .modal [class*="-empty-box"] {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .modal .text-tip {
+    color: #7fb8a0 !important;
+}
+
+[data-theme="dark"] .modal .text-disclaimer {
+    color: #c98882 !important;
+}
+
+/* Form controls inside any modal */
+[data-theme="dark"] .modal .form-control,
+[data-theme="dark"] .modal .form-control-sm,
+[data-theme="dark"] .modal .custom-select,
+[data-theme="dark"] .modal select,
+[data-theme="dark"] .modal textarea,
+[data-theme="dark"] .modal input[type="text"],
+[data-theme="dark"] .modal input[type="email"],
+[data-theme="dark"] .modal input[type="password"],
+[data-theme="dark"] .modal input[type="number"],
+[data-theme="dark"] .modal input[type="search"],
+[data-theme="dark"] .modal input[type="tel"],
+[data-theme="dark"] .modal input[type="url"],
+[data-theme="dark"] .modal input[type="date"],
+[data-theme="dark"] .modal input[type="datetime-local"],
+[data-theme="dark"] .modal input[type="time"],
+[data-theme="dark"] .modal input[type="file"],
+[data-theme="dark"] .modal .custom-file-label,
+[data-theme="dark"] .modal .custom-file-label::after,
+[data-theme="dark"] .modal .input-group-text {
+    background: var(--mz-theme-input-bg) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal .form-control:focus,
+[data-theme="dark"] .modal .custom-select:focus {
+    background: var(--mz-theme-input-bg) !important;
+    border-color: rgba(139, 175, 212, 0.55) !important;
+    color: var(--mz-theme-text) !important;
+    box-shadow: 0 0 0 0.15rem rgba(139, 175, 212, 0.15) !important;
+}
+
+[data-theme="dark"] .modal .form-control::placeholder {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+/* Ghost / cancel / secondary buttons */
+[data-theme="dark"] .modal [class*="btn-"][class*="-ghost"],
+[data-theme="dark"] .modal [class*="btn-"][class*="-cancel"],
+[data-theme="dark"] .modal .btn-outline-secondary,
+[data-theme="dark"] .modal .btn-secondary,
+[data-theme="dark"] .modal .btn-light,
+[data-theme="dark"] .modal .btn-default,
+[data-theme="dark"] .modal .btn-cancel {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal [class*="btn-"][class*="-ghost"]:hover,
+[data-theme="dark"] .modal [class*="btn-"][class*="-cancel"]:hover,
+[data-theme="dark"] .modal .btn-outline-secondary:hover,
+[data-theme="dark"] .modal .btn-secondary:hover,
+[data-theme="dark"] .modal .btn-light:hover,
+[data-theme="dark"] .modal .btn-default:hover,
+[data-theme="dark"] .modal .btn-cancel:hover {
+    background: var(--mz-theme-bg-muted) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* Tables inside modals */
+[data-theme="dark"] .modal table,
+[data-theme="dark"] .modal .table,
+[data-theme="dark"] .modal [class*="-view-table"],
+[data-theme="dark"] .modal [class*="-detail-table"] {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .modal table thead th,
+[data-theme="dark"] .modal .table thead th,
+[data-theme="dark"] .modal table th,
+[data-theme="dark"] .modal .table th {
+    background: var(--mz-theme-bg-elevated) !important;
+    color: var(--mz-theme-text-secondary) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .modal table tbody td,
+[data-theme="dark"] .modal .table tbody td,
+[data-theme="dark"] .modal table td,
+[data-theme="dark"] .modal .table td {
+    background: var(--mz-theme-bg-surface) !important;
+    color: var(--mz-theme-text) !important;
+    border-color: var(--mz-theme-border-light) !important;
+}
+
+/* Combobox / autocomplete menus inside modals */
+[data-theme="dark"] .modal [class*="-menu"],
+[data-theme="dark"] .modal [class*="-dropdown"],
+[data-theme="dark"] .modal .dropdown-menu,
+[data-theme="dark"] .modal .tp-rg-panel,
+[data-theme="dark"] .modal .tp-destination-menu,
+[data-theme="dark"] .modal .lead-contact-menu,
+[data-theme="dark"] .modal .select2-dropdown {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal [class*="-item"],
+[data-theme="dark"] .modal [class*="-dest-item"],
+[data-theme="dark"] .modal [class*="-city-item"],
+[data-theme="dark"] .modal .dropdown-item {
+    color: var(--mz-theme-text) !important;
+    background: transparent !important;
+}
+
+[data-theme="dark"] .modal [class*="-item"]:hover,
+[data-theme="dark"] .modal [class*="-item"]:focus,
+[data-theme="dark"] .modal .dropdown-item:hover,
+[data-theme="dark"] .modal .dropdown-item:focus {
+    background: var(--mz-theme-bg-muted) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] .modal [class*="-empty"] {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+/* Line items / dynamic rows */
+[data-theme="dark"] .modal [class*="-line-item"],
+[data-theme="dark"] .modal [class*="-room-line"],
+[data-theme="dark"] .modal [class*="-dynamic"] {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* Summernote inside modals */
+[data-theme="dark"] .modal .note-editor.note-frame {
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .modal .note-editor .note-toolbar,
+[data-theme="dark"] .modal .note-editor .note-statusbar {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] .modal .note-editor .note-editing-area .note-editable {
+    background: var(--mz-theme-input-bg) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* ——— Explicit hotel / cruise / sightseeing / airline / vehicle / city ——— */
+[data-theme="dark"] #hotelFormModal .modal-content.hotel-form-shell,
+[data-theme="dark"] #hotelFormModal .modal-body.hotel-modal-bd,
+[data-theme="dark"] #hotelFormModal .hotel-info-card,
+[data-theme="dark"] #hotelFormModal .hotel-info-card-bd,
+[data-theme="dark"] #hotelFormModal .hotel-sub-card,
+[data-theme="dark"] #hotelFormModal .hotel-sub-card-bd,
+[data-theme="dark"] #hotelFormModal .hotel-empty-box,
+[data-theme="dark"] #hotelFormModal .hotel-line-item,
+[data-theme="dark"] #hotelFormModal .modal-footer.hotel-form-ft {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #hotelFormModal .modal-body.hotel-modal-bd {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] #hotelFormModal .hotel-modal-bd label {
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] #hotelFormModal .btn-hotel-ghost {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #hotelFormModal .hotel-line-item .input-group-text {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] #hotelFormModal .hotel-dest-menu,
+[data-theme="dark"] #hotelFormModal .hotel-city-menu {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+}
+
+[data-theme="dark"] #hotelFormModal .hotel-dest-item,
+[data-theme="dark"] #hotelFormModal .hotel-city-item {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #hotelFormModal .hotel-dest-item:hover,
+[data-theme="dark"] #hotelFormModal .hotel-city-item:hover {
+    background: var(--mz-theme-bg-muted) !important;
+}
+
+[data-theme="dark"] #hotelDetailModal .hotel-detail-bd,
+[data-theme="dark"] #hotelDetailModal .hotel-detail-section,
+[data-theme="dark"] #hotelDetailModal .hotel-detail-ft {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #cruiseFormModal .modal-body.cruise-modal-bd,
+[data-theme="dark"] #cruiseFormModal .cruise-info-panel,
+[data-theme="dark"] #cruiseFormModal .cruise-empty-box,
+[data-theme="dark"] #cruiseFormModal .cruise-room-line,
+[data-theme="dark"] #cruiseFormModal .modal-footer.cruise-form-ft,
+[data-theme="dark"] #cruiseViewModal .modal-body.cruise-view-bd,
+[data-theme="dark"] #cruiseViewModal .modal-footer.cruise-view-ft {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #cruiseFormModal .modal-body.cruise-modal-bd,
+[data-theme="dark"] #cruiseViewModal .modal-body.cruise-view-bd {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] #ssFormModal .ss-info-card,
+[data-theme="dark"] #ssFormModal .modal-body.ss-modal-bd,
+[data-theme="dark"] #ssFormModal .modal-footer.ss-form-ft,
+[data-theme="dark"] #ssDestViewModal .modal-body.ss-dest-view-bd,
+[data-theme="dark"] #ssItemViewModal .modal-body.ss-item-view-bd {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #ssFormModal .modal-body.ss-modal-bd,
+[data-theme="dark"] #ssDestViewModal .modal-body.ss-dest-view-bd,
+[data-theme="dark"] #ssItemViewModal .modal-body.ss-item-view-bd {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] #ssFormModal .btn-ss-ghost,
+[data-theme="dark"] #ssDestViewModal .btn-ss-ghost,
+[data-theme="dark"] #ssItemViewModal .btn-ss-ghost,
+[data-theme="dark"] #cruiseFormModal .btn-cruise-ghost,
+[data-theme="dark"] #cruiseViewModal .btn-cruise-ghost {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* Airline / vehicle / city / addon / testimonial form modals — shared patterns */
+[data-theme="dark"] [id$="FormModal"] .modal-body,
+[data-theme="dark"] [id$="FormModal"] .modal-footer,
+[data-theme="dark"] [id$="ViewModal"] .modal-body,
+[data-theme="dark"] [id$="ViewModal"] .modal-footer,
+[data-theme="dark"] [id$="DetailModal"] .modal-body,
+[data-theme="dark"] [id$="DetailModal"] .modal-footer {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] [id$="FormModal"] .modal-body,
+[data-theme="dark"] [id$="ViewModal"] .modal-body,
+[data-theme="dark"] [id$="DetailModal"] .modal-body {
+    background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] [id$="FormModal"] [class*="-info-card"],
+[data-theme="dark"] [id$="FormModal"] [class*="-empty-box"],
+[data-theme="dark"] [id$="FormModal"] [class*="-sub-card"],
+[data-theme="dark"] [id$="FormModal"] [class*="-line-item"] {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+/* Custom file browse button + checkbox labels */
+[data-theme="dark"] .modal .custom-control-label,
+[data-theme="dark"] .modal .custom-checkbox label,
+[data-theme="dark"] .modal .form-check-label {
+    color: var(--mz-theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .modal .close:not(.text-white) {
+    color: var(--mz-theme-text) !important;
+    text-shadow: none !important;
+    opacity: 0.75;
+}

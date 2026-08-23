@@ -37,8 +37,11 @@ if ($adminFooterPage === 'dashboard.php') :
 <?php endif; ?>
 <!-- AdminLTE for demo purposes -->
 <script src="dist/js/demo.js"></script>
+<!-- Theme force (after page styles) so dark mode wins over hardcoded light CSS -->
+<link rel="stylesheet" href="custom/theme-force.css">
 <!-- Custom JS -->
 <script src="custom/custom-js.js"></script>
+<script src="custom/theme.js"></script>
 
 <!-- DataTables -->
 <script src="plugins/datatables/jquery.dataTables.min.js"></script>

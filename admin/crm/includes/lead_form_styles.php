@@ -1439,4 +1439,185 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
     font-size: 0.78rem;
     color: #64748b;
 }
+
+/* ——— Dark mode (Create Lead page + modal embed) ——— */
+[data-theme="dark"] <?= $scope ?> .crm-card,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-blue,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-teal,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-green,
+[data-theme="dark"] <?= $scope ?> .crm-card-bd,
+[data-theme="dark"] <?= $scope ?> .form-actions,
+[data-theme="dark"] <?= $scope ?> .svc-detail-panel {
+    background: var(--mz-theme-bg-surface, #22252d) !important;
+    border-color: var(--mz-theme-border, #3a404d) !important;
+    color: var(--mz-theme-text, #b8c0cc) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-blue,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-teal,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-green {
+    border-bottom-color: var(--mz-theme-border, #3a404d) !important;
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-blue .crm-card-hd-title,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-teal .crm-card-hd-title,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-green .crm-card-hd-title {
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-blue .crm-card-hd-title i,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-teal .crm-card-hd-title i,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-green .crm-card-hd-title i,
+[data-theme="dark"] <?= $scope ?> .svc-detail-hd i {
+    color: #c98882 !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-blue .crm-card-hd-title::after,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-teal .crm-card-hd-title::after,
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-green .crm-card-hd-title::after {
+    background: #c98882 !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .crm-card-hd-sub,
+[data-theme="dark"] <?= $scope ?> .text-hint,
+[data-theme="dark"] <?= $scope ?> .lead-contact-empty,
+[data-theme="dark"] <?= $scope ?> .lead-contact-item-meta {
+    color: var(--mz-theme-text-muted, #7a8494) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .form-group > label,
+[data-theme="dark"] <?= $scope ?> .form-label-bold,
+[data-theme="dark"] <?= $scope ?> .svc-detail-hd,
+[data-theme="dark"] <?= $scope ?> .tp-rg-row-label strong,
+[data-theme="dark"] <?= $scope ?> .lead-contact-item-title {
+    color: var(--mz-theme-text-secondary, #9aa3b2) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .form-control,
+[data-theme="dark"] <?= $scope ?> .custom-select,
+[data-theme="dark"] <?= $scope ?> .tp-rg-trigger,
+[data-theme="dark"] <?= $scope ?> .tp-destination-field,
+[data-theme="dark"] <?= $scope ?> .itinerary-day-dest-badge,
+[data-theme="dark"] <?= $scope ?> select.form-control {
+    background: var(--mz-theme-input-bg, #1e2128) !important;
+    border-color: var(--mz-theme-input-border, #454b58) !important;
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .form-control:focus {
+    border-color: rgba(201, 136, 130, 0.55) !important;
+    box-shadow: 0 0 0 0.15rem rgba(201, 136, 130, 0.15) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .lead-field-icon-glyph {
+    color: var(--mz-theme-text-muted, #7a8494) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .traveler-grid {
+    background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+    border-color: var(--mz-theme-border, #3a404d) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .travel-details-empty {
+    background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+    border-color: var(--mz-theme-border, #3a404d) !important;
+    color: var(--mz-theme-text-muted, #7a8494) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .svc-tile-label {
+    background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+    border-color: var(--mz-theme-border, #3a404d) !important;
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .svc-tile-label i {
+    color: var(--mz-theme-text-muted, #7a8494) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .svc-tile-box {
+    background: var(--mz-theme-input-bg, #1e2128) !important;
+    border-color: var(--mz-theme-input-border, #454b58) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .svc-tile-input:checked + .svc-tile-label {
+    background: rgba(201, 136, 130, 0.1) !important;
+    border-color: rgba(201, 136, 130, 0.4) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .svc-tile-input:checked + .svc-tile-label i {
+    color: #c98882 !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .form-actions .btn-cancel {
+    background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+    border-color: var(--mz-theme-border, #3a404d) !important;
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .form-actions .btn-cancel:hover {
+    background: var(--mz-theme-bg-muted, #323744) !important;
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-rg-panel,
+[data-theme="dark"] <?= $scope ?> .tp-rg-child-ages-popup,
+[data-theme="dark"] <?= $scope ?> .tp-destination-menu,
+[data-theme="dark"] <?= $scope ?> .lead-contact-menu,
+[data-theme="dark"] <?= $scope ?> .tp-rg-stepper {
+    background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+    border-color: var(--mz-theme-border, #3a404d) !important;
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-rg-child-ages-popup-bd {
+    background: var(--mz-theme-bg-muted, #323744) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-rg-child-ages-popup-hd,
+[data-theme="dark"] <?= $scope ?> .tp-rg-row-label strong {
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-rg-row-label small,
+[data-theme="dark"] <?= $scope ?> .tp-rg-close {
+    color: var(--mz-theme-text-muted, #7a8494) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-rg-panel-hd,
+[data-theme="dark"] <?= $scope ?> .svc-detail-hd {
+    border-bottom-color: var(--mz-theme-border, #3a404d) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .lead-contact-item {
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .lead-contact-item:hover,
+[data-theme="dark"] <?= $scope ?> .lead-contact-item:focus {
+    background: var(--mz-theme-bg-muted, #323744) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-destination-tag {
+    background: rgba(139, 175, 212, 0.14) !important;
+    color: #8bafd4 !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-destination-tag-remove {
+    color: #8bafd4 !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-destination-search {
+    color: var(--mz-theme-text, #b8c0cc) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .tp-destination-field.is-disabled {
+    background: var(--mz-theme-bg-muted, #323744) !important;
+}
+
+[data-theme="dark"] <?= $scope ?> .itinerary-card-hd .js-itinerary-collapse-toggle {
+    background: var(--mz-theme-bg-muted, #323744) !important;
+    color: var(--mz-theme-text-muted, #7a8494) !important;
+}
 </style>

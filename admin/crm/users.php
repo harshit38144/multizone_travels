@@ -691,6 +691,153 @@ unset($_SESSION['crm_user_flash'], $_SESSION['crm_user_flash_type']);
             .crm-users .ls-toolbar { width: 100%; }
             .crm-users .ls-search { flex: 1 1 auto; min-width: 0; }
         }
+
+        /* ——— Dark mode ——— */
+        [data-theme="dark"] .crm-users .content-wrapper,
+        [data-theme="dark"] .crm-users .content-wrapper > .content {
+            background: var(--mz-theme-bg-page, #1a1d24) !important;
+        }
+        [data-theme="dark"] .crm-users .page-title {
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users .page-subtitle,
+        [data-theme="dark"] .crm-users .ls-card-sub,
+        [data-theme="dark"] .crm-users .breadcrumbs,
+        [data-theme="dark"] .crm-users .breadcrumbs a {
+            color: var(--mz-theme-text-muted, #7a8494) !important;
+        }
+        [data-theme="dark"] .crm-users .breadcrumbs a:hover {
+            color: var(--mz-theme-text-secondary, #9aa3b2) !important;
+        }
+        [data-theme="dark"] .crm-users .ls-card {
+            background: var(--mz-theme-bg-surface, #22252d) !important;
+            border-color: var(--mz-theme-border, #3a404d) !important;
+            box-shadow: none !important;
+        }
+        [data-theme="dark"] .crm-users .ls-card-hd,
+        [data-theme="dark"] .crm-users .ls-footer,
+        [data-theme="dark"] .crm-users .table-wrap {
+            background: var(--mz-theme-bg-surface, #22252d) !important;
+            border-color: var(--mz-theme-border, #3a404d) !important;
+        }
+        [data-theme="dark"] .crm-users .ls-card-title {
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users .ls-card-icon {
+            background: rgba(201, 136, 130, 0.16) !important;
+            color: #c98882 !important;
+        }
+        [data-theme="dark"] .crm-users .ls-search .form-control {
+            background: var(--mz-theme-input-bg, #1e2128) !important;
+            border-color: var(--mz-theme-input-border, #454b58) !important;
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users .btn-ls-filter {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--mz-theme-border, #3a404d) !important;
+            color: var(--mz-theme-text-secondary, #9aa3b2) !important;
+        }
+        [data-theme="dark"] .crm-users .btn-ls-filter:hover,
+        [data-theme="dark"] .crm-users .btn-ls-filter.is-on {
+            background: rgba(201, 136, 130, 0.12) !important;
+            border-color: rgba(201, 136, 130, 0.35) !important;
+            color: #c98882 !important;
+        }
+        [data-theme="dark"] .crm-users table.ls-table {
+            background: var(--mz-theme-bg-surface, #22252d) !important;
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users table.ls-table thead th {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            color: var(--mz-theme-text-muted, #7a8494) !important;
+            border-bottom-color: var(--mz-theme-border, #3a404d) !important;
+        }
+        [data-theme="dark"] .crm-users table.ls-table tbody td {
+            background: var(--mz-theme-bg-surface, #22252d) !important;
+            color: var(--mz-theme-text, #b8c0cc) !important;
+            border-color: var(--mz-theme-border-light, #2e3340) !important;
+        }
+        [data-theme="dark"] .crm-users table.ls-table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+        [data-theme="dark"] .crm-users .ls-updated,
+        [data-theme="dark"] .crm-users .ls-footer-summary,
+        [data-theme="dark"] .crm-users .col-serial {
+            color: var(--mz-theme-text-muted, #7a8494) !important;
+        }
+        [data-theme="dark"] .crm-users .type-pill.is-employee {
+            background: var(--mz-theme-bg-muted, #323744) !important;
+            color: var(--mz-theme-text-secondary, #9aa3b2) !important;
+        }
+        [data-theme="dark"] .crm-users .type-pill.is-admin {
+            background: rgba(201, 136, 130, 0.16) !important;
+            color: #c98882 !important;
+        }
+        [data-theme="dark"] .crm-users .type-pill.is-manager {
+            background: rgba(139, 175, 212, 0.16) !important;
+            color: #8bafd4 !important;
+        }
+        [data-theme="dark"] .crm-users .btn-user-edit {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--mz-theme-border, #3a404d) !important;
+            color: #8bafd4 !important;
+        }
+        [data-theme="dark"] .crm-users .btn-user-edit:hover {
+            background: rgba(139, 175, 212, 0.14) !important;
+            color: #8bafd4 !important;
+        }
+        [data-theme="dark"] .crm-users .ls-pager .btn {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--mz-theme-border, #3a404d) !important;
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users .ls-pager .btn:hover:not(:disabled) {
+            background: var(--mz-theme-bg-muted, #323744) !important;
+        }
+        [data-theme="dark"] .crm-users .ls-pager .btn.is-current {
+            background: #9f2a2c !important;
+            border-color: #9f2a2c !important;
+            color: #ececec !important;
+        }
+        [data-theme="dark"] .crm-users .ls-empty {
+            color: var(--mz-theme-text-muted, #7a8494) !important;
+        }
+        [data-theme="dark"] .crm-users .user-modal-bd,
+        [data-theme="dark"] .crm-users .user-modal-ft,
+        [data-theme="dark"] .crm-users .user-modal-shell {
+            background: var(--mz-theme-bg-surface, #22252d) !important;
+            border-color: var(--mz-theme-border, #3a404d) !important;
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users .user-modal-bd .ls-label,
+        [data-theme="dark"] .crm-users .user-modal-bd .form-text {
+            color: var(--mz-theme-text-secondary, #9aa3b2) !important;
+        }
+        [data-theme="dark"] .crm-users .user-modal-bd .form-control,
+        [data-theme="dark"] .crm-users .user-modal-bd .custom-file-label {
+            background: var(--mz-theme-input-bg, #1e2128) !important;
+            border-color: var(--mz-theme-input-border, #454b58) !important;
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users .btn-user-cancel {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--mz-theme-border, #3a404d) !important;
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users .btn-user-cancel:hover {
+            background: var(--mz-theme-bg-muted, #323744) !important;
+            color: var(--mz-theme-text, #b8c0cc) !important;
+        }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-red { background: rgba(201, 136, 130, 0.18); color: #c98882; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-purple { background: rgba(167, 139, 212, 0.16); color: #a78bd4; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-blue { background: rgba(139, 175, 212, 0.16); color: #8bafd4; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-orange { background: rgba(201, 165, 110, 0.16); color: #c9a56e; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-teal { background: rgba(94, 166, 154, 0.16); color: #7fb8a0; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-indigo { background: rgba(142, 152, 212, 0.16); color: #8e98d4; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-pink { background: rgba(201, 136, 170, 0.16); color: #c988aa; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-green { background: rgba(94, 166, 127, 0.16); color: #7fb8a0; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-cyan { background: rgba(94, 176, 196, 0.16); color: #7fb0c4; }
+        [data-theme="dark"] .crm-users .avatar-fallback.tone-amber { background: rgba(201, 165, 110, 0.16); color: #c9a56e; }
     </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
