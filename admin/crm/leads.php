@@ -562,26 +562,23 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui .content-wrapper>.content {
             background: #f4f6f9;
             padding: 0.75rem 0.5rem 0.5rem;
-            overflow: visible;
+            overflow-x: hidden;
+            overflow-y: visible;
         }
 
         .crm-leads-ui .content-wrapper {
             min-height: calc(100vh - 3.5rem);
-            overflow: visible;
-        }
-
-        .crm-leads-ui .content-wrapper > .content-header {
-            display: none;
-            margin: 0;
-            padding: 0;
-            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: visible;
         }
 
         .crm-leads-ui .content-wrapper > .content > .container-fluid {
             width: 100%;
+            max-width: 100%;
             padding-left: 0.5rem;
             padding-right: 0.5rem;
             padding-bottom: 0.5rem;
+            overflow-x: hidden;
         }
 
         .crm-leads-ui {
@@ -793,6 +790,7 @@ foreach ($destinationLookup as $destId => $destName) {
             border: 1px solid var(--ld-border);
             overflow: hidden;
             width: 100%;
+            max-width: 100%;
             display: flex;
             flex-direction: column;
             min-height: 0;
@@ -1030,6 +1028,8 @@ foreach ($destinationLookup as $destId => $destName) {
             flex: 1 1 auto;
             min-height: 14rem;
             max-height: var(--ld-table-pane-max, calc(100dvh - 22rem));
+            max-width: 100%;
+            width: 100%;
             overflow-x: hidden;
             overflow-y: auto;
             background: #fff;
@@ -1090,6 +1090,50 @@ foreach ($destinationLookup as $destId => $destName) {
             top: 0;
             z-index: 2;
             box-shadow: inset 0 -1px 0 var(--ld-border);
+            user-select: none;
+        }
+
+        .crm-leads-ui table.crm-leads-table thead th .ld-th-label {
+            display: inline-block;
+            max-width: calc(100% - 6px);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+
+        .crm-leads-ui table.crm-leads-table thead th .ld-col-resizer {
+            position: absolute;
+            top: 0;
+            right: -3px;
+            width: 8px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 4;
+            touch-action: none;
+        }
+
+        .crm-leads-ui table.crm-leads-table thead th .ld-col-resizer::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            bottom: 20%;
+            left: 3px;
+            width: 2px;
+            border-radius: 2px;
+            background: transparent;
+            transition: background-color 0.12s ease;
+        }
+
+        .crm-leads-ui table.crm-leads-table thead th:hover .ld-col-resizer::after,
+        .crm-leads-ui table.crm-leads-table thead th .ld-col-resizer:hover::after,
+        .crm-leads-ui table.crm-leads-table.is-col-resizing thead th .ld-col-resizer.is-active::after {
+            background: #94a3b8;
+        }
+
+        .crm-leads-ui table.crm-leads-table.is-col-resizing,
+        .crm-leads-ui table.crm-leads-table.is-col-resizing * {
+            cursor: col-resize !important;
+            user-select: none !important;
         }
 
         .crm-leads-ui table.crm-leads-table thead th:last-child {
@@ -1141,13 +1185,11 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui table.crm-leads-table tbody td.col-actions {
             text-align: center;
             vertical-align: middle;
-            max-width: 11.5rem;
-            overflow: visible;
+            overflow: hidden;
         }
 
         .crm-leads-ui table.crm-leads-table thead th.col-actions,
         .crm-leads-ui table.crm-leads-table tbody td.col-actions {
-            width: 11.5rem;
             white-space: nowrap;
             text-align: center;
         }
@@ -1222,8 +1264,8 @@ foreach ($destinationLookup as $destId => $destName) {
         @media (max-width: 575.98px) {
             .crm-leads-ui table.crm-leads-table thead th.col-actions,
             .crm-leads-ui table.crm-leads-table tbody td.col-actions {
-                width: 7.5rem;
-                max-width: 7.5rem;
+                /* Width controlled by JS fit — keep content from forcing scroll */
+                max-width: none;
             }
         }
 
@@ -1475,6 +1517,7 @@ foreach ($destinationLookup as $destId => $destName) {
             max-width: 100%;
             min-width: 0;
             overflow: hidden;
+            cursor: default;
         }
 
         .crm-leads-ui .svc-pills-collapsible.is-open {
@@ -1572,26 +1615,6 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui .svc-pills-collapsible:hover .svc-pills-popup,
         .crm-leads-ui .svc-pills-collapsible:focus-within .svc-pills-popup {
             display: none;
-        }
-
-        .crm-leads-ui .svc-more-count {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 1.35rem;
-            height: 1.35rem;
-            border-radius: 999px;
-            background: #f1f5f9;
-            color: #64748b;
-            font-size: calc(0.68rem + 1px);
-            font-weight: 700;
-            flex-shrink: 0;
-            cursor: default;
-            line-height: 1;
-        }
-
-        .crm-leads-ui .svc-more-count i {
-            font-size: calc(0.62rem + 1px);
         }
 
         .crm-leads-ui .svc-pill {
@@ -1720,7 +1743,7 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui .badge-stage,
         .crm-leads-ui .lead-stage-select {
             font-weight: 700;
-            padding: 0.35rem 1.7rem 0.35rem 0.75rem;
+            padding: 0.35rem 0.75rem;
             border-radius: 999px;
             font-size: calc(0.68rem + 1px);
             border: 1px solid transparent;
@@ -1734,10 +1757,12 @@ foreach ($destinationLookup as $destId => $destName) {
             cursor: pointer;
             appearance: none;
             -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239e9e9e' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.55rem center;
-            background-size: 10px 6px;
+            -moz-appearance: none;
+            background-image: none;
+        }
+
+        .crm-leads-ui .lead-stage-select::-ms-expand {
+            display: none;
         }
 
         .crm-leads-ui .lead-stage-select:focus {
@@ -1749,28 +1774,28 @@ foreach ($destinationLookup as $destId => $destName) {
             background-color: #e3f2fd;
             border-color: #bbdefb;
             color: #1e88e5;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%231e88e5' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+            background-image: none;
         }
 
         .crm-leads-ui .lead-stage-select.stage-quoted {
             background-color: #fff3e0;
             border-color: #ffe0b2;
             color: #fb8c00;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23fb8c00' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+            background-image: none;
         }
 
         .crm-leads-ui .lead-stage-select.stage-confirmed {
             background-color: #e8f5e9;
             border-color: #c8e6c9;
             color: #43a047;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2343a047' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+            background-image: none;
         }
 
         .crm-leads-ui .lead-stage-select.stage-lost {
             background-color: #f5f5f5;
             border-color: #e0e0e0;
             color: #757575;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23757575' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+            background-image: none;
         }
 
         .crm-leads-ui .lead-stage-select[data-stage-auto="1"] {
@@ -1790,6 +1815,8 @@ foreach ($destinationLookup as $destId => $destName) {
             flex-wrap: nowrap;
             white-space: nowrap;
             width: 100%;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .crm-leads-ui .action-btns .btn-icon {
@@ -1836,6 +1863,14 @@ foreach ($destinationLookup as $destId => $destName) {
             background: #fff7ed;
             border-color: #fed7aa;
             color: #c2410c !important;
+        }
+
+        .crm-leads-ui .action-btns .btn-book .btn-book-img {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+            display: block;
+            pointer-events: none;
         }
 
         .crm-leads-ui .action-btns .btn-book:hover {
@@ -1936,7 +1971,7 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui td.col-actions {
-            overflow: visible;
+            overflow: hidden;
             white-space: nowrap;
             text-align: center;
         }
@@ -2512,18 +2547,19 @@ foreach ($destinationLookup as $destId => $destName) {
         #leadDetailModal.lead-expand-drawer .lead-detail-modal-dialog {
             position: fixed;
             top: 0;
-            right: 0;
+            left: 0;
+            right: auto;
             bottom: 0;
             margin: 0;
             height: 100%;
             max-width: min(460px, 100vw);
             width: min(460px, 100vw);
-            transform: translateX(100%);
+            transform: translateX(-100%);
             transition: transform 0.28s ease;
         }
 
         #leadDetailModal.lead-expand-drawer.fade .lead-detail-modal-dialog {
-            transform: translateX(100%);
+            transform: translateX(-100%);
         }
 
         #leadDetailModal.lead-expand-drawer.show .lead-detail-modal-dialog,
@@ -2536,7 +2572,7 @@ foreach ($destinationLookup as $destId => $destName) {
             border-radius: 0;
             display: flex;
             flex-direction: column;
-            box-shadow: -12px 0 40px rgba(15, 23, 42, 0.18);
+            box-shadow: 12px 0 40px rgba(15, 23, 42, 0.18);
         }
 
         #leadDetailModal.lead-expand-drawer .modal-header {
@@ -3234,14 +3270,14 @@ foreach ($destinationLookup as $destId => $destName) {
                         </div>
                         <div class="page-title-actions">
                             <button type="button" class="btn btn-outline-leads" id="btnOpenLeadsColumnSettings" title="Column settings">
-                                <i class="fas fa-cog mr-1"></i> Settings
+                                <i class="fas fa-cog mr-1"></i> 
                             </button>
                             <button type="button" class="btn btn-outline-leads" id="btnOpenSendLinkModal">
-                                <i class="fas fa-external-link-alt mr-1"></i> Send Form Link
+                                <i class="fas fa-external-link-alt mr-1"></i> 
                             </button>
-                            <button type="button" class="btn btn-outline-leads" id="btnImportLeads" title="Import leads from spreadsheet">
+                            <!-- <button type="button" class="btn btn-outline-leads" id="btnImportLeads" title="Import leads from spreadsheet">
                                 <i class="fas fa-file-import mr-1"></i> Import Leads
-                            </button>
+                            </button> -->
                             <button type="button" class="btn btn-danger leads-create-btn" id="btnOpenLeadFormCreate">
                                 <i class="fas fa-plus mr-1"></i> Create Lead
                             </button>
@@ -3292,15 +3328,15 @@ foreach ($destinationLookup as $destId => $destName) {
                                 data-col-actions="<?= !empty($leadsColumnVisibility['actions']) ? '1' : '0' ?>">
                                 <thead>
                                     <tr>
-                                        <th class="col-ld-lead">Lead ID</th>
-                                        <th class="col-ld-guest">Guest</th>
-                                        <th class="col-ld-dest">Destination</th>
-                                        <th class="col-ld-date">Travel Date</th>
-                                        <th class="col-ld-services">Services</th>
-                                        <th class="col-ld-source">Lead Source</th>
-                                        <th class="col-ld-assign">Assigned</th>
-                                        <th class="col-ld-stage">Stage</th>
-                                        <th class="col-actions">Actions</th>
+                                        <th class="col-ld-lead" data-col-key="lead"><span class="ld-th-label">Lead ID</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-ld-guest" data-col-key="guest"><span class="ld-th-label">Guest</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-ld-dest" data-col-key="dest"><span class="ld-th-label">Destination</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-ld-date" data-col-key="date"><span class="ld-th-label">Travel Date</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-ld-services" data-col-key="services"><span class="ld-th-label">Services</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-ld-source" data-col-key="source"><span class="ld-th-label">Lead Source</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-ld-assign" data-col-key="assign"><span class="ld-th-label">Assigned</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-ld-stage" data-col-key="stage"><span class="ld-th-label">Stage</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-actions" data-col-key="actions"><span class="ld-th-label">Actions</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -3409,13 +3445,12 @@ foreach ($destinationLookup as $destId => $destName) {
                                                         $extraServices = array_slice($leadServices, 1);
                                                         $hasExtraServices = count($extraServices) > 0;
                                                     ?>
-                                                        <div class="svc-pills<?= $hasExtraServices ? ' svc-pills-collapsible' : '' ?>">
+                                                        <div class="svc-pills<?= $hasExtraServices ? ' svc-pills-collapsible' : '' ?>"<?= $hasExtraServices ? ' title="' . count($extraServices) . ' more service' . (count($extraServices) === 1 ? '' : 's') . '"' : '' ?>>
                                                             <span class="svc-pill svc-pill-<?= htmlspecialchars($firstService, ENT_QUOTES, 'UTF-8') ?>">
                                                                 <i class="<?= htmlspecialchars($serviceIcons[$firstService][0], ENT_QUOTES, 'UTF-8') ?>"></i>
                                                                 <?= htmlspecialchars($serviceIcons[$firstService][1], ENT_QUOTES, 'UTF-8') ?>
                                                             </span>
                                                             <?php if ($hasExtraServices) { ?>
-                                                                <span class="svc-more-count" title="<?= count($extraServices) ?> more service<?= count($extraServices) === 1 ? '' : 's' ?>"><i class="fas fa-plus"></i></span>
                                                                 <div class="svc-pills-popup">
                                                                     <?php foreach ($extraServices as $svc) { ?>
                                                                         <span class="svc-pill svc-pill-<?= htmlspecialchars($svc, ENT_QUOTES, 'UTF-8') ?>">
@@ -3510,7 +3545,11 @@ foreach ($destinationLookup as $destId => $destName) {
                                                                     data-id="<?= $latestQuotationId ?>"
                                                                     title="<?= $latestTourConfirmed ? 'Tour Confirmed' : 'Book' ?>"
                                                                     aria-label="<?= $latestTourConfirmed ? 'Tour Confirmed' : 'Book quotation' ?>">
-                                                                    <i class="fas <?= $latestTourConfirmed ? 'fa-check' : 'fa-book' ?>"></i>
+                                                                    <?php if ($latestTourConfirmed) { ?>
+                                                                        <i class="fas fa-check"></i>
+                                                                    <?php } else { ?>
+                                                                        <img src="img/booking.png" alt="" class="btn-book-img" width="16" height="16">
+                                                                    <?php } ?>
                                                                 </button>
                                                             <?php } ?>
                                                         <?php } else { ?>
@@ -3988,6 +4027,11 @@ foreach ($destinationLookup as $destId => $destName) {
         leadsTablePaneResizeTimer = window.setTimeout(syncLeadsTablePaneHeight, 50);
     }
     window.addEventListener('resize', scheduleLeadsTablePaneHeight);
+    window.addEventListener('resize', function () {
+        if (typeof leadsRedistributeColumnWidths === 'function') {
+            leadsRedistributeColumnWidths(leadsLoadColumnVisibility());
+        }
+    });
     window.addEventListener('load', syncLeadsTablePaneHeight);
     $(document).on('collapsed.lte.pushmenu shown.lte.pushmenu', scheduleLeadsTablePaneHeight);
     $(function () {
@@ -4113,20 +4157,23 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     var LEADS_COL_SAVE_URL = 'crm/ajax/save_leads_column_settings.php';
+    var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v1';
     var LEADS_TABLE_COLUMNS = [
-        { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 18 },
-        { key: 'guest', className: 'col-ld-guest', label: 'Guest', locked: false, weight: 16 },
-        { key: 'dest', className: 'col-ld-dest', label: 'Destination', locked: false, weight: 16 },
-        { key: 'date', className: 'col-ld-date', label: 'Travel Date', locked: false, weight: 10 },
-        { key: 'services', className: 'col-ld-services', label: 'Services', locked: false, weight: 12 },
-        { key: 'source', className: 'col-ld-source', label: 'Lead Source', locked: false, weight: 12 },
-        { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 10 },
-        { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 9 },
-        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '11.5rem' }
+        { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 18, minWidth: 110 },
+        { key: 'guest', className: 'col-ld-guest', label: 'Guest', locked: false, weight: 16, minWidth: 120 },
+        { key: 'dest', className: 'col-ld-dest', label: 'Destination', locked: false, weight: 16, minWidth: 120 },
+        { key: 'date', className: 'col-ld-date', label: 'Travel Date', locked: false, weight: 10, minWidth: 100 },
+        { key: 'services', className: 'col-ld-services', label: 'Services', locked: false, weight: 12, minWidth: 100 },
+        { key: 'source', className: 'col-ld-source', label: 'Lead Source', locked: false, weight: 12, minWidth: 100 },
+        { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 10, minWidth: 100 },
+        { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 9, minWidth: 110 },
+        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '9.5rem', minWidth: 100 }
     ];
     var leadsColumnVisibilityState = <?= json_encode($leadsColumnVisibility, JSON_UNESCAPED_UNICODE) ?>;
     var leadsColumnSaveTimer = null;
     var leadsColumnSaveXhr = null;
+    var leadsColumnWidthsState = null;
+    var leadsColResizeState = null;
 
     function leadsDefaultColumnVisibility() {
         var vis = {};
@@ -4152,55 +4199,335 @@ foreach ($destinationLookup as $destId => $destName) {
         return !state || state[col.key] !== false;
     }
 
+    function leadsLoadColumnWidths() {
+        if (leadsColumnWidthsState && typeof leadsColumnWidthsState === 'object') {
+            return leadsColumnWidthsState;
+        }
+        try {
+            var raw = window.localStorage.getItem(LEADS_COL_WIDTHS_KEY);
+            var parsed = raw ? JSON.parse(raw) : null;
+            leadsColumnWidthsState = (parsed && typeof parsed === 'object') ? parsed : {};
+        } catch (err) {
+            leadsColumnWidthsState = {};
+        }
+        return leadsColumnWidthsState;
+    }
+
+    function leadsSaveColumnWidths(widths) {
+        leadsColumnWidthsState = widths && typeof widths === 'object' ? widths : {};
+        try {
+            window.localStorage.setItem(LEADS_COL_WIDTHS_KEY, JSON.stringify(leadsColumnWidthsState));
+        } catch (err) {}
+        return leadsColumnWidthsState;
+    }
+
+    function leadsClearColumnWidths() {
+        leadsColumnWidthsState = {};
+        try {
+            window.localStorage.removeItem(LEADS_COL_WIDTHS_KEY);
+        } catch (err) {}
+    }
+
+    function leadsParseFixedWidthPx(fixedWidth) {
+        if (!fixedWidth) {
+            return 0;
+        }
+        var str = String(fixedWidth);
+        if (str.indexOf('rem') !== -1) {
+            var rem = parseFloat(str);
+            if (isNaN(rem)) return 0;
+            var root = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+            return Math.round(rem * root);
+        }
+        var px = parseFloat(str);
+        return isNaN(px) ? 0 : Math.round(px);
+    }
+
+    function leadsSetColumnCellsWidth($table, col, widthPx) {
+        var widthVal = Math.round(widthPx) + 'px';
+        var $cells = $table.find('.' + col.className);
+        if (col.key === 'services') {
+            $cells = $cells.add($table.find('.col-services'));
+        }
+        if (col.key === 'stage') {
+            $cells = $cells.add($table.find('.col-stage'));
+        }
+        $cells.css({
+            width: widthVal,
+            maxWidth: widthVal,
+            minWidth: 0
+        });
+    }
+
+    function leadsCaptureCurrentColumnWidths($table, state) {
+        var widths = {};
+        var $ths = $table.find('thead th[data-col-key]');
+        $ths.each(function () {
+            var key = String($(this).attr('data-col-key') || '');
+            var meta = leadsColumnMeta(key);
+            if (!key || !meta || !leadsColumnIsVisible(meta, state)) {
+                return;
+            }
+            var w = Math.round($(this).outerWidth());
+            if (w > 0) {
+                widths[key] = w;
+            }
+        });
+        return widths;
+    }
+
+    function leadsGetTableWrapWidth($table) {
+        var $wrap = $table.closest('.table-wrap');
+        var w = $wrap.length ? $wrap.innerWidth() : 0;
+        if (!(w > 0)) {
+            w = $table.parent().innerWidth() || window.innerWidth || 1000;
+        }
+        // Leave a little room so borders don't force overflow.
+        return Math.max(320, Math.floor(w) - 2);
+    }
+
+    function leadsApplyFittedColumnWidths($table, state, widthsMap, fitToWrap) {
+        var visible = [];
+        var total = 0;
+        LEADS_TABLE_COLUMNS.forEach(function (col) {
+            if (!leadsColumnIsVisible(col, state)) {
+                $table.find('.' + col.className).css({ width: '', maxWidth: '', minWidth: '' });
+                if (col.key === 'services') {
+                    $table.find('.col-services').css({ width: '', maxWidth: '', minWidth: '' });
+                }
+                if (col.key === 'stage') {
+                    $table.find('.col-stage').css({ width: '', maxWidth: '', minWidth: '' });
+                }
+                return;
+            }
+            var w = parseInt(widthsMap[col.key], 10);
+            if (!(w > 0)) {
+                w = col.minWidth || 100;
+            }
+            // Soft preference only — hard clamp happens after exact page fit.
+            w = Math.max(40, w);
+            visible.push({ col: col, width: w });
+            total += w;
+        });
+        if (!visible.length) {
+            return 0;
+        }
+
+        var wrapW = leadsGetTableWrapWidth($table);
+        if (fitToWrap && total > 0 && wrapW > 0) {
+            // Always force exact page width so no horizontal scroll is needed.
+            var used = 0;
+            visible.forEach(function (item, idx) {
+                if (idx === visible.length - 1) {
+                    item.width = Math.max(1, wrapW - used);
+                } else {
+                    item.width = Math.max(1, Math.floor(item.width * (wrapW / total)));
+                    used += item.width;
+                }
+            });
+            total = wrapW;
+        }
+
+        visible.forEach(function (item) {
+            leadsSetColumnCellsWidth($table, item.col, item.width);
+        });
+
+        $table.css({
+            width: '100%',
+            minWidth: '0',
+            maxWidth: '100%'
+        });
+        return total;
+    }
+
     function leadsRedistributeColumnWidths(state) {
         var $table = $('.crm-leads-ui table.crm-leads-table');
         if (!$table.length) {
             return;
         }
 
+        var savedWidths = leadsLoadColumnWidths();
+        var hasCustom = false;
+        Object.keys(savedWidths || {}).forEach(function (k) {
+            if (savedWidths[k] > 0) {
+                hasCustom = true;
+            }
+        });
+
+        var wrapW = leadsGetTableWrapWidth($table);
+        var widthsMap = {};
         var visibleFlexible = [];
         var totalWeight = 0;
+        var fixedBudget = 0;
+
         LEADS_TABLE_COLUMNS.forEach(function (col) {
             if (!leadsColumnIsVisible(col, state)) {
-                $table.find('.' + col.className).css({ width: '', maxWidth: '' });
-                if (col.key === 'services') {
-                    $table.find('.col-services').css({ width: '', maxWidth: '' });
-                }
-                if (col.key === 'stage') {
-                    $table.find('.col-stage').css({ width: '', maxWidth: '' });
-                }
                 return;
             }
-            if (col.fixedWidth) {
-                $table.find('.' + col.className).css({
-                    width: col.fixedWidth,
-                    maxWidth: col.fixedWidth
-                });
+            if (hasCustom && savedWidths[col.key] > 0) {
+                widthsMap[col.key] = Math.max(col.minWidth || 80, parseInt(savedWidths[col.key], 10) || 0);
+                return;
+            }
+            if (col.fixedWidth && !hasCustom) {
+                widthsMap[col.key] = Math.max(col.minWidth || 80, leadsParseFixedWidthPx(col.fixedWidth) || (col.minWidth || 120));
+                fixedBudget += widthsMap[col.key];
                 return;
             }
             visibleFlexible.push(col);
             totalWeight += Number(col.weight) || 1;
         });
 
-        if (!visibleFlexible.length || totalWeight <= 0) {
-            return;
+        if (!hasCustom) {
+            var remain = Math.max(wrapW - fixedBudget, visibleFlexible.length * 80);
+            if (visibleFlexible.length && totalWeight > 0) {
+                var used = 0;
+                visibleFlexible.forEach(function (col, idx) {
+                    var w;
+                    if (idx === visibleFlexible.length - 1) {
+                        w = Math.max(col.minWidth || 80, remain - used);
+                    } else {
+                        w = Math.max(col.minWidth || 80, Math.floor(remain * ((Number(col.weight) || 1) / totalWeight)));
+                        used += w;
+                    }
+                    widthsMap[col.key] = w;
+                });
+            }
+        } else if (visibleFlexible.length && totalWeight > 0) {
+            var assigned = 0;
+            Object.keys(widthsMap).forEach(function (k) { assigned += widthsMap[k]; });
+            var remainCustom = Math.max(wrapW - assigned, visibleFlexible.length * 80);
+            var usedC = 0;
+            visibleFlexible.forEach(function (col, idx) {
+                var w;
+                if (idx === visibleFlexible.length - 1) {
+                    w = Math.max(col.minWidth || 80, remainCustom - usedC);
+                } else {
+                    w = Math.max(col.minWidth || 80, Math.floor(remainCustom * ((Number(col.weight) || 1) / totalWeight)));
+                    usedC += w;
+                }
+                widthsMap[col.key] = w;
+            });
         }
 
-        visibleFlexible.forEach(function (col) {
-            var pct = ((Number(col.weight) || 1) / totalWeight) * 100;
-            var widthVal = pct.toFixed(3) + '%';
-            var $cells = $table.find('.' + col.className);
-            if (col.key === 'services') {
-                $cells = $cells.add($table.find('.col-services'));
-            }
-            if (col.key === 'stage') {
-                $cells = $cells.add($table.find('.col-stage'));
-            }
-            $cells.css({
-                width: widthVal,
-                maxWidth: widthVal
+        // Always fit within the page width (scale down if needed).
+        leadsApplyFittedColumnWidths($table, state, widthsMap, true);
+    }
+
+    function leadsStartColumnResize(e, $th) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $table = $th.closest('table.crm-leads-table');
+        var key = String($th.attr('data-col-key') || '');
+        var meta = leadsColumnMeta(key);
+        if (!$table.length || !meta) {
+            return;
+        }
+        var state = leadsLoadColumnVisibility();
+        var widths = leadsCaptureCurrentColumnWidths($table, state);
+        leadsSaveColumnWidths(widths);
+        leadsRedistributeColumnWidths(state);
+
+        var startX = e.clientX || (e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[0]
+            ? e.originalEvent.touches[0].clientX
+            : 0);
+        var startW = Math.round($th.outerWidth());
+        leadsColResizeState = {
+            key: key,
+            meta: meta,
+            $table: $table,
+            $th: $th,
+            startX: startX,
+            startW: startW,
+            minW: meta.minWidth || 80,
+            widths: leadsCaptureCurrentColumnWidths($table, state)
+        };
+        $table.addClass('is-col-resizing');
+        $th.find('.ld-col-resizer').addClass('is-active');
+    }
+
+    function leadsMoveColumnResize(e) {
+        if (!leadsColResizeState) {
+            return;
+        }
+        var clientX = e.clientX;
+        if (clientX == null && e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[0]) {
+            clientX = e.originalEvent.touches[0].clientX;
+        }
+        if (clientX == null) {
+            return;
+        }
+        e.preventDefault();
+        var delta = clientX - leadsColResizeState.startX;
+        var nextW = Math.max(leadsColResizeState.minW, Math.round(leadsColResizeState.startW + delta));
+        var widths = $.extend({}, leadsColResizeState.widths || leadsLoadColumnWidths());
+        widths[leadsColResizeState.key] = nextW;
+        // Keep all columns inside the page by fitting to wrap width while dragging.
+        leadsApplyFittedColumnWidths(leadsColResizeState.$table, leadsLoadColumnVisibility(), widths, true);
+    }
+
+    function leadsEndColumnResize() {
+        if (!leadsColResizeState) {
+            return;
+        }
+        var $table = leadsColResizeState.$table;
+        var state = leadsLoadColumnVisibility();
+        var widths = leadsCaptureCurrentColumnWidths($table, state);
+        leadsSaveColumnWidths(widths);
+        leadsRedistributeColumnWidths(state);
+        $table.removeClass('is-col-resizing');
+        $table.find('.ld-col-resizer.is-active').removeClass('is-active');
+        leadsColResizeState = null;
+        if (typeof scheduleLeadsTablePaneHeight === 'function') {
+            scheduleLeadsTablePaneHeight();
+        }
+    }
+
+    function leadsInitColumnResize() {
+        var $table = $('.crm-leads-ui table.crm-leads-table');
+        if (!$table.length) {
+            return;
+        }
+        $(document)
+            .off('mousedown.leadsColResize touchstart.leadsColResize', '.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer')
+            .on('mousedown.leadsColResize touchstart.leadsColResize', '.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer', function (e) {
+                if (e.type === 'mousedown' && e.which !== 1) {
+                    return;
+                }
+                leadsStartColumnResize(e, $(this).closest('th'));
             });
-        });
+
+        $(document)
+            .off('mousemove.leadsColResize touchmove.leadsColResize')
+            .on('mousemove.leadsColResize touchmove.leadsColResize', function (e) {
+                leadsMoveColumnResize(e);
+            });
+
+        $(document)
+            .off('mouseup.leadsColResize touchend.leadsColResize touchcancel.leadsColResize')
+            .on('mouseup.leadsColResize touchend.leadsColResize touchcancel.leadsColResize', function () {
+                leadsEndColumnResize();
+            });
+
+        $(document)
+            .off('dblclick.leadsColResize', '.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer')
+            .on('dblclick.leadsColResize', '.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var key = String($(this).closest('th').attr('data-col-key') || '');
+                var widths = leadsLoadColumnWidths();
+                if (key && Object.prototype.hasOwnProperty.call(widths, key)) {
+                    delete widths[key];
+                    if (!Object.keys(widths).length) {
+                        leadsClearColumnWidths();
+                    } else {
+                        leadsSaveColumnWidths(widths);
+                    }
+                    leadsRedistributeColumnWidths(leadsLoadColumnVisibility());
+                    if (typeof scheduleLeadsTablePaneHeight === 'function') {
+                        scheduleLeadsTablePaneHeight();
+                    }
+                }
+            });
     }
 
     function leadsNormalizeColumnVisibility(raw) {
@@ -4351,6 +4678,7 @@ foreach ($destinationLookup as $destId => $destName) {
 
     $('#btnLeadsColumnsReset').on('click', function () {
         var vis = leadsDefaultColumnVisibility();
+        leadsClearColumnWidths();
         leadsSaveColumnVisibility(vis);
         leadsApplyColumnVisibility(vis);
         leadsSyncColumnCheckboxes(vis);
@@ -4358,6 +4686,7 @@ foreach ($destinationLookup as $destId => $destName) {
 
     leadsColumnVisibilityState = leadsNormalizeColumnVisibility(leadsColumnVisibilityState);
     leadsApplyColumnVisibility(leadsColumnVisibilityState);
+    leadsInitColumnResize();
 
     function buildSendLinkPostData() {
         var data = [];
@@ -5481,7 +5810,7 @@ foreach ($destinationLookup as $destId => $destName) {
             zIndex: 2050
         });
 
-        var trigger = $wrap.find('.svc-more-count')[0] || $wrap[0];
+        var trigger = $wrap.find('.svc-pill').first()[0] || $wrap[0];
         var rect = trigger.getBoundingClientRect();
         var gap = 6;
         var popupWidth = $popup.outerWidth() || 144;
@@ -5878,7 +6207,7 @@ foreach ($destinationLookup as $destId => $destName) {
 })();
 </script>
 <script src="crm/assets/quotation_confirm_tour.js?v=3"></script>
-<script src="crm/assets/quotation_supplier_mail.js?v=17"></script>
+<script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {
     if (window.QSupplierMail) {

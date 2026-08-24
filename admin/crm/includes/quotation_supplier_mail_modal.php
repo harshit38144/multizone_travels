@@ -163,9 +163,9 @@ $qMailFromInitial = htmlspecialchars(strtoupper(substr($qMailFromName, 0, 1)), E
                         <input type="text" class="form-control" id="qScMobile">
                     </div>
                     <div class="form-group mb-0">
-                        <label>Destination (linked place)</label>
+                        <label>City / Destination</label>
                         <input type="text" class="form-control" id="qScDestination" readonly>
-                        <small class="form-text text-muted">Supplier will be linked to the quotation destination.</small>
+                        <small class="form-text text-muted">Saved as City in Supplier Master (and linked place when available).</small>
                     </div>
                 </div>
                 <div class="modal-footer py-2">

@@ -292,6 +292,88 @@ function crmSupplierCityLine($cityName, $countryName)
     return $cityName !== '' ? $cityName : $countryName;
 }
 
+/**
+ * Resolve a city/destination label to cities.id (+ country) when possible.
+ *
+ * @return array{city_id:int,city_name:string,country_name:string}
+ */
+function crmSupplierResolveCityByName(mysqli $conn, string $name): array
+{
+    $out = [
+        'city_id' => 0,
+        'city_name' => '',
+        'country_name' => '',
+    ];
+    $name = trim($name);
+    if ($name === '') {
+        return $out;
+    }
+    $out['city_name'] = $name;
+
+    // Prefer exact match in cities master.
+    $tables = $conn->query("SHOW TABLES LIKE 'cities'");
+    if ($tables && $tables->num_rows > 0) {
+        $hasCountryId = false;
+        $col = $conn->query("SHOW COLUMNS FROM `cities` LIKE 'country_id'");
+        if ($col && $col->num_rows > 0) {
+            $hasCountryId = true;
+        }
+        if ($hasCountryId) {
+            $stmt = $conn->prepare(
+                'SELECT c.id, c.name, COALESCE(co.name, \'\') AS country_name
+                 FROM cities c
+                 LEFT JOIN countries co ON co.id = c.country_id
+                 WHERE LOWER(TRIM(c.name)) = LOWER(?)
+                 LIMIT 1'
+            );
+        } else {
+            $stmt = $conn->prepare(
+                'SELECT id, name, \'\' AS country_name
+                 FROM cities
+                 WHERE LOWER(TRIM(name)) = LOWER(?)
+                 LIMIT 1'
+            );
+        }
+        if ($stmt) {
+            $stmt->bind_param('s', $name);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $stmt->close();
+            if ($row) {
+                $out['city_id'] = (int) ($row['id'] ?? 0);
+                $out['city_name'] = trim((string) ($row['name'] ?? $name)) ?: $name;
+                $out['country_name'] = trim((string) ($row['country_name'] ?? ''));
+                return $out;
+            }
+        }
+    }
+
+    // Fall back to destinations.country for the country label.
+    $destTables = $conn->query("SHOW TABLES LIKE 'destinations'");
+    if ($destTables && $destTables->num_rows > 0) {
+        $stmt = $conn->prepare(
+            'SELECT name, COALESCE(country, \'\') AS country
+             FROM destinations
+             WHERE is_active = 1 AND LOWER(TRIM(name)) = LOWER(?)
+             LIMIT 1'
+        );
+        if ($stmt) {
+            $stmt->bind_param('s', $name);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $stmt->close();
+            if ($row) {
+                $out['city_name'] = trim((string) ($row['name'] ?? $name)) ?: $name;
+                $out['country_name'] = trim((string) ($row['country'] ?? ''));
+            }
+        }
+    }
+
+    return $out;
+}
+
 /** @return array<string, mixed>|null */
 function crmSupplierMailCatalogItemFromRow(array $row): ?array
 {
@@ -390,8 +472,53 @@ function crmSuppliersForHotelSelect(mysqli $conn): array
         $types = crmSupplierNormalizeTypes($row['supplier_type'] ?? '');
         $isHotelSupplier = in_array('hotels', $supplierOf, true)
             || in_array('hotels', $types, true)
+            || in_array('land_package', $supplierOf, true)
+            || in_array('land_package', $types, true)
             || ($supplierOf === [] && $types === []);
         if (!$isHotelSupplier) {
+            continue;
+        }
+        $name = trim((string) ($row['name'] ?? ''));
+        $id = (int) ($row['id'] ?? 0);
+        if ($id < 1 || $name === '') {
+            continue;
+        }
+        $out[] = [
+            'id' => $id,
+            'name' => $name,
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * Active flight/train suppliers for quotation Flight / Train dropdowns.
+ *
+ * @return array<int, array{id:int,name:string}>
+ */
+function crmSuppliersForFlightSelect(mysqli $conn): array
+{
+    crmEnsureSupplierTables($conn);
+    $out = [];
+    $res = $conn->query('SELECT `id`, `name`, `supplier_of_json`, `supplier_type`
+        FROM `crm_suppliers`
+        WHERE `is_active` = 1
+        ORDER BY `name` ASC');
+    if (!$res) {
+        return $out;
+    }
+
+    while ($row = $res->fetch_assoc()) {
+        $supplierOf = crmSupplierNormalizeSupplierOf(
+            json_decode((string) ($row['supplier_of_json'] ?? '[]'), true) ?: []
+        );
+        $types = crmSupplierNormalizeTypes($row['supplier_type'] ?? '');
+        $isFlightSupplier = in_array('flight', $supplierOf, true)
+            || in_array('train', $supplierOf, true)
+            || in_array('flight', $types, true)
+            || in_array('train', $types, true);
+        if (!$isFlightSupplier) {
             continue;
         }
         $name = trim((string) ($row['name'] ?? ''));

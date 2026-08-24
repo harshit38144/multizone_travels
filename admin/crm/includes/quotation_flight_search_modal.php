@@ -39,7 +39,27 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                         </div>
                     </div>
                 </div>
-                <div class="row">
+                <div class="row align-items-end">
+                    <div class="col-md-6 form-group">
+                        <div class="qfs-route-row">
+                            <div class="qfs-route-field qfs-airport-field">
+                                <label class="font-weight-bold" for="qfsApiFrom">From</label>
+                                <input type="text" class="form-control" id="qfsApiFrom" autocomplete="off" placeholder="Start typing a city...">
+                                <div id="qfsApiFromSuggest" class="qfs-airport-suggest" style="display:none;"></div>
+                            </div>
+                            <div class="qfs-swap-wrap">
+                                <label class="font-weight-bold">&nbsp;</label>
+                                <button type="button" class="btn qfs-swap-btn" id="qfsSwapAirports" title="Swap From / To" aria-label="Swap From and To">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                            </div>
+                            <div class="qfs-route-field qfs-airport-field">
+                                <label class="font-weight-bold" for="qfsApiTo">To</label>
+                                <input type="text" class="form-control" id="qfsApiTo" autocomplete="off" placeholder="Start typing a city...">
+                                <div id="qfsApiToSuggest" class="qfs-airport-suggest" style="display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="col-md-3 form-group qfs-date-field">
                         <label class="font-weight-bold">Onward Date</label>
                         <div class="qfs-date-wrapper">
@@ -53,16 +73,6 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                             <input type="date" class="form-control" id="qfsApiReturnDate" value="<?= htmlspecialchars($tomorrow) ?>" min="<?= htmlspecialchars($today) ?>">
                             <img src="img/calendar.png" class="qfs-calendar-icon" alt="" onclick="qfsOpenDatePicker('qfsApiReturnDate')">
                         </div>
-                    </div>
-                    <div class="col-md-4 form-group qfs-airport-field">
-                        <label class="font-weight-bold">From</label>
-                        <input type="text" class="form-control" id="qfsApiFrom" autocomplete="off" placeholder="Start typing a city...">
-                        <div id="qfsApiFromSuggest" class="qfs-airport-suggest" style="display:none;"></div>
-                    </div>
-                    <div class="col-md-4 form-group qfs-airport-field">
-                        <label class="font-weight-bold">To</label>
-                        <input type="text" class="form-control" id="qfsApiTo" autocomplete="off" placeholder="Start typing a city...">
-                        <div id="qfsApiToSuggest" class="qfs-airport-suggest" style="display:none;"></div>
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary qfs-search-btn" id="qfsSearchFlightsBtn">Search</button>

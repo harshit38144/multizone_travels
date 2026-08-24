@@ -97,10 +97,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($id > 0) {
+            $oldName = '';
+            $oldStmt = $conn->prepare("SELECT `name` FROM `crm_lead_sources` WHERE `id` = ? LIMIT 1");
+            if ($oldStmt) {
+                $oldStmt->bind_param('i', $id);
+                $oldStmt->execute();
+                $oldRes = $oldStmt->get_result();
+                if ($oldRes && ($oldRow = $oldRes->fetch_assoc())) {
+                    $oldName = trim((string) ($oldRow['name'] ?? ''));
+                }
+                $oldStmt->close();
+            }
+
             $stmt = $conn->prepare("UPDATE `crm_lead_sources` SET `name` = ?, `display_order` = ?, `is_active` = ? WHERE `id` = ?");
             $stmt->bind_param('siii', $name, $displayOrder, $isActive, $id);
             $ok = $stmt->execute();
             $stmt->close();
+
+            // Leads store source by name (not id) — keep list column in sync on rename.
+            if ($ok && $oldName !== '' && strcasecmp($oldName, $name) !== 0) {
+                $syncLead = $conn->prepare("UPDATE `crm_leads` SET `lead_source` = ? WHERE `lead_source` = ?");
+                if ($syncLead) {
+                    $syncLead->bind_param('ss', $name, $oldName);
+                    $syncLead->execute();
+                    $syncLead->close();
+                }
+                $syncIntake = $conn->prepare("UPDATE `crm_lead_intake_requests` SET `lead_source` = ? WHERE `lead_source` = ?");
+                if ($syncIntake) {
+                    $syncIntake->bind_param('ss', $name, $oldName);
+                    $syncIntake->execute();
+                    $syncIntake->close();
+                }
+            }
 
             if ($ok) {
                 $_SESSION['lead_source_flash'] = 'Lead source updated successfully.';
@@ -628,6 +656,130 @@ unset($_SESSION['lead_source_flash'], $_SESSION['lead_source_flash_type']);
             font-weight: 500;
         }
 
+        /* Confirm edit modal */
+        #lsConfirmEditModal .modal-dialog {
+            max-width: 420px;
+        }
+        #lsConfirmEditModal .ls-confirm-shell {
+            border: none;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+        }
+        #lsConfirmEditModal .ls-confirm-body {
+            padding: 1.75rem 1.65rem 1.35rem;
+            text-align: center;
+            background: #fff;
+        }
+        #lsConfirmEditModal .ls-confirm-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1.1rem;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%);
+            color: #ea580c;
+            font-size: 1.55rem;
+            box-shadow: inset 0 0 0 1px rgba(234, 88, 12, 0.12);
+        }
+        #lsConfirmEditModal .ls-confirm-title {
+            margin: 0 0 0.55rem;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+        #lsConfirmEditModal .ls-confirm-text {
+            margin: 0 auto;
+            max-width: 34ch;
+            font-size: 0.92rem;
+            line-height: 1.55;
+            color: #64748b;
+            font-weight: 500;
+        }
+        #lsConfirmEditModal .ls-confirm-note {
+            margin: 1rem auto 0;
+            padding: 0.65rem 0.85rem;
+            max-width: 100%;
+            border-radius: 10px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            font-size: 0.78rem;
+            font-weight: 600;
+            line-height: 1.4;
+            text-align: left;
+        }
+        #lsConfirmEditModal .ls-confirm-note i {
+            margin-right: 0.35rem;
+            color: #ea580c;
+        }
+        #lsConfirmEditModal .ls-confirm-footer {
+            display: flex;
+            gap: 0.65rem;
+            justify-content: stretch;
+            padding: 0 1.65rem 1.55rem;
+            background: #fff;
+        }
+        #lsConfirmEditModal .ls-confirm-footer .btn {
+            flex: 1 1 0;
+            height: 44px;
+            border-radius: 11px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+        #lsConfirmEditModal .btn-ls-confirm-cancel {
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569 !important;
+        }
+        #lsConfirmEditModal .btn-ls-confirm-cancel:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #334155 !important;
+        }
+        #lsConfirmEditModal .btn-ls-confirm-ok {
+            border: none;
+            background: linear-gradient(135deg, #ef4444 0%, #e11d2e 100%);
+            color: #fff !important;
+            box-shadow: 0 8px 18px rgba(225, 29, 46, 0.28);
+        }
+        #lsConfirmEditModal .btn-ls-confirm-ok:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #be123c 100%);
+            color: #fff !important;
+        }
+        #lsConfirmEditModal.modal.show .modal-dialog {
+            transform: none;
+            animation: lsConfirmIn 0.22s ease-out;
+        }
+        @keyframes lsConfirmIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        body.dark-mode #lsConfirmEditModal .ls-confirm-shell,
+        body.dark-mode #lsConfirmEditModal .ls-confirm-body,
+        body.dark-mode #lsConfirmEditModal .ls-confirm-footer {
+            background: #1e293b;
+        }
+        body.dark-mode #lsConfirmEditModal .ls-confirm-title { color: #f8fafc; }
+        body.dark-mode #lsConfirmEditModal .ls-confirm-text { color: #94a3b8; }
+        body.dark-mode #lsConfirmEditModal .ls-confirm-note {
+            background: rgba(234, 88, 12, 0.12);
+            border-color: rgba(234, 88, 12, 0.28);
+            color: #fdba74;
+        }
+        body.dark-mode #lsConfirmEditModal .btn-ls-confirm-cancel {
+            background: #0f172a;
+            border-color: #334155;
+            color: #cbd5e1 !important;
+        }
+
         @media (max-width: 767.98px) {
             .crm-lead-source-master .ls-field-actions {
                 margin-left: 0;
@@ -847,6 +999,33 @@ unset($_SESSION['lead_source_flash'], $_SESSION['lead_source_flash_type']);
                 </div>
             </section>
         </div>
+
+        <div class="modal fade" id="lsConfirmEditModal" tabindex="-1" role="dialog" aria-labelledby="lsConfirmEditTitle" aria-hidden="true" data-backdrop="static" data-keyboard="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content ls-confirm-shell">
+                    <div class="ls-confirm-body">
+                        <div class="ls-confirm-icon" aria-hidden="true">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3 class="ls-confirm-title" id="lsConfirmEditTitle">Confirm lead source update</h3>
+                        <p class="ls-confirm-text">
+                            Changing the lead source data will update all existing lead source records. Are you sure you want to continue?
+                        </p>
+                        <div class="ls-confirm-note">
+                            <i class="fas fa-info-circle"></i>
+                            This will sync the updated name across related leads in the CRM.
+                        </div>
+                    </div>
+                    <div class="ls-confirm-footer">
+                        <button type="button" class="btn btn-ls-confirm-cancel" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-ls-confirm-ok js-ls-confirm-continue">
+                            <i class="fas fa-check"></i> Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <?php include __DIR__ . '/../includes/footer-links.php'; ?>
     </div>
 
@@ -934,6 +1113,30 @@ unset($_SESSION['lead_source_flash'], $_SESSION['lead_source_flash_type']);
                 jQuery('.js-ls-form-title').text('Edit Lead Source');
                 jQuery('.js-ls-save-btn').text('Save Changes');
                 scrollToForm();
+            });
+
+            jQuery('#leadSourceForm').on('submit', function (e) {
+                var editId = parseInt(jQuery('#leadSourceId').val(), 10) || 0;
+                if (editId <= 0) {
+                    return true;
+                }
+                if (jQuery(this).data('ls-confirm-ok')) {
+                    jQuery(this).removeData('ls-confirm-ok');
+                    return true;
+                }
+                e.preventDefault();
+                jQuery('#lsConfirmEditModal').modal('show');
+                return false;
+            });
+
+            jQuery(document).on('click', '.js-ls-confirm-continue', function () {
+                var $form = jQuery('#leadSourceForm');
+                $form.data('ls-confirm-ok', 1);
+                jQuery('#lsConfirmEditModal')
+                    .one('hidden.bs.modal', function () {
+                        $form.trigger('submit');
+                    })
+                    .modal('hide');
             });
 
             jQuery(document).on('click', '.js-lead-source-reset, .js-lead-source-add', function () {

@@ -1114,28 +1114,39 @@
 }
 
 [data-theme="dark"] .crm-quotation-gen .q-tour-cost-card,
-[data-theme="dark"] .crm-quotation-gen .q-tour-cost-hd,
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-body,
 [data-theme="dark"] .crm-quotation-gen .q-tour-cost-row,
-[data-theme="dark"] .crm-quotation-gen .q-tour-cost-meta {
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-grand-wrap {
     background: var(--mz-theme-bg-surface) !important;
     border-color: var(--mz-theme-border) !important;
     color: var(--mz-theme-text) !important;
     box-shadow: none !important;
 }
 
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-hd {
+    background: linear-gradient(105deg, #8f1014 0%, #6f0c10 100%) !important;
+    border-color: transparent !important;
+}
+
 [data-theme="dark"] .crm-quotation-gen .q-tour-cost-title,
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-autosave {
+    color: #fff !important;
+}
+
 [data-theme="dark"] .crm-quotation-gen .q-tour-cost-traveller-name,
-[data-theme="dark"] .crm-quotation-gen .q-tour-cost-amount,
-[data-theme="dark"] .crm-quotation-gen .q-tour-cost-meta-row strong {
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-amount {
     color: var(--mz-theme-text) !important;
 }
 
-[data-theme="dark"] .crm-quotation-gen .q-tour-cost-thead {
-    background: #111827 !important;
-    color: #f8fafc !important;
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-avatar {
+    background: rgba(225, 29, 46, 0.16) !important;
+    border-color: rgba(225, 29, 46, 0.35) !important;
+    color: #fca5a5 !important;
 }
 
-[data-theme="dark"] .crm-quotation-gen .q-tour-cost-rate .form-control {
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-rate-inline,
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-qty-inline,
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-gst-inline {
     background: var(--mz-theme-input-bg) !important;
     border-color: var(--mz-theme-input-border) !important;
     color: var(--mz-theme-text) !important;
@@ -1143,7 +1154,20 @@
 
 [data-theme="dark"] .crm-quotation-gen .q-tour-cost-grand {
     background: rgba(225, 29, 46, 0.14) !important;
-    border-top-color: var(--mz-theme-border) !important;
+    border-color: rgba(225, 29, 46, 0.35) !important;
+}
+
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-grand-label,
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-grand-amount {
+    color: #fca5a5 !important;
+}
+
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-grand-sub {
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .crm-quotation-gen .q-tour-cost-grand-divider {
+    background: var(--mz-theme-border) !important;
 }
 
 [data-theme="dark"] .crm-quotation-gen .q-usd-result {
@@ -1188,6 +1212,67 @@
 [data-theme="dark"] .crm-quotation-gen .q-pricing-compare-body,
 [data-theme="dark"] .crm-quotation-gen .q-pricing-sheets-host {
     background: var(--mz-theme-bg-page) !important;
+}
+
+[data-theme="dark"] .crm-quotation-gen .q-flight-layover {
+    background: rgba(96, 165, 250, 0.12) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: #93c5fd !important;
+}
+
+[data-theme="dark"] .crm-quotation-gen .q-wizard-step-indicator {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] .q-supplier-create-modal,
+[data-theme="dark"] #qSupplierCreateModal .modal-content,
+[data-theme="dark"] .q-supplier-create-modal .modal-header,
+[data-theme="dark"] .q-supplier-create-modal .modal-body,
+[data-theme="dark"] .q-supplier-create-modal .modal-footer {
+    background: var(--mz-theme-bg-surface) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #qSupplierCreateModal .modal-title,
+[data-theme="dark"] #qSupplierCreateModal label,
+[data-theme="dark"] .q-supplier-create-modal .modal-title,
+[data-theme="dark"] .q-supplier-create-modal label {
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #qSupplierCreateModal .form-control,
+[data-theme="dark"] .q-supplier-create-modal .form-control {
+    background: var(--mz-theme-input-bg) !important;
+    border-color: var(--mz-theme-input-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #qSupplierCreateModal .form-control[readonly],
+[data-theme="dark"] .q-supplier-create-modal .form-control[readonly] {
+    background: var(--mz-theme-bg-elevated) !important;
+    color: var(--mz-theme-text-muted) !important;
+}
+
+[data-theme="dark"] #qSupplierCreateModal .close,
+[data-theme="dark"] .q-supplier-create-modal .close {
+    color: var(--mz-theme-text) !important;
+    text-shadow: none !important;
+    opacity: 0.85;
+}
+
+[data-theme="dark"] #qSupplierCreateModal .btn-outline-secondary,
+[data-theme="dark"] .q-supplier-create-modal .btn-outline-secondary {
+    background: var(--mz-theme-bg-elevated) !important;
+    border-color: var(--mz-theme-border) !important;
+    color: var(--mz-theme-text) !important;
+}
+
+[data-theme="dark"] #qSupplierCreateModal .form-text,
+[data-theme="dark"] .q-supplier-create-modal .form-text {
+    color: var(--mz-theme-text-muted) !important;
 }
 
 /* ============================================================

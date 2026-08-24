@@ -580,6 +580,7 @@
     }
 
     function openCreateSupplierModal() {
+        window.qSupplierCreateContext = 'mail';
         var destination = currentDestination();
         if (!destination) {
             alert('Please enter a destination on the quotation form first.');
@@ -587,11 +588,15 @@
         }
         $('#qSupplierCreateForm')[0].reset();
         $('#qScDestination').val(destination);
+        $('#qScDestination').closest('.form-group').find('.form-text').text(
+            'Supplier will be linked to the quotation destination.'
+        );
         $('#qSupplierCreateModal').modal('show');
     }
 
     function saveNewSupplier() {
-        var destination = currentDestination();
+        var context = String(window.qSupplierCreateContext || 'mail');
+        var destination = String($('#qScDestination').val() || currentDestination() || '').trim();
         var name = String($('#qScName').val() || '').trim();
         var contactName = String($('#qScContactName').val() || '').trim();
         var email = String($('#qScEmail').val() || '').trim();
@@ -605,6 +610,36 @@
             alert('Contact email is required.');
             return;
         }
+        if (context === 'mail' && !destination) {
+            alert('Please enter a destination on the quotation form first.');
+            return;
+        }
+
+        var types = ['land_package'];
+        var supplierOf = ['land_package'];
+        if (context === 'flight') {
+            types = ['flight', 'train'];
+            supplierOf = ['flight', 'train'];
+        } else if (context === 'itinerary' || context === 'hotel') {
+            // Appears in Itinerary and Hotel supplier dropdowns after save / reload.
+            types = ['land_package', 'hotels'];
+            supplierOf = ['land_package', 'hotels'];
+        }
+        var places = destination ? destinationPlacesFromText(destination) : [];
+        var cityName = '';
+        var cityId = 0;
+        var countryName = '';
+        if (places.length) {
+            cityName = String(places[0].name || '').trim();
+            cityId = parseInt(places[0].id, 10) || 0;
+            countryName = String(places[0].country || '').trim();
+        }
+        if (!cityName && destination) {
+            cityName = parseDestinationParts(destination)[0] || destination;
+        }
+        // Place ids from destination lookup are destination IDs, not cities.id —
+        // city_id is resolved on the server from city_name.
+        cityId = 0;
 
         var $btn = $('#qScSaveBtn');
         $btn.prop('disabled', true);
@@ -617,17 +652,21 @@
                 id: 0,
                 name: name,
                 website: '',
-                city_id: 0,
-                city_name: '',
-                country_name: '',
+                city_id: cityId,
+                city_name: cityName,
+                country_name: countryName,
                 physical_address: '',
+                is_active: 1,
+                supplier_types_json: JSON.stringify(types),
+                supplier_type: JSON.stringify(types),
                 contacts_json: JSON.stringify([{
                     contact_name: contactName,
                     email: email,
-                    mobile: mobile
+                    mobile: mobile,
+                    is_primary: 1
                 }]),
-                supplier_of_json: JSON.stringify(['land_package']),
-                places_json: JSON.stringify(destinationPlacesFromText(destination))
+                supplier_of_json: JSON.stringify(supplierOf),
+                places_json: JSON.stringify(places)
             },
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         }).done(function (res) {
@@ -637,11 +676,46 @@
             }
 
             var newId = parseInt(res.id, 10) || 0;
-            if (res.supplier) {
-                mergeSupplierIntoCatalog(res.supplier);
+            var newName = name;
+            if (res.supplier && res.supplier.name) {
+                newName = String(res.supplier.name);
             }
 
             $('#qSupplierCreateModal').modal('hide');
+
+            if (context === 'flight' && typeof window.qOnFlightSupplierCreated === 'function') {
+                window.qOnFlightSupplierCreated({
+                    id: newId,
+                    name: newName,
+                    supplier: res.supplier || null
+                });
+                window.qSupplierCreateContext = 'mail';
+                return;
+            }
+
+            if (context === 'itinerary' && typeof window.qOnItinerarySupplierCreated === 'function') {
+                window.qOnItinerarySupplierCreated({
+                    id: newId,
+                    name: newName,
+                    supplier: res.supplier || null
+                });
+                window.qSupplierCreateContext = 'mail';
+                return;
+            }
+
+            if (context === 'hotel' && typeof window.qOnHotelSupplierCreated === 'function') {
+                window.qOnHotelSupplierCreated({
+                    id: newId,
+                    name: newName,
+                    supplier: res.supplier || null
+                });
+                window.qSupplierCreateContext = 'mail';
+                return;
+            }
+
+            if (res.supplier) {
+                mergeSupplierIntoCatalog(res.supplier);
+            }
 
             if (res.supplier) {
                 var dest = currentDestination();
@@ -661,6 +735,7 @@
                     autoSelectId: newId
                 });
             }
+            window.qSupplierCreateContext = 'mail';
         }).fail(function (xhr) {
             var msg = 'Could not save supplier.';
             if (xhr.responseJSON && xhr.responseJSON.message) {

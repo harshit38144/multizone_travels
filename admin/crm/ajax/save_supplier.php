@@ -75,6 +75,27 @@ try {
     $placesDecoded = json_decode((string) $placesRaw, true);
     $places = crmSupplierNormalizePlaces(is_array($placesDecoded) ? $placesDecoded : []);
 
+    // Quick-create from quotation (Flight / Mail): destination is sent as places
+    // and/or city_name. Ensure city columns used by Supplier Master are filled.
+    if ($cityName === '' && $places) {
+        $cityName = trim((string) ($places[0]['name'] ?? ''));
+    }
+    if ($countryName === '' && $places) {
+        $countryName = trim((string) ($places[0]['country'] ?? ''));
+    }
+    if ($cityName !== '') {
+        $resolved = crmSupplierResolveCityByName($conn, $cityName);
+        if ($cityId < 1 && !empty($resolved['city_id'])) {
+            $cityId = (int) $resolved['city_id'];
+        }
+        if (!empty($resolved['city_name'])) {
+            $cityName = (string) $resolved['city_name'];
+        }
+        if ($countryName === '' && !empty($resolved['country_name'])) {
+            $countryName = (string) $resolved['country_name'];
+        }
+    }
+
     $contactsJson = json_encode($contacts, JSON_UNESCAPED_UNICODE);
     $supplierOfJson = json_encode($supplierOf, JSON_UNESCAPED_UNICODE);
     $placesJson = json_encode($places, JSON_UNESCAPED_UNICODE);
