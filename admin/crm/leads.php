@@ -521,13 +521,6 @@ crmEnsureLeadIntakeTables($conn);
 $sendLinkDefaultFields = crmLeadIntakeSendLinkDefaultFields();
 
 $sendLinkCompanyName = 'Multi Zone Travels';
-$ssTable = $conn->query("SHOW TABLES LIKE 'site_settings'");
-if ($ssTable && $ssTable->num_rows > 0) {
-    $ssRes = $conn->query("SELECT `site_title` FROM `site_settings` WHERE `id` = 1 LIMIT 1");
-    if ($ssRes && ($ssRow = $ssRes->fetch_assoc()) && !empty($ssRow['site_title'])) {
-        $sendLinkCompanyName = (string) $ssRow['site_title'];
-    }
-}
 
 $pendingIntakeCount = 0;
 $pcRes = $conn->query("SELECT COUNT(*) AS c FROM `crm_lead_intake_submissions` WHERE `status` = 'pending'");
@@ -4723,58 +4716,72 @@ foreach ($destinationLookup as $destId => $destName) {
         return $('<div>').text(text == null ? '' : String(text)).html();
     }
 
+    /** Build emoji safely (avoids broken surrogate pairs in some deployments). */
+    function sendLinkEmojis() {
+        return {
+            sparkle: String.fromCodePoint(0x2728),
+            memo: String.fromCodePoint(0x1F4DD),
+            plane: String.fromCodePoint(0x2708, 0xFE0F),
+            globe: String.fromCodePoint(0x1F30D)
+        };
+    }
+
+    function buildSendLinkWhatsAppUrl(phoneDigits, message) {
+        var params = [];
+        if (phoneDigits) {
+            params.push('phone=' + encodeURIComponent(phoneDigits));
+        }
+        params.push('text=' + encodeURIComponent(String(message || '')));
+        return 'https://api.whatsapp.com/send?' + params.join('&');
+    }
+
     function buildSendLinkCustomerMessage(url) {
-        var company = sendLinkCompanyName || 'Multi Zone Travels';
-        var name = sendLinkGuestName() || 'Traveller';
-        var email = sendLinkGuestEmail();
+        var company = 'Multi Zone Travels';
+        var name = sendLinkGuestName();
         var link = String(url || $('#sendLinkUrl').val() || '').trim();
-        var emojiPlane = '\u2708\uFE0F';
-        var emojiGlobe = '\uD83C\uDF0D';
-        var dash = '\u2014';
+        var emoji = sendLinkEmojis();
+        var greetingName = name || 'Traveller';
         var lines = [
-            'Hi ' + name + ',',
+            'Dear ' + greetingName + ',',
+            'Greetings from ' + company + '! ' + emoji.sparkle,
             '',
-            'Thank you for considering Travel with us! ' + emojiPlane,
-            '',
-            'Please take a moment to fill out your travel preferences using the form below. It will help us create a personalized experience just for you.',
+            'To help us create a personalized travel plan, kindly complete our Travel Preference Form.',
             ''
         ];
-        if (email) {
-            lines.push('We\'ll keep you updated at ' + email + '.');
-            lines.push('');
-        }
         if (link) {
-            lines.push(link);
+            lines.push(emoji.memo + ' ' + link);
             lines.push('');
         }
-        lines.push('Looking forward to helping you plan the perfect trip! ' + emojiGlobe);
+        lines.push('Your responses will help us prepare a customized itinerary and quotation tailored to your preferences.');
         lines.push('');
-        lines.push(dash + ' ' + company);
+        lines.push('Thank you. We look forward to planning your perfect journey! ' + emoji.plane);
+        lines.push(emoji.globe);
+        lines.push('');
+        lines.push('Warm Regards,');
+        lines.push('Team Multi Zone Travels');
         return lines.join('\n');
     }
 
     function refreshSendLinkPreview() {
-        var name = sendLinkGuestName() || 'Guest';
-        var email = sendLinkGuestEmail();
+        var name = sendLinkGuestName();
         var link = String($('#sendLinkUrl').val() || '').trim();
-        var company = sendLinkCompanyName || 'Multi Zone Travels';
-        var emojiPlane = '\u2708\uFE0F';
-        var emojiGlobe = '\uD83C\uDF0D';
-        var dash = '\u2014';
+        var company = 'Multi Zone Travels';
+        var emoji = sendLinkEmojis();
+        var greetingName = name || 'Traveller';
         var html = '';
-        html += 'Hi <strong>' + sendLinkEscapeHtml(name) + '</strong>,\n';
-        html += 'Thank you for considering Travel with us! ' + emojiPlane + '\n';
-        html += 'Please take a moment to fill out your travel preferences using the form below. It will help us create a personalized experience just for you.\n';
-        if (email) {
-            html += 'We\'ll keep you updated at <strong>' + sendLinkEscapeHtml(email) + '</strong>.\n';
-        }
+        html += 'Dear <strong>' + sendLinkEscapeHtml(greetingName) + '</strong>,\n';
+        html += 'Greetings from ' + sendLinkEscapeHtml(company) + '! ' + emoji.sparkle + '\n\n';
+        html += 'To help us create a personalized travel plan, kindly complete our Travel Preference Form.\n\n';
         if (link) {
-            html += '<a class="sl-wa-link" href="' + sendLinkEscapeHtml(link) + '" target="_blank" rel="noopener">' + sendLinkEscapeHtml(link) + '</a>\n';
+            html += emoji.memo + ' <a class="sl-wa-link" href="' + sendLinkEscapeHtml(link) + '" target="_blank" rel="noopener">' + sendLinkEscapeHtml(link) + '</a>\n\n';
         }
-        html += 'Looking forward to helping you plan the perfect trip! ' + emojiGlobe + '\n';
-        html += dash + ' ' + sendLinkEscapeHtml(company);
+        html += 'Your responses will help us prepare a customized itinerary and quotation tailored to your preferences.\n\n';
+        html += 'Thank you. We look forward to planning your perfect journey! ' + emoji.plane + '\n';
+        html += emoji.globe + '\n\n';
+        html += 'Warm Regards,\n';
+        html += 'Team Multi Zone Travels';
         $('#sendLinkPreviewBody').html(html);
-        $('#sendLinkAvatar').text(sendLinkInitials(name));
+        $('#sendLinkAvatar').text(sendLinkInitials(name || 'Guest'));
         var now = new Date();
         var hours = now.getHours();
         var minutes = now.getMinutes();
@@ -4858,7 +4865,7 @@ foreach ($destinationLookup as $destId => $destName) {
             phoneDigits = '91' + phoneDigits;
         }
         var message = buildSendLinkCustomerMessage($('#sendLinkUrl').val() || '');
-        var waUrl = 'https://wa.me/' + (phoneDigits ? phoneDigits : '') + '?text=' + encodeURIComponent(message);
+        var waUrl = buildSendLinkWhatsAppUrl(phoneDigits, message);
         window.open(waUrl, '_blank', 'noopener');
     });
 
