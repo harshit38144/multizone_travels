@@ -51,7 +51,7 @@ $adminAssetBase = crmPublicAdminAssetBase();
 $shareBrandName = 'Multi Zone Travels';
 $ogTitle = 'Travel Inquiry - Multi Zone Travels';
 $ogDescription = 'Complete our Travel Preference Form so we can prepare a customized itinerary and quotation tailored to your preferences.';
-$ogImageUrl = function_exists('crmIntakeShareImageUrl') ? crmIntakeShareImageUrl() : 'https://admin.multizonetravels.com/img/travel-inquiry-og.jpg';
+$ogImageUrl = function_exists('crmIntakeShareImageUrl') ? crmIntakeShareImageUrl() : 'https://multizonetravels.com/admin/img/travel-inquiry-og.jpg?v=20260826b';
 $ogUrl = function_exists('crmIntakeCanonicalPageUrl') ? crmIntakeCanonicalPageUrl($token) : '';
 
 $ssTable = $conn->query("SHOW TABLES LIKE 'site_settings'");
@@ -89,7 +89,6 @@ if ($request) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <base href="<?= htmlspecialchars($adminAssetBase, ENT_QUOTES, 'UTF-8') ?>">
     <title><?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?></title>
     <meta name="description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:type" content="website">
@@ -110,6 +109,8 @@ if ($request) {
     <meta name="twitter:title" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
     <meta name="twitter:description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
     <meta name="twitter:image" content="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="image_src" href="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
+    <base href="<?= htmlspecialchars($adminAssetBase, ENT_QUOTES, 'UTF-8') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">

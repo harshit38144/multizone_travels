@@ -4735,10 +4735,20 @@ foreach ($destinationLookup as $destId => $destName) {
         return 'https://api.whatsapp.com/send?' + params.join('&');
     }
 
+    function sendLinkWhatsAppShareUrl(url) {
+        var link = String(url || $('#sendLinkUrl').val() || '').trim();
+        // WhatsApp caches link previews by URL. A stable query forces a fresh scrape
+        // so title/image updates (Travel Inquiry - Multi Zone Travels) show up.
+        if (link && link.indexOf('preview=') === -1) {
+            link += (link.indexOf('?') >= 0 ? '&' : '?') + 'preview=mzt';
+        }
+        return link;
+    }
+
     function buildSendLinkCustomerMessage(url) {
         var company = 'Multi Zone Travels';
         var name = sendLinkGuestName();
-        var link = String(url || $('#sendLinkUrl').val() || '').trim();
+        var link = sendLinkWhatsAppShareUrl(url);
         var emoji = sendLinkEmojis();
         var greetingName = name || 'Traveller';
         var lines = [
@@ -4764,7 +4774,7 @@ foreach ($destinationLookup as $destId => $destName) {
 
     function refreshSendLinkPreview() {
         var name = sendLinkGuestName();
-        var link = String($('#sendLinkUrl').val() || '').trim();
+        var link = sendLinkWhatsAppShareUrl($('#sendLinkUrl').val() || '');
         var company = 'Multi Zone Travels';
         var emoji = sendLinkEmojis();
         var greetingName = name || 'Traveller';
