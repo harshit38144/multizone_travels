@@ -72,7 +72,7 @@ if (isset($conn) && $conn instanceof mysqli) {
 }
 
 $tpHotelCategories = $leadFormEmbedModal
-    ? ['3 Star', '3 Star Delux', '4 Star', '4 Star Delux', '5 Star', '5 Star Delux']
+    ? ['3 Star', '4 Star', '5 Star']
     : ['1 Star', '2 Star', '3 Star', '4 Star', '5 Star'];
 $tpVehicleTypes = ['Sedan', 'SUV', 'Tempo Traveller', 'Coach'];
 $leadSourceOptions = [];

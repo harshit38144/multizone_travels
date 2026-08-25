@@ -188,8 +188,28 @@ function crmResolveIntakeLogoUrl($logoPath)
     if (strpos($logoPath, 'admin/') === 0) {
         $logoPath = substr($logoPath, 6);
     }
+    // Common site_settings paths that live on the main site folder tree
+    if (strpos($logoPath, 'images/') === 0 || strpos($logoPath, 'uploads/') === 0) {
+        $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')) ?: '');
+        if (!crmIntakeIsLocalHost($host) && preg_match('/(^|\.)multizonetravels\.com$/', $host)) {
+            // Prefer admin panel logo which is reliably deployed
+            return 'https://admin.multizonetravels.com/img/web-logo.png';
+        }
+    }
     $base = crmPublicAdminAssetBase();
     return rtrim($base, '/') . '/' . $logoPath;
+}
+
+/**
+ * Absolute fallback Multizone logo used if configured logo fails to load.
+ */
+function crmIntakeFallbackLogoUrl()
+{
+    $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')) ?: '');
+    if (crmIntakeIsLocalHost($host)) {
+        return '../admin/img/web-logo.png';
+    }
+    return 'https://admin.multizonetravels.com/img/web-logo.png';
 }
 
 function crmBuildIntakePublicUrl($token)

@@ -44,6 +44,7 @@ if ($token === '') {
 $companyName = 'Multizone Travels';
 $companyTagline = 'travel for memories...';
 $logoUrl = crmResolveIntakeLogoUrl('img/web-logo.png');
+$logoFallbackUrl = function_exists('crmIntakeFallbackLogoUrl') ? crmIntakeFallbackLogoUrl() : $logoUrl;
 $noteToCustomer = '';
 $intakeFormSubtitle = 'Share your travel plans and we\'ll craft the perfect experience for you.';
 $adminAssetBase = crmPublicAdminAssetBase();
@@ -59,7 +60,11 @@ if ($ssTable && $ssTable->num_rows > 0) {
             $companyTagline = (string) $ssRow['site_tagline'];
         }
         if (!empty($ssRow['logo_path'])) {
-            $logoUrl = crmResolveIntakeLogoUrl($ssRow['logo_path']);
+            $resolved = crmResolveIntakeLogoUrl($ssRow['logo_path']);
+            // Prefer admin brand logo when settings path looks like a missing main-site asset
+            if ($resolved !== '') {
+                $logoUrl = $resolved;
+            }
         }
     }
 }
@@ -109,47 +114,55 @@ if ($request) {
 
         .crm-lead-intake-hero {
             text-align: center;
-            padding: 0.5rem 0.5rem 1.25rem;
+            padding: 0.35rem 0.35rem 1rem;
+        }
+
+        .crm-lead-intake-logo-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 56px;
+            margin: 0 auto 0.75rem;
         }
 
         .crm-lead-intake-logo {
-            max-height: 72px;
-            max-width: min(280px, 78vw);
+            max-height: 64px;
+            max-width: min(240px, 72vw);
             width: auto;
+            height: auto;
             object-fit: contain;
-            margin: 0 auto 0.85rem;
-            display: none;
-        }
-
-        .crm-lead-intake-logo.is-loaded {
             display: block;
         }
 
+        .crm-lead-intake-logo.is-broken {
+            display: none;
+        }
+
         .crm-lead-intake-wordmark {
-            display: inline-block;
-            margin: 0 auto 0.85rem;
-            font-size: 1.45rem;
+            display: none;
+            margin: 0 auto;
+            font-size: 1.35rem;
             font-weight: 700;
             color: #0f172a;
             letter-spacing: 0.01em;
         }
 
-        .crm-lead-intake-logo.is-loaded + .crm-lead-intake-wordmark {
-            display: none;
+        .crm-lead-intake-logo-wrap.is-fallback .crm-lead-intake-wordmark {
+            display: inline-block;
         }
 
         .crm-lead-intake-headline {
-            margin: 0 0 0.45rem;
-            font-size: clamp(1.45rem, 3.2vw, 1.85rem);
+            margin: 0 0 0.4rem;
+            font-size: clamp(1.35rem, 3vw, 1.75rem);
             font-weight: 700;
             color: #0f172a;
             line-height: 1.25;
         }
 
         .crm-lead-intake-accent {
-            width: 52px;
+            width: 48px;
             height: 3px;
-            margin: 0 auto 0.75rem;
+            margin: 0 auto 0.65rem;
             border-radius: 999px;
             background: #e11d2e;
         }
@@ -158,8 +171,8 @@ if ($request) {
             margin: 0 auto;
             max-width: 520px;
             color: #64748b;
-            font-size: 0.95rem;
-            line-height: 1.5;
+            font-size: 0.9rem;
+            line-height: 1.45;
             font-weight: 500;
         }
 
@@ -430,8 +443,8 @@ if ($request) {
             overflow: hidden;
             border: 0;
         }
-        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row .tp-nights-stepper,
-        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row .tp-rg-stepper {
+        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row .tp-nights-stepper .tp-rg-stepper,
+        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row .tp-rooms-stepper .tp-rg-stepper {
             width: 100%;
             min-width: 0;
             max-width: 100%;
@@ -441,6 +454,77 @@ if ($request) {
         .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row .tp-vehicle-type-picker,
         .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row .js-tp-rg-picker {
             width: 100%;
+        }
+
+        /* Number of Guests dropdown — match trigger width & even steppers */
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-picker {
+            width: 100%;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-trigger {
+            width: 100%;
+            text-align: left;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-panels-wrap {
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-panel {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-row {
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 0.85rem;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-row-label {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-row-label strong {
+            font-size: 0.88rem;
+            line-height: 1.25;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-row-label small {
+            font-size: 0.7rem;
+            line-height: 1.2;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-stepper {
+            flex: 0 0 118px;
+            width: 118px !important;
+            min-width: 118px !important;
+            max-width: 118px !important;
+            justify-content: space-between;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-step-btn {
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-step-val {
+            flex: 1 1 auto;
+            min-width: 0;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-panel-hd {
+            padding: 0.7rem 0.85rem;
+            font-size: 0.9rem;
+        }
+        .crm-lead-intake-public .js-tp-guests-field .tp-rg-close {
+            font-size: 1.15rem;
         }
         @media (max-width: 767.98px) {
             .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .form-group,
@@ -627,25 +711,289 @@ if ($request) {
         @media (max-width: 991px) {
             .crm-lead-intake-trust {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.65rem;
+                padding: 0.85rem 0.7rem;
+            }
+
+            .crm-lead-intake-trust-title {
+                font-size: 0.72rem;
+            }
+
+            .crm-lead-intake-trust-text {
+                font-size: 0.65rem;
             }
         }
 
-        @media (max-width: 575px) {
+        @media (max-width: 767.98px) {
             .crm-lead-intake-page {
-                padding: 0.85rem 0.65rem 1.5rem;
+                padding: 0.75rem 0.55rem 1.35rem;
+            }
+
+            .crm-lead-intake-hero {
+                padding: 0.15rem 0.15rem 0.75rem;
+            }
+
+            .crm-lead-intake-logo-wrap {
+                min-height: 44px;
+                margin-bottom: 0.55rem;
+            }
+
+            .crm-lead-intake-logo {
+                max-height: 48px;
+                max-width: min(200px, 70vw);
+            }
+
+            .crm-lead-intake-wordmark {
+                font-size: 1.1rem;
+            }
+
+            .crm-lead-intake-headline {
+                font-size: 1.15rem;
+                margin-bottom: 0.3rem;
+            }
+
+            .crm-lead-intake-accent {
+                width: 36px;
+                height: 2px;
+                margin-bottom: 0.45rem;
+            }
+
+            .crm-lead-intake-subhead {
+                font-size: 0.78rem;
+                line-height: 1.4;
+                max-width: 34rem;
+                padding: 0 0.25rem;
             }
 
             .crm-lead-intake-trust {
-                grid-template-columns: 1fr;
+                margin-bottom: 0.85rem;
+                border-radius: 12px;
+            }
+
+            .crm-lead-intake-trust-icon {
+                width: 30px;
+                height: 30px;
+                flex-basis: 30px;
+                font-size: 0.72rem;
+            }
+
+            .crm-lead-intake-trust-item {
+                gap: 0.4rem;
+                padding: 0.1rem 0.15rem;
+            }
+
+            .crm-lead-intake-note {
+                font-size: 0.78rem;
+                padding: 0.7rem 0.8rem;
+            }
+
+            .crm-lead-intake-public .crm-card {
+                border-radius: 12px;
+                margin-bottom: 0.75rem;
+            }
+
+            .crm-lead-intake-public .crm-card-hd-blue,
+            .crm-lead-intake-public .crm-card-hd-teal,
+            .crm-lead-intake-public .crm-card-hd-green {
+                padding: 0.75rem 0.85rem 0.65rem;
+                gap: 0.55rem;
+            }
+
+            .crm-lead-intake-public .intake-step-num {
+                width: 28px;
+                height: 28px;
+                flex-basis: 28px;
+                font-size: 0.8rem;
+            }
+
+            .crm-lead-intake-public .crm-card-hd-title {
+                font-size: 0.92rem;
+            }
+
+            .crm-lead-intake-public .crm-card-hd-sub {
+                font-size: 0.7rem;
+            }
+
+            .crm-lead-intake-public .crm-card-bd {
+                padding: 0.8rem 0.85rem 0.95rem;
+            }
+
+            .crm-lead-intake-public label {
+                font-size: 0.74rem;
+                margin-bottom: 0.28rem;
+            }
+
+            .crm-lead-intake-public .form-group {
+                margin-bottom: 0.75rem;
+            }
+
+            .crm-lead-intake-public .form-control,
+            .crm-lead-intake-public .tp-rg-trigger,
+            .crm-lead-intake-public .tp-destination-field,
+            .crm-lead-intake-public .tp-hotel-cat-field,
+            .crm-lead-intake-public .tp-vehicle-type-field {
+                min-height: 40px !important;
+                font-size: 0.82rem !important;
+                border-radius: 8px;
+                padding-top: 0.4rem;
+                padding-bottom: 0.4rem;
+            }
+
+            .crm-lead-intake-public .intake-tip-banner {
+                font-size: 0.76rem;
+                padding: 0.65rem 0.75rem;
+                margin: 0.25rem 0 0.75rem;
+            }
+
+            .crm-lead-intake-public .form-actions .js-lead-submit-btn,
+            .crm-lead-intake-public .form-actions .btn-primary {
+                min-width: 0;
+                width: 100%;
+                min-height: 42px;
+                font-size: 0.88rem;
+                padding: 0.55rem 1rem;
             }
 
             .crm-lead-intake-public .form-actions {
                 flex-direction: column;
                 align-items: stretch;
+                justify-content: flex-start;
+                gap: 0.55rem;
+                padding: 0.15rem 0 0;
+                margin-top: 0.15rem;
+            }
+
+            .crm-lead-intake-public .intake-safe-note {
+                flex: 0 0 auto;
+                width: 100%;
+                margin: 0;
             }
 
             .crm-lead-intake-public .intake-submit-wrap {
-                margin-left: 0;
+                margin: 0;
+                width: 100%;
+                text-align: center;
+            }
+
+            .crm-lead-intake-public .intake-submit-soon {
+                margin-top: 0.35rem;
+            }
+
+            .crm-lead-intake-public .intake-submit-soon,
+            .crm-lead-intake-public .intake-safe-note,
+            .crm-lead-intake-footer {
+                font-size: 0.7rem;
+            }
+
+            .crm-lead-intake-public .row > [class*="col-"] {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .crm-lead-intake-public .js-tp-guests-field .tp-rg-panels-wrap {
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+            }
+
+            .crm-lead-intake-public .js-tp-guests-field .tp-rg-stepper {
+                flex-basis: 108px;
+                width: 108px !important;
+                min-width: 108px !important;
+                max-width: 108px !important;
+            }
+
+            .crm-lead-intake-public .js-tp-guests-field .tp-rg-step-btn {
+                width: 34px;
+                height: 34px;
+                flex-basis: 34px;
+            }
+
+            .crm-lead-intake-public .js-tp-guests-field .tp-rg-child-ages-popup {
+                position: static;
+                left: auto;
+                top: auto;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                margin-top: 0.5rem;
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .crm-lead-intake-page {
+                padding: 0.6rem 0.45rem 1.2rem;
+            }
+
+            .crm-lead-intake-logo {
+                max-height: 42px;
+                max-width: min(180px, 68vw);
+            }
+
+            .crm-lead-intake-headline {
+                font-size: 1.05rem;
+            }
+
+            .crm-lead-intake-subhead {
+                font-size: 0.72rem;
+            }
+
+            .crm-lead-intake-trust {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem 0.35rem;
+                padding: 0.65rem 0.5rem;
+            }
+
+            .crm-lead-intake-trust-title {
+                font-size: 0.66rem;
+            }
+
+            .crm-lead-intake-trust-text {
+                font-size: 0.6rem;
+                line-height: 1.25;
+            }
+
+            .crm-lead-intake-trust-icon {
+                width: 26px;
+                height: 26px;
+                flex-basis: 26px;
+                font-size: 0.65rem;
+            }
+
+            .crm-lead-intake-public .crm-card-hd-title {
+                font-size: 0.86rem;
+            }
+
+            .crm-lead-intake-public label {
+                font-size: 0.7rem;
+            }
+
+            .crm-lead-intake-public .form-control,
+            .crm-lead-intake-public .tp-rg-trigger,
+            .crm-lead-intake-public .tp-destination-field,
+            .crm-lead-intake-public .tp-hotel-cat-field,
+            .crm-lead-intake-public .tp-vehicle-type-field {
+                min-height: 38px !important;
+                font-size: 0.78rem !important;
+            }
+
+            .crm-lead-intake-public .form-actions {
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+                gap: 0.45rem;
+                padding: 0;
+                margin-top: 0;
+            }
+
+            .crm-lead-intake-public .intake-safe-note {
+                flex: 0 0 auto;
+                width: 100%;
+            }
+
+            .crm-lead-intake-public .intake-submit-wrap {
+                margin: 0;
                 width: 100%;
             }
 
@@ -653,9 +1001,15 @@ if ($request) {
                 width: 100%;
             }
 
+            .crm-lead-intake-public .intake-submit-soon {
+                margin-top: 0.3rem;
+                margin-bottom: 0;
+            }
+
             .crm-lead-intake-public .intake-tip-banner {
                 flex-direction: column;
                 align-items: flex-start;
+                margin-bottom: 0.55rem;
             }
         }
     </style>
@@ -663,8 +1017,16 @@ if ($request) {
 <body class="hold-transition">
 <div class="crm-lead-intake-page">
     <div class="crm-lead-intake-hero">
-        <img src="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="" class="crm-lead-intake-logo" onload="this.classList.add('is-loaded')" onerror="this.classList.add('is-broken')">
-        <div class="crm-lead-intake-wordmark"><?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?></div>
+        <div class="crm-lead-intake-logo-wrap" id="crmIntakeLogoWrap">
+            <img
+                src="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>"
+                alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>"
+                class="crm-lead-intake-logo"
+                id="crmIntakeLogo"
+                decoding="async"
+            >
+            <div class="crm-lead-intake-wordmark"><?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?></div>
+        </div>
         <h1 class="crm-lead-intake-headline">Explore the World with Us</h1>
         <div class="crm-lead-intake-accent" aria-hidden="true"></div>
         <p class="crm-lead-intake-subhead"><?= htmlspecialchars($intakeFormSubtitle, ENT_QUOTES, 'UTF-8') ?></p>
@@ -754,6 +1116,32 @@ if ($request) {
         line-height: 1.5;
     }
 </style>
+<script>
+(function () {
+    var logo = document.getElementById('crmIntakeLogo');
+    var wrap = document.getElementById('crmIntakeLogoWrap');
+    var fallback = <?= json_encode($logoFallbackUrl, JSON_UNESCAPED_SLASHES) ?>;
+    if (!logo || !wrap) {
+        return;
+    }
+    var triedFallback = false;
+    function showTextFallback() {
+        logo.classList.add('is-broken');
+        wrap.classList.add('is-fallback');
+    }
+    logo.addEventListener('error', function () {
+        if (!triedFallback && fallback && logo.getAttribute('src') !== fallback) {
+            triedFallback = true;
+            logo.setAttribute('src', fallback);
+            return;
+        }
+        showTextFallback();
+    });
+    if (logo.complete && logo.naturalWidth === 0) {
+        logo.dispatchEvent(new Event('error'));
+    }
+})();
+</script>
 <script>
 (function () {
     var $notes = $('textarea[name="tp_notes"]');
