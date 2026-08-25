@@ -240,16 +240,12 @@ function crmBuildIntakePublicUrlLegacy($token)
 /**
  * Absolute same-origin submit URL. Must not be relative: <base href> on the
  * public form points at admin.multizonetravels.com, which would steal the POST.
+ * Always targets /public/ajax/… even when the form is opened via short /f/{code}.
  */
 function crmBuildIntakeSubmitUrl()
 {
-    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/public/lead_intake.php'));
-    $dir = rtrim(dirname($script), '/');
-    if ($dir === '' || $dir === '.' || $dir === '\\') {
-        $ajaxPath = '/ajax/submit_lead_intake.php';
-    } else {
-        $ajaxPath = $dir . '/ajax/submit_lead_intake.php';
-    }
+    $base = rtrim((string) crmIntakePublicBasePath(), '/');
+    $ajaxPath = $base . '/public/ajax/submit_lead_intake.php';
 
     $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
     $hostNoPort = strtolower(preg_replace('/:\d+$/', '', $host) ?: $host);

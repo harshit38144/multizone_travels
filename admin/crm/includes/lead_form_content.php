@@ -1374,7 +1374,18 @@ if (empty($leadSourceOptions)) {
             var destinationSaveUrl = $form.attr('data-destination-save-url') || 'crm/ajax/save_destination.php';
             var leadSaveUrl = $form.attr('data-save-url') || (isIntake ? '' : 'crm/ajax/save_lead.php');
             if (isIntake && !leadSaveUrl) {
-                leadSaveUrl = window.location.origin + window.location.pathname.replace(/[^/]+$/, '') + 'ajax/submit_lead_intake.php';
+                // Prefer /public/ajax even when the page URL is short /f/{code}
+                var pathParts = String(window.location.pathname || '').split('/').filter(Boolean);
+                var fIdx = pathParts.indexOf('f');
+                var publicIdx = pathParts.indexOf('public');
+                var rootParts = pathParts.slice(0);
+                if (fIdx >= 0) {
+                    rootParts = pathParts.slice(0, fIdx);
+                } else if (publicIdx >= 0) {
+                    rootParts = pathParts.slice(0, publicIdx);
+                }
+                var rootPrefix = rootParts.length ? '/' + rootParts.join('/') : '';
+                leadSaveUrl = window.location.origin + rootPrefix + '/public/ajax/submit_lead_intake.php';
             }
             var tpDestinationOptions = [];
             var tpSelectedDestinations = [];
@@ -2559,8 +2570,8 @@ if (empty($leadSourceOptions)) {
                         var $select = jQuery('<select class="form-control js-tp-child-bed-select"></select>')
                             .attr('data-index', index)
                             .html(
-                                '<option value="cnb" title="CNB - Child No Bed">CNB</option>' +
-                                '<option value="cwb" title="CWB - Child With Bed">CWB</option>'
+                                '<option value="cnb">Child No Bed</option>' +
+                                '<option value="cwb">Child With Bed</option>'
                             )
                             .val(bedType);
                         $row.append($select);
