@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# /f/Ab3xK9m2  → short customer form
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^f/([A-Za-z0-9_-]+)/thanks/?$ f/thanks.php?token=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^f/([A-Za-z0-9_-]+)/?$ f/index.php?token=$1 [L,QSA]

@@ -44,7 +44,7 @@ if ($fieldConfigJson === false) {
     $fieldConfigJson = '[]';
 }
 
-$token = crmGenerateIntakeToken();
+$token = crmGenerateIntakeToken($conn);
 $sql = "INSERT INTO `crm_lead_intake_requests`
     (`token`, `admin_id`, `admin_name`, `recipient_name`, `recipient_phone`, `recipient_email`,
      `lead_source`, `referred_by`, `assign_to`, `field_config`, `note_to_customer`, `status`)

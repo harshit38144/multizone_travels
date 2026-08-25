@@ -29,7 +29,11 @@ if ($token === '') {
     } elseif (in_array((string) ($request['status'] ?? ''), ['approved', 'rejected', 'cancelled'], true)) {
         $error = 'This link is no longer active.';
     } elseif ((string) ($request['status'] ?? '') === 'submitted') {
-        header('Location: lead_intake_thanks.php?token=' . rawurlencode($token));
+        if (function_exists('crmBuildIntakeThanksUrl')) {
+            header('Location: ' . crmBuildIntakeThanksUrl($token));
+        } else {
+            header('Location: lead_intake_thanks.php?token=' . rawurlencode($token));
+        }
         exit;
     } else {
         $decoded = json_decode((string) ($request['field_config'] ?? '[]'), true);
@@ -75,11 +79,15 @@ if ($request) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-    <?php include __DIR__ . '/../admin/includes/header-links.php'; ?>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" crossorigin="anonymous">
-    <script src="plugins/jquery/jquery.min.js"></script>
-    <script src="plugins/jquery-ui/jquery-ui.min.js"></script>
-    <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tempusdominus-bootstrap-4@5.39.0/build/css/tempusdominus-bootstrap-4.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tempusdominus-bootstrap-4@5.39.0/build/js/tempusdominus-bootstrap-4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <?php
     $leadFormScope = '.crm-lead-intake-public';
     include __DIR__ . '/../admin/crm/includes/lead_form_styles.php';

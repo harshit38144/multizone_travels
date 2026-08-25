@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# When /f/CODE is requested under this folder
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9_-]+)/thanks/?$ thanks.php?token=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9_-]+)/?$ index.php?token=$1 [L,QSA]

@@ -47,14 +47,18 @@ function adminThemeResolveForRequest(): string
         return 'light';
     }
 
-    if (!isset($conn) || !($conn instanceof mysqli)) {
-        $connPath = __DIR__ . '/../connection.php';
-        if (is_file($connPath)) {
-            include_once $connPath;
+    // Public pages (lead intake) may already have $conn from database.php at global scope.
+    // Includes inside this function do not inherit that unless we declare global.
+    global $conn;
+
+    if (!($conn instanceof mysqli)) {
+        $dbPath = __DIR__ . '/../config/database.php';
+        if (is_file($dbPath)) {
+            require_once $dbPath;
         }
     }
 
-    if (!isset($conn) || !($conn instanceof mysqli)) {
+    if (!($conn instanceof mysqli) || $conn->connect_errno) {
         return 'light';
     }
 

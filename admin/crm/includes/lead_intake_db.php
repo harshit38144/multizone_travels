@@ -60,21 +60,65 @@ function crmEnsureLeadIntakeTables(mysqli $conn)
     return true;
 }
 
-function crmGenerateIntakeToken()
+function crmGenerateIntakeToken(?mysqli $conn = null, int $length = 8): string
 {
-    return bin2hex(random_bytes(24));
+    // Unambiguous alphabet (no 0/O/1/I/l) for short shareable codes
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    $max = strlen($alphabet) - 1;
+    $length = max(6, min(16, $length));
+
+    for ($attempt = 0; $attempt < 12; $attempt++) {
+        $token = '';
+        for ($i = 0; $i < $length; $i++) {
+            $token .= $alphabet[random_int(0, $max)];
+        }
+
+        if (!($conn instanceof mysqli)) {
+            return $token;
+        }
+
+        $stmt = $conn->prepare('SELECT 1 FROM `crm_lead_intake_requests` WHERE `token` = ? LIMIT 1');
+        if (!$stmt) {
+            return $token;
+        }
+        $stmt->bind_param('s', $token);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $exists = $res && $res->num_rows > 0;
+        $stmt->close();
+        if (!$exists) {
+            return $token;
+        }
+    }
+
+    // Extremely unlikely fallback
+    return bin2hex(random_bytes(8));
 }
 
+function crmIntakeShortCodeIsValid($code): bool
+{
+    $code = trim((string) $code);
+    return $code !== '' && (bool) preg_match('/^[A-Za-z0-9_-]{6,64}$/', $code);
+}
+
+/**
+ * Public base path for guest form URLs.
+ * Prefer project root when creating links from admin AJAX.
+ */
 function crmIntakePublicBasePath()
 {
-    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
     $base = '';
     if (preg_match('#^(.*?)/admin/#', $script, $m)) {
         $base = $m[1];
     } elseif (preg_match('#^(.*?)/public/#', $script, $m)) {
         $base = $m[1];
+    } elseif (preg_match('#^(.*?)/f/#', $script, $m)) {
+        $base = $m[1];
+    } elseif (preg_match('#^(.*?)/f(?:/|$)#', $script, $m)) {
+        $base = $m[1];
     }
-    return $base;
+    return rtrim($base, '/');
 }
 
 function crmIntakeIsLocalHost($host)
@@ -150,14 +194,27 @@ function crmResolveIntakeLogoUrl($logoPath)
 
 function crmBuildIntakePublicUrl($token)
 {
+    $token = trim((string) $token);
     $path = crmIntakeIsLocalHost(crmIntakePublicHost()) ? crmIntakePublicBasePath() : '';
-    return crmIntakePublicScheme() . '://' . crmIntakePublicHost() . $path . '/public/lead_intake.php?token=' . rawurlencode($token);
+    // Short branded path: /f/Ab3xK9m2
+    return crmIntakePublicScheme() . '://' . crmIntakePublicHost() . $path . '/f/' . rawurlencode($token);
 }
 
 function crmBuildIntakeThanksUrl($token)
 {
+    $token = trim((string) $token);
     $path = crmIntakeIsLocalHost(crmIntakePublicHost()) ? crmIntakePublicBasePath() : '';
-    return crmIntakePublicScheme() . '://' . crmIntakePublicHost() . $path . '/public/lead_intake_thanks.php?token=' . rawurlencode($token);
+    return crmIntakePublicScheme() . '://' . crmIntakePublicHost() . $path . '/f/' . rawurlencode($token) . '/thanks';
+}
+
+/**
+ * Legacy long URL (kept for old WhatsApp messages / bookmarks).
+ */
+function crmBuildIntakePublicUrlLegacy($token)
+{
+    $token = trim((string) $token);
+    $path = crmIntakeIsLocalHost(crmIntakePublicHost()) ? crmIntakePublicBasePath() : '';
+    return crmIntakePublicScheme() . '://' . crmIntakePublicHost() . $path . '/public/lead_intake.php?token=' . rawurlencode($token);
 }
 
 /**

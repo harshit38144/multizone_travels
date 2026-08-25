@@ -4,8 +4,18 @@ require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/admin_assets.php';
 
+// When this file is include()'d from inside a function, $conn from database.php
+// may already exist only in global scope (require_once will not re-create it).
+if (!isset($conn) || !($conn instanceof mysqli)) {
+	global $conn;
+}
+if (!isset($conn) || !($conn instanceof mysqli)) {
+	return;
+}
+
 if ($conn->connect_errno) {
 	echo 'connection failed!!';
+	return;
 }
 date_default_timezone_set('Asia/Kolkata');
 
