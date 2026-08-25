@@ -394,16 +394,72 @@
         return html;
     }
 
+    function qRestoreSupplierSearchField($sel) {
+        var data = $sel && $sel.data('select2');
+        if (!data) {
+            return;
+        }
+        var $selection = data.$selection;
+        var $dropdown = data.$dropdown;
+        if (!$selection || !$dropdown) {
+            return;
+        }
+        var $search = $selection.find('.q-supplier-inline-search-field');
+        var $host = $dropdown.find('.select2-search--dropdown');
+        if ($search.length && $host.length) {
+            $host.append($search);
+        }
+        $search.removeClass('q-supplier-inline-search-field');
+        $selection.removeClass('q-supplier-searching');
+        $selection.find('.select2-selection__rendered').removeClass('q-supplier-search-host');
+        $dropdown.removeClass('q-supplier-inline-search');
+    }
+
+    function qMountSupplierInlineSearch($sel) {
+        var data = $sel && $sel.data('select2');
+        if (!data) {
+            return;
+        }
+        var $selection = data.$selection;
+        var $dropdown = data.$dropdown;
+        if (!$selection || !$dropdown) {
+            return;
+        }
+        var $search = $dropdown.find('.select2-search__field');
+        if (!$search.length) {
+            $search = $selection.find('.select2-search__field');
+        }
+        if (!$search.length) {
+            return;
+        }
+        var placeholder = String($sel.data('qSupplierPlaceholder') || 'Search…');
+        $dropdown.addClass('q-supplier-inline-search');
+        $selection.addClass('q-supplier-searching');
+        $selection.find('.select2-selection__rendered').addClass('q-supplier-search-host');
+        $search
+            .addClass('q-supplier-inline-search-field')
+            .attr('placeholder', placeholder)
+            .val('');
+        // Type in the actual supplier field (selection), not a nested dropdown search.
+        $selection.prepend($search);
+        window.setTimeout(function () {
+            try {
+                $search.trigger('focus');
+            } catch (e) { /* ignore */ }
+        }, 0);
+    }
+
     function qDestroySupplierSelect2($sel) {
         if (!$sel || !$sel.length || !$.fn.select2) {
             return;
         }
+        qRestoreSupplierSearchField($sel);
         if ($sel.hasClass('select2-hidden-accessible')) {
             try {
                 $sel.select2('destroy');
             } catch (e) { /* ignore */ }
         }
-        $sel.off('select2:opening.qSupplierPrev select2:open.qCreateFooter');
+        $sel.off('select2:opening.qSupplierPrev select2:open.qCreateFooter select2:open.qInlineSearch select2:closing.qInlineSearch');
     }
 
     function qTriggerSupplierCreateFromSelect($sel) {
@@ -462,9 +518,11 @@
         }
         qDestroySupplierSelect2($sel);
         var hasCreate = $sel.find('option[value="__create__"]').length > 0;
+        var placeholder = opts.placeholder || 'Select';
+        $sel.data('qSupplierPlaceholder', placeholder);
         $sel.select2({
             width: '100%',
-            placeholder: opts.placeholder || 'Select',
+            placeholder: placeholder,
             allowClear: false,
             minimumResultsForSearch: 0,
             dropdownParent: $(document.body),
@@ -506,6 +564,15 @@
         });
         $sel.off('select2:opening.qSupplierPrev').on('select2:opening.qSupplierPrev', function () {
             $(this).data('prevSupplierVal', $(this).val() || '');
+        });
+        $sel.off('select2:open.qInlineSearch').on('select2:open.qInlineSearch', function () {
+            var $open = $(this);
+            window.setTimeout(function () {
+                qMountSupplierInlineSearch($open);
+            }, 0);
+        });
+        $sel.off('select2:closing.qInlineSearch').on('select2:closing.qInlineSearch', function () {
+            qRestoreSupplierSearchField($(this));
         });
         $sel.off('select2:open.qCreateFooter').on('select2:open.qCreateFooter', function () {
             var $open = $(this);
@@ -6189,17 +6256,39 @@
         }, behavior === 'auto' ? 50 : 650);
     }
 
+    function syncUnlockedWizardSections() {
+        if (!Q_WIZARD_SCROLL_MODE) {
+            return;
+        }
+        $('.q-wizard-step').each(function () {
+            var step = parseInt($(this).attr('data-q-step'), 10) || 0;
+            var unlocked = step > 0 && step <= qWizardMax;
+            $(this).toggleClass('is-unlocked', unlocked);
+            $(this).toggleClass('is-last-unlocked', step === qWizardMax);
+            // Hide Next on sections that are no longer the furthest unlocked,
+            // except keep Next on every unlocked section before Pricing.
+            var $nextBar = $(this).find('.q-section-next-bar');
+            if ($nextBar.length) {
+                $nextBar.toggle(unlocked && step < Q_WIZARD_TOTAL);
+            }
+        });
+    }
+
     function initAllWizardSectionsVisible() {
         if (!Q_WIZARD_SCROLL_MODE) {
             return;
         }
-        $('.q-wizard-step').addClass('is-visible');
         qWizardMax = Q_WIZARD_TOTAL;
+        syncUnlockedWizardSections();
     }
 
     function ensureWizardSectionsReady() {
-        onWizardStepShown(4);
-        onWizardStepShown(6);
+        var max = Math.max(1, Math.min(Q_WIZARD_TOTAL, qWizardMax || 1));
+        for (var step = 1; step <= max; step++) {
+            if (step === 4 || step === 6) {
+                onWizardStepShown(step);
+            }
+        }
     }
 
     function updateWizardStepperUi(options) {
@@ -6208,13 +6297,7 @@
             var step = parseInt($(this).data('qStep'), 10);
             var $item = $(this);
             $item.removeClass('is-active is-complete is-locked');
-            if (Q_WIZARD_SCROLL_MODE) {
-                if (step < qWizardCurrent) {
-                    $item.addClass('is-complete');
-                } else if (step === qWizardCurrent) {
-                    $item.addClass('is-active');
-                }
-            } else if (step < qWizardCurrent) {
+            if (step < qWizardCurrent) {
                 $item.addClass('is-complete');
             } else if (step === qWizardCurrent) {
                 $item.addClass('is-active');
@@ -6222,11 +6305,16 @@
                 $item.addClass('is-locked');
             }
             $item.attr('aria-current', step === qWizardCurrent ? 'step' : 'false');
+            // Always keep every step visible in the top navigation.
+            $item.show();
         });
         if (!Q_WIZARD_SCROLL_MODE) {
             $('#qWizardStepIndicator').text('Step ' + qWizardCurrent + ' of ' + Q_WIZARD_TOTAL);
             $('#qWizardPrev').css('visibility', qWizardCurrent <= 1 ? 'hidden' : 'visible');
             $('#qWizardNext').toggle(qWizardCurrent < Q_WIZARD_TOTAL);
+        }
+        if (Q_WIZARD_SCROLL_MODE) {
+            syncUnlockedWizardSections();
         }
         if (options.save !== false) {
             saveWizardState();
@@ -6254,6 +6342,9 @@
 
     function setWizardStep(step, scroll) {
         step = Math.max(1, Math.min(Q_WIZARD_TOTAL, step));
+        if (step > qWizardMax) {
+            return false;
+        }
         if (!Q_WIZARD_SCROLL_MODE && step > qWizardCurrent && !validateWizardStep(qWizardCurrent)) {
             return false;
         }
@@ -6285,8 +6376,28 @@
         return true;
     }
 
+    function advanceWizardFrom(fromStep) {
+        fromStep = parseInt(fromStep, 10) || qWizardCurrent;
+        fromStep = Math.max(1, Math.min(Q_WIZARD_TOTAL, fromStep));
+        if (!validateWizardStep(fromStep)) {
+            return false;
+        }
+        if (fromStep >= Q_WIZARD_TOTAL) {
+            return setWizardStep(Q_WIZARD_TOTAL, true);
+        }
+        var next = fromStep + 1;
+        var newlyUnlocked = next > qWizardMax;
+        if (newlyUnlocked) {
+            qWizardMax = next;
+            syncUnlockedWizardSections();
+            initWizardScrollSpy();
+        }
+        return setWizardStep(next, true);
+    }
+
     function unlockAllWizardSteps() {
         qWizardMax = Q_WIZARD_TOTAL;
+        syncUnlockedWizardSections();
         updateWizardStepperUi();
     }
 
@@ -6298,7 +6409,7 @@
             qWizardScrollSpyObserver.disconnect();
             qWizardScrollSpyObserver = null;
         }
-        var sections = document.querySelectorAll('.q-wizard-step[data-q-step]');
+        var sections = document.querySelectorAll('.q-wizard-step.is-unlocked[data-q-step]');
         if (!sections.length) {
             return;
         }
@@ -6326,7 +6437,7 @@
                 return a.top - b.top;
             });
             var nextStep = visible[0].step;
-            if (!nextStep || nextStep === qWizardCurrent) {
+            if (!nextStep || nextStep === qWizardCurrent || nextStep > qWizardMax) {
                 return;
             }
             qWizardCurrent = nextStep;
@@ -6342,24 +6453,37 @@
     }
 
     function restoreWizardStepOnLoad() {
-        unlockAllWizardSteps();
-        if (Q_WIZARD_SCROLL_MODE) {
-            initAllWizardSectionsVisible();
-            ensureWizardSectionsReady();
-        }
         var saved = loadWizardState();
         var startStep = 1;
-        if (saved) {
+        var maxStep = 1;
+        var isExistingSaved = !!(QUOTATION_PREFILL && QUOTATION_PREFILL.id && QUOTATION_PREFILL.status !== 'draft');
+
+        if (isExistingSaved) {
+            maxStep = Q_WIZARD_TOTAL;
+            startStep = saved && saved.step ? saved.step : 1;
+        } else if (saved) {
             startStep = saved.step;
+            maxStep = saved.max || saved.step || 1;
         } else if (QUOTATION_PREFILL && QUOTATION_PREFILL.status === 'draft') {
             startStep = parseInt(QUOTATION_PREFILL.wizard_step, 10) || 1;
+            maxStep = startStep;
         }
+
         startStep = Math.max(1, Math.min(Q_WIZARD_TOTAL, startStep));
+        maxStep = Math.max(1, Math.min(Q_WIZARD_TOTAL, maxStep));
+        if (startStep > maxStep) {
+            maxStep = startStep;
+        }
+
         qWizardCurrent = startStep;
-        qWizardMax = Q_WIZARD_TOTAL;
+        qWizardMax = maxStep;
+        syncUnlockedWizardSections();
+        ensureWizardSectionsReady();
         updateWizardStepperUi({ save: false });
+
         if (Q_WIZARD_SCROLL_MODE) {
             initWizardScrollSpy();
+            expandWizardSection(startStep);
             window.setTimeout(function () {
                 scrollToWizardStep(startStep, 'auto');
             }, 120);
@@ -6373,7 +6497,8 @@
             return;
         }
         if (Q_WIZARD_SCROLL_MODE) {
-            initAllWizardSectionsVisible();
+            qWizardMax = Math.max(1, qWizardMax || 1);
+            syncUnlockedWizardSections();
         }
         updateWizardStepperUi({ save: false });
         if (!Q_WIZARD_SCROLL_MODE) {
@@ -6384,6 +6509,10 @@
                 setWizardStep(qWizardCurrent - 1, false);
             });
         }
+        $(document).on('click', '.q-section-next-btn', function () {
+            var from = parseInt($(this).attr('data-q-next-from'), 10) || qWizardCurrent;
+            advanceWizardFrom(from);
+        });
         $(document).on('click', '.q-qty-btn', function () {
             var targetId = String($(this).attr('data-qty-target') || '');
             var dir = parseInt($(this).attr('data-qty-dir'), 10) || 0;
@@ -6402,13 +6531,18 @@
             if (max != null && !isNaN(max) && val > max) val = max;
             $input.val(val).trigger('change').trigger('input');
         });
-        $(document).on('click', '.q-stepper-item' + (Q_WIZARD_SCROLL_MODE ? '' : ':not(.is-locked)'), function () {
+        $(document).on('click', '.q-stepper-item:not(.is-locked)', function () {
             var target = parseInt($(this).data('qStep'), 10);
             if (!target) {
                 return;
             }
+            if (target > qWizardMax) {
+                $(this).blur();
+                return;
+            }
             if (target === qWizardCurrent && Q_WIZARD_SCROLL_MODE) {
                 scrollToWizardStep(target);
+                expandWizardSection(target);
                 $(this).blur();
                 return;
             }
@@ -6623,6 +6757,15 @@
 
         $('#qAddFlight, #qAddFlightSegment').on('click', function () {
             addFlightSegment({});
+        });
+
+        function setFlightActionActive($el) {
+            var $actions = $('.q-flight-actions .q-flight-btn');
+            $actions.removeClass('is-active q-flight-btn-red').addClass('q-flight-btn-outline');
+            $el.removeClass('q-flight-btn-outline').addClass('q-flight-btn-red is-active');
+        }
+        $(document).on('click', '.q-flight-actions .q-flight-btn', function () {
+            setFlightActionActive($(this));
         });
         window.qQuotationAddFlightRow = function (data) {
             addFlightSegment(data || {});
@@ -7620,9 +7763,10 @@
             applyPrefill(QUOTATION_PREFILL);
             if (QUOTATION_PREFILL.status === 'draft') {
                 var draftStep = parseInt(QUOTATION_PREFILL.wizard_step, 10) || 1;
-                qWizardMax = Math.max(draftStep, qWizardMax);
-            } else {
-                unlockAllWizardSteps();
+                qWizardMax = Math.max(draftStep, qWizardMax || 1);
+            } else if (QUOTATION_PREFILL.id) {
+                // Existing saved quotation: show all sections for review/edit.
+                qWizardMax = Q_WIZARD_TOTAL;
             }
             restoreWizardStepOnLoad();
             if (QUOTATION_PREFILL.editing_from_version) {

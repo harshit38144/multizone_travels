@@ -212,6 +212,38 @@ function crmIntakeFallbackLogoUrl()
     return 'https://admin.multizonetravels.com/img/web-logo.png';
 }
 
+/**
+ * Absolute image URL for WhatsApp / Open Graph link previews.
+ */
+function crmIntakeShareImageUrl()
+{
+    $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')) ?: '');
+    if (crmIntakeIsLocalHost($host)) {
+        $scheme = crmIntakePublicScheme();
+        $path = rtrim(crmIntakePublicBasePath(), '/');
+        return $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . $path . '/admin/img/travel-inquiry-og.jpg';
+    }
+    return 'https://admin.multizonetravels.com/img/travel-inquiry-og.jpg';
+}
+
+/**
+ * Canonical absolute URL for the current intake form page (for og:url).
+ */
+function crmIntakeCanonicalPageUrl($token = '')
+{
+    $token = trim((string) $token);
+    if ($token !== '') {
+        return crmBuildIntakePublicUrl($token);
+    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        $scheme = strtolower(trim(explode(',', (string) $_SERVER['HTTP_X_FORWARDED_PROTO'])[0]));
+    }
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? crmIntakePublicHost());
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+    return $scheme . '://' . $host . $uri;
+}
+
 function crmBuildIntakePublicUrl($token)
 {
     $token = trim((string) $token);

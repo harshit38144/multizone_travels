@@ -41,20 +41,31 @@ if ($token === '') {
     }
 }
 
-$companyName = 'Multizone Travels';
+$companyName = 'Multi Zone Travels';
 $companyTagline = 'travel for memories...';
 $logoUrl = crmResolveIntakeLogoUrl('img/web-logo.png');
 $logoFallbackUrl = function_exists('crmIntakeFallbackLogoUrl') ? crmIntakeFallbackLogoUrl() : $logoUrl;
 $noteToCustomer = '';
 $intakeFormSubtitle = 'Share your travel plans and we\'ll craft the perfect experience for you.';
 $adminAssetBase = crmPublicAdminAssetBase();
+$shareBrandName = 'Multi Zone Travels';
+$ogTitle = 'Travel Inquiry - Multi Zone Travels';
+$ogDescription = 'Complete our Travel Preference Form so we can prepare a customized itinerary and quotation tailored to your preferences.';
+$ogImageUrl = function_exists('crmIntakeShareImageUrl') ? crmIntakeShareImageUrl() : 'https://admin.multizonetravels.com/img/travel-inquiry-og.jpg';
+$ogUrl = function_exists('crmIntakeCanonicalPageUrl') ? crmIntakeCanonicalPageUrl($token) : '';
 
 $ssTable = $conn->query("SHOW TABLES LIKE 'site_settings'");
 if ($ssTable && $ssTable->num_rows > 0) {
     $ssRes = $conn->query("SELECT `site_title`, `site_tagline`, `logo_path` FROM `site_settings` WHERE `id` = 1 LIMIT 1");
     if ($ssRes && ($ssRow = $ssRes->fetch_assoc())) {
         if (!empty($ssRow['site_title'])) {
-            $companyName = (string) $ssRow['site_title'];
+            $rawTitle = trim((string) $ssRow['site_title']);
+            // Keep short/admin labels from becoming the WhatsApp / page brand name.
+            if (!preg_match('/^multi\s*zone(\s+travels)?$/i', $rawTitle) && strcasecmp($rawTitle, 'multizone') !== 0 && strcasecmp($rawTitle, 'multizone travels') !== 0) {
+                $companyName = $rawTitle;
+            } else {
+                $companyName = $shareBrandName;
+            }
         }
         if (!empty($ssRow['site_tagline'])) {
             $companyTagline = (string) $ssRow['site_tagline'];
@@ -79,7 +90,26 @@ if ($request) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <base href="<?= htmlspecialchars($adminAssetBase, ENT_QUOTES, 'UTF-8') ?>">
-    <title>Travel Inquiry — <?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?></title>
+    <title><?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?></title>
+    <meta name="description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="<?= htmlspecialchars($shareBrandName, ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:title" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:image" content="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:image:secure_url" content="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
+    <?php if ($ogUrl !== ''): ?>
+    <meta property="og:url" content="<?= htmlspecialchars($ogUrl, ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="canonical" href="<?= htmlspecialchars($ogUrl, ENT_QUOTES, 'UTF-8') ?>">
+    <?php endif; ?>
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="twitter:description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="twitter:image" content="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
