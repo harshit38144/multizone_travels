@@ -15,7 +15,9 @@ $companyTagline = 'Explore the World with Us';
 $logoUrl = crmResolveIntakeLogoUrl('img/web-logo.png');
 $supportPhone = '+91 98765 43210';
 $supportEmail = 'support@multizonetravels.com';
-$homeUrl = '../index.php';
+$homeUrl = function_exists('crmBuildIntakeWebsiteHomeUrl')
+    ? crmBuildIntakeWebsiteHomeUrl()
+    : 'https://multizonetravels.com/';
 $adminAssetBase = crmPublicAdminAssetBase();
 
 $ssTable = $conn->query("SHOW TABLES LIKE 'site_settings'");

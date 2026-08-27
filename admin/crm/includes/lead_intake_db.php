@@ -267,6 +267,21 @@ function crmBuildIntakeThanksUrl($token)
 }
 
 /**
+ * Absolute URL to the public website homepage (not the admin panel).
+ * Used by thank-you "Back to Home" — page has <base href> pointing at admin assets.
+ */
+function crmBuildIntakeWebsiteHomeUrl()
+{
+    $host = crmIntakePublicHost();
+    $scheme = crmIntakePublicScheme();
+    if (crmIntakeIsLocalHost(preg_replace('/:\d+$/', '', strtolower((string) $host)) ?: $host)) {
+        $path = rtrim(crmIntakePublicBasePath(), '/');
+        return $scheme . '://' . $host . ($path !== '' ? $path . '/' : '/');
+    }
+    return $scheme . '://' . $host . '/';
+}
+
+/**
  * Legacy long URL (kept for old WhatsApp messages / bookmarks).
  */
 function crmBuildIntakePublicUrlLegacy($token)
