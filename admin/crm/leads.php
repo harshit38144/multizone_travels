@@ -4739,7 +4739,7 @@ foreach ($destinationLookup as $destId => $destName) {
         var link = String(url || $('#sendLinkUrl').val() || '').trim();
         // WhatsApp caches link previews by exact URL. Bump this when OG title/image
         // change so the rich card (title + image) is re-scraped instead of the bare domain.
-        var previewKey = 'wa27g';
+        var previewKey = 'wa27h';
         if (link) {
             link = link.replace(/([?&])preview=[^&]*/g, '$1').replace(/[?&]$/, '');
             link += (link.indexOf('?') >= 0 ? '&' : '?') + 'preview=' + previewKey;

@@ -51,7 +51,7 @@ $adminAssetBase = crmPublicAdminAssetBase();
 $shareBrandName = 'Multi Zone Travels';
 $ogTitle = 'Travel Preference Form | Multi Zone Travels';
 $ogDescription = 'Share your travel plans with Multi Zone Travels. Complete this short preference form so we can prepare a customized itinerary and quotation for you.';
-$ogImageUrl = function_exists('crmIntakeShareImageUrl') ? crmIntakeShareImageUrl() : 'https://multizonetravels.com/img/travel-inquiry-og.jpg?v=20260827g';
+$ogImageUrl = function_exists('crmIntakeShareImageUrl') ? crmIntakeShareImageUrl() : 'https://multizonetravels.com/img/travel-inquiry-og.jpg?v=20260827h';
 $ogUrl = function_exists('crmIntakeCanonicalPageUrl') ? crmIntakeCanonicalPageUrl($token) : '';
 $ogImageWidth = 1200;
 $ogImageHeight = 630;
