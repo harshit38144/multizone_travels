@@ -342,8 +342,6 @@ if (empty($leadSourceOptions)) {
                             $lfServiceTiles[] = ['hotel', 'SvcHotel', 'fas fa-hotel', 'Hotel'];
                             $lfServiceTiles[] = ['vehicle', 'SvcVehicle', 'fas fa-car', 'Vehicle (disposal)'];
                             $lfServiceTiles[] = ['sightseeing', 'SvcSight', 'fas fa-binoculars', 'Sightseeing'];
-                        } elseif (crmLeadIntakeFieldEnabled($leadFormIntakeEnabledFields, 'vehicle_type')) {
-                            $lfServiceTiles[] = ['vehicle', 'SvcVehicle', 'fas fa-car', 'Vehicle (disposal)'];
                         }
                         if (!$leadFormPublicIntake || crmLeadIntakeShowServiceCheckbox($leadFormIntakeEnabledFields, 'cruise')) {
                             $lfServiceTiles[] = ['cruise', 'SvcCruise', 'fas fa-ship', 'Cruise'];
@@ -515,7 +513,7 @@ if (empty($leadSourceOptions)) {
                         </div>
                         <?php } ?>
 
-                        <?php if (!$leadFormPublicIntake || crmLeadIntakeShowTourRgRow($leadFormIntakeEnabledFields) || lfIntakeField('vehicle_type')) { ?>
+                        <?php if (!$leadFormPublicIntake || crmLeadIntakeShowTourRgRow($leadFormIntakeEnabledFields)) { ?>
                         <div class="form-row js-tp-rg-wrap<?= $leadFormPublicIntake ? ' tp-pack-row' : '' ?>">
                             <?php if (!$leadFormEmbedModal && lfIntakeField('tp_budget')) { ?>
                             <div class="form-group <?= $leadFormPublicIntake ? 'col-12 col-md' : 'col-md-3' ?>">
@@ -527,11 +525,12 @@ if (empty($leadSourceOptions)) {
                             <?php if (lfIntakeField('tp_hotel_category')) { ?>
                             <div class="form-group <?= $leadFormPublicIntake ? 'col-12 col-md' : 'col-md-3' ?> js-hotel-svc-fields" style="<?= $leadFormPublicIntake ? '' : 'display:none;' ?>">
                                 <label><?= $leadFormPublicIntake ? 'Preferred Hotel Category' : 'Pref. Hotel Categories' ?></label>
-                                <div class="tp-hotel-cat-picker js-tp-hotel-cat-wrap"
+                                <div class="tp-hotel-cat-picker js-tp-hotel-cat-wrap<?= $leadFormPublicIntake ? ' is-single' : '' ?>"
+                                    data-single="<?= $leadFormPublicIntake ? '1' : '0' ?>"
                                     data-hotel-categories="<?= htmlspecialchars(json_encode($tpHotelCategories), ENT_QUOTES, 'UTF-8') ?>">
                                     <div class="tp-hotel-cat-field js-tp-hotel-cat-field" tabindex="0">
                                         <div class="tp-hotel-cat-tags js-tp-hotel-cat-tags"></div>
-                                        <span class="tp-hotel-cat-placeholder js-tp-hotel-cat-placeholder">Select star ratings</span>
+                                        <span class="tp-hotel-cat-placeholder js-tp-hotel-cat-placeholder"><?= $leadFormPublicIntake ? 'Select hotel category' : 'Select star ratings' ?></span>
                                     </div>
                                     <div class="js-tp-hotel-cat-values"></div>
                                     <div class="tp-hotel-cat-menu js-tp-hotel-cat-menu" style="display:none;"></div>
@@ -639,8 +638,8 @@ if (empty($leadSourceOptions)) {
                                 <?php } ?>
                             </div>
                             <?php } ?>
-                            <?php if ($leadFormEmbedModal && lfIntakeField('vehicle_type')) { ?>
-                            <div class="form-group <?= $leadFormPublicIntake ? 'col-12 col-md' : 'col-md-3' ?> js-vehicle-svc-fields" style="<?= $leadFormPublicIntake ? '' : 'display:none;' ?>">
+                            <?php if (!$leadFormPublicIntake && $leadFormEmbedModal && lfIntakeField('vehicle_type')) { ?>
+                            <div class="form-group col-md-3 js-vehicle-svc-fields" style="display:none;">
                                 <label class="label-req">Vehicle Type</label>
                                 <div class="tp-vehicle-type-picker js-tp-vehicle-type-wrap"
                                     data-vehicle-types="<?= htmlspecialchars(json_encode($tpVehicleTypes), ENT_QUOTES, 'UTF-8') ?>">
@@ -670,8 +669,8 @@ if (empty($leadSourceOptions)) {
                         <div class="form-row js-tp-child-bed-field tp-child-bed-list js-tp-child-bed-list<?= $leadFormPublicIntake ? ' tp-pack-row' : '' ?>" style="display:none;"></div>
                         <?php } ?>
                         <?php } ?>
-                        <?php if (lfIntakeField('vehicle_type') && !$leadFormEmbedModal) { ?>
-                        <div class="form-row js-vehicle-svc-fields" style="<?= $leadFormPublicIntake ? '' : 'display:none;' ?>">
+                        <?php if (!$leadFormPublicIntake && lfIntakeField('vehicle_type') && !$leadFormEmbedModal) { ?>
+                        <div class="form-row js-vehicle-svc-fields" style="display:none;">
                             <div class="form-group col-md-3 mb-0">
                                 <label class="label-req">Vehicle Type</label>
                                 <div class="tp-vehicle-type-picker js-tp-vehicle-type-wrap"
@@ -2759,6 +2758,10 @@ if (empty($leadSourceOptions)) {
                         state.childAges[index] = parseInt(jQuery(this).val(), 10) || 0;
                         syncChildBedFields();
                         updateSummaries();
+                        // Close guests + age popups after the last child's age is chosen
+                        if (state.children > 0 && index === state.children - 1) {
+                            closeAllPanels();
+                        }
                     });
 
                 $form.off('click.tpRgOutside').on('click.tpRgOutside', function (e) {
@@ -2798,6 +2801,7 @@ if (empty($leadSourceOptions)) {
                     return;
                 }
 
+                var singleSelect = String($wrap.attr('data-single') || '') === '1' || $wrap.hasClass('is-single');
                 var options = [];
                 try {
                     options = JSON.parse($wrap.attr('data-hotel-categories') || '[]');
@@ -2810,6 +2814,7 @@ if (empty($leadSourceOptions)) {
                 var $tags = $wrap.find('.js-tp-hotel-cat-tags');
                 var $values = $wrap.find('.js-tp-hotel-cat-values');
                 var $menu = $wrap.find('.js-tp-hotel-cat-menu');
+                var $placeholder = $wrap.find('.js-tp-hotel-cat-placeholder');
 
                 function isSelected(value) {
                     return selected.indexOf(value) >= 0;
@@ -2826,12 +2831,17 @@ if (empty($leadSourceOptions)) {
                     selected.forEach(function (value) {
                         var $tag = jQuery('<span class="tp-hotel-cat-tag"></span>');
                         $tag.append(jQuery('<span></span>').html('<i class="fas fa-star mr-1"></i>' + escapeHtml(value)));
-                        $tag.append(
-                            jQuery('<button type="button" class="tp-hotel-cat-tag-remove" aria-label="Remove category">&times;</button>')
-                                .attr('data-value', value)
-                        );
+                        if (!singleSelect) {
+                            $tag.append(
+                                jQuery('<button type="button" class="tp-hotel-cat-tag-remove" aria-label="Remove category">&times;</button>')
+                                    .attr('data-value', value)
+                            );
+                        }
                         $tags.append($tag);
                     });
+                    if ($placeholder.length) {
+                        $placeholder.toggle(selected.length === 0);
+                    }
                 }
 
                 function syncHiddenInputs() {
@@ -2845,6 +2855,19 @@ if (empty($leadSourceOptions)) {
 
                 function renderMenu() {
                     $menu.empty();
+                    if (singleSelect) {
+                        options.forEach(function (value) {
+                            var $btn = jQuery('<button type="button" class="tp-hotel-cat-item"></button>')
+                                .attr('data-value', value)
+                                .html('<i class="fas fa-star text-warning mr-2"></i>' + escapeHtml(value));
+                            if (isSelected(value)) {
+                                $btn.addClass('is-active');
+                            }
+                            $menu.append($btn);
+                        });
+                        return;
+                    }
+
                     var available = options.filter(function (value) {
                         return !isSelected(value);
                     });
@@ -2873,7 +2896,17 @@ if (empty($leadSourceOptions)) {
                 }
 
                 function addCategory(value) {
-                    if (!value || isSelected(value)) {
+                    if (!value) {
+                        return;
+                    }
+                    if (singleSelect) {
+                        selected = [value];
+                        renderTags();
+                        syncHiddenInputs();
+                        hideMenu();
+                        return;
+                    }
+                    if (isSelected(value)) {
                         return;
                     }
                     selected.push(value);
@@ -2936,6 +2969,9 @@ if (empty($leadSourceOptions)) {
                             selected.push(v);
                         }
                     });
+                    if (singleSelect && selected.length > 1) {
+                        selected = [selected[0]];
+                    }
                     sortSelected();
                     renderTags();
                     syncHiddenInputs();
@@ -3118,19 +3154,19 @@ if (empty($leadSourceOptions)) {
                     hotelChecked = hotelChecked
                         || intakeFieldEnabled('tp_hotel_category')
                         || intakeFieldEnabled('tp_rooms');
-                    vehicleChecked = vehicleChecked || intakeFieldEnabled('vehicle_type');
+                    // Vehicle Type is not offered on customer intake forms
+                    vehicleChecked = false;
 
                     $hotelFields.each(function () {
                         var $grp = jQuery(this);
                         var showHotelCat = $grp.find('.js-tp-hotel-cat-wrap').length > 0 && intakeFieldEnabled('tp_hotel_category');
-                        var showRooms = $grp.find('.js-tp-rg-picker[data-picker="rooms"]').length > 0 && intakeFieldEnabled('tp_rooms');
+                        var showRooms = $grp.find('.js-tp-rg-picker[data-picker="rooms"], .js-tp-rooms-stepper').length > 0 && intakeFieldEnabled('tp_rooms');
                         var show = showHotelCat || showRooms;
                         $grp.toggle(show);
                         $grp.find('input, select, textarea, button').prop('disabled', !show);
                     });
 
-                    $vehicleFields.toggle(vehicleChecked);
-                    $vehicleFields.find('input, select, textarea, button').prop('disabled', !vehicleChecked);
+                    $vehicleFields.hide().find('input, select, textarea, button').prop('disabled', true);
                 } else {
                     $hotelFields.toggle(hotelChecked);
                     $hotelFields.find('input, select, textarea, button').prop('disabled', !hotelChecked);
@@ -3183,9 +3219,7 @@ if (empty($leadSourceOptions)) {
                     $form.find('.js-tp-rg-picker[data-picker="guests"] .js-tp-rg-trigger').prop('disabled', false);
                 }
 
-                if (intakeFieldEnabled('vehicle_type')) {
-                    $form.find('.js-vehicle-svc-fields').show().find('input, button').prop('disabled', false);
-                }
+                // Vehicle Type is not shown on customer intake forms
 
                 if (intakeFieldEnabled('tp_budget')) {
                     $form.find('.js-tp-rg-wrap input[name="tp_budget"]').prop('disabled', false);

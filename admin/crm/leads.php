@@ -4737,10 +4737,12 @@ foreach ($destinationLookup as $destId => $destName) {
 
     function sendLinkWhatsAppShareUrl(url) {
         var link = String(url || $('#sendLinkUrl').val() || '').trim();
-        // WhatsApp caches link previews by URL. A stable query forces a fresh scrape
-        // so title/image updates (Travel Inquiry - Multi Zone Travels) show up.
-        if (link && link.indexOf('preview=') === -1) {
-            link += (link.indexOf('?') >= 0 ? '&' : '?') + 'preview=mzt';
+        // WhatsApp caches link previews by exact URL. Bump this when OG title/image
+        // change so the rich card (title + image) is re-scraped instead of the bare domain.
+        var previewKey = 'wa27a';
+        if (link) {
+            link = link.replace(/([?&])preview=[^&]*/g, '$1').replace(/[?&]$/, '');
+            link += (link.indexOf('?') >= 0 ? '&' : '?') + 'preview=' + previewKey;
         }
         return link;
     }
@@ -4951,7 +4953,7 @@ foreach ($destinationLookup as $destId => $destName) {
             tp_tour_type: 'Tour Type',
             tp_destination: 'Selected Destinations',
             tp_budget: 'Approx. Budget',
-            tp_hotel_category: 'Preferred Hotel Categories',
+            tp_hotel_category: 'Preferred Hotel Category',
             tp_rooms: 'Rooms',
             tp_child_cnb: 'CNB (Child No Bed)',
             tp_child_cwb: 'CWB (Child With Bed)',

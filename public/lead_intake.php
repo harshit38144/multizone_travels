@@ -49,10 +49,12 @@ $noteToCustomer = '';
 $intakeFormSubtitle = 'Share your travel plans and we\'ll craft the perfect experience for you.';
 $adminAssetBase = crmPublicAdminAssetBase();
 $shareBrandName = 'Multi Zone Travels';
-$ogTitle = 'Travel Inquiry - Multi Zone Travels';
-$ogDescription = 'Complete our Travel Preference Form so we can prepare a customized itinerary and quotation tailored to your preferences.';
-$ogImageUrl = function_exists('crmIntakeShareImageUrl') ? crmIntakeShareImageUrl() : 'https://multizonetravels.com/admin/img/travel-inquiry-og.jpg?v=20260826b';
+$ogTitle = 'Travel Preference Form | Multi Zone Travels';
+$ogDescription = 'Share your travel plans with Multi Zone Travels. Complete this short preference form so we can prepare a customized itinerary and quotation for you.';
+$ogImageUrl = function_exists('crmIntakeShareImageUrl') ? crmIntakeShareImageUrl() : 'https://multizonetravels.com/img/travel-inquiry-og.jpg?v=20260827a';
 $ogUrl = function_exists('crmIntakeCanonicalPageUrl') ? crmIntakeCanonicalPageUrl($token) : '';
+$ogImageWidth = 1200;
+$ogImageHeight = 630;
 
 $ssTable = $conn->query("SHOW TABLES LIKE 'site_settings'");
 if ($ssTable && $ssTable->num_rows > 0) {
@@ -92,14 +94,15 @@ if ($request) {
     <title><?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?></title>
     <meta name="description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_IN">
     <meta property="og:site_name" content="<?= htmlspecialchars($shareBrandName, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:title" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:image" content="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:image:secure_url" content="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    <meta property="og:image:width" content="<?= (int) $ogImageWidth ?>">
+    <meta property="og:image:height" content="<?= (int) $ogImageHeight ?>">
     <meta property="og:image:alt" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
     <?php if ($ogUrl !== ''): ?>
     <meta property="og:url" content="<?= htmlspecialchars($ogUrl, ENT_QUOTES, 'UTF-8') ?>">
@@ -109,6 +112,9 @@ if ($request) {
     <meta name="twitter:title" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
     <meta name="twitter:description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
     <meta name="twitter:image" content="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
+    <meta itemprop="name" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
+    <meta itemprop="description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">
+    <meta itemprop="image" content="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
     <link rel="image_src" href="<?= htmlspecialchars($ogImageUrl, ENT_QUOTES, 'UTF-8') ?>">
     <base href="<?= htmlspecialchars($adminAssetBase, ENT_QUOTES, 'UTF-8') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">

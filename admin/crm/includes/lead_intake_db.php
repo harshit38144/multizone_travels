@@ -214,21 +214,23 @@ function crmIntakeFallbackLogoUrl()
 
 /**
  * Absolute image URL for WhatsApp / Open Graph link previews.
- * Uses the same public host as the shared /f/ link so WhatsApp can fetch it reliably.
+ * Served from the customer-facing host (not admin.) so WhatsApp can fetch it reliably.
+ * Image must be ~1200×630 JPEG for large preview cards.
  */
 function crmIntakeShareImageUrl()
 {
-    $version = '20260826b';
+    // Bump when replacing the OG asset so WhatsApp re-scrapes the preview.
+    $version = '20260827a';
     $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')) ?: '');
     if (crmIntakeIsLocalHost($host)) {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $path = rtrim(crmIntakePublicBasePath(), '/');
-        return $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . $path . '/admin/img/travel-inquiry-og.jpg?v=' . $version;
+        return $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . $path . '/img/travel-inquiry-og.jpg?v=' . $version;
     }
-    // Same customer-facing domain as /f/{code} (already deployed under /admin/img/).
     $publicHost = crmIntakePublicHost();
     $scheme = crmIntakePublicScheme();
-    return $scheme . '://' . $publicHost . '/admin/img/travel-inquiry-og.jpg?v=' . $version;
+    // Prefer /img on the public site (same host as /f/{code}).
+    return $scheme . '://' . $publicHost . '/img/travel-inquiry-og.jpg?v=' . $version;
 }
 
 /**

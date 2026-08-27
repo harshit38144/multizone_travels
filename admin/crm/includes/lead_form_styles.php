@@ -1020,6 +1020,10 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
     background: #fff8e1;
     outline: none;
 }
+<?= $scope ?> .tp-hotel-cat-item.is-active {
+    background: #fff3cd;
+    font-weight: 600;
+}
 <?= $scope ?> .tp-hotel-cat-empty {
     padding: 0.65rem 0.85rem;
     color: #6c757d;

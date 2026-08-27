@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /f/
+Allow: /img/
+Allow: /public/
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: Twitterbot
+Allow: /

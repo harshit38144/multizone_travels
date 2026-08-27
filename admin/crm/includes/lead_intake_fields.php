@@ -29,13 +29,12 @@ function crmLeadIntakeFieldCatalog()
                 'tp_tour_type' => 'Tour Type',
                 'tp_destination' => 'Destinations',
                 'tp_budget' => 'Approx. Budget',
-                'tp_hotel_category' => 'Hotel Categories',
+                'tp_hotel_category' => 'Preferred Hotel Category',
                 'tp_rooms' => 'Rooms',
                 'tp_adults' => 'Adults',
                 'tp_children' => 'Children',
                 'tp_children_ages' => 'Children Ages',
                 'tp_notes' => 'Package Notes',
-                'vehicle_type' => 'Vehicle Type',
             ],
         ],
         'cruise' => [
@@ -93,10 +92,11 @@ function crmLeadIntakeAllFieldKeys()
 
 /**
  * Fields included when sending a customer form link (contact + all Tour Package fields).
+ * Vehicle Type is intentionally omitted from customer links.
  */
 function crmLeadIntakeSendLinkDefaultFields()
 {
-    $exclude = ['tp_departure', 'tp_arrival'];
+    $exclude = ['tp_departure', 'tp_arrival', 'vehicle_type'];
     $fields = ['customer_name', 'customer_phone', 'customer_email'];
     $catalog = crmLeadIntakeFieldCatalog();
     if (isset($catalog['tour_package']['fields']) && is_array($catalog['tour_package']['fields'])) {
@@ -178,7 +178,7 @@ function crmInferPayloadServices(array $payload)
 function crmLeadIntakeServiceFieldMap()
 {
     return [
-        'tour_package' => ['tp_travel_date', 'tp_departure', 'tp_arrival', 'tp_tour_type', 'tp_destination', 'tp_budget', 'tp_hotel_category', 'tp_rooms', 'tp_adults', 'tp_children', 'tp_children_ages', 'tp_notes', 'vehicle_type'],
+        'tour_package' => ['tp_travel_date', 'tp_departure', 'tp_arrival', 'tp_tour_type', 'tp_destination', 'tp_budget', 'tp_hotel_category', 'tp_rooms', 'tp_adults', 'tp_children', 'tp_children_ages', 'tp_notes'],
         'cruise' => ['cruise_embark_date', 'cruise_line', 'cruise_cabin', 'cruise_pax', 'cruise_port'],
         'visa' => ['visa_country', 'visa_type', 'visa_travel_date', 'visa_passport_no', 'visa_passport_exp'],
         'passport' => ['passport_service', 'passport_urgency', 'passport_expiry', 'passport_notes'],
