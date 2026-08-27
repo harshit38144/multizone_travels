@@ -220,7 +220,7 @@ function crmIntakeFallbackLogoUrl()
 function crmIntakeShareImageUrl()
 {
     // Bump when replacing the OG asset so WhatsApp re-scrapes the preview.
-    $version = '20260827a';
+    $version = '20260827g';
     $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')) ?: '');
     if (crmIntakeIsLocalHost($host)) {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
