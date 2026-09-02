@@ -19,7 +19,7 @@ $crmCustomersPages = ['crm_customers', 'crm_customer_add'];
 $suppliersPages = ['crm_suppliers'];
 $crmUsersPages = ['crm_users', 'crm_permission_templates'];
 $crmReportsPages = ['crm_reports'];
-$crmOfficePages = ['crm_office_settings', 'crm_email_master'];
+$crmOfficePages = ['crm_office_settings', 'crm_email_master', 'crm_legacy_import'];
 $crmAccountPages = ['crm_subscription'];
 $contentPages = ['sliders', 'homepage_sections', 'pages', 'about_us', 'instagram_reels', 'testimonials', 'budget_cards', 'secondary_features', 'secondary_feature_form', 'live_counters', 'features'];
 $packagePages = ['categories', 'destinations', 'packages', 'group_departures'];
@@ -690,6 +690,13 @@ $crmParentPages = array_merge(
                     class="nav-link <?= ($page === 'crm_email_master') ? 'active' : '' ?>">
                     <i class="far fa-circle nav-icon"></i>
                     <p>Email Master</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="crm/legacy_import.php"
+                    class="nav-link <?= ($page === 'crm_legacy_import') ? 'active' : '' ?>">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Import Legacy Data</p>
                   </a>
                 </li>
               </ul>
