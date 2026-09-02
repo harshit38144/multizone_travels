@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/includes/quotation_db.php';
+require_once __DIR__ . '/includes/legacy_quotation_normalize.php';
 require_once __DIR__ . '/includes/lead_uid.php';
 require_once __DIR__ . '/includes/lead_db.php';
 require_once __DIR__ . '/includes/admin_ui_settings.php';
