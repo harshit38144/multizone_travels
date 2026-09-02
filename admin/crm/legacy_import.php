@@ -124,6 +124,9 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
                             <button type="submit" class="btn btn-primary" id="runImportBtn" <?= empty($probe['connected']) ? 'disabled' : '' ?>>
                                 <i class="fas fa-database mr-1"></i> Run import
                             </button>
+                            <button type="button" class="btn btn-outline-secondary ml-2" id="repairQuotationsBtn">
+                                <i class="fas fa-wrench mr-1"></i> Repair imported quotations only
+                            </button>
                         </form>
 
                         <div class="mt-4">
@@ -154,6 +157,7 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
     var form = document.getElementById('legacyImportForm');
     var logEl = document.getElementById('importLog');
     var btn = document.getElementById('runImportBtn');
+    var repairBtn = document.getElementById('repairQuotationsBtn');
 
     var ADMIN_BASE = location.href.replace(/[?#].*$/, '').replace(/\/crm\/[^\/]*$/, '/');
 
@@ -226,6 +230,7 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
         steps.push({ action: 'import_suppliers', label: 'Importing suppliers...' });
         steps.push({ action: 'import_customers', label: 'Importing customers as leads...' });
         steps.push({ action: 'import_quotations', label: 'Importing quotations...' });
+        steps.push({ action: 'repair_quotations', label: 'Repairing legacy quotation formats...' });
         steps.push({ action: 'cleanup', label: 'Cleaning up temporary tables...' });
 
         var chain = Promise.resolve();
@@ -259,6 +264,29 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
             btn.disabled = false;
         });
     });
+
+    if (repairBtn) {
+        repairBtn.addEventListener('click', function () {
+            if (!confirm('Repair all imported quotation JSON formats (flights, hotels, itinerary, costing)?')) return;
+            btn.disabled = true;
+            repairBtn.disabled = true;
+            logEl.textContent = 'Repairing quotations...';
+            var fd = new FormData();
+            fd.append('action', 'repair_quotations');
+            postStep('repair_quotations', fd).then(function (res) {
+                appendLog(res.message || 'Repair completed.');
+                if (res.repair) {
+                    appendLog('Updated: ' + (res.repair.updated || 0) + ', failed: ' + (res.repair.failed || 0));
+                }
+                setTimeout(function () { window.location.reload(); }, 1500);
+            }).catch(function (err) {
+                appendLog('Failed: ' + (err && err.message ? err.message : String(err)));
+            }).finally(function () {
+                btn.disabled = false;
+                repairBtn.disabled = false;
+            });
+        });
+    }
 })();
 </script>
 </body>

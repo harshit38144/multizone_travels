@@ -168,24 +168,40 @@
         }
     }
 
+    function normalizeLegacyDateInput(val) {
+        val = String(val || '').trim();
+        if (!val || val === '0000-00-00') return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        var m = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (m) {
+            return m[3] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[1]).padStart(2, '0');
+        }
+        if (typeof moment !== 'undefined') {
+            var parsed = moment(val, ['DD/MM/YYYY', 'DD-MM-YYYY', 'D MMM YYYY', 'DD MMM YYYY'], true);
+            if (parsed.isValid()) return parsed.format('YYYY-MM-DD');
+        }
+        return val;
+    }
+
     function normalizeFlightData(data) {
         data = data || {};
         return {
             from: data.from || '',
             to: data.to || '',
             name: data.name || '',
-            fl_tr_no: data.fl_tr_no || data.pnr || '',
-            dep_date: data.dep_date || data.date || '',
+            fl_tr_no: data.fl_tr_no || data.pnr || data.fno || '',
+            dep_date: normalizeLegacyDateInput(data.dep_date || data.date || ''),
             dep_time: data.dep_time || data.time || '',
-            arr_date: data.arr_date || '',
-            arr_time: data.arr_time || '',
+            arr_date: normalizeLegacyDateInput(data.arr_date || data.arv_date || data.dep_date || data.date || ''),
+            arr_time: data.arr_time || data.arv_time || '',
             fare: data.fare !== undefined && data.fare !== '' ? data.fare : (data.amount || ''),
             supplier_id: data.supplier_id || '',
             supplier: data.supplier || '',
             layover_time: data.layover_time || '',
             layover_at: data.layover_at || '',
             journey_start: data.journey_start ? true : false,
-            journey_label: data.journey_label || ''
+            journey_label: data.journey_label || '',
+            _legacy_type: data._legacy_type || ''
         };
     }
 
@@ -1176,8 +1192,8 @@
             rooms: data.rooms !== undefined && data.rooms !== '' ? data.rooms : '',
             meal_plan: data.meal_plan || data.meal || 'CP',
             nights: data.nights !== undefined && data.nights !== '' ? data.nights : '',
-            checkin: data.checkin || data.check_in || '',
-            checkout: data.checkout || data.check_out || '',
+            checkin: normalizeLegacyDateInput(data.checkin || data.check_in || ''),
+            checkout: normalizeLegacyDateInput(data.checkout || data.check_out || ''),
             rate: (function () {
                 var raw = data.rate !== undefined && data.rate !== '' ? data.rate : (data.amount || '');
                 if (raw === '' || raw == null) return '';
@@ -2307,9 +2323,16 @@
 
     function normalizeItineraryDay(day) {
         day = day || {};
+        var title = day.title || day.caption || '';
+        if (!title && day.day) {
+            title = 'Day ' + day.day;
+        }
+        if (!title && day.date) {
+            title = String(day.date);
+        }
         return {
-            title: day.title || '',
-            description: day.description || '',
+            title: title,
+            description: day.description || day.todo || '',
             image: day.image || day.img || day.image_url || ''
         };
     }
@@ -2508,6 +2531,9 @@
         var nights = parseInt($('#q_nights').val(), 10);
         if (isNaN(nights) || nights < 0) nights = 0;
         var totalDays = nights + 1;
+        if (Array.isArray(preserve) && preserve.length > totalDays) {
+            totalDays = preserve.length;
+        }
 
         var existing;
         if (Array.isArray(preserve)) {

@@ -556,6 +556,10 @@ function crmQuotationLoadArchivedVersion(mysqli $conn, int $quotationId, int $ve
  */
 function crmQuotationRowToPrefill(array $quotation): array
 {
+    require_once __DIR__ . '/legacy_quotation_normalize.php';
+
+    $quotation = crmLegacyNormalizeQuotationRowForCrm($quotation);
+
     return [
         'id' => (int) ($quotation['id'] ?? 0),
         'quotation_uid' => (string) ($quotation['quotation_uid'] ?? ''),

@@ -9,6 +9,7 @@ require_once __DIR__ . '/supplier_db.php';
 require_once __DIR__ . '/quotation_db.php';
 require_once __DIR__ . '/lead_uid.php';
 require_once __DIR__ . '/legacy_sql_staging.php';
+require_once __DIR__ . '/legacy_quotation_normalize.php';
 
 if (!function_exists('crmLegacyImportProbe')) {
     /** @return array{connected:bool,source:string,file:string,database:string,counts:array<string,int>,error:?string} */
@@ -602,6 +603,21 @@ if (!function_exists('crmLegacyImportQuotations')) {
             $itineraryJson = crmLegacyJsonOrFallback($row['itineraries'] ?? '', '[]');
             $costSheetJson = crmLegacyJsonOrFallback($row['costing'] ?? '', '{}');
 
+            $pricePerAdult = (float) ($row['adult_cost'] ?? 0);
+            $normalized = crmLegacyNormalizeQuotationRowForCrm([
+                'flights_json' => $flightsJson,
+                'hotels_json' => $hotelsJson,
+                'itinerary_json' => $itineraryJson,
+                'cost_sheet_json' => $costSheetJson,
+                'no_of_nights' => $nights,
+                'price_per_adult' => $pricePerAdult,
+            ]);
+            $flightsJson = (string) ($normalized['flights_json'] ?? $flightsJson);
+            $hotelsJson = (string) ($normalized['hotels_json'] ?? $hotelsJson);
+            $itineraryJson = (string) ($normalized['itinerary_json'] ?? $itineraryJson);
+            $costSheetJson = (string) ($normalized['cost_sheet_json'] ?? $costSheetJson);
+            $nights = max(0, (int) ($normalized['no_of_nights'] ?? $nights));
+
             $inclusion = (string) ($row['inclusion'] ?? '');
             $exclusion = (string) ($row['exclusion'] ?? '');
             $paymentPolicy = (string) ($row['payment_policy'] ?? '');
@@ -621,8 +637,8 @@ if (!function_exists('crmLegacyImportQuotations')) {
             $totalCost = 0.0;
             $packageTotal = 0.0;
             if (is_array($costDecoded)) {
-                $totalCost = (float) ($costDecoded['cost_price'] ?? 0);
-                $packageTotal = (float) ($costDecoded['selling_price'] ?? 0);
+                $totalCost = (float) ($costDecoded['legacy_cost_price'] ?? ($costDecoded['cost_price'] ?? 0));
+                $packageTotal = (float) ($costDecoded['legacy_selling_price'] ?? ($costDecoded['selling_price'] ?? 0));
             }
             $quotationTotal = (float) ($row['total'] ?? 0);
             if ($packageTotal <= 0 && $quotationTotal > 0) {
@@ -872,6 +888,17 @@ if (!function_exists('crmLegacyImportHandleStep')) {
             crmLegacyDropStagingTables($conn);
 
             return ['success' => true, 'message' => 'Temporary staging tables removed.', 'step' => $step];
+        }
+
+        if ($step === 'repair_quotations') {
+            $repair = crmLegacyRepairStoredQuotations($conn);
+
+            return [
+                'success' => empty($repair['failed']),
+                'message' => 'Repaired ' . (int) $repair['updated'] . ' quotation(s).',
+                'step' => $step,
+                'repair' => $repair,
+            ];
         }
 
         return ['success' => false, 'message' => 'Unknown import step: ' . $step, 'step' => $step];

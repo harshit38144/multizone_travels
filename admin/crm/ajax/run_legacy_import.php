@@ -70,6 +70,7 @@ $stepActions = [
     'import_customers',
     'import_quotations',
     'cleanup',
+    'repair_quotations',
 ];
 
 if (in_array($action, $stepActions, true)) {

@@ -507,6 +507,7 @@ if ($hasLeadsTable) {
 }
 
 crmLeadsAttachQuotationLines($conn, $leadRows);
+crmLeadsEnrichDisplayFromQuotations($conn, $leadRows);
 crmLeadsSyncFeatureStages($conn, $leadRows);
 
 $deletedLeadsCount = $hasLeadsTable ? crmLeadsDeletedCount($conn) : 0;
