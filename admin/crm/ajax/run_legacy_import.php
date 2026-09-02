@@ -71,6 +71,7 @@ $stepActions = [
     'import_quotations',
     'cleanup',
     'repair_quotations',
+    'import_leads_from_quotations',
 ];
 
 if (in_array($action, $stepActions, true)) {

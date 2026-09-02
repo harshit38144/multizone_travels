@@ -517,6 +517,228 @@ if (!function_exists('crmLegacyImportCustomersAsLeads')) {
     }
 }
 
+if (!function_exists('crmLegacyBuildLeadIdByPhone')) {
+    /** @return array<string,int> normalized phone => lead id */
+    function crmLegacyBuildLeadIdByPhone(mysqli $conn): array
+    {
+        $map = [];
+        $res = $conn->query('SELECT `id`, `customer_phone` FROM `crm_leads`');
+        if (!$res) {
+            return $map;
+        }
+        while ($row = $res->fetch_assoc()) {
+            $phone = crmLegacyNormalizePhone((string) ($row['customer_phone'] ?? ''));
+            if ($phone !== '') {
+                $map[$phone] = (int) ($row['id'] ?? 0);
+            }
+        }
+        $res->free();
+
+        return $map;
+    }
+}
+
+if (!function_exists('crmLegacyPayloadFromQuotationRow')) {
+    function crmLegacyPayloadFromQuotationRow(array $qRow, string $customerName, string $customerPhone, string $customerEmail): array
+    {
+        $nights = max(0, (int) ($qRow['no_of_nights'] ?? 0));
+        $travelDate = crmLegacyNormalizeDateValue($qRow['tentative_date'] ?? '');
+
+        return [
+            'customer_name' => $customerName,
+            'customer_phone' => $customerPhone,
+            'customer_email' => $customerEmail,
+            'legacy_from_quotation' => true,
+            'legacy_quotation_id' => (int) ($qRow['id'] ?? 0),
+            'tp_arrival' => trim((string) ($qRow['destination'] ?? '')),
+            'tp_travel_date' => $travelDate,
+            'tp_adults' => max(0, (int) ($qRow['no_of_adults'] ?? 0)),
+            'tp_children' => max(0, (int) ($qRow['no_of_children'] ?? 0)),
+            'itinerary_total_nights' => $nights,
+            'itinerary_total_days' => $nights > 0 ? $nights + 1 : 0,
+        ];
+    }
+}
+
+if (!function_exists('crmLegacyCreateLeadsFromStoredQuotations')) {
+    /**
+     * Create one lead per unique quotation phone and link quotations to leads.
+     *
+     * @return array{imported:int,updated:int,skipped:int,linked:int,failed:int,errors:array<int,string>}
+     */
+    function crmLegacyCreateLeadsFromStoredQuotations(mysqli $conn): array
+    {
+        crmEnsureQuotationTables($conn);
+
+        $conn->query("CREATE TABLE IF NOT EXISTS `crm_leads` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `lead_uid` VARCHAR(40) NOT NULL,
+            `customer_name` VARCHAR(150) NOT NULL,
+            `customer_phone` VARCHAR(30) NOT NULL,
+            `customer_email` VARCHAR(190) DEFAULT NULL,
+            `lead_source` VARCHAR(60) DEFAULT NULL,
+            `referred_by` VARCHAR(150) DEFAULT NULL,
+            `assign_to` VARCHAR(120) DEFAULT NULL,
+            `services` TEXT,
+            `itinerary_total_nights` INT DEFAULT 0,
+            `itinerary_total_days` INT DEFAULT 0,
+            `payload_json` LONGTEXT,
+            `created_by_id` INT DEFAULT NULL,
+            `created_by_name` VARCHAR(120) DEFAULT NULL,
+            `intake_submission_id` INT UNSIGNED DEFAULT NULL,
+            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_crm_lead_uid` (`lead_uid`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $stats = ['imported' => 0, 'updated' => 0, 'skipped' => 0, 'linked' => 0, 'failed' => 0, 'errors' => []];
+
+        $byPhone = [];
+        $res = $conn->query('SELECT * FROM `crm_quotations` ORDER BY `id` ASC');
+        if (!$res) {
+            $stats['failed']++;
+            $stats['errors'][] = 'Could not read quotations.';
+
+            return $stats;
+        }
+        while ($row = $res->fetch_assoc()) {
+            $phone = crmLegacyNormalizePhone((string) ($row['mobile_no'] ?? ''));
+            if ($phone === '') {
+                continue;
+            }
+            $byPhone[$phone] = $row;
+        }
+        $res->free();
+
+        if (empty($byPhone)) {
+            return $stats;
+        }
+
+        $leadByPhone = crmLegacyBuildLeadIdByPhone($conn);
+
+        $insertSql = 'INSERT INTO `crm_leads`
+            (`lead_uid`, `customer_name`, `customer_phone`, `customer_email`, `lead_source`, `assign_to`,
+             `services`, `itinerary_total_nights`, `itinerary_total_days`, `payload_json`, `created_by_name`, `created_at`, `updated_at`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        $insertStmt = $conn->prepare($insertSql);
+
+        $updatePayloadSql = 'UPDATE `crm_leads`
+            SET `payload_json` = ?, `itinerary_total_nights` = ?, `itinerary_total_days` = ?, `updated_at` = NOW()
+            WHERE `id` = ? LIMIT 1';
+        $updatePayloadStmt = $conn->prepare($updatePayloadSql);
+
+        $leadSource = 'Legacy Quotation';
+        $assignTo = 'Admin';
+        $createdByName = 'Legacy Import';
+        $servicesJson = json_encode(['tour_package'], JSON_UNESCAPED_UNICODE);
+
+        foreach ($byPhone as $phone => $qRow) {
+            $guestName = trim((string) ($qRow['guest_name'] ?? ''));
+            $mobileNo = trim((string) ($qRow['mobile_no'] ?? ''));
+            $email = trim((string) ($qRow['email'] ?? ''));
+            if ($guestName === '' || $mobileNo === '') {
+                $stats['failed']++;
+                continue;
+            }
+
+            $payload = crmLegacyPayloadFromQuotationRow($qRow, $guestName, $mobileNo, $email);
+            $payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE) ?: '{}';
+            $nights = (int) ($payload['itinerary_total_nights'] ?? 0);
+            $days = (int) ($payload['itinerary_total_days'] ?? 0);
+
+            $leadId = (int) ($leadByPhone[$phone] ?? 0);
+
+            if ($leadId <= 0) {
+                if (!$insertStmt) {
+                    $stats['failed']++;
+                    $stats['errors'][] = 'Could not prepare lead insert.';
+                    break;
+                }
+
+                $leadUid = generateLeadUid($conn);
+                $createdAt = trim((string) ($qRow['created_at'] ?? ''));
+                $updatedAt = trim((string) ($qRow['updated_at'] ?? ''));
+                if ($createdAt === '' || $createdAt === '0000-00-00 00:00:00') {
+                    $createdAt = date('Y-m-d H:i:s');
+                }
+                if ($updatedAt === '' || $updatedAt === '0000-00-00 00:00:00') {
+                    $updatedAt = $createdAt;
+                }
+                $emailParam = $email !== '' ? $email : null;
+
+                $insertStmt->bind_param(
+                    'sssssssiissss',
+                    $leadUid,
+                    $guestName,
+                    $mobileNo,
+                    $emailParam,
+                    $leadSource,
+                    $assignTo,
+                    $servicesJson,
+                    $nights,
+                    $days,
+                    $payloadJson,
+                    $createdByName,
+                    $createdAt,
+                    $updatedAt
+                );
+
+                if ($insertStmt->execute()) {
+                    $leadId = (int) $insertStmt->insert_id;
+                    $leadByPhone[$phone] = $leadId;
+                    $stats['imported']++;
+                } else {
+                    $stats['failed']++;
+                    $stats['errors'][] = 'Lead for ' . $mobileNo . ': ' . $conn->error;
+                    continue;
+                }
+            } else {
+                $needsPayload = true;
+                $resLead = $conn->query('SELECT `payload_json` FROM `crm_leads` WHERE `id` = ' . $leadId . ' LIMIT 1');
+                if ($resLead && ($leadRow = $resLead->fetch_assoc())) {
+                    $existingPayload = json_decode((string) ($leadRow['payload_json'] ?? ''), true);
+                    if (is_array($existingPayload) && trim((string) ($existingPayload['tp_arrival'] ?? '')) !== '') {
+                        $needsPayload = false;
+                    }
+                }
+
+                if ($needsPayload && $updatePayloadStmt) {
+                    $updatePayloadStmt->bind_param('siii', $payloadJson, $nights, $days, $leadId);
+                    if ($updatePayloadStmt->execute()) {
+                        $stats['updated']++;
+                    }
+                } else {
+                    $stats['skipped']++;
+                }
+            }
+
+            $linkStmt = $conn->prepare(
+                'UPDATE `crm_quotations` SET `lead_id` = ?
+                 WHERE REPLACE(REPLACE(REPLACE(`mobile_no`, " ", ""), "-", ""), "+", "") LIKE ?
+                 AND (`lead_id` IS NULL OR `lead_id` = 0 OR `lead_id` = ?)'
+            );
+            if ($linkStmt) {
+                $like = '%' . $phone;
+                $linkStmt->bind_param('isi', $leadId, $like, $leadId);
+                if ($linkStmt->execute()) {
+                    $stats['linked'] += max(0, (int) $linkStmt->affected_rows);
+                }
+                $linkStmt->close();
+            }
+        }
+
+        if ($insertStmt) {
+            $insertStmt->close();
+        }
+        if ($updatePayloadStmt) {
+            $updatePayloadStmt->close();
+        }
+
+        return $stats;
+    }
+}
+
 if (!function_exists('crmLegacyImportQuotations')) {
     /** @return array{imported:int,skipped:int,failed:int,errors:array<int,string>} */
     function crmLegacyImportQuotations(mysqli $conn, mysqli $legacy, array $leadLookup, string $quotationTable = 'quotation'): array
@@ -898,6 +1120,17 @@ if (!function_exists('crmLegacyImportHandleStep')) {
                 'message' => 'Repaired ' . (int) $repair['updated'] . ' quotation(s).',
                 'step' => $step,
                 'repair' => $repair,
+            ];
+        }
+
+        if ($step === 'import_leads_from_quotations') {
+            $stats = crmLegacyCreateLeadsFromStoredQuotations($conn);
+
+            return [
+                'success' => empty($stats['failed']),
+                'message' => 'Created ' . (int) $stats['imported'] . ' lead(s) from quotations, updated ' . (int) $stats['updated'] . ', linked ' . (int) $stats['linked'] . ' quotation(s).',
+                'step' => $step,
+                'leads_from_quotations' => $stats,
             ];
         }
 

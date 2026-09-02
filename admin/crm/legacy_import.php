@@ -127,6 +127,9 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
                             <button type="button" class="btn btn-outline-secondary ml-2" id="repairQuotationsBtn">
                                 <i class="fas fa-wrench mr-1"></i> Repair imported quotations only
                             </button>
+                            <button type="button" class="btn btn-outline-primary ml-2" id="createLeadsFromQuotationsBtn">
+                                <i class="fas fa-user-plus mr-1"></i> Create leads from quotations
+                            </button>
                         </form>
 
                         <div class="mt-4">
@@ -145,6 +148,7 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
                             <li>Check <strong>Clear existing</strong> if current CRM data is dummy, then run import.</li>
                         </ol>
                         <p class="text-muted small mt-3 mb-0">Temporary staging tables are created during import and removed automatically. Your CRM database is the only database used.</p>
+                        <p class="text-muted small mt-2 mb-0"><strong>Note:</strong> The old dashboard stored only a few rows in <em>customers</em> but hundreds in <em>quotation</em>. Leads are built from quotation guest phones — use <em>Create leads from quotations</em> after import to populate the Leads page.</p>
                     </div>
                 </div>
             </div>
@@ -158,6 +162,7 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
     var logEl = document.getElementById('importLog');
     var btn = document.getElementById('runImportBtn');
     var repairBtn = document.getElementById('repairQuotationsBtn');
+    var createLeadsBtn = document.getElementById('createLeadsFromQuotationsBtn');
 
     var ADMIN_BASE = location.href.replace(/[?#].*$/, '').replace(/\/crm\/[^\/]*$/, '/');
 
@@ -231,6 +236,7 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
         steps.push({ action: 'import_customers', label: 'Importing customers as leads...' });
         steps.push({ action: 'import_quotations', label: 'Importing quotations...' });
         steps.push({ action: 'repair_quotations', label: 'Repairing legacy quotation formats...' });
+        steps.push({ action: 'import_leads_from_quotations', label: 'Creating leads from quotation guests...' });
         steps.push({ action: 'cleanup', label: 'Cleaning up temporary tables...' });
 
         var chain = Promise.resolve();
@@ -270,9 +276,9 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
             if (!confirm('Repair all imported quotation JSON formats (flights, hotels, itinerary, costing)?')) return;
             btn.disabled = true;
             repairBtn.disabled = true;
+            if (createLeadsBtn) createLeadsBtn.disabled = true;
             logEl.textContent = 'Repairing quotations...';
             var fd = new FormData();
-            fd.append('action', 'repair_quotations');
             postStep('repair_quotations', fd).then(function (res) {
                 appendLog(res.message || 'Repair completed.');
                 if (res.repair) {
@@ -284,6 +290,32 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
             }).finally(function () {
                 btn.disabled = false;
                 repairBtn.disabled = false;
+                if (createLeadsBtn) createLeadsBtn.disabled = false;
+            });
+        });
+    }
+
+    if (createLeadsBtn) {
+        createLeadsBtn.addEventListener('click', function () {
+            if (!confirm('Create one lead per unique quotation phone number and link quotations?')) return;
+            btn.disabled = true;
+            repairBtn.disabled = true;
+            createLeadsBtn.disabled = true;
+            logEl.textContent = 'Creating leads from quotations...';
+            var fd = new FormData();
+            postStep('import_leads_from_quotations', fd).then(function (res) {
+                appendLog(res.message || 'Done.');
+                if (res.leads_from_quotations) {
+                    var s = res.leads_from_quotations;
+                    appendLog('Imported: ' + (s.imported || 0) + ', updated: ' + (s.updated || 0) + ', skipped: ' + (s.skipped || 0) + ', quotations linked: ' + (s.linked || 0));
+                }
+                setTimeout(function () { window.location.href = absUrl('crm/leads.php'); }, 1500);
+            }).catch(function (err) {
+                appendLog('Failed: ' + (err && err.message ? err.message : String(err)));
+            }).finally(function () {
+                btn.disabled = false;
+                if (repairBtn) repairBtn.disabled = false;
+                createLeadsBtn.disabled = false;
             });
         });
     }
