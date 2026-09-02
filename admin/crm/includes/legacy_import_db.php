@@ -781,3 +781,99 @@ if (!function_exists('crmLegacyImportRun')) {
         return $result;
     }
 }
+
+if (!function_exists('crmLegacyImportHandleStep')) {
+    /**
+     * Run one import step (for AJAX — avoids Hostinger request timeouts).
+     *
+     * @param array{clear_existing?:bool,suppliers?:bool,customers?:bool,quotations?:bool} $options
+     */
+    function crmLegacyImportHandleStep(mysqli $conn, string $step, array $options = []): array
+    {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
+        $step = strtolower(trim($step));
+        $tableMap = crmLegacyStagingTableMap();
+
+        if ($step === 'probe') {
+            return ['success' => true, 'message' => 'OK', 'probe' => crmLegacyImportProbe($conn)];
+        }
+
+        if ($step === 'wipe') {
+            crmLegacyImportWipeTables($conn);
+
+            return ['success' => true, 'message' => 'Existing CRM suppliers, leads, and quotations cleared.', 'step' => $step];
+        }
+
+        if ($step === 'stage_init') {
+            $stage = crmLegacyStageSelectedTables($conn, ['places', 'suppliers', 'customers'], null, true);
+            $stage['step'] = $step;
+            $stage['file'] = basename(crmLegacySqlFilePath());
+            if ((int) ($stage['counts']['suppliers'] ?? 0) === 0 && (int) ($stage['counts']['customers'] ?? 0) === 0) {
+                $stage['success'] = false;
+                $stage['message'] = 'Could not load suppliers/customers from SQL file.';
+            }
+
+            return $stage;
+        }
+
+        if ($step === 'stage_quotations') {
+            $stage = crmLegacyStageSelectedTables($conn, ['quotation'], null, false);
+            $stage['step'] = $step;
+            if ((int) ($stage['counts']['quotation'] ?? 0) === 0) {
+                $stage['success'] = false;
+                $stage['message'] = 'Could not load quotations from SQL file.';
+            }
+
+            return $stage;
+        }
+
+        if ($step === 'import_suppliers') {
+            if (empty($options['suppliers'])) {
+                return ['success' => true, 'message' => 'Suppliers skipped.', 'step' => $step, 'suppliers' => ['imported' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => []]];
+            }
+            if (!crmLegacyStagingTablesExist($conn)) {
+                return ['success' => false, 'message' => 'Staging tables missing. Run stage steps first.', 'step' => $step];
+            }
+            $placesMap = crmLegacyLoadPlacesMap($conn, $tableMap['places']);
+            $stats = crmLegacyImportSuppliers($conn, $conn, $placesMap, $tableMap['suppliers']);
+
+            return ['success' => empty($stats['failed']), 'message' => 'Suppliers imported.', 'step' => $step, 'suppliers' => $stats];
+        }
+
+        if ($step === 'import_customers') {
+            if (empty($options['customers'])) {
+                return ['success' => true, 'message' => 'Customers skipped.', 'step' => $step, 'customers' => ['imported' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => []]];
+            }
+            if (!crmLegacyStagingTablesExist($conn)) {
+                return ['success' => false, 'message' => 'Staging tables missing. Run stage steps first.', 'step' => $step];
+            }
+            $stats = crmLegacyImportCustomersAsLeads($conn, $conn, $tableMap['customers']);
+            unset($stats['lookup']);
+
+            return ['success' => empty($stats['failed']), 'message' => 'Customers imported.', 'step' => $step, 'customers' => $stats];
+        }
+
+        if ($step === 'import_quotations') {
+            if (empty($options['quotations'])) {
+                return ['success' => true, 'message' => 'Quotations skipped.', 'step' => $step, 'quotations' => ['imported' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => []]];
+            }
+            if (!crmLegacyStagingTablesExist($conn)) {
+                return ['success' => false, 'message' => 'Staging tables missing. Run stage steps first.', 'step' => $step];
+            }
+            $leadLookup = crmLegacyBuildLeadLookup($conn);
+            $stats = crmLegacyImportQuotations($conn, $conn, $leadLookup, $tableMap['quotation']);
+
+            return ['success' => empty($stats['failed']), 'message' => 'Quotations imported.', 'step' => $step, 'quotations' => $stats];
+        }
+
+        if ($step === 'cleanup') {
+            crmLegacyDropStagingTables($conn);
+
+            return ['success' => true, 'message' => 'Temporary staging tables removed.', 'step' => $step];
+        }
+
+        return ['success' => false, 'message' => 'Unknown import step: ' . $step, 'step' => $step];
+    }
+}

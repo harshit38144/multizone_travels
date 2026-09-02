@@ -19,6 +19,12 @@ if (!function_exists('crmLegacySqlFilePath')) {
             dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'legacy_dashboard.sql',
         ];
 
+        $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim((string) $_SERVER['DOCUMENT_ROOT'], '/\\') : '';
+        if ($docRoot !== '') {
+            $candidates[] = $docRoot . DIRECTORY_SEPARATOR . 'u560130840_dashboard.sql';
+            $candidates[] = dirname($docRoot) . DIRECTORY_SEPARATOR . 'u560130840_dashboard.sql';
+        }
+
         foreach ($candidates as $path) {
             if (is_readable($path)) {
                 $resolved = $path;
@@ -244,6 +250,55 @@ if (!function_exists('crmLegacyDropStagingTables')) {
     }
 }
 
+if (!function_exists('crmLegacyStageSelectedTables')) {
+    /**
+     * @param array<int,string> $legacyTables
+     * @return array{success:bool,message:string,counts:array<string,int>,errors:array<int,string>}
+     */
+    function crmLegacyStageSelectedTables(mysqli $conn, array $legacyTables, ?string $filePath = null, bool $recreateTables = false): array
+    {
+        $filePath = $filePath !== null && $filePath !== '' ? $filePath : crmLegacySqlFilePath();
+        if ($filePath === '' || !is_readable($filePath)) {
+            return [
+                'success' => false,
+                'message' => 'Legacy SQL file not found.',
+                'counts' => [],
+                'errors' => [],
+            ];
+        }
+
+        @set_time_limit(300);
+        $conn->query('SET FOREIGN_KEY_CHECKS = 0');
+
+        if ($recreateTables) {
+            crmLegacyStagingCreateTables($conn);
+        } elseif (!crmLegacyStagingTablesExist($conn)) {
+            crmLegacyStagingCreateTables($conn);
+        }
+
+        $map = crmLegacyStagingTableMap();
+        $errors = [];
+        foreach ($legacyTables as $legacyTable) {
+            if (!isset($map[$legacyTable])) {
+                continue;
+            }
+            $stageStats = crmLegacyStageTableFromSql($conn, $filePath, $legacyTable, $map[$legacyTable]);
+            if ($stageStats['errors']) {
+                $errors = array_merge($errors, $stageStats['errors']);
+            }
+        }
+
+        $conn->query('SET FOREIGN_KEY_CHECKS = 1');
+
+        return [
+            'success' => true,
+            'message' => 'Staged ' . implode(', ', $legacyTables),
+            'counts' => crmLegacyStagingCounts($conn),
+            'errors' => $errors,
+        ];
+    }
+}
+
 if (!function_exists('crmLegacyStageFromSqlFile')) {
     /**
      * @return array{success:bool,message:string,file:string,counts:array<string,int>,errors:array<int,string>}
@@ -266,6 +321,7 @@ if (!function_exists('crmLegacyStageFromSqlFile')) {
 
         $conn->query('SET FOREIGN_KEY_CHECKS = 0');
         $conn->query('SET SESSION max_allowed_packet = 67108864');
+        // Ignore if shared hosting disallows changing session variables.
 
         crmLegacyStagingCreateTables($conn);
 

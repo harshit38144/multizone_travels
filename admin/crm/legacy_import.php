@@ -155,6 +155,14 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
     var logEl = document.getElementById('importLog');
     var btn = document.getElementById('runImportBtn');
 
+    var ADMIN_BASE = location.href.replace(/[?#].*$/, '').replace(/\/crm\/[^\/]*$/, '/');
+
+    function absUrl(path) {
+        if (!path) return '';
+        if (/^(https?:)?\/\//i.test(path)) return path;
+        return ADMIN_BASE + path.replace(/^\//, '');
+    }
+
     function appendLog(text) {
         logEl.textContent = (logEl.textContent === 'Ready.' ? '' : logEl.textContent + '\n') + text;
         logEl.scrollTop = logEl.scrollHeight;
@@ -165,42 +173,91 @@ foreach (['crm_suppliers', 'crm_leads', 'crm_quotations'] as $table) {
         return label + ': imported ' + (stats.imported || 0) + ', skipped ' + (stats.skipped || 0) + ', failed ' + (stats.failed || 0);
     }
 
+    function logErrors(prefix, stats) {
+        if (!stats || !stats.errors || !stats.errors.length) return;
+        stats.errors.forEach(function (err) { appendLog(prefix + ': ' + err); });
+    }
+
+    function postStep(action, fd) {
+        fd.set('action', action);
+        return fetch(absUrl('crm/ajax/run_legacy_import.php'), {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        }).then(function (r) {
+            return r.text().then(function (text) {
+                var res;
+                try {
+                    res = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('HTTP ' + r.status + ' — server did not return JSON.\n' + text.substring(0, 500));
+                }
+                if (r.status === 401) {
+                    throw new Error(res.message || 'Session expired. Please sign in again.');
+                }
+                if (!res.success) {
+                    var msg = res.message || 'Step failed.';
+                    if (res.errors && res.errors.length) {
+                        msg += '\n' + res.errors.slice(0, 5).join('\n');
+                    }
+                    throw new Error(msg);
+                }
+                return res;
+            });
+        });
+    }
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!confirm('Start legacy import now?')) return;
 
         btn.disabled = true;
-        logEl.textContent = 'Running import...';
+        logEl.textContent = 'Starting import (runs in small steps to avoid timeout)...';
 
         var fd = new FormData(form);
-        fd.append('action', 'run');
+        var clearExisting = fd.get('clear_existing') === '1';
+        var totals = { suppliers: null, customers: null, quotations: null };
 
-        fetch('crm/ajax/run_legacy_import.php', {
-            method: 'POST',
-            body: fd,
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
-                appendLog(res.message || (res.success ? 'Done.' : 'Failed.'));
-                if (res.wiped) appendLog('Existing CRM suppliers/leads/quotations were cleared.');
-                appendLog(statLine('Suppliers', res.suppliers));
-                appendLog(statLine('Customers', res.customers));
-                appendLog(statLine('Quotations', res.quotations));
-                if (res.suppliers && res.suppliers.errors) res.suppliers.errors.forEach(function (err) { appendLog('Supplier error: ' + err); });
-                if (res.customers && res.customers.errors) res.customers.errors.forEach(function (err) { appendLog('Customer error: ' + err); });
-                if (res.quotations && res.quotations.errors) res.quotations.errors.forEach(function (err) { appendLog('Quotation error: ' + err); });
-                if (res.success) {
-                    setTimeout(function () { window.location.reload(); }, 1500);
-                }
-            })
-            .catch(function () {
-                appendLog('Request failed. Check session/login and try again.');
-            })
-            .finally(function () {
-                btn.disabled = false;
+        var steps = [];
+        if (clearExisting) steps.push({ action: 'wipe', label: 'Clearing existing CRM data...' });
+        steps.push({ action: 'stage_init', label: 'Loading suppliers & customers from SQL file...' });
+        steps.push({ action: 'stage_quotations', label: 'Loading quotations from SQL file...' });
+        steps.push({ action: 'import_suppliers', label: 'Importing suppliers...' });
+        steps.push({ action: 'import_customers', label: 'Importing customers as leads...' });
+        steps.push({ action: 'import_quotations', label: 'Importing quotations...' });
+        steps.push({ action: 'cleanup', label: 'Cleaning up temporary tables...' });
+
+        var chain = Promise.resolve();
+        steps.forEach(function (step) {
+            chain = chain.then(function () {
+                appendLog(step.label);
+                return postStep(step.action, fd).then(function (res) {
+                    if (res.suppliers) totals.suppliers = res.suppliers;
+                    if (res.customers) totals.customers = res.customers;
+                    if (res.quotations) totals.quotations = res.quotations;
+                    if (res.counts) {
+                        appendLog('  Loaded: suppliers ' + (res.counts.suppliers || 0) + ', customers ' + (res.counts.customers || 0) + ', quotations ' + (res.counts.quotation || 0));
+                    }
+                });
             });
+        });
+
+        chain.then(function () {
+            appendLog('Import completed successfully.');
+            if (clearExisting) appendLog('Existing dummy CRM rows were cleared.');
+            appendLog(statLine('Suppliers', totals.suppliers));
+            appendLog(statLine('Customers', totals.customers));
+            appendLog(statLine('Quotations', totals.quotations));
+            logErrors('Supplier error', totals.suppliers);
+            logErrors('Customer error', totals.customers);
+            logErrors('Quotation error', totals.quotations);
+            setTimeout(function () { window.location.reload(); }, 2000);
+        }).catch(function (err) {
+            appendLog('Failed: ' + (err && err.message ? err.message : String(err)));
+        }).finally(function () {
+            btn.disabled = false;
+        });
     });
 })();
 </script>
