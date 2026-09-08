@@ -204,6 +204,10 @@ $pageTitle = $isArchivedView
         : (!empty($prefill['lead_id']) ? 'Create Quotation from Lead' : 'Quotation Generator'));
 
 $showSaveDraft = !$isArchivedView && (!$quotation || crmQuotationIsDraft($quotation));
+$qPreviewOnly = isset($_GET['preview_only']) && (string) $_GET['preview_only'] === '1';
+if ($qPreviewOnly && !isset($_GET['mz_embed'])) {
+    $_GET['mz_embed'] = '1';
+}
 
 $qPreviewMeta = [
     'logo' => 'img/web-logo.png',
@@ -7201,10 +7205,63 @@ $qWizardSteps = [
             background: rgba(225, 29, 46, 0.14) !important;
             border-top-color: var(--q-border) !important;
         }
+
+        /* Embedded preview-only mode (opened from Leads modal iframe) */
+        body.q-preview-only {
+            background: #fff !important;
+            overflow: auto !important;
+        }
+        body.q-preview-only .wrapper > .main-header,
+        body.q-preview-only .wrapper > .main-sidebar,
+        body.q-preview-only .content-header,
+        body.q-preview-only .page-title-row,
+        body.q-preview-only .q-page-layout,
+        body.q-preview-only .q-wizard-nav,
+        body.q-preview-only .q-sticky-actions,
+        body.q-preview-only .main-footer {
+            display: none !important;
+        }
+        body.q-preview-only .content-wrapper,
+        body.q-preview-only .content-wrapper > .content,
+        body.q-preview-only .container-fluid {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            min-height: 0 !important;
+        }
+        body.q-preview-only #qPreviewModal {
+            position: static !important;
+            display: block !important;
+            padding: 0 !important;
+            overflow: visible !important;
+        }
+        body.q-preview-only #qPreviewModal .modal-dialog {
+            max-width: 100% !important;
+            margin: 0 !important;
+            transform: none !important;
+        }
+        body.q-preview-only #qPreviewModal .modal-content {
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        body.q-preview-only #qPreviewModal .modal-header,
+        body.q-preview-only #qPreviewModal .modal-footer,
+        body.q-preview-only #qPreviewModal .close {
+            display: none !important;
+        }
+        body.q-preview-only #qPreviewModal .modal-body {
+            padding: 0.75rem 1rem 1.25rem !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        body.q-preview-only .modal-backdrop {
+            display: none !important;
+        }
     </style>
 </head>
 
-<body class="hold-transition sidebar-mini layout-fixed">
+<body class="hold-transition sidebar-mini layout-fixed<?= !empty($qPreviewOnly) ? ' q-preview-only' : '' ?>">
     <div class="wrapper crm-quotation-gen">
 
         <?php include __DIR__ . '/../includes/top-header.php'; ?>
@@ -8028,6 +8085,9 @@ $qWizardSteps = [
                 </div>
                 <div class="modal-footer py-2">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger btn-sm" id="qPreviewEditBtn" title="Open full quotation editor">
+                        <i class="fas fa-edit mr-1"></i> Edit Quotation
+                    </button>
                     <button type="button" class="btn btn-success btn-sm d-none" id="qPreviewSaveBtn" disabled>
                         <i class="fas fa-save mr-1"></i>Save Changes
                     </button>
@@ -8058,7 +8118,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=111"></script>
+    <script src="crm/assets/quotation_generator.js?v=113"></script>
     <script src="crm/assets/quotation_flight_search.js?v=13"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

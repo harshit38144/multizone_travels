@@ -7474,6 +7474,24 @@
             openQuotationPreview();
         });
 
+        $('#qPreviewEditBtn').on('click', function () {
+            $('#qPreviewModal').modal('hide');
+            try {
+                var url = new URL(window.location.href);
+                if (url.searchParams.has('preview')) {
+                    url.searchParams.delete('preview');
+                    window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+                }
+            } catch (e) { /* ignore */ }
+            $('html, body').animate({ scrollTop: 0 }, 200);
+            window.setTimeout(function () {
+                var $focus = $('#q_guest_name, #qGuestName, input[name="guest_name"]').filter(':visible').first();
+                if ($focus.length) {
+                    $focus.trigger('focus');
+                }
+            }, 250);
+        });
+
         $('#qLoadTermsMasterBtn').on('click', function () {
             if (!window.confirm('Replace all Terms & Policies fields with master content?')) {
                 return;
@@ -7868,6 +7886,42 @@
             renderTourCostRows();
         }
         qInitSupplierSelect2In();
+
+        // Open preview automatically when arriving from Leads view icon (quoted stage).
+        (function autoOpenPreviewFromQuery() {
+            var wantsPreview = false;
+            var previewOnly = false;
+            try {
+                var params = new URLSearchParams(window.location.search || '');
+                wantsPreview = params.get('preview') === '1' || params.get('preview') === 'true'
+                    || params.get('preview_only') === '1';
+                previewOnly = params.get('preview_only') === '1' || document.body.classList.contains('q-preview-only');
+            } catch (e) {
+                wantsPreview = /[?&]preview(?:_only)?=1(?:&|$)/.test(window.location.search || '');
+                previewOnly = /[?&]preview_only=1(?:&|$)/.test(window.location.search || '')
+                    || document.body.classList.contains('q-preview-only');
+            }
+            if (!wantsPreview) {
+                return;
+            }
+            window.setTimeout(function () {
+                try {
+                    openQuotationPreview();
+                    if (previewOnly) {
+                        // Keep preview content visible as a static page inside the Leads modal iframe.
+                        var $modal = $('#qPreviewModal');
+                        $modal.addClass('show d-block').attr('aria-hidden', 'false').css({
+                            position: 'static',
+                            display: 'block',
+                            paddingRight: '0'
+                        });
+                        $('body').addClass('q-preview-only').removeClass('modal-open');
+                        $('.modal-backdrop').remove();
+                        $('#qPreviewEditBtn, #qPreviewModal .close, #qPreviewModal [data-dismiss="modal"]').addClass('d-none');
+                    }
+                } catch (err) { /* ignore */ }
+            }, previewOnly ? 200 : 350);
+        })();
     });
 
 })(jQuery);

@@ -42,6 +42,17 @@ if ($adminFooterPage === 'dashboard.php') :
 <!-- Custom JS -->
 <script src="custom/custom-js.js"></script>
 <script src="custom/theme.js"></script>
+<?php
+if (!function_exists('mz_is_tab_shell')) {
+  require_once __DIR__ . '/mz_embed.php';
+}
+if (mz_is_tab_shell()) :
+?>
+<link rel="stylesheet" href="custom/tabs.css">
+<script src="custom/tabs.js"></script>
+<?php elseif (!mz_is_embed_request()) : ?>
+<script src="custom/tabs.js"></script>
+<?php endif; ?>
 
 <!-- DataTables -->
 <script src="plugins/datatables/jquery.dataTables.min.js"></script>

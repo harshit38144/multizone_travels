@@ -1,4 +1,12 @@
 <?php
+if (!function_exists('mz_is_embed_request')) {
+  require_once __DIR__ . '/mz_embed.php';
+}
+$mzEmbed = mz_is_embed_request();
+if ($mzEmbed) {
+  return;
+}
+
 $mzHeaderUserName = trim((string) ($_SESSION['name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Admin'));
 if ($mzHeaderUserName === '') {
   $mzHeaderUserName = 'Admin';

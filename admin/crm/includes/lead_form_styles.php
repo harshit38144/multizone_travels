@@ -1120,6 +1120,62 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
     font-size: 0.88rem;
 }
 
+<?= $scope ?> .lead-source-field {
+    display: flex;
+    align-items: stretch;
+    gap: 0.4rem;
+}
+<?= $scope ?> .lead-source-field .lead-source-select-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+<?= $scope ?> .btn-lead-source-add {
+    flex: 0 0 auto;
+    width: 2.35rem;
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.35rem;
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+    color: #e11d2e;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+<?= $scope ?> .btn-lead-source-add:hover,
+<?= $scope ?> .btn-lead-source-add:focus {
+    background: #e11d2e;
+    border-color: #e11d2e;
+    color: #fff;
+}
+
+.lead-source-create-modal {
+    z-index: 1070 !important;
+}
+.lead-source-create-modal .lead-source-create-hd {
+    background: #c41e20;
+    color: #fff;
+    padding: 0.75rem 1rem;
+}
+.lead-source-create-modal .lead-source-create-hd .modal-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+}
+.lead-source-create-modal .lead-source-create-bd {
+    padding: 1rem;
+    background: #fff;
+}
+.lead-source-create-modal .lead-source-create-ft {
+    padding: 0.65rem 1rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+.modal-backdrop.lead-source-create-backdrop {
+    z-index: 1065 !important;
+}
+
 .tp-dest-create-modal {
     z-index: 1060 !important;
 }

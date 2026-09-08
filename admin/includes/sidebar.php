@@ -1,4 +1,12 @@
 <?php
+if (!function_exists('mz_is_embed_request')) {
+  require_once __DIR__ . '/mz_embed.php';
+}
+$mzEmbed = mz_is_embed_request();
+if ($mzEmbed) {
+  return;
+}
+
 // Detect current page (CRM files live in admin/crm/ — use a stable prefix so names like index.php do not clash)
 $scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
 if (strpos($scriptPath, '/admin/crm/') !== false) {
@@ -767,4 +775,4 @@ $crmParentPages = array_merge(
 
   </div>
 
-</aside></aside>
+</aside>

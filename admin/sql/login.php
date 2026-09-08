@@ -37,7 +37,7 @@ if (isset($_POST['adminlogin'])) {
              VALUES ('$admin_id','$msg')"
         );
 
-        header('Location: dashboard.php');
+        header('Location: app.php');
         exit;
 
     } else {

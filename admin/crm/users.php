@@ -1212,6 +1212,21 @@ unset($_SESSION['crm_user_flash'], $_SESSION['crm_user_flash_type']);
     });
 
     renderList();
+
+    // Notify other open tabs (e.g. Create Lead Assign To) that the user list changed.
+    <?php if ($flashMsg !== '' && $flashType === 'success') { ?>
+    (function notifyUserListChanged() {
+        var payload = { type: 'mz-data-changed', resource: 'users', at: Date.now() };
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(payload, '*');
+            }
+        } catch (e) {}
+        try {
+            window.postMessage(payload, '*');
+        } catch (e2) {}
+    })();
+    <?php } ?>
 })();
 </script>
 </body>

@@ -267,15 +267,21 @@ if (empty($leadSourceOptions)) {
                         <?php if (!$leadFormPublicIntake) { ?>
                         <div class="form-group col-md-6">
                             <label class="label-req" for="<?= $idPfx ?>LeadSource">Lead Source</label>
-                            <div class="lead-field-icon">
-                                <i class="fas fa-bullhorn lead-field-icon-glyph" aria-hidden="true"></i>
-                                <select class="form-control js-lead-source" id="<?= $idPfx ?>LeadSource" name="lead_source">
-                                    <?php foreach ($leadSourceOptions as $idx => $leadSourceName) { ?>
-                                        <option value="<?= htmlspecialchars($leadSourceName, ENT_QUOTES, 'UTF-8') ?>" <?= $idx === 0 ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($leadSourceName, ENT_QUOTES, 'UTF-8') ?>
-                                        </option>
-                                    <?php } ?>
-                                </select>
+                            <div class="lead-source-field">
+                                <div class="lead-field-icon lead-source-select-wrap">
+                                    <i class="fas fa-bullhorn lead-field-icon-glyph" aria-hidden="true"></i>
+                                    <select class="form-control js-lead-source" id="<?= $idPfx ?>LeadSource" name="lead_source">
+                                        <?php foreach ($leadSourceOptions as $idx => $leadSourceName) { ?>
+                                            <option value="<?= htmlspecialchars($leadSourceName, ENT_QUOTES, 'UTF-8') ?>" <?= $idx === 0 ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($leadSourceName, ENT_QUOTES, 'UTF-8') ?>
+                                            </option>
+                                        <?php } ?>
+                                        <option value="__add_new__">+ Add new lead source…</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-lead-source-add js-lead-source-add" title="Add lead source" aria-label="Add lead source">
+                                    <i class="fas fa-plus"></i>
+                                </button>
                             </div>
                         </div>
                         <?php } ?>
@@ -295,7 +301,7 @@ if (empty($leadSourceOptions)) {
                             <label class="label-req">Assign To</label>
                             <div class="lead-field-icon">
                                 <i class="fas fa-user-check lead-field-icon-glyph" aria-hidden="true"></i>
-                                <select class="form-control" name="assign_to" required>
+                                <select class="form-control js-assign-to-select" name="assign_to" required>
                                     <option value="">Select User</option>
                                     <option value="__self__">To Self<?= $assignToSelfName !== '' ? ' (' . htmlspecialchars($assignToSelfName, ENT_QUOTES, 'UTF-8') . ')' : '' ?></option>
                                     <?php foreach ($assignToUsers as $assignee) {
@@ -982,6 +988,39 @@ if (empty($leadSourceOptions)) {
 </form>
 
 <?php if (!$leadFormPublicIntake) { ?>
+<div class="modal fade lead-source-create-modal js-lead-source-create-modal" id="<?= $idPfx ?>LeadSourceCreateModal" tabindex="-1"
+    role="dialog" aria-labelledby="<?= $idPfx ?>LeadSourceCreateModalLabel" aria-hidden="true" data-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+        <div class="modal-content lead-source-create-shell">
+            <form class="js-lead-source-create-form" onsubmit="return false;">
+                <div class="modal-header lead-source-create-hd">
+                    <h5 class="modal-title mb-0" id="<?= $idPfx ?>LeadSourceCreateModalLabel">
+                        <i class="fas fa-bullhorn mr-1"></i> Add Lead Source
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body lead-source-create-bd">
+                    <div class="alert alert-danger d-none js-lead-source-create-error mb-2 py-2"></div>
+                    <div class="form-group mb-0">
+                        <label class="label-req" for="<?= $idPfx ?>LeadSourceCreateName">Source Name</label>
+                        <input type="text" class="form-control js-lead-source-create-name" id="<?= $idPfx ?>LeadSourceCreateName"
+                            name="name" maxlength="120" placeholder="e.g. Instagram, Walk-in" required autocomplete="off">
+                        <small class="text-muted d-block mt-1">Saved to Lead Source Master and available immediately.</small>
+                    </div>
+                </div>
+                <div class="modal-footer lead-source-create-ft">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger js-lead-source-create-submit">
+                        <i class="fas fa-plus mr-1"></i> Add Source
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade tp-dest-create-modal js-tp-dest-create-modal" id="<?= $idPfx ?>DestCreateModal" tabindex="-1"
     role="dialog" aria-labelledby="<?= $idPfx ?>DestCreateModalLabel" aria-hidden="true" data-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
@@ -1445,6 +1484,303 @@ if (empty($leadSourceOptions)) {
             function escapeHtml(text) {
                 return jQuery('<div>').text(text || '').html();
             }
+
+            function escapeAttr(text) {
+                return String(text || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            /**
+             * Reload Assign To options from the server without resetting the rest of the form.
+             * Needed when users are added in another browser tab while Create Lead stays open.
+             */
+            var assignToRefreshInFlight = null;
+            function refreshAssignToUsers(force) {
+                var $sel = $form.find('select.js-assign-to-select, select[name="assign_to"]').first();
+                if (!$sel.length) {
+                    return;
+                }
+                if (assignToRefreshInFlight && !force) {
+                    return assignToRefreshInFlight;
+                }
+
+                var current = $sel.val();
+                var $selfOpt = $sel.find('option[value="__self__"]').first();
+                var selfLabel = $selfOpt.length
+                    ? $selfOpt.text()
+                    : ('To Self');
+
+                assignToRefreshInFlight = jQuery.ajax({
+                    url: 'crm/ajax/list_assign_users.php',
+                    method: 'GET',
+                    dataType: 'json',
+                    cache: false,
+                    data: { _: Date.now() }
+                }).done(function (res) {
+                    if (!res || !res.success || !Array.isArray(res.data)) {
+                        return;
+                    }
+
+                    if (res.self_name) {
+                        selfLabel = 'To Self (' + String(res.self_name) + ')';
+                    }
+
+                    var html = '<option value="">Select User</option>';
+                    html += '<option value="__self__">' + escapeHtml(selfLabel) + '</option>';
+
+                    res.data.forEach(function (u) {
+                        var username = String((u && u.username) || '').trim();
+                        var fullName = String((u && u.full_name) || '').trim();
+                        var value = username || fullName;
+                        var label = fullName || username;
+                        if (!value || !label) {
+                            return;
+                        }
+                        if (fullName && username) {
+                            label += ' (' + username + ')';
+                        }
+                        html += '<option value="' + escapeAttr(value) + '">' + escapeHtml(label) + '</option>';
+                    });
+
+                    $sel.html(html);
+
+                    if (current) {
+                        $sel.val(current);
+                        if ($sel.val() !== current) {
+                            $sel.append(
+                                jQuery('<option></option>').val(current).text(current)
+                            );
+                            $sel.val(current);
+                        }
+                    }
+                }).always(function () {
+                    assignToRefreshInFlight = null;
+                });
+
+                return assignToRefreshInFlight;
+            }
+
+            $form.off('focus.mzAssignTo mousedown.mzAssignTo', 'select.js-assign-to-select, select[name="assign_to"]')
+                .on('focus.mzAssignTo mousedown.mzAssignTo', 'select.js-assign-to-select, select[name="assign_to"]', function () {
+                    refreshAssignToUsers(false);
+                });
+
+            jQuery(window).off('focus.mzAssignToVis').on('focus.mzAssignToVis', function () {
+                if ($form.closest('body').length && $form.find('select[name="assign_to"]').length) {
+                    refreshAssignToUsers(false);
+                }
+            });
+
+            document.addEventListener('visibilitychange', function onAssignVis() {
+                if (document.visibilityState === 'visible' && $form.closest('body').length) {
+                    refreshAssignToUsers(false);
+                }
+            });
+
+            window.addEventListener('message', function onAssignMsg(ev) {
+                var data = ev && ev.data;
+                if (!data || data.type !== 'mz-data-changed') {
+                    return;
+                }
+                if (data.resource === 'users' || data.resource === '*') {
+                    refreshAssignToUsers(true);
+                }
+            });
+
+            // Initial sync in case the form HTML was cached slightly behind another tab's write.
+            refreshAssignToUsers(false);
+
+            (function initLeadSourceCreate() {
+                var $sourceSelect = $form.find('select.js-lead-source');
+                var $addBtn = $form.find('.js-lead-source-add');
+                var $sourceModal = $form.find('.js-lead-source-create-modal');
+                if (!$sourceModal.length) {
+                    $sourceModal = jQuery('.js-lead-source-create-modal').last();
+                }
+                if (!$sourceSelect.length || !$sourceModal.length) {
+                    return;
+                }
+
+                // Keep nested modal above Create Lead modal; avoid duplicates after form reload
+                jQuery('.js-lead-source-create-modal').not($sourceModal).remove();
+                if ($sourceModal.parent()[0] !== document.body) {
+                    $sourceModal.appendTo(document.body);
+                }
+
+                var $sourceForm = $sourceModal.find('.js-lead-source-create-form');
+                var $sourceName = $sourceModal.find('.js-lead-source-create-name');
+                var $sourceError = $sourceModal.find('.js-lead-source-create-error');
+                var $sourceSubmit = $sourceModal.find('.js-lead-source-create-submit');
+                var lastSourceValue = $sourceSelect.val() || '';
+                var sourceRefreshInFlight = null;
+
+                function showSourceError(msg) {
+                    if (!$sourceError.length) {
+                        return;
+                    }
+                    if (msg) {
+                        $sourceError.removeClass('d-none').text(msg);
+                    } else {
+                        $sourceError.addClass('d-none').text('');
+                    }
+                }
+
+                function rebuildSourceOptions(sources, selectName) {
+                    var html = '';
+                    (sources || []).forEach(function (item, idx) {
+                        var name = String((item && item.name) || '').trim();
+                        if (!name) {
+                            return;
+                        }
+                        var selected = selectName
+                            ? (name.toLowerCase() === String(selectName).toLowerCase())
+                            : (idx === 0 && !selectName);
+                        html += '<option value="' + escapeAttr(name) + '"' + (selected ? ' selected' : '') + '>'
+                            + escapeHtml(name) + '</option>';
+                    });
+                    html += '<option value="__add_new__">+ Add new lead source…</option>';
+                    $sourceSelect.html(html);
+                    if (selectName) {
+                        $sourceSelect.val(selectName);
+                        if ($sourceSelect.val() !== selectName) {
+                            $sourceSelect.find('option[value="__add_new__"]').before(
+                                jQuery('<option></option>').val(selectName).text(selectName).prop('selected', true)
+                            );
+                        }
+                    }
+                    lastSourceValue = $sourceSelect.val() || '';
+                    $sourceSelect.trigger('change');
+                }
+
+                function refreshLeadSources(selectName) {
+                    if (sourceRefreshInFlight) {
+                        return sourceRefreshInFlight;
+                    }
+                    sourceRefreshInFlight = jQuery.ajax({
+                        url: 'crm/ajax/list_lead_sources.php',
+                        method: 'GET',
+                        dataType: 'json',
+                        cache: false,
+                        data: { _: Date.now() }
+                    }).done(function (res) {
+                        if (!res || !res.success || !Array.isArray(res.data)) {
+                            return;
+                        }
+                        rebuildSourceOptions(res.data, selectName || lastSourceValue || $sourceSelect.val());
+                    }).always(function () {
+                        sourceRefreshInFlight = null;
+                    });
+                    return sourceRefreshInFlight;
+                }
+
+                function openSourceCreateModal() {
+                    showSourceError('');
+                    $sourceName.val('');
+                    $sourceModal.modal('show');
+                }
+
+                $sourceSelect.off('focus.mzLeadSource mousedown.mzLeadSource change.mzLeadSource')
+                    .on('focus.mzLeadSource mousedown.mzLeadSource', function () {
+                        refreshLeadSources($sourceSelect.val());
+                    })
+                    .on('change.mzLeadSource', function () {
+                        var val = $sourceSelect.val();
+                        if (val === '__add_new__') {
+                            $sourceSelect.val(lastSourceValue || '');
+                            openSourceCreateModal();
+                            return;
+                        }
+                        lastSourceValue = val || '';
+                    });
+
+                $addBtn.off('click.mzLeadSource').on('click.mzLeadSource', function (e) {
+                    e.preventDefault();
+                    openSourceCreateModal();
+                });
+
+                $sourceModal.off('shown.bs.modal.mzLeadSource hidden.bs.modal.mzLeadSource')
+                    .on('shown.bs.modal.mzLeadSource', function () {
+                        jQuery('.modal-backdrop').last().addClass('lead-source-create-backdrop');
+                        $sourceName.trigger('focus');
+                    })
+                    .on('hidden.bs.modal.mzLeadSource', function () {
+                        showSourceError('');
+                        $sourceSubmit.prop('disabled', false);
+                        // Keep Create Lead modal usable
+                        if (jQuery('#leadFormModal').hasClass('show')) {
+                            jQuery('body').addClass('modal-open');
+                        }
+                    });
+
+                $sourceForm.off('submit.mzLeadSource').on('submit.mzLeadSource', function (e) {
+                    e.preventDefault();
+                    var name = jQuery.trim($sourceName.val() || '');
+                    if (!name) {
+                        showSourceError('Lead source name is required.');
+                        $sourceName.trigger('focus');
+                        return;
+                    }
+
+                    showSourceError('');
+                    $sourceSubmit.prop('disabled', true);
+
+                    jQuery.ajax({
+                        url: 'crm/ajax/save_lead_source.php',
+                        method: 'POST',
+                        dataType: 'json',
+                        data: { name: name }
+                    }).done(function (res) {
+                        if (!res || !res.success) {
+                            showSourceError((res && res.message) ? res.message : 'Could not add lead source.');
+                            return;
+                        }
+                        var savedName = (res.data && res.data.name) ? String(res.data.name) : name;
+                        $sourceModal.modal('hide');
+
+                        // Prefer full list refresh so order matches master.
+                        var refresh = refreshLeadSources(savedName);
+                        if (refresh && refresh.fail) {
+                            refresh.fail(function () {
+                                // Fallback: inject option locally
+                                if ($sourceSelect.find('option').filter(function () {
+                                    return jQuery(this).val().toLowerCase() === savedName.toLowerCase();
+                                }).length === 0) {
+                                    $sourceSelect.find('option[value="__add_new__"]').before(
+                                        jQuery('<option></option>').val(savedName).text(savedName)
+                                    );
+                                }
+                                $sourceSelect.val(savedName);
+                                lastSourceValue = savedName;
+                                $sourceSelect.trigger('change');
+                            });
+                        }
+
+                        try {
+                            if (window.parent && window.parent !== window) {
+                                window.parent.postMessage({ type: 'mz-data-changed', resource: 'lead_sources', at: Date.now() }, '*');
+                            }
+                        } catch (err) {}
+                    }).fail(function () {
+                        showSourceError('Could not add lead source. Please try again.');
+                    }).always(function () {
+                        $sourceSubmit.prop('disabled', false);
+                    });
+                });
+
+                window.addEventListener('message', function (ev) {
+                    var data = ev && ev.data;
+                    if (!data || data.type !== 'mz-data-changed') {
+                        return;
+                    }
+                    if (data.resource === 'lead_sources' || data.resource === '*') {
+                        refreshLeadSources($sourceSelect.val());
+                    }
+                });
+            })();
 
             function initDestCreateSummernote() {
                 if (!$destCreateForm.length) {
@@ -2907,13 +3243,14 @@ if (empty($leadSourceOptions)) {
                         return;
                     }
                     if (isSelected(value)) {
+                        hideMenu();
                         return;
                     }
                     selected.push(value);
                     sortSelected();
                     renderTags();
                     syncHiddenInputs();
-                    renderMenu();
+                    hideMenu();
                 }
 
                 function removeCategory(value) {

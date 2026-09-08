@@ -1841,6 +1841,58 @@ foreach ($destinationLookup as $destId => $destName) {
             box-shadow: 0 1px 3px rgba(46, 125, 50, 0.15);
         }
 
+        #leadQuotationPreviewModal .modal-dialog {
+            max-width: min(1100px, 96vw);
+            margin: 1rem auto;
+        }
+        #leadQuotationPreviewModal .modal-content {
+            border: 0;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+        }
+        #leadQuotationPreviewModal .modal-header {
+            background: #c41e20;
+            color: #fff;
+            border-bottom: 0;
+            padding: 0.75rem 1rem;
+        }
+        #leadQuotationPreviewModal .modal-header .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+        #leadQuotationPreviewModal .modal-header .close {
+            color: #fff;
+            text-shadow: none;
+            opacity: 0.9;
+        }
+        #leadQuotationPreviewModal .modal-body {
+            padding: 0;
+            background: #eef2f7;
+            height: min(78vh, 820px);
+        }
+        #leadQuotationPreviewModal .lead-q-preview-frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: #fff;
+        }
+        #leadQuotationPreviewModal .lead-q-preview-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #64748b;
+            font-weight: 600;
+            gap: 0.6rem;
+        }
+        #leadQuotationPreviewModal .modal-footer {
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            padding: 0.65rem 1rem;
+        }
+
         .crm-leads-ui .action-btns .btn-create-quote {
             background: #e3f2fd;
             border-color: #bbdefb;
@@ -3523,18 +3575,32 @@ foreach ($destinationLookup as $destId => $destName) {
                                                 </td>
                                                 <td class="col-actions">
                                                     <div class="action-btns">
-                                                        <?php if (!empty($lead['latest_quotation_href'])) { ?>
-                                                            <a href="<?= htmlspecialchars((string) $lead['latest_quotation_href'], ENT_QUOTES, 'UTF-8') ?>"
-                                                                class="btn-icon btn-view"
-                                                                title="View Quotation">
-                                                                <i class="far fa-eye"></i>
-                                                            </a>
-                                                            <?php
+                                                        <?php if (!empty($lead['latest_quotation_href'])) {
+                                                            $latestQuotationHref = (string) $lead['latest_quotation_href'];
                                                             $latestQuotationId = (int) ($lead['latest_quotation_id'] ?? 0);
                                                             $latestIsDraft = (($lead['latest_quotation_status'] ?? '') === 'draft');
                                                             $latestTourConfirmed = !empty($lead['latest_is_tour_confirmed']);
-                                                            if ($latestQuotationId > 0 && !$latestIsDraft) {
+                                                            $viewOpensPreview = ($leadStage === 'quoted' && !$latestIsDraft && $latestQuotationId > 0);
+                                                            $viewTitle = $viewOpensPreview ? 'Preview Quotation' : 'View Quotation';
                                                             ?>
+                                                            <?php if ($viewOpensPreview) { ?>
+                                                            <button type="button"
+                                                                class="btn-icon btn-view js-lead-q-preview"
+                                                                data-quotation-id="<?= $latestQuotationId ?>"
+                                                                data-edit-href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>"
+                                                                title="<?= htmlspecialchars($viewTitle, ENT_QUOTES, 'UTF-8') ?>"
+                                                                aria-label="<?= htmlspecialchars($viewTitle, ENT_QUOTES, 'UTF-8') ?>">
+                                                                <i class="far fa-eye"></i>
+                                                            </button>
+                                                            <?php } else { ?>
+                                                            <a href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>"
+                                                                class="btn-icon btn-view"
+                                                                title="<?= htmlspecialchars($viewTitle, ENT_QUOTES, 'UTF-8') ?>"
+                                                                aria-label="<?= htmlspecialchars($viewTitle, ENT_QUOTES, 'UTF-8') ?>">
+                                                                <i class="far fa-eye"></i>
+                                                            </a>
+                                                            <?php } ?>
+                                                            <?php if ($latestQuotationId > 0 && !$latestIsDraft) { ?>
                                                                 <button type="button"
                                                                     class="btn-icon js-q-book <?= $latestTourConfirmed ? 'btn-confirmed' : 'btn-book' ?>"
                                                                     data-id="<?= $latestQuotationId ?>"
@@ -3573,8 +3639,23 @@ foreach ($destinationLookup as $destId => $destName) {
                                                                     <i class="far fa-comment-dots mr-2 text-primary"></i> Message
                                                                 </button>
                                                                 <button type="button" class="dropdown-item js-lead-action-preview" data-lead-id="<?= (int) $lead['id'] ?>">
-                                                                    <i class="far fa-eye mr-2 text-muted"></i> Preview
+                                                                    <i class="far fa-eye mr-2 text-muted"></i> Preview Lead
                                                                 </button>
+                                                                <?php if (!empty($lead['latest_quotation_href'])) { ?>
+                                                                    <a class="dropdown-item" href="<?= htmlspecialchars((string) $lead['latest_quotation_href'], ENT_QUOTES, 'UTF-8') ?>">
+                                                                        <i class="fas fa-edit mr-2 text-muted"></i> Edit Quotation
+                                                                    </a>
+                                                                    <?php if (($leadStage ?? '') === 'quoted'
+                                                                        && (($lead['latest_quotation_status'] ?? '') !== 'draft')
+                                                                        && (int) ($lead['latest_quotation_id'] ?? 0) > 0) { ?>
+                                                                    <button type="button"
+                                                                        class="dropdown-item js-lead-q-preview"
+                                                                        data-quotation-id="<?= (int) $lead['latest_quotation_id'] ?>"
+                                                                        data-edit-href="<?= htmlspecialchars((string) $lead['latest_quotation_href'], ENT_QUOTES, 'UTF-8') ?>">
+                                                                        <i class="far fa-file-alt mr-2 text-muted"></i> Preview Quotation
+                                                                    </button>
+                                                                    <?php } ?>
+                                                                <?php } ?>
                                                                 <button type="button" class="dropdown-item js-lead-action-duplicate" data-lead-id="<?= (int) $lead['id'] ?>">
                                                                     <i class="far fa-copy mr-2 text-muted"></i> Duplicate
                                                                 </button>
@@ -3981,6 +4062,35 @@ foreach ($destinationLookup as $destId => $destName) {
         </div>
 
         <?php include __DIR__ . '/includes/quotation_supplier_mail_modal.php'; ?>
+
+        <div class="modal fade" id="leadQuotationPreviewModal" tabindex="-1" role="dialog"
+            aria-labelledby="leadQuotationPreviewModalLabel" aria-hidden="true" data-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title mb-0" id="leadQuotationPreviewModalLabel">
+                            <i class="far fa-eye mr-2"></i>Quotation Preview
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="lead-q-preview-loading" id="leadQPreviewLoading">
+                            <i class="fas fa-spinner fa-spin"></i> Loading preview…
+                        </div>
+                        <iframe class="lead-q-preview-frame d-none" id="leadQPreviewFrame"
+                            title="Quotation Preview" src="about:blank"></iframe>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Close</button>
+                        <a href="#" class="btn btn-danger btn-sm" id="leadQPreviewEditBtn">
+                            <i class="fas fa-edit mr-1"></i> Edit Quotation
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <?php include __DIR__ . '/../includes/footer-links.php'; ?>
 
@@ -4772,7 +4882,7 @@ foreach ($destinationLookup as $destId => $destName) {
         lines.push(emoji.globe);
         lines.push('');
         lines.push('Warm Regards,');
-        lines.push('Team Multi Zone Travels');
+        lines.push('Multi Zone Travels');
         return lines.join('\n');
     }
 
@@ -4793,7 +4903,7 @@ foreach ($destinationLookup as $destId => $destName) {
         html += 'Thank you. We look forward to planning your perfect journey! ' + emoji.plane + '\n';
         html += emoji.globe + '\n\n';
         html += 'Warm Regards,\n';
-        html += 'Team Multi Zone Travels';
+        html += 'Multi Zone Travels';
         $('#sendLinkPreviewBody').html(html);
         $('#sendLinkAvatar').text(sendLinkInitials(name || 'Guest'));
         var now = new Date();
@@ -5163,6 +5273,71 @@ foreach ($destinationLookup as $destId => $destName) {
         e.preventDefault();
         e.stopPropagation();
         openLeadViewModal(Number($(this).attr('data-lead-id') || 0));
+    });
+
+    var leadQPreviewEditHref = '';
+    function openLeadQuotationPreview(quotationId, editHref) {
+        quotationId = Number(quotationId || 0);
+        editHref = String(editHref || '').trim();
+        if (quotationId <= 0) {
+            window.alert('Quotation not found.');
+            return;
+        }
+        if (!editHref) {
+            editHref = 'crm/quotation_generator.php?id=' + quotationId;
+        }
+        leadQPreviewEditHref = editHref;
+        $('#leadQPreviewEditBtn').attr('href', editHref);
+        $('#leadQPreviewLoading').removeClass('d-none');
+        $('#leadQPreviewFrame').addClass('d-none').attr('src', 'about:blank');
+        $('#leadQuotationPreviewModal').modal('show');
+
+        var frameSrc = 'crm/quotation_generator.php?id=' + encodeURIComponent(String(quotationId))
+            + '&preview=1&preview_only=1&mz_embed=1';
+        window.setTimeout(function () {
+            $('#leadQPreviewFrame').attr('src', frameSrc);
+        }, 40);
+    }
+
+    $(document).on('click', '.js-lead-q-preview', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openLeadQuotationPreview($(this).attr('data-quotation-id'), $(this).attr('data-edit-href'));
+    });
+
+    $('#leadQPreviewFrame').on('load', function () {
+        var src = String($(this).attr('src') || '');
+        if (!src || src === 'about:blank') {
+            return;
+        }
+        $('#leadQPreviewLoading').addClass('d-none');
+        $(this).removeClass('d-none');
+    });
+
+    $('#leadQuotationPreviewModal').on('hidden.bs.modal', function () {
+        $('#leadQPreviewFrame').addClass('d-none').attr('src', 'about:blank');
+        $('#leadQPreviewLoading').removeClass('d-none');
+        leadQPreviewEditHref = '';
+    });
+
+    $('#leadQPreviewEditBtn').on('click', function (e) {
+        e.preventDefault();
+        var href = String($(this).attr('href') || leadQPreviewEditHref || '').trim();
+        if (!href || href === '#') {
+            return;
+        }
+        $('#leadQuotationPreviewModal').modal('hide');
+
+        // Prefer opening the editor in a separate workspace tab so Leads stays put.
+        try {
+            if (window.parent && window.parent !== window && window.parent.MZTabWorkspace
+                && typeof window.parent.MZTabWorkspace.open === 'function') {
+                window.parent.MZTabWorkspace.open(href, 'Edit Quotation', { pushHistory: true });
+                return;
+            }
+        } catch (err) { /* ignore */ }
+
+        window.location.href = href;
     });
 
     $(document).on('click', '#btnLeadExpandEdit', function () {

@@ -1,5 +1,6 @@
 /**
  * Admin sidebar: leaf links navigate without collapsing parents; branch toggles open/close normally.
+ * When the multi-tab shell is active, leaf navigation is handled by tabs.js instead.
  */
 ;(function ($) {
   'use strict'
@@ -30,7 +31,7 @@
       var $link = $(this)
       var $li = $link.parent('li')
 
-      // Real page links: navigate; do not run treeview toggle.
+      // Real page links: navigate (or let tabs.js handle on the shell); do not run treeview toggle.
       if (!$li.hasClass('has-treeview')) {
         return
       }
