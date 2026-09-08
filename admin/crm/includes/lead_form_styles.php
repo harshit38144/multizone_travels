@@ -822,6 +822,62 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
 <?= $scope ?> .tp-destination-combobox {
     position: relative;
 }
+<?= $scope ?> .tp-departure-ex-group .input-group-text {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #495057;
+    background: #f1f3f5;
+    border-color: #ced4da;
+}
+<?= $scope ?> .tp-departure-ex-group.js-tp-departure-wrap {
+    position: relative;
+}
+<?= $scope ?> .tp-departure-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 1080;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #f7f3ee;
+    border: 1px solid #e2d8cc;
+    border-radius: 0.65rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    padding: 0.35rem;
+}
+<?= $scope ?> .tp-departure-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: #1f2937;
+    font-weight: 700;
+    font-size: 0.92rem;
+    line-height: 1.35;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.45rem;
+    cursor: pointer;
+}
+<?= $scope ?> .tp-departure-item-country {
+    color: #64748b;
+    font-weight: 500;
+}
+<?= $scope ?> .tp-departure-item + .tp-departure-item {
+    border-top: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0;
+}
+<?= $scope ?> .tp-departure-item:hover,
+<?= $scope ?> .tp-departure-item:focus {
+    background: rgba(255, 255, 255, 0.72);
+    outline: none;
+}
+<?= $scope ?> .tp-departure-empty {
+    padding: 0.7rem 0.75rem;
+    color: #64748b;
+    font-size: 0.85rem;
+}
 <?= $scope ?> .tp-destination-field {
     display: flex;
     flex-wrap: wrap;

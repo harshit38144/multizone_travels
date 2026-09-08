@@ -7207,56 +7207,55 @@ $qWizardSteps = [
         }
 
         /* Embedded preview-only mode (opened from Leads modal iframe) */
+        html.mz-embed body.q-preview-only,
         body.q-preview-only {
             background: #fff !important;
             overflow: auto !important;
-        }
-        body.q-preview-only .wrapper > .main-header,
-        body.q-preview-only .wrapper > .main-sidebar,
-        body.q-preview-only .content-header,
-        body.q-preview-only .page-title-row,
-        body.q-preview-only .q-page-layout,
-        body.q-preview-only .q-wizard-nav,
-        body.q-preview-only .q-sticky-actions,
-        body.q-preview-only .main-footer {
-            display: none !important;
-        }
-        body.q-preview-only .content-wrapper,
-        body.q-preview-only .content-wrapper > .content,
-        body.q-preview-only .container-fluid {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #fff !important;
+            height: auto !important;
             min-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        body.q-preview-only.hold-transition,
+        body.q-preview-only.sidebar-mini,
+        body.q-preview-only.layout-fixed {
+            padding-top: 0 !important;
+        }
+        /* Hide the entire AdminLTE shell so it cannot reserve 100vh above the preview */
+        body.q-preview-only .wrapper,
+        html.mz-embed body.q-preview-only .wrapper,
+        html.mz-embed body.q-preview-only .content-wrapper,
+        body.q-preview-only .main-header,
+        body.q-preview-only .main-sidebar,
+        body.q-preview-only .main-footer,
+        body.q-preview-only .modal-backdrop,
+        body.q-preview-only .q-city-create-modal,
+        body.q-preview-only .q-day-ai-modal,
+        body.q-preview-only #qHotelCreateModal,
+        body.q-preview-only #qFlightSearchModal,
+        body.q-preview-only #qItineraryImageModal,
+        body.q-preview-only #qSupplierMailModal {
+            display: none !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            visibility: hidden !important;
+        }
+        body.q-preview-only #qPreviewOnlyMount,
+        body.q-preview-only #qPreviewPrintArea {
+            display: block !important;
+            visibility: visible !important;
+            background: #fff;
+            min-height: auto;
+            position: relative !important;
+            z-index: 1;
         }
         body.q-preview-only #qPreviewModal {
-            position: static !important;
-            display: block !important;
-            padding: 0 !important;
-            overflow: visible !important;
-        }
-        body.q-preview-only #qPreviewModal .modal-dialog {
-            max-width: 100% !important;
-            margin: 0 !important;
-            transform: none !important;
-        }
-        body.q-preview-only #qPreviewModal .modal-content {
-            border: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-        }
-        body.q-preview-only #qPreviewModal .modal-header,
-        body.q-preview-only #qPreviewModal .modal-footer,
-        body.q-preview-only #qPreviewModal .close {
             display: none !important;
         }
-        body.q-preview-only #qPreviewModal .modal-body {
-            padding: 0.75rem 1rem 1.25rem !important;
-            max-height: none !important;
-            overflow: visible !important;
-        }
-        body.q-preview-only .modal-backdrop {
-            display: none !important;
+        body.q-preview-only .modal-open {
+            overflow: auto !important;
+            padding-right: 0 !important;
         }
     </style>
 </head>
@@ -8118,7 +8117,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=113"></script>
+    <script src="crm/assets/quotation_generator.js?v=116"></script>
     <script src="crm/assets/quotation_flight_search.js?v=13"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

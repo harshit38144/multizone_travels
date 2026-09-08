@@ -7,6 +7,24 @@ admin/uploads/
 .env
 .env.*
 *.pem
+*.key
+*secrets.local.php
+*.local.php
+!*.local.example.php
+
+# Payment gateway credentials
+includes/payu_config.php
+includes/phonepe_config.php
+
+# AI / image API local keys
+admin/crm/includes/ai_config.local.php
+
+# Other API / SMTP local secrets
+admin/config/aviationstack_config.php
+includes/mail_secrets.local.php
+
+# Database credentials
+admin/config/database.php
 
 # Local / IDE
 .idea/
@@ -18,13 +36,11 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
-# Uploads & generated files (keep folders, ignore contents if needed)
+# Uploads & generated files
 admin/uploads/
 uploads/
 
 # Composer / cache
 composer.lock
-
-admin/config/database.php
 
 *.zip

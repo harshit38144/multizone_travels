@@ -137,6 +137,7 @@ if (empty($leadSourceOptions)) {
     class="crm-lead-create-form" onsubmit="return false;" autocomplete="off"
     data-lead-destinations="<?= htmlspecialchars(json_encode($leadDestinations), ENT_QUOTES, 'UTF-8') ?>"
     data-destination-save-url="<?= $leadFormPublicIntake ? '' : 'crm/ajax/save_destination.php' ?>"
+    data-departure-search-url="<?= $leadFormPublicIntake ? '' : 'ajax/mmt_autosuggest.php' ?>"
     data-save-url="<?= $leadFormPublicIntake ? htmlspecialchars((string) ($leadFormIntakeSubmitUrl ?? 'ajax/submit_lead_intake.php'), ENT_QUOTES, 'UTF-8') : 'crm/ajax/save_lead.php' ?>"
     data-next-dest-order="<?= (int) ($nextDestOrder ?? 1) ?>"
     <?= !$leadFormPublicIntake ? 'data-contact-search-url="ajax/search_contacts_for_payment.php"' : '' ?>
@@ -427,8 +428,7 @@ if (empty($leadSourceOptions)) {
                             <div class="form-group <?= $tpCol ?: 'col-md-2' ?>">
                                 <label class="label-req">Tour Type</label>
                                 <select class="form-control js-tp-tour-type" name="tp_tour_type">
-                                    <option value="">Select</option>
-                                    <option value="domestic">Domestic</option>
+                                    <option value="domestic" selected>Domestic</option>
                                     <option value="international">International</option>
                                 </select>
                             </div>
@@ -450,7 +450,14 @@ if (empty($leadSourceOptions)) {
                             <?php if (lfIntakeField('tp_departure')) { ?>
                             <div class="form-group <?= $tpCol ?: 'col-md-3' ?>">
                                 <label class="label-req">Departure City</label>
-                                <input type="text" class="form-control" name="tp_departure" placeholder="e.g. Mumbai">
+                                <div class="input-group tp-departure-ex-group js-tp-departure-wrap">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">EX-</span>
+                                    </div>
+                                    <input type="text" class="form-control js-tp-departure-input" name="tp_departure"
+                                        placeholder="Search airports" autocomplete="off">
+                                    <div class="tp-departure-menu js-tp-departure-menu" style="display:none;" role="listbox"></div>
+                                </div>
                             </div>
                             <?php } ?>
                             <div class="form-group <?= $tpCol ? $tpCol . ' tp-pack-col-narrow' : 'col-md-2' ?>">
@@ -483,7 +490,14 @@ if (empty($leadSourceOptions)) {
                             <?php if (lfIntakeField('tp_departure')) { ?>
                             <div class="form-group col-md-2">
                                 <label class="label-req">Departure</label>
-                                <input type="text" class="form-control" name="tp_departure" placeholder="e.g. Mumbai">
+                                <div class="input-group tp-departure-ex-group js-tp-departure-wrap">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">EX-</span>
+                                    </div>
+                                    <input type="text" class="form-control js-tp-departure-input" name="tp_departure"
+                                        placeholder="Search airports" autocomplete="off">
+                                    <div class="tp-departure-menu js-tp-departure-menu" style="display:none;" role="listbox"></div>
+                                </div>
                             </div>
                             <?php } ?>
                             <?php if (lfIntakeField('tp_arrival')) { ?>
@@ -496,8 +510,7 @@ if (empty($leadSourceOptions)) {
                             <div class="form-group col-md-2">
                                 <label class="label-req">Tour Type</label>
                                 <select class="form-control js-tp-tour-type" name="tp_tour_type">
-                                    <option value="">Select</option>
-                                    <option value="domestic">Domestic</option>
+                                    <option value="domestic" selected>Domestic</option>
                                     <option value="international">International</option>
                                 </select>
                             </div>
@@ -1982,6 +1995,8 @@ if (empty($leadSourceOptions)) {
 
             function addTpDestination(dest) {
                 if (!dest || isTpDestinationSelected(dest.id)) {
+                    $tpDestinationInput.val('');
+                    hideTpDestinationMenu();
                     return;
                 }
 
@@ -1990,8 +2005,7 @@ if (empty($leadSourceOptions)) {
                 syncTpDestinationHiddenInputs();
                 syncItinerary(true);
                 $tpDestinationInput.val('');
-                renderTpDestinationMenu('');
-                $tpDestinationInput.focus();
+                hideTpDestinationMenu();
             }
 
             function removeTpDestination(id) {
@@ -2616,6 +2630,206 @@ if (empty($leadSourceOptions)) {
             $form.off('change.leadTourTypeDestDelegated input.leadTourTypeDestDelegated', 'select.js-tp-tour-type')
                 .on('change.leadTourTypeDestDelegated input.leadTourTypeDestDelegated', 'select.js-tp-tour-type', syncTourPackageDestinations);
 
+            (function initTpDepartureCitySuggest() {
+                var $wraps = $form.find('.js-tp-departure-wrap');
+                if (!$wraps.length) {
+                    return;
+                }
+
+                // Same airport autosuggest source as admin/etickets.php
+                var searchUrl = jQuery.trim(String($form.attr('data-departure-search-url') || 'ajax/mmt_autosuggest.php'));
+                if (!searchUrl) {
+                    return;
+                }
+                var requestSeq = 0;
+                var popularAirports = [
+                    { city: 'Bengaluru', code: 'BLR', country: 'India' },
+                    { city: 'Chennai', code: 'MAA', country: 'India' },
+                    { city: 'New Delhi', code: 'DEL', country: 'India' },
+                    { city: 'Mumbai', code: 'BOM', country: 'India' },
+                    { city: 'Hyderabad', code: 'HYD', country: 'India' },
+                    { city: 'Kolkata', code: 'CCU', country: 'India' },
+                    { city: 'Pune', code: 'PNQ', country: 'India' },
+                    { city: 'Ahmedabad', code: 'AMD', country: 'India' },
+                    { city: 'Goa', code: 'GOI', country: 'India' },
+                    { city: 'Jaipur', code: 'JAI', country: 'India' },
+                    { city: 'Kochi', code: 'COK', country: 'India' },
+                    { city: 'Ranchi', code: 'IXR', country: 'India' }
+                ];
+
+                function escapeDepHtml(text) {
+                    return jQuery('<div>').text(text == null ? '' : String(text)).html();
+                }
+
+                function hideMenu($menu) {
+                    $menu.hide().empty().removeClass('is-open');
+                }
+
+                function normalizeMmtItems(res) {
+                    var raw = (res && res.r) ? res.r : (Array.isArray(res) ? res : []);
+                    if (!Array.isArray(raw)) {
+                        raw = [raw];
+                    }
+                    var items = [];
+                    var seen = {};
+                    raw.forEach(function (item) {
+                        if (!item || typeof item !== 'object') {
+                            return;
+                        }
+                        var code = String(item.iata || item.code || '').trim().toUpperCase();
+                        var city = String(item.ct || item.cName || item.city || '').trim();
+                        var country = String(item.cnty || item.countryName || item.country || '').trim();
+                        if (!code || !city) {
+                            return;
+                        }
+                        var key = city.toLowerCase() + '|' + code;
+                        if (seen[key]) {
+                            return;
+                        }
+                        seen[key] = true;
+                        items.push({
+                            city: city,
+                            code: code,
+                            country: country,
+                            label: city + ', ' + code
+                        });
+                    });
+                    return items;
+                }
+
+                function renderMenu($menu, items, query) {
+                    $menu.empty();
+                    if (!items.length) {
+                        $menu.append(
+                            '<div class="tp-departure-empty">No airports found' +
+                            (query ? (' for "' + escapeDepHtml(query) + '"') : '') +
+                            '</div>'
+                        );
+                        $menu.addClass('is-open').show();
+                        return;
+                    }
+                    items.forEach(function (item) {
+                        var city = String(item.city || '').trim();
+                        var code = String(item.code || '').trim();
+                        var country = String(item.country || '').trim();
+                        var label = String(item.label || (code ? (city + ', ' + code) : city)).trim();
+                        if (!city) {
+                            return;
+                        }
+                        $menu.append(
+                            jQuery('<button type="button" class="tp-departure-item" role="option"></button>')
+                                .attr('data-city', city)
+                                .attr('data-code', code)
+                                .attr('data-label', label)
+                                .html(
+                                    '<span class="tp-departure-item-city">' + escapeDepHtml(city) +
+                                    (code ? (', ' + escapeDepHtml(code)) : '') + '</span>' +
+                                    (country ? (' <small class="tp-departure-item-country">' + escapeDepHtml(country) + '</small>') : '')
+                                )
+                        );
+                    });
+                    $menu.addClass('is-open').show();
+                }
+
+                function filterPopular(query) {
+                    var q = String(query || '').trim().toLowerCase();
+                    if (!q) {
+                        return popularAirports.slice();
+                    }
+                    return popularAirports.filter(function (item) {
+                        return String(item.city).toLowerCase().indexOf(q) >= 0
+                            || String(item.code).toLowerCase().indexOf(q) >= 0;
+                    });
+                }
+
+                function fetchSuggestions($input, $menu, query) {
+                    var q = jQuery.trim(String(query || ''));
+
+                    // Same threshold as etickets.php airport autosuggest
+                    if (q.length < 2) {
+                        renderMenu($menu, filterPopular(q), q);
+                        return;
+                    }
+
+                    var seq = ++requestSeq;
+                    jQuery.ajax({
+                        url: searchUrl,
+                        method: 'GET',
+                        dataType: 'json',
+                        cache: false,
+                        data: { q: q }
+                    }).done(function (res) {
+                        if (seq !== requestSeq) {
+                            return;
+                        }
+                        var items = normalizeMmtItems(res);
+                        if (!items.length) {
+                            items = filterPopular(q);
+                        }
+                        renderMenu($menu, items, q);
+                    }).fail(function () {
+                        if (seq !== requestSeq) {
+                            return;
+                        }
+                        renderMenu($menu, filterPopular(q), q);
+                    });
+                }
+
+                $wraps.each(function () {
+                    var $wrap = jQuery(this);
+                    var $input = $wrap.find('.js-tp-departure-input');
+                    var $menu = $wrap.find('.js-tp-departure-menu');
+                    if (!$input.length || !$menu.length) {
+                        return;
+                    }
+
+                    var debounceTimer = null;
+
+                    $input.off('.leadDepCity').on('focus.leadDepCity click.leadDepCity', function () {
+                        fetchSuggestions($input, $menu, jQuery.trim(String($input.val() || '')));
+                    }).on('input.leadDepCity', function () {
+                        var query = jQuery.trim(String($input.val() || ''));
+                        window.clearTimeout(debounceTimer);
+                        debounceTimer = window.setTimeout(function () {
+                            fetchSuggestions($input, $menu, query);
+                        }, 300);
+                    }).on('keydown.leadDepCity', function (e) {
+                        if (e.key === 'Escape') {
+                            hideMenu($menu);
+                        }
+                    }).on('blur.leadDepCity', function () {
+                        window.setTimeout(function () {
+                            hideMenu($menu);
+                        }, 160);
+                    });
+
+                    $menu.off('.leadDepCity').on('mousedown.leadDepCity', '.tp-departure-item', function (e) {
+                        e.preventDefault();
+                        var city = String(jQuery(this).attr('data-city') || '').trim();
+                        var code = String(jQuery(this).attr('data-code') || '').trim();
+                        var label = String(jQuery(this).attr('data-label') || '').trim();
+                        if (!city) {
+                            return;
+                        }
+                        $input
+                            .val(label || (code ? (city + ', ' + code) : city))
+                            .attr('data-airport-code', code)
+                            .attr('data-city', city)
+                            .trigger('change');
+                        hideMenu($menu);
+                    });
+                });
+
+                $form.off('click.leadDepCityOutside').on('click.leadDepCityOutside', function (e) {
+                    $wraps.each(function () {
+                        var $wrap = jQuery(this);
+                        if (!$wrap.is(e.target) && $wrap.has(e.target).length === 0) {
+                            hideMenu($wrap.find('.js-tp-departure-menu'));
+                        }
+                    });
+                });
+            })();
+
             $form.find('.js-itinerary-total-nights').off('.leadItinerary').on('input.leadItinerary change.leadItinerary', function () {
                 if ($form.find('.js-tp-total-nights').length) {
                     syncTpTotalDaysFromNights();
@@ -2898,10 +3112,13 @@ if (empty($leadSourceOptions)) {
                     state.childBedTypes.forEach(function (type, index) {
                         var bedType = type === 'cwb' ? 'cwb' : 'cnb';
                         var ageVal = state.childAges[index];
-                        var ageLabel = (ageVal != null && ageVal !== '') ? String(ageVal) : '—';
+                        var ageNum = parseInt(ageVal, 10);
+                        var ageLabel = (ageVal != null && ageVal !== '' && !isNaN(ageNum))
+                            ? (ageNum + ' Yr')
+                            : '—';
                         var isPublicIntake = $form.closest('.crm-lead-intake-public').length > 0;
                         var $row = jQuery('<div class="form-group ' + (isPublicIntake ? 'col-12 col-md' : 'col-md-3 col-sm-6') + ' tp-child-bed-row mb-2"></div>');
-                        $row.append('<label class="tp-child-bed-row-lbl">Child Bed Type (' + ageLabel + ')</label>');
+                        $row.append('<label class="tp-child-bed-row-lbl">' + ageLabel + '</label>');
                         var $select = jQuery('<select class="form-control js-tp-child-bed-select"></select>')
                             .attr('data-index', index)
                             .html(

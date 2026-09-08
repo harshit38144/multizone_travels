@@ -1842,20 +1842,29 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         #leadQuotationPreviewModal .modal-dialog {
-            max-width: min(1100px, 96vw);
-            margin: 1rem auto;
+            max-width: min(1200px, 98vw);
+            width: 98vw;
+            height: calc(100vh - 1.25rem);
+            margin: 0.6rem auto;
+            display: flex;
+            align-items: stretch;
         }
         #leadQuotationPreviewModal .modal-content {
             border: 0;
             border-radius: 0.75rem;
             overflow: hidden;
             box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-height: 100%;
         }
         #leadQuotationPreviewModal .modal-header {
             background: #c41e20;
             color: #fff;
             border-bottom: 0;
             padding: 0.75rem 1rem;
+            flex: 0 0 auto;
         }
         #leadQuotationPreviewModal .modal-header .modal-title {
             font-size: 1.05rem;
@@ -1868,8 +1877,12 @@ foreach ($destinationLookup as $destId => $destName) {
         }
         #leadQuotationPreviewModal .modal-body {
             padding: 0;
-            background: #eef2f7;
-            height: min(78vh, 820px);
+            background: #fff;
+            flex: 1 1 auto;
+            min-height: 0;
+            height: auto;
+            overflow: hidden;
+            position: relative;
         }
         #leadQuotationPreviewModal .lead-q-preview-frame {
             width: 100%;
@@ -1877,20 +1890,26 @@ foreach ($destinationLookup as $destId => $destName) {
             border: 0;
             display: block;
             background: #fff;
+            position: absolute;
+            inset: 0;
         }
         #leadQuotationPreviewModal .lead-q-preview-loading {
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100%;
+            position: absolute;
+            inset: 0;
             color: #64748b;
             font-weight: 600;
             gap: 0.6rem;
+            background: #fff;
+            z-index: 2;
         }
         #leadQuotationPreviewModal .modal-footer {
             background: #fff;
             border-top: 1px solid #e2e8f0;
             padding: 0.65rem 1rem;
+            flex: 0 0 auto;
         }
 
         .crm-leads-ui .action-btns .btn-create-quote {
@@ -4065,7 +4084,7 @@ foreach ($destinationLookup as $destId => $destName) {
 
         <div class="modal fade" id="leadQuotationPreviewModal" tabindex="-1" role="dialog"
             aria-labelledby="leadQuotationPreviewModalLabel" aria-hidden="true" data-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title mb-0" id="leadQuotationPreviewModalLabel">
@@ -4082,8 +4101,14 @@ foreach ($destinationLookup as $destId => $destName) {
                         <iframe class="lead-q-preview-frame d-none" id="leadQPreviewFrame"
                             title="Quotation Preview" src="about:blank"></iframe>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer align-items-center">
+                        <small class="text-warning mr-auto d-none" id="leadQPreviewUnsavedHint">
+                            <i class="fas fa-circle" style="font-size:7px;vertical-align:middle;"></i> Unsaved changes
+                        </small>
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="leadQPreviewSaveBtn" disabled>
+                            <i class="fas fa-save mr-1"></i>Save Changes
+                        </button>
                         <a href="#" class="btn btn-danger btn-sm" id="leadQPreviewEditBtn">
                             <i class="fas fa-edit mr-1"></i> Edit Quotation
                         </a>
@@ -5276,6 +5301,22 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     var leadQPreviewEditHref = '';
+    var leadQPreviewDirty = false;
+    var leadQPreviewSaveBtnHtml = '<i class="fas fa-save mr-1"></i>Save Changes';
+
+    function setLeadQPreviewDirty(isDirty) {
+        leadQPreviewDirty = !!isDirty;
+        var $btn = $('#leadQPreviewSaveBtn');
+        var $hint = $('#leadQPreviewUnsavedHint');
+        if (leadQPreviewDirty) {
+            $btn.removeClass('d-none').prop('disabled', false).html(leadQPreviewSaveBtnHtml);
+            $hint.removeClass('d-none');
+        } else {
+            $btn.addClass('d-none').prop('disabled', true).html(leadQPreviewSaveBtnHtml);
+            $hint.addClass('d-none');
+        }
+    }
+
     function openLeadQuotationPreview(quotationId, editHref) {
         quotationId = Number(quotationId || 0);
         editHref = String(editHref || '').trim();
@@ -5287,6 +5328,7 @@ foreach ($destinationLookup as $destId => $destName) {
             editHref = 'crm/quotation_generator.php?id=' + quotationId;
         }
         leadQPreviewEditHref = editHref;
+        setLeadQPreviewDirty(false);
         $('#leadQPreviewEditBtn').attr('href', editHref);
         $('#leadQPreviewLoading').removeClass('d-none');
         $('#leadQPreviewFrame').addClass('d-none').attr('src', 'about:blank');
@@ -5314,14 +5356,88 @@ foreach ($destinationLookup as $destId => $destName) {
         $(this).removeClass('d-none');
     });
 
+    window.addEventListener('message', function (ev) {
+        var data = ev && ev.data;
+        if (!data || typeof data !== 'object') {
+            return;
+        }
+        if (data.type === 'mz-quotation-preview-ready') {
+            $('#leadQPreviewLoading').addClass('d-none');
+            $('#leadQPreviewFrame').removeClass('d-none');
+            return;
+        }
+        if (data.type !== 'mz-quotation-preview-state') {
+            return;
+        }
+        if (data.saving) {
+            $('#leadQPreviewSaveBtn')
+                .removeClass('d-none')
+                .prop('disabled', true)
+                .html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+            return;
+        }
+        if (data.saveError) {
+            setLeadQPreviewDirty(true);
+            return;
+        }
+        if (data.saved) {
+            setLeadQPreviewDirty(false);
+            var okMsg = data.message || 'Quotation saved.';
+            if (data.version) {
+                okMsg += ' (v' + data.version + ')';
+            }
+            if (window.toastr && typeof window.toastr.success === 'function') {
+                window.toastr.success(okMsg);
+            } else {
+                window.alert(okMsg);
+            }
+            return;
+        }
+        if (typeof data.dirty === 'boolean') {
+            setLeadQPreviewDirty(data.dirty);
+        }
+    });
+
+    $('#leadQPreviewSaveBtn').on('click', function (e) {
+        e.preventDefault();
+        var frame = document.getElementById('leadQPreviewFrame');
+        try {
+            if (frame && frame.contentWindow && typeof frame.contentWindow.qSavePreviewOnly === 'function') {
+                frame.contentWindow.qSavePreviewOnly();
+                return;
+            }
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({ type: 'mz-quotation-preview-save' }, '*');
+                return;
+            }
+        } catch (err) { /* ignore */ }
+        window.alert('Could not save preview changes. Please try again.');
+    });
+
+    $('#leadQuotationPreviewModal').on('hide.bs.modal', function (e) {
+        if (!leadQPreviewDirty) {
+            return;
+        }
+        if (!window.confirm('You have unsaved preview edits. Close without saving?')) {
+            e.preventDefault();
+        }
+    });
+
     $('#leadQuotationPreviewModal').on('hidden.bs.modal', function () {
         $('#leadQPreviewFrame').addClass('d-none').attr('src', 'about:blank');
         $('#leadQPreviewLoading').removeClass('d-none');
         leadQPreviewEditHref = '';
+        setLeadQPreviewDirty(false);
     });
 
     $('#leadQPreviewEditBtn').on('click', function (e) {
         e.preventDefault();
+        if (leadQPreviewDirty) {
+            if (!window.confirm('You have unsaved preview edits. Open the editor without saving?')) {
+                return;
+            }
+            leadQPreviewDirty = false;
+        }
         var href = String($(this).attr('href') || leadQPreviewEditHref || '').trim();
         if (!href || href === '#') {
             return;

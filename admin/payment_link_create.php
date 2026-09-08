@@ -1,6 +1,15 @@
 <?php
 session_start();
 if (($_SESSION['role'] ?? '') != '1') {
+    if (
+        (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string) $_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+        || (isset($_POST['ajax']) && (string) $_POST['ajax'] === '1')
+        || (isset($_GET['embed']) && (string) $_GET['embed'] === '1' && $_SERVER['REQUEST_METHOD'] === 'POST')
+    ) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized. Please log in again.']);
+        exit;
+    }
     header('location:index.php');
     exit;
 }
@@ -14,6 +23,11 @@ lcEnsureContactTables($conn);
 
 $gatewayOptions = payment_gateway_options();
 $defaultGateway = payment_normalize_gateway((string) ($_GET['gateway'] ?? 'phonepe'));
+$isEmbed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
+$isAjax = (
+    (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string) $_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+    || (isset($_POST['ajax']) && (string) $_POST['ajax'] === '1')
+);
 
 $msg = '';
 $msgType = 'success';
@@ -27,6 +41,13 @@ $values = [
     'amount' => '',
     'payment_gateway' => $defaultGateway,
 ];
+
+function payment_link_create_json(array $payload): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['name'] = trim((string) ($_POST['name'] ?? ''));
@@ -134,6 +155,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    if ($isAjax) {
+        if ($msgType === 'success' && $generatedUrl !== '' && is_array($createdCustomer)) {
+            payment_link_create_json([
+                'success' => true,
+                'message' => $msg,
+                'url' => $generatedUrl,
+                'customer' => $createdCustomer,
+            ]);
+        }
+        payment_link_create_json([
+            'success' => false,
+            'message' => $msg !== '' ? $msg : 'Could not create payment link.',
+        ]);
+    }
+}
+
+if ($isEmbed) {
+    header('Content-Type: text/html; charset=UTF-8');
+    $formAction = 'payment_link_create.php';
+    $formInModal = true;
+    ?>
+    <div class="pay-link-create-embed"
+        data-pay-contact-search-url="<?= htmlspecialchars(function_exists('admin_url') ? admin_url('ajax/search_contacts_for_payment.php') : 'ajax/search_contacts_for_payment.php', ENT_QUOTES, 'UTF-8') ?>">
+        <div class="js-pay-link-create-alert"></div>
+        <div class="js-pay-link-create-success" style="display:none;"></div>
+        <div class="js-pay-link-create-form-wrap">
+            <?php include __DIR__ . '/includes/payment_link_create_form.php'; ?>
+        </div>
+    </div>
+    <?php
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -144,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php include __DIR__ . '/includes/header-links.php'; ?>
     <?php include __DIR__ . '/includes/payment_links_assets.php'; ?>
 </head>
-<body class="hold-transition sidebar-mini layout-fixed page-bg" data-pay-contact-search-url="<?= htmlspecialchars(admin_url('ajax/search_contacts_for_payment.php'), ENT_QUOTES, 'UTF-8') ?>">
+<body class="hold-transition sidebar-mini layout-fixed page-bg" data-pay-contact-search-url="<?= htmlspecialchars(function_exists('admin_url') ? admin_url('ajax/search_contacts_for_payment.php') : 'ajax/search_contacts_for_payment.php', ENT_QUOTES, 'UTF-8') ?>">
 <div class="wrapper">
     <?php include __DIR__ . '/includes/top-header.php'; ?>
     <?php include __DIR__ . '/includes/sidebar.php'; ?>
@@ -205,86 +258,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="row">
                     <div class="col-12">
-                        <div class="card main-card">
-                            <div class="card-header-pay">
-                                <h5 class="mb-0"><i class="fas fa-link mr-2"></i> New payment link</h5>
+                        <div class="card main-card overflow-hidden">
+                            <div class="modal-header" style="background:#c41e20;color:#fff;border:0;border-radius:12px 12px 0 0;padding:0.95rem 1.25rem;">
+                                <div class="pay-link-modal-hd d-flex align-items-center justify-content-between w-100">
+                                    <h5 class="modal-title mb-0" style="font-size:1.08rem;font-weight:700;">
+                                        <i class="fas fa-link mr-2"></i>New Payment Link
+                                    </h5>
+                                    <div class="pay-link-modal-sub d-none d-md-block" style="font-size:0.82rem;opacity:0.92;">
+                                        Create and share a payment link with your customer
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <form method="post" action="">
-                                    <div class="row">
-                                        <div class="col-12 form-group">
-                                            <label class="d-block mb-2">Payment method <span class="text-danger">*</span></label>
-                                            <div class="gateway-radio-group" role="radiogroup" aria-label="Payment method">
-                                                <?php foreach ($gatewayOptions as $gKey => $gLabel) {
-                                                    $isChecked = ($values['payment_gateway'] === $gKey);
-                                                    $isPhonePe = ($gKey === 'phonepe');
-                                                    $hint = $isPhonePe
-                                                        ? 'UPI, cards & net banking'
-                                                        : 'Cards, UPI & wallets via PayU';
-                                                    $iconClass = $isPhonePe ? 'fa-mobile-alt' : 'fa-credit-card';
-                                                    $cardClass = $isPhonePe ? 'gateway-radio-phonepe' : 'gateway-radio-payu';
-                                                    ?>
-                                                    <label class="gateway-radio-card <?= $cardClass ?><?= $isChecked ? ' is-selected' : '' ?>">
-                                                        <input type="radio" name="payment_gateway" value="<?= htmlspecialchars($gKey) ?>"
-                                                            <?= $isChecked ? 'checked' : '' ?> required>
-                                                        <span class="gateway-radio-check"><i class="fas fa-check"></i></span>
-                                                        <span class="gateway-radio-icon"><i class="fas <?= $iconClass ?>"></i></span>
-                                                        <span class="gateway-radio-title"><?= htmlspecialchars($gLabel) ?></span>
-                                                        <span class="gateway-radio-hint"><?= htmlspecialchars($hint) ?></span>
-                                                    </label>
-                                                <?php } ?>
-                                            </div>
-                                            <!-- <small class="text-muted d-block mt-2">PayU credentials: <code>includes/payu_config.php</code> · PhonePe: <code>includes/phonepe_config.php</code></small> -->
-                                        </div>
-                                        <div class="col-md-4 form-group">
-                                            <label>Name <span class="text-danger">*</span></label>
-                                            <div class="pay-contact-combobox">
-                                                <input type="text" name="name" class="form-control js-pay-contact-lookup" required maxlength="120"
-                                                    value="<?= htmlspecialchars($values['name']) ?>" placeholder="Customer full name" autocomplete="off">
-                                                <div class="pay-contact-menu js-pay-contact-menu" style="display:none;"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 form-group">
-                                            <label>Email <span class="text-danger">*</span></label>
-                                            <div class="pay-contact-combobox">
-                                                <input type="email" name="email" class="form-control js-pay-contact-lookup" required maxlength="200"
-                                                    value="<?= htmlspecialchars($values['email']) ?>" placeholder="customer@email.com" autocomplete="off">
-                                                <div class="pay-contact-menu js-pay-contact-menu" style="display:none;"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 form-group">
-                                            <label>Mobile <span class="text-danger">*</span></label>
-                                            <div class="pay-contact-combobox">
-                                                <input type="tel" name="mobile" class="form-control js-pay-contact-lookup" required maxlength="15"
-                                                    value="<?= htmlspecialchars($values['mobile']) ?>" placeholder="9876543210" autocomplete="off">
-                                                <div class="pay-contact-menu js-pay-contact-menu" style="display:none;"></div>
-                                            </div>
-                                            <small class="text-muted">Suggestions from <a href="lead_contacts.php">Contacts</a></small>
-                                        </div>
-                                        <div class="col-md-4 form-group">
-                                            <label>Remarks <small class="text-muted">(optional)</small></label>
-                                            <textarea name="remarks" class="form-control" rows="3" maxlength="500"
-                                                placeholder="Booking ref, package name, etc."><?= htmlspecialchars($values['remarks']) ?></textarea>
-                                        </div>
-                                        <div class="col-md-4 form-group">
-                                            <label>Amount (₹) <span class="text-danger">*</span></label>
-                                            <input type="text" name="amount" class="form-control" required inputmode="decimal"
-                                                value="<?= htmlspecialchars($values['amount']) ?>" placeholder="e.g. 5000">
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <button type="submit" class="btn btn-success btn-block">
-                                                <i class="fas fa-link mr-1"></i> Create link
-                                            </button>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <a href="payment_links.php" class="btn btn-outline-secondary btn-block">
-                                                <i class="fas fa-arrow-left mr-1"></i> Back to list
-                                            </a>
-                                        </div>
-                                    </div>
-                                </form>
+                            <div class="card-body" style="background:#f7f8fa;">
+                                <?php
+                                $formAction = '';
+                                $formInModal = false;
+                                include __DIR__ . '/includes/payment_link_create_form.php';
+                                ?>
                             </div>
                         </div>
                     </div>

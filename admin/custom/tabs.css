@@ -242,6 +242,22 @@ html.mz-embed body .content-wrapper {
 	min-height: 100vh !important;
 }
 
+/* Quotation preview-only iframe: do not force full viewport shell height */
+html.mz-embed body.q-preview-only .wrapper,
+html.mz-embed body.q-preview-only .content-wrapper {
+	display: none !important;
+	min-height: 0 !important;
+	height: 0 !important;
+	overflow: hidden !important;
+}
+
+html.mz-embed body.q-preview-only {
+	min-height: 0 !important;
+	height: auto !important;
+	overflow: auto !important;
+	background: #fff !important;
+}
+
 html.mz-embed .content-wrapper > .content {
 	padding-top: 0.75rem;
 }

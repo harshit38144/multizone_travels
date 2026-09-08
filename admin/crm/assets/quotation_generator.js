@@ -4668,18 +4668,38 @@
     var previewEditOrig = '';
     var previewDirty = false;
 
+    function isPreviewOnlyMode() {
+        return !!(document.body && document.body.classList.contains('q-preview-only'))
+            || /[?&]preview_only=1(?:&|$)/.test(window.location.search || '');
+    }
+
+    function notifyParentPreviewState(extra) {
+        try {
+            if (!window.parent || window.parent === window) {
+                return;
+            }
+            var payload = $.extend({
+                type: 'mz-quotation-preview-state',
+                dirty: previewDirty
+            }, extra || {});
+            window.parent.postMessage(payload, '*');
+        } catch (e) { /* ignore */ }
+    }
+
     function setPreviewDirty(isDirty) {
         previewDirty = !!isDirty;
         var $btn = $('#qPreviewSaveBtn');
         var $hint = $('#qPreviewUnsavedHint');
-        if (!$btn.length) return;
-        if (previewDirty) {
-            $btn.removeClass('d-none').prop('disabled', false);
-            $hint.removeClass('d-none');
-        } else {
-            $btn.addClass('d-none').prop('disabled', true);
-            $hint.addClass('d-none');
+        if ($btn.length) {
+            if (previewDirty) {
+                $btn.removeClass('d-none').prop('disabled', false);
+                $hint.removeClass('d-none');
+            } else {
+                $btn.addClass('d-none').prop('disabled', true);
+                $hint.addClass('d-none');
+            }
         }
+        notifyParentPreviewState();
     }
 
     function previewVal(v, fallback) {
@@ -7621,8 +7641,14 @@
                             onSuccess(res);
                         }
                     } else {
-                        $('#qAlert').html('<div class="alert alert-danger">' + esc((res && res.message) || 'Could not save.') + '</div>');
-                        window.scrollTo(0, 0);
+                        var failMsg = (res && res.message) || 'Could not save.';
+                        if (isPreviewOnlyMode()) {
+                            notifyParentPreviewState({ saveError: true, message: failMsg, dirty: true });
+                            window.alert(failMsg);
+                        } else {
+                            $('#qAlert').html('<div class="alert alert-danger">' + esc(failMsg) + '</div>');
+                            window.scrollTo(0, 0);
+                        }
                     }
                 })
                 .fail(function (xhr) {
@@ -7642,12 +7668,20 @@
                             msg = text.substring(0, 240);
                         }
                     }
-                    $('#qAlert').html('<div class="alert alert-danger">' + esc(msg) + '</div>');
-                    window.scrollTo(0, 0);
+                    if (isPreviewOnlyMode()) {
+                        notifyParentPreviewState({ saveError: true, message: msg, dirty: true });
+                        window.alert(msg);
+                    } else {
+                        $('#qAlert').html('<div class="alert alert-danger">' + esc(msg) + '</div>');
+                        window.scrollTo(0, 0);
+                    }
                 })
                 .always(function () {
                     if ($btn && $btn.length) {
                         $btn.prop('disabled', false).html(btnDefaultHtml);
+                    }
+                    if (isPreviewOnlyMode()) {
+                        notifyParentPreviewState({ saving: false });
                     }
                 });
         }
@@ -7683,7 +7717,9 @@
             });
         }
 
-        function saveQuotation($btnOverride) {
+        function saveQuotation($btnOverride, options) {
+            options = options || {};
+            var previewOnlySave = !!options.previewOnly || isPreviewOnlyMode();
             var p;
             try {
                 p = collectPayload();
@@ -7693,17 +7729,42 @@
             }
             if (!p.guest_name) {
                 alert('Please enter the guest name.');
-                expandWizardSection(1);
-                setWizardStep(1);
+                if (!previewOnlySave) {
+                    expandWizardSection(1);
+                    setWizardStep(1);
+                }
                 return;
             }
             var $btn = ($btnOverride && $btnOverride.length) ? $btnOverride : $('#qSaveBtn');
-            var btnDefaultHtml = $btn.is('#qPreviewSaveBtn')
+            var btnDefaultHtml = ($btn.length && $btn.is('#qPreviewSaveBtn')) || previewOnlySave
                 ? '<i class="fas fa-save mr-1"></i>Save Changes'
                 : '<i class="fas fa-save mr-1"></i>Save Quotation';
-            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+            if ($btn.length) {
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+            }
+            if (previewOnlySave) {
+                notifyParentPreviewState({ saving: true, dirty: true });
+            }
             postQuotationSave(p, 'publish', $btn, btnDefaultHtml, function (res) {
                 setPreviewDirty(false);
+                if (res.id) {
+                    $('#q_id').val(res.id);
+                }
+                saveFormDraftToStorage();
+
+                // Embedded Leads preview: save in place, do not redirect away.
+                if (previewOnlySave) {
+                    notifyParentPreviewState({
+                        saved: true,
+                        dirty: false,
+                        message: res.message || 'Quotation saved.',
+                        id: res.id || null,
+                        version: res.version || null,
+                        quotation_uid: res.quotation_uid || null
+                    });
+                    return;
+                }
+
                 var successHtml = esc(res.message || 'Quotation saved.');
                 if (res.quotation_uid) {
                     successHtml += ' (' + esc(res.quotation_uid) + ')';
@@ -7713,10 +7774,6 @@
                 }
                 $('#qAlert').html('<div class="alert alert-success">' + successHtml + '</div>');
                 window.scrollTo(0, 0);
-                if (res.id) {
-                    $('#q_id').val(res.id);
-                }
-                saveFormDraftToStorage();
                 if ($('#qPreviewModal').hasClass('show')) {
                     $('#qPreviewModal').modal('hide');
                 }
@@ -7731,6 +7788,28 @@
         }
 
         window.qSaveQuotation = saveQuotation;
+
+        window.qSavePreviewOnly = function () {
+            flushPreviewActiveEdit();
+            window.setTimeout(function () {
+                var $previewBtn = $('#qPreviewSaveBtn');
+                saveQuotation($previewBtn.length ? $previewBtn : $(), { previewOnly: true });
+            }, 80);
+        };
+
+        window.qIsPreviewDirty = function () {
+            return !!previewDirty;
+        };
+
+        window.addEventListener('message', function (ev) {
+            var data = ev && ev.data;
+            if (!data || data.type !== 'mz-quotation-preview-save') {
+                return;
+            }
+            if (typeof window.qSavePreviewOnly === 'function') {
+                window.qSavePreviewOnly();
+            }
+        });
 
         $('#quotationForm').on('submit', function (e) {
             e.preventDefault();
@@ -7904,23 +7983,52 @@
             if (!wantsPreview) {
                 return;
             }
+
+            function renderPreviewOnlyPage() {
+                var html;
+                try {
+                    html = buildPreviewHtml(collectPayload());
+                } catch (err) {
+                    html = '<div style="padding:1.5rem;color:#b91c1c;">Could not prepare preview.</div>';
+                }
+
+                // Remove AdminLTE shell height entirely — it was causing a huge blank gap
+                // above the quotation inside the Leads iframe modal.
+                $('.wrapper').hide();
+                $('#qPreviewModal').hide();
+                $('.modal-backdrop').remove();
+                $('body')
+                    .addClass('q-preview-only')
+                    .removeClass('modal-open layout-fixed sidebar-mini sidebar-collapse hold-transition')
+                    .css({ paddingRight: '', overflow: 'auto', height: 'auto', minHeight: 0 });
+
+                var $mount = $('#qPreviewPrintArea');
+                if (!$mount.length) {
+                    $mount = $('<div id="qPreviewPrintArea" class="q-preview-doc"></div>');
+                    $('body').prepend($mount);
+                } else if ($mount.closest('.wrapper, #qPreviewModal').length) {
+                    $mount = $mount.detach();
+                    $('body').prepend($mount);
+                }
+                $mount.attr('id', 'qPreviewPrintArea').addClass('q-preview-doc').html(html).show();
+
+                // Notify parent Leads modal that preview content is ready.
+                try {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'mz-quotation-preview-ready' }, '*');
+                    }
+                } catch (e2) { /* ignore */ }
+            }
+
             window.setTimeout(function () {
                 try {
-                    openQuotationPreview();
                     if (previewOnly) {
-                        // Keep preview content visible as a static page inside the Leads modal iframe.
-                        var $modal = $('#qPreviewModal');
-                        $modal.addClass('show d-block').attr('aria-hidden', 'false').css({
-                            position: 'static',
-                            display: 'block',
-                            paddingRight: '0'
-                        });
-                        $('body').addClass('q-preview-only').removeClass('modal-open');
-                        $('.modal-backdrop').remove();
-                        $('#qPreviewEditBtn, #qPreviewModal .close, #qPreviewModal [data-dismiss="modal"]').addClass('d-none');
+                        renderPreviewOnlyPage();
+                    } else {
+                        openQuotationPreview();
                     }
                 } catch (err) { /* ignore */ }
-            }, previewOnly ? 200 : 350);
+            }, previewOnly ? 150 : 350);
         })();
     });
 
