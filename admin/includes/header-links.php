@@ -71,15 +71,16 @@ $mzAdminWebRoot = defined('ADMIN_WEB_ROOT') ? ADMIN_WEB_ROOT : '/admin';
       if (window.top !== window.self) return;
       if (window.MZ_EMBED) return;
       var path = window.location.pathname || '';
-      var root = String(window.MZ_ADMIN.adminRoot || '/admin').replace(/\/$/, '');
+      var rawRoot = (typeof window.MZ_ADMIN.adminRoot === 'string') ? window.MZ_ADMIN.adminRoot : '/admin';
+      var root = (rawRoot === '/' || rawRoot === '') ? '' : String(rawRoot).replace(/\/$/, '');
       if (/\/(app|index|logout)\.php$/i.test(path)) return;
       if (/\/ajax\//i.test(path)) return;
-      if (path.indexOf(root) !== 0) return;
-      var rel = path.slice(root.length).replace(/^\/+/, '');
+      if (root && path.indexOf(root) !== 0) return;
+      var rel = (root ? path.slice(root.length) : path).replace(/^\/+/, '');
       if (!rel || !/\.php$/i.test(rel.split('?')[0])) return;
       var open = rel + (window.location.search || '') + (window.location.hash || '');
       open = open.replace(/([?&])mz_embed=1(&)?/g, function (_, a, b) { return b ? a : ''; }).replace(/[?&]$/, '');
-      window.location.replace(root + '/app.php?open=' + encodeURIComponent(open));
+      window.location.replace((root || '') + '/app.php?open=' + encodeURIComponent(open));
     } catch (e) {}
   })();
 <?php endif; ?>

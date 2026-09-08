@@ -1,0 +1,5 @@
+RewriteEngine On
+
+# When this folder is the vhost docroot (admin.multizonetravels.com),
+# a mistaken /admin/... URL (from old tab history) must redirect to /...
+RewriteRule ^admin/(.*)$ /$1 [R=302,L]

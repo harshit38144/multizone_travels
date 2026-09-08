@@ -27,9 +27,25 @@
     initialOpen: ''
   }
 
+  function normalizeAdminRoot (root) {
+    // '' = admin is site document root (admin subdomain). Never coerce to '/admin'.
+    if (root === '' || root === '/') return ''
+    if (root == null) return '/admin'
+    var s = String(root).replace(/\/$/, '')
+    return s === '' ? '' : s
+  }
+
+  function shellAppUrl (openPath) {
+    var url = (cfg.adminRoot ? cfg.adminRoot : '') + '/app.php'
+    if (openPath) {
+      url += '?open=' + encodeURIComponent(openPath)
+    }
+    return url
+  }
+
   function extendCfg () {
     var t = window.MZ_TABS || {}
-    if (t.adminRoot) cfg.adminRoot = String(t.adminRoot).replace(/\/$/, '') || '/admin'
+    if (typeof t.adminRoot === 'string') cfg.adminRoot = normalizeAdminRoot(t.adminRoot)
     if (t.dashboardUrl) cfg.dashboardUrl = t.dashboardUrl
     if (t.dashboardTitle) cfg.dashboardTitle = t.dashboardTitle
     if (typeof t.initialOpen === 'string') cfg.initialOpen = t.initialOpen
@@ -123,12 +139,17 @@
 
   function toAbsoluteUrl (path) {
     var clean = String(path || '').replace(/^\/+/, '')
+    if (!cfg.adminRoot) return '/' + clean
     return cfg.adminRoot + '/' + clean
   }
 
   /** Frame URL relative to app.php (admin root) so query params are never dropped. */
   function toFrameSrc (path) {
     var clean = String(path || '').replace(/^\/+/, '')
+    // Drop a mistaken leading "admin/" when the vhost docroot is already admin/
+    if (!cfg.adminRoot && /^admin\//i.test(clean)) {
+      clean = clean.replace(/^admin\//i, '')
+    }
     var qIndex = clean.indexOf('?')
     var file = qIndex === -1 ? clean : clean.slice(0, qIndex)
     var search = qIndex === -1 ? '' : clean.slice(qIndex + 1)
@@ -139,7 +160,13 @@
   }
 
   function withEmbed (url) {
-    return toFrameSrc(url.replace(/^https?:\/\/[^/]+/i, '').replace(cfg.adminRoot + '/', ''))
+    var path = String(url || '').replace(/^https?:\/\/[^/]+/i, '')
+    if (cfg.adminRoot && path.indexOf(cfg.adminRoot + '/') === 0) {
+      path = path.slice(cfg.adminRoot.length + 1)
+    } else {
+      path = path.replace(/^\//, '')
+    }
+    return toFrameSrc(path)
   }
 
   function persist () {
@@ -421,21 +448,15 @@
 
   function pushHistory (tab) {
     try {
-      var url = cfg.adminRoot + '/app.php'
-      if (tab && tab.path && tab.path.split('?')[0] !== cfg.dashboardUrl) {
-        url += '?open=' + encodeURIComponent(tab.path)
-      }
-      window.history.pushState({ mzTabId: tab.id }, tab.title, url)
+      var open = (tab && tab.path && tab.path.split('?')[0] !== cfg.dashboardUrl) ? tab.path : ''
+      window.history.pushState({ mzTabId: tab.id }, tab.title, shellAppUrl(open))
     } catch (e) {}
   }
 
   function replaceHistory (tab) {
     try {
-      var url = cfg.adminRoot + '/app.php'
-      if (tab && tab.path && tab.path.split('?')[0] !== cfg.dashboardUrl) {
-        url += '?open=' + encodeURIComponent(tab.path)
-      }
-      window.history.replaceState({ mzTabId: tab.id }, tab.title, url)
+      var open = (tab && tab.path && tab.path.split('?')[0] !== cfg.dashboardUrl) ? tab.path : ''
+      window.history.replaceState({ mzTabId: tab.id }, tab.title, shellAppUrl(open))
     } catch (e) {}
   }
 
@@ -555,6 +576,21 @@
 
   function initShell () {
     extendCfg()
+    // If history was previously rewritten to /admin/... on a subdomain where
+    // admin is the docroot, fix the URL before relative iframe srcs resolve.
+    if (!cfg.adminRoot) {
+      try {
+        var pathNow = window.location.pathname || ''
+        if (/^\/admin(\/|$)/i.test(pathNow)) {
+          var fixedPath = pathNow.replace(/^\/admin/i, '') || '/'
+          window.history.replaceState(
+            window.history.state,
+            document.title,
+            fixedPath + (window.location.search || '') + (window.location.hash || '')
+          )
+        }
+      } catch (eFix) {}
+    }
     els.list = document.getElementById('mzTabList')
     els.panes = document.getElementById('mzTabPanes')
     els.scrollLeft = document.getElementById('mzTabScrollLeft')
@@ -609,7 +645,9 @@
     if (document.body && document.body.classList.contains('mz-tab-shell')) return
 
     var path = window.location.pathname || ''
-    var root = (window.MZ_ADMIN && window.MZ_ADMIN.adminRoot) || cfg.adminRoot
+    var root = (window.MZ_ADMIN && typeof window.MZ_ADMIN.adminRoot === 'string')
+      ? window.MZ_ADMIN.adminRoot
+      : cfg.adminRoot
     // Detect app.php / login / logout
     if (/\/app\.php$/i.test(path)) return
     if (/\/index\.php$/i.test(path)) return
@@ -617,18 +655,17 @@
     if (/\/ajax\//i.test(path)) return
 
     // Only redirect pages under admin root that look like app pages
-    var adminRoot = String(root || '/admin').replace(/\/$/, '')
-    if (path.indexOf(adminRoot) !== 0) return
+    var adminRoot = normalizeAdminRoot(root)
+    if (adminRoot && path.indexOf(adminRoot) !== 0) return
 
-    var rel = path.slice(adminRoot.length).replace(/^\/+/, '')
+    var rel = (adminRoot ? path.slice(adminRoot.length) : path).replace(/^\/+/, '')
     if (!rel || !/\.php$/i.test(rel.split('?')[0])) return
 
     var open = rel + (window.location.search || '') + (window.location.hash || '')
     // Strip mz_embed if present
     open = open.replace(/([?&])mz_embed=1&?/, '$1').replace(/[?&]$/, '')
 
-    var target = adminRoot + '/app.php?open=' + encodeURIComponent(open)
-    window.location.replace(target)
+    window.location.replace(shellAppUrl(open))
   }
 
   // Public API

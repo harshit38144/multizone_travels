@@ -8,10 +8,11 @@ if ($mzEmbed) {
 }
 
 // Detect current page (CRM files live in admin/crm/ — use a stable prefix so names like index.php do not clash)
+// On admin subdomain, SCRIPT_NAME is /crm/... (docroot is already admin/), not /admin/crm/...
 $scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
-if (strpos($scriptPath, '/admin/crm/') !== false) {
+if (strpos($scriptPath, '/crm/') !== false || preg_match('#/crm/[^/]+\.php$#', $scriptPath)) {
   $page = 'crm_' . basename($_SERVER['SCRIPT_NAME'], '.php');
-} elseif (strpos($scriptPath, '/admin/mail/') !== false) {
+} elseif (strpos($scriptPath, '/mail/') !== false || preg_match('#/mail/[^/]+\.php$#', $scriptPath)) {
   $page = 'mail_' . basename($_SERVER['SCRIPT_NAME'], '.php');
 } else {
   $page = basename($_SERVER['SCRIPT_NAME'], '.php');
