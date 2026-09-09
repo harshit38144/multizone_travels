@@ -115,7 +115,8 @@
                             var code = item.iata || '';
                             var city = item.ct || item.cName || '';
                             var country = item.cnty || item.countryName || '';
-                            var fullStr = city + ', ' + country + ' (' + code + ')';
+                            // Input value: City (CODE) — country stays in dropdown only
+                            var fullStr = city + ' (' + code + ')';
                             if (code && city) {
                                 html += '<div class="qfs-suggest-item p-2 border-bottom" style="cursor:pointer; font-size:14px;" data-code="' + code + '" data-full="' + $('<div>').text(fullStr).html() + '" data-city="' + $('<div>').text(city).html() + '">' +
                                     '<div class="d-flex justify-content-between">' +

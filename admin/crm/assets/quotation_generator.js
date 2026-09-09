@@ -2564,6 +2564,7 @@
                 '<div class="q-day-head q-accordion-head collapsed" data-target="#' + dayBodyId + '" role="button" tabindex="0" aria-expanded="false">' +
                 '<div class="q-day-head-main">' +
                 '<i class="fas fa-chevron-down toggle-icon" aria-hidden="true"></i>' +
+                '<span class="q-day-calendar-icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>' +
                 '<span class="q-day-head-label"></span>' +
                 '</div>' +
                 '<button type="button" class="btn btn-sm q-day-ai-suggest" title="AI Suggest this day">' +
@@ -2725,18 +2726,102 @@
         $('.js-q-package-menu').hide().empty();
     }
 
+    function formatPackageUpdated(raw) {
+        if (!raw) {
+            return '';
+        }
+        if (typeof moment === 'function') {
+            var m = moment(raw);
+            if (m.isValid()) {
+                return m.format('DD MMM YYYY');
+            }
+        }
+        var d = new Date(raw);
+        if (isNaN(d.getTime())) {
+            return '';
+        }
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return String(d.getDate()).padStart(2, '0') + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function packageDurationLabel(pkg) {
+        var nights = Math.max(0, parseInt(pkg.duration_nights, 10) || 0);
+        var days = Math.max(0, parseInt(pkg.duration_days, 10) || 0);
+        if (days <= 0 && nights > 0) {
+            days = nights + 1;
+        }
+        if (nights <= 0 && days <= 0) {
+            return '';
+        }
+        return nights + 'N / ' + Math.max(1, days) + 'D';
+    }
+
+    function packageTierLabel(pkg) {
+        return (pkg.category || pkg.tier || pkg.status || '').toString().trim();
+    }
+
+    function updateSelectedPackageCard(pkg) {
+        selectedPackageForItinerary = pkg || null;
+        var $empty = $('#qSelectedPackageEmpty');
+        var $filled = $('#qSelectedPackageFilled');
+        var $btn = $('#qApplyPackageItinerary');
+        if (!pkg || !pkg.id) {
+            $empty.show();
+            $filled.hide();
+            $btn.prop('disabled', true);
+            return;
+        }
+        $empty.hide();
+        $filled.show();
+        $('#qSelectedPackageTitle').text(pkg.title || pkg.label || 'Package');
+        var metaHtml = '';
+        if (pkg.destination) {
+            metaHtml += '<span><i class="fas fa-map-marker-alt"></i> ' + esc(pkg.destination) + '</span>';
+        }
+        var dur = packageDurationLabel(pkg);
+        if (dur) {
+            var nights = Math.max(0, parseInt(pkg.duration_nights, 10) || 0);
+            var days = Math.max(0, parseInt(pkg.duration_days, 10) || 0);
+            if (days <= 0 && nights > 0) {
+                days = nights + 1;
+            }
+            metaHtml += '<span><i class="fas fa-calendar-alt"></i> ' + esc(nights + ' Nights / ' + Math.max(1, days) + ' Days') + '</span>';
+        }
+        var tier = packageTierLabel(pkg);
+        if (tier) {
+            metaHtml += '<span><i class="fas fa-landmark"></i> ' + esc(tier) + '</span>';
+        }
+        $('#qSelectedPackageMeta').html(metaHtml);
+        var updated = formatPackageUpdated(pkg.updated_at);
+        $('#qSelectedPackageUpdated').text(updated ? ('Last Updated: ' + updated) : '');
+        $btn.prop('disabled', false);
+    }
+
     function renderPackageMenu($menu, items, query) {
         $menu.empty();
         if (!items || !items.length) {
-            $menu.append('<div class="q-lead-empty">No packages found' + (query ? ' for "' + esc(query) + '"' : '') + '</div>');
+            $menu.append('<div class="q-itin-pkg-empty">No packages found' + (query ? ' for "' + esc(query) + '"' : '') + '</div>');
         } else {
-            items.forEach(function (item) {
-                var $btn = $('<button type="button" class="q-lead-item"></button>');
-                $btn.append($('<span class="q-lead-item-title"></span>').text(item.label || item.title || 'Package'));
-                if (item.sub_label) {
-                    $btn.append($('<span class="q-lead-item-meta"></span>').text(item.sub_label));
+            items.forEach(function (item, idx) {
+                var dur = packageDurationLabel(item);
+                var tier = packageTierLabel(item);
+                var updated = formatPackageUpdated(item.updated_at);
+                var $btn = $('<button type="button" class="q-itin-pkg-item"></button>');
+                var $titleWrap = $('<div class="q-itin-pkg-item-title-wrap"></div>');
+                if (query && idx === 0) {
+                    $titleWrap.append('<span class="q-itin-best-match">BEST MATCH</span>');
                 }
+                $titleWrap.append($('<span class="q-itin-pkg-item-title"></span>').text(item.label || item.title || 'Package'));
+                $btn.append($titleWrap);
+                $btn.append($('<span class="q-itin-pkg-item-dest"></span>').text(item.destination || '—'));
+                $btn.append($('<span class="q-itin-pkg-item-duration"></span>').text(dur || '—'));
+                $btn.append($('<span class="q-itin-pkg-item-tier"></span>').text(tier || 'Package'));
+                $btn.append($('<span class="q-itin-pkg-item-date"></span>').text(updated || '—'));
+                $btn.append('<span class="q-itin-pkg-item-chevron"><i class="fas fa-chevron-right"></i></span>');
                 $btn.data('package', item);
+                if (selectedPackageForItinerary && selectedPackageForItinerary.id === item.id) {
+                    $btn.addClass('is-active');
+                }
                 $menu.append($btn);
             });
         }
@@ -2771,7 +2856,7 @@
     function initPackageSuggest() {
         $(document).on('input focus', '.js-q-package-search', function () {
             var $input = $(this);
-            var $menu = $input.closest('.q-lead-combobox').find('.js-q-package-menu');
+            var $menu = $input.closest('.q-itin-pkg-search-wrap, .q-lead-combobox').find('.js-q-package-menu');
             var query = ($input.val() || '').trim();
 
             hideAllPackageMenus();
@@ -2783,19 +2868,20 @@
             }, 220);
         });
 
-        $(document).on('click', '.js-q-package-menu .q-lead-item', function () {
+        $(document).on('click', '.js-q-package-menu .q-itin-pkg-item, .js-q-package-menu .q-lead-item', function () {
             var pkg = $(this).data('package');
             if (!pkg) {
                 return;
             }
-            selectedPackageForItinerary = pkg;
             $('.js-q-package-search').val(pkg.label || pkg.title || '');
             hideAllPackageMenus();
-            $('#qApplyPackageItinerary').prop('disabled', false);
+            updateSelectedPackageCard(pkg);
+            $(this).closest('.js-q-package-menu').find('.q-itin-pkg-item').removeClass('is-active');
+            $(this).addClass('is-active');
         });
 
         $(document).on('click', function (e) {
-            if ($(e.target).closest('.q-lead-combobox').length) {
+            if ($(e.target).closest('.q-itin-pkg-search-wrap, .q-lead-combobox').length) {
                 return;
             }
             hideAllPackageMenus();
@@ -2828,7 +2914,7 @@
                     alert('Could not load package itinerary.');
                 })
                 .always(function () {
-                    $btn.prop('disabled', false).html('<i class="fas fa-suitcase-rolling mr-1"></i>Apply Itinerary');
+                    $btn.prop('disabled', !selectedPackageForItinerary).html('<i class="fas fa-file-import mr-1"></i> Load Itinerary');
                 });
         });
     }

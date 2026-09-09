@@ -23,12 +23,33 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
     $limit = max(1, min(30, $limit));
     $rows = [];
 
+    $hasCategories = false;
+    $catTbl = $conn->query("SHOW TABLES LIKE 'categories'");
+    $mapTbl = $conn->query("SHOW TABLES LIKE 'package_category_map'");
+    if ($catTbl && $catTbl->num_rows > 0 && $mapTbl && $mapTbl->num_rows > 0) {
+        $hasCategories = true;
+    }
+    $catSelect = $hasCategories
+        ? "(SELECT GROUP_CONCAT(c.name ORDER BY c.name SEPARATOR ', ')
+                 FROM categories c
+                 INNER JOIN package_category_map pcm ON pcm.category_id = c.id
+                 WHERE pcm.package_id = p.id) AS cat_names"
+        : "'' AS cat_names";
+
+    $hasUpdatedAt = false;
+    $updCol = $conn->query("SHOW COLUMNS FROM `packages` LIKE 'updated_at'");
+    if ($updCol && $updCol->num_rows > 0) {
+        $hasUpdatedAt = true;
+    }
+    $updatedSelect = $hasUpdatedAt ? 'p.updated_at' : 'NULL AS updated_at';
+
     if ($query === '') {
-        $sql = "SELECT p.id, p.title, p.duration_nights, p.duration_days, p.sale_price, p.status,
+        $sql = "SELECT p.id, p.title, p.duration_nights, p.duration_days, p.sale_price, p.status, {$updatedSelect},
                 (SELECT GROUP_CONCAT(d.name ORDER BY d.name SEPARATOR ', ')
                  FROM destinations d
                  INNER JOIN package_destination_map pdm ON pdm.destination_id = d.id
-                 WHERE pdm.package_id = p.id) AS dest_names
+                 WHERE pdm.package_id = p.id) AS dest_names,
+                {$catSelect}
             FROM packages p
             WHERE p.status IN ('Published', 'Draft')
             ORDER BY p.id DESC
@@ -36,11 +57,12 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
         $res = $conn->query($sql);
     } else {
         $like = '%' . $query . '%';
-        $sql = "SELECT p.id, p.title, p.duration_nights, p.duration_days, p.sale_price, p.status,
+        $sql = "SELECT p.id, p.title, p.duration_nights, p.duration_days, p.sale_price, p.status, {$updatedSelect},
                 (SELECT GROUP_CONCAT(d.name ORDER BY d.name SEPARATOR ', ')
                  FROM destinations d
                  INNER JOIN package_destination_map pdm ON pdm.destination_id = d.id
-                 WHERE pdm.package_id = p.id) AS dest_names
+                 WHERE pdm.package_id = p.id) AS dest_names,
+                {$catSelect}
             FROM packages p
             WHERE p.status IN ('Published', 'Draft')
               AND (
@@ -70,6 +92,9 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
                 $days = $nights + 1;
             }
             $destNames = trim((string) ($row['dest_names'] ?? ''));
+            $catNames = trim((string) ($row['cat_names'] ?? ''));
+            $category = $catNames !== '' ? explode(',', $catNames)[0] : '';
+            $category = trim($category);
             $label = (string) ($row['title'] ?? '');
             $sub = [];
             if ($nights > 0) {
@@ -84,7 +109,10 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
                 'duration_nights' => $nights,
                 'duration_days' => $days,
                 'destination' => $destNames,
+                'category' => $category !== '' ? $category : (string) ($row['status'] ?? ''),
+                'updated_at' => (string) ($row['updated_at'] ?? ''),
                 'sale_price' => (float) ($row['sale_price'] ?? 0),
+                'status' => (string) ($row['status'] ?? ''),
                 'label' => $label,
                 'sub_label' => implode(' · ', $sub),
             ];

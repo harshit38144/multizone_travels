@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>E-Tickets Module — Full Detailed Workflow & Instructions</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --teal: #0d9488;
+      --red: #dc2626;
+      --amber: #d97706;
+      --grid: #eef2f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, system-ui, sans-serif;
+      background: #f1f5f9;
+      color: var(--ink);
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; padding: 12px 18px;
+      background: rgba(255,255,255,.95);
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .toolbar h1 { margin: 0; font-size: 15px; }
+    .toolbar p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+    .toolbar button {
+      border: 1px solid #cbd5e1; background: #fff; border-radius: 8px;
+      padding: 8px 14px; font-weight: 600; cursor: pointer;
+    }
+    .wrap { padding: 20px; overflow: auto; }
+    .canvas {
+      width: min(100%, 1900px);
+      margin: 0 auto 28px;
+      background:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        #fff;
+      background-size: 28px 28px, 28px 28px, auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 14px 36px rgba(15,23,42,.08);
+    }
+    svg { width: 100%; height: auto; display: block; }
+    .instructions {
+      width: min(100%, 1900px);
+      margin: 0 auto 40px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 20px rgba(15,23,42,.05);
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px;
+      color: #fff; font-size: 12px; font-weight: 700;
+    }
+    .badge.blue { background: var(--blue); }
+    .badge.purple { background: var(--purple); }
+    .badge.teal { background: var(--teal); }
+    .badge.amber { background: var(--amber); }
+    .card ol, .card ul { margin: 0; padding-left: 18px; }
+    .card li { margin: 6px 0; font-size: 14px; line-height: 1.45; color: #334155; }
+    .card .note {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+      background: #f8fafc; border-left: 3px solid var(--blue);
+      font-size: 13px; color: #475569;
+    }
+    .nav {
+      width: min(100%, 1900px);
+      margin: 0 auto 16px;
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .nav a {
+      text-decoration: none; font-size: 13px; font-weight: 600;
+      padding: 8px 12px; border-radius: 999px;
+      background: #fff; border: 1px solid #e2e8f0; color: #334155;
+    }
+    .nav a:hover { border-color: #93c5fd; color: #1d4ed8; }
+    @media print {
+      .toolbar { display: none; }
+      body, .wrap { background: #fff; padding: 0; }
+      .canvas, .card { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>
+      <h1>E-Tickets Module — Full Detailed Workflow &amp; Instructions</h1>
+      <p>Multizone Travels Admin · New E-Tickets · All E-Tickets · E-Tickets Master</p>
+    </div>
+    <button type="button" onclick="window.print()">Print / Export PDF</button>
+  </div>
+
+  <div class="wrap">
+    <div class="nav">
+      <a href="login-feature-detailed-workflow.html">Login Workflow</a>
+      <a href="etickets-module-detailed-workflow.html">E-Tickets Workflow</a>
+      <a href="crm-module-detailed-workflow.html">CRM Workflow</a>
+    </div>
+
+    <div class="canvas">
+      <svg viewBox="0 0 1900 1450" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="E-Tickets module detailed workflow diagram">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+          </marker>
+          <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="arrT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#0d9488"/>
+          </marker>
+          <marker id="arrP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#7c3aed"/>
+          </marker>
+          <filter id="sh" x="-10%" y="-10%" width="120%" height="135%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity=".08"/>
+          </filter>
+          <linearGradient id="tg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="50%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#0d9488"/>
+          </linearGradient>
+        </defs>
+
+        <text x="950" y="40" text-anchor="middle" font-size="28" font-weight="750" fill="url(#tg)">E-Tickets Module — Full Detailed Workflow</text>
+        <text x="950" y="68" text-anchor="middle" font-size="14" fill="#64748b">Sidebar: New E-Tickets · All E-Tickets · E-Tickets Master · with step-by-step instructions</text>
+
+        <!-- Legend -->
+        <g font-size="12" fill="#475569">
+          <rect x="60" y="88" width="14" height="14" rx="3" fill="#eff6ff" stroke="#2563eb"/>
+          <text x="80" y="100">Process</text>
+          <path d="M160 97 L172 88 L184 97 L172 106 Z" fill="#f5f3ff" stroke="#7c3aed"/>
+          <text x="194" y="100">Decision</text>
+          <rect x="280" y="88" width="14" height="14" rx="3" fill="#f0fdfa" stroke="#0d9488"/>
+          <text x="300" y="100">Success / Output</text>
+          <rect x="440" y="88" width="14" height="14" rx="3" fill="#fffbeb" stroke="#d97706"/>
+          <text x="460" y="100">Instruction</text>
+          <rect x="560" y="88" width="14" height="14" rx="3" fill="#fef2f2" stroke="#dc2626"/>
+          <text x="580" y="100">Delete / Error</text>
+        </g>
+
+        <!-- START -->
+        <g filter="url(#sh)">
+          <rect x="700" y="120" width="500" height="64" rx="16" fill="#2563eb"/>
+          <text x="950" y="147" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">START: Admin Login → Sidebar → E-Tickets</text>
+          <text x="950" y="168" text-anchor="middle" fill="#dbeafe" font-size="12">Role access required (Admin) · Pages: etickets.php · eticketslist.php · e-ticket-master.php</text>
+        </g>
+
+        <!-- Menu choice diamond -->
+        <path d="M950 230 L1040 280 L950 330 L860 280 Z" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" filter="url(#sh)"/>
+        <text x="950" y="274" text-anchor="middle" font-size="12" font-weight="700" fill="#5b21b6">Choose menu</text>
+        <text x="950" y="292" text-anchor="middle" font-size="11" fill="#7c3aed">E-Tickets item</text>
+
+        <line x1="950" y1="184" x2="950" y2="230" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrB)"/>
+
+        <!-- three branches -->
+        <line x1="860" y1="280" x2="320" y2="280" stroke="#2563eb" stroke-width="2.5"/>
+        <line x1="320" y1="280" x2="320" y2="360" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrB)"/>
+        <line x1="950" y1="330" x2="950" y2="360" stroke="#0d9488" stroke-width="2.5" marker-end="url(#arrT)"/>
+        <line x1="1040" y1="280" x2="1580" y2="280" stroke="#7c3aed" stroke-width="2.5"/>
+        <line x1="1580" y1="280" x2="1580" y2="360" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#arrP)"/>
+
+        <text x="480" y="270" font-size="12" font-weight="700" fill="#2563eb">New E-Tickets</text>
+        <text x="980" y="350" font-size="12" font-weight="700" fill="#0d9488">All E-Tickets</text>
+        <text x="1320" y="270" font-size="12" font-weight="700" fill="#7c3aed">E-Tickets Master</text>
+
+        <!-- ========== COLUMN A: NEW ========== -->
+        <rect x="40" y="360" width="560" height="960" rx="20" fill="#f8fbff" stroke="#bfdbfe"/>
+        <rect x="40" y="360" width="560" height="46" rx="20" fill="#2563eb"/>
+        <rect x="40" y="382" width="560" height="24" fill="#2563eb"/>
+        <text x="320" y="390" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">A. New E-Tickets (Create / Edit)</text>
+
+        <rect x="60" y="425" width="520" height="58" rx="10" fill="#fffbeb" stroke="#fbbf24"/>
+        <text x="80" y="448" font-size="12" font-weight="700" fill="#92400e">INSTRUCTION</text>
+        <text x="80" y="468" font-size="12" fill="#78350f">Open New E-Tickets → fill booking details → preview ticket → Save / Download PDF</text>
+
+        <rect x="90" y="505" width="460" height="40" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="320" y="531" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">1. Enter PNR, booking date, contact</text>
+
+        <rect x="90" y="560" width="460" height="40" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="320" y="586" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">2. Search Flight (One-way / Round-trip)</text>
+
+        <rect x="90" y="615" width="460" height="40" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="320" y="641" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">3. Select flight(s) → sector &amp; airline fill</text>
+
+        <rect x="90" y="670" width="460" height="40" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="320" y="696" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">4. Add passengers (name, type, seat, meal…)</text>
+
+        <rect x="90" y="725" width="460" height="40" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="320" y="751" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">5. Enter base fare, tax, total (optional hide)</text>
+
+        <rect x="90" y="780" width="460" height="40" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="320" y="806" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">6. Live A4 ticket preview updates on screen</text>
+
+        <path d="M320 860 L380 900 L320 940 L260 900 Z" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" filter="url(#sh)"/>
+        <text x="320" y="896" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6">Ready to</text>
+        <text x="320" y="912" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6">issue?</text>
+
+        <rect x="70" y="970" width="200" height="50" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="170" y="1000" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">Save Ticket</text>
+
+        <rect x="300" y="970" width="220" height="50" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="410" y="1000" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">Download Ticket PDF</text>
+
+        <rect x="90" y="1050" width="460" height="70" rx="12" fill="#f0fdfa" stroke="#5eead4" filter="url(#sh)"/>
+        <text x="320" y="1080" text-anchor="middle" font-size="13" font-weight="700" fill="#115e59">System: generate PDF → save to uploads/tickets/</text>
+        <text x="320" y="1102" text-anchor="middle" font-size="12" fill="#0f766e">Insert/Update row in saved_tickets (+ passengers_json)</text>
+
+        <rect x="90" y="1150" width="460" height="55" rx="12" fill="#f0fdfa" stroke="#5eead4" filter="url(#sh)"/>
+        <text x="320" y="1184" text-anchor="middle" font-size="13" font-weight="700" fill="#115e59">Done — ticket ready for print / share / list</text>
+
+        <rect x="90" y="1230" width="460" height="60" rx="12" fill="#fffbeb" stroke="#fbbf24"/>
+        <text x="320" y="1255" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">Edit mode tip</text>
+        <text x="320" y="1275" text-anchor="middle" font-size="12" fill="#78350f">From All E-Tickets → Edit opens etickets.php?edit_id=…</text>
+
+        <g stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr)">
+          <line x1="320" y1="545" x2="320" y2="560"/>
+          <line x1="320" y1="600" x2="320" y2="615"/>
+          <line x1="320" y1="655" x2="320" y2="670"/>
+          <line x1="320" y1="710" x2="320" y2="725"/>
+          <line x1="320" y1="765" x2="320" y2="780"/>
+          <line x1="320" y1="820" x2="320" y2="860"/>
+          <line x1="280" y1="920" x2="170" y2="970"/>
+          <line x1="360" y1="920" x2="410" y2="970"/>
+          <line x1="170" y1="1020" x2="170" y2="1050"/>
+          <line x1="410" y1="1020" x2="410" y2="1050"/>
+          <line x1="320" y1="1120" x2="320" y2="1150"/>
+        </g>
+
+        <!-- ========== COLUMN B: ALL ========== -->
+        <rect x="640" y="360" width="620" height="960" rx="20" fill="#f3fffc" stroke="#99f6e4"/>
+        <rect x="640" y="360" width="620" height="46" rx="20" fill="#0d9488"/>
+        <rect x="640" y="382" width="620" height="24" fill="#0d9488"/>
+        <text x="950" y="390" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">B. All E-Tickets (List / Manage)</text>
+
+        <rect x="665" y="425" width="570" height="58" rx="10" fill="#fffbeb" stroke="#fbbf24"/>
+        <text x="685" y="448" font-size="12" font-weight="700" fill="#92400e">INSTRUCTION</text>
+        <text x="685" y="468" font-size="12" fill="#78350f">Open All E-Tickets → filter/search → View / Edit / Update / Delete as needed</text>
+
+        <rect x="700" y="510" width="500" height="40" rx="10" fill="#f0fdfa" stroke="#5eead4" filter="url(#sh)"/>
+        <text x="950" y="536" text-anchor="middle" font-size="13" font-weight="600" fill="#115e59">1. Load tickets from saved_tickets table</text>
+
+        <rect x="700" y="570" width="500" height="55" rx="10" fill="#f0fdfa" stroke="#5eead4" filter="url(#sh)"/>
+        <text x="950" y="593" text-anchor="middle" font-size="13" font-weight="600" fill="#115e59">2. Filter by date range</text>
+        <text x="950" y="613" text-anchor="middle" font-size="11" fill="#0f766e">Created / Departure / Arrival date</text>
+
+        <rect x="700" y="645" width="500" height="40" rx="10" fill="#f0fdfa" stroke="#5eead4" filter="url(#sh)"/>
+        <text x="950" y="671" text-anchor="middle" font-size="13" font-weight="600" fill="#115e59">3. Search in DataTable (PNR, passenger…)</text>
+
+        <path d="M950 720 L1020 765 L950 810 L880 765 Z" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" filter="url(#sh)"/>
+        <text x="950" y="760" text-anchor="middle" font-size="12" font-weight="700" fill="#5b21b6">Choose action</text>
+        <text x="950" y="778" text-anchor="middle" font-size="11" fill="#7c3aed">on a ticket row</text>
+
+        <rect x="670" y="850" width="160" height="48" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="750" y="880" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">View PDF</text>
+
+        <rect x="860" y="850" width="160" height="48" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="940" y="880" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">Edit Ticket</text>
+
+        <rect x="1050" y="850" width="170" height="48" rx="10" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="1135" y="880" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">Quick Update</text>
+
+        <rect x="860" y="930" width="160" height="48" rx="10" fill="#fef2f2" stroke="#f87171" filter="url(#sh)"/>
+        <text x="940" y="960" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b">Delete Ticket</text>
+
+        <rect x="700" y="1015" width="500" height="70" rx="12" fill="#eff6ff" stroke="#93c5fd" filter="url(#sh)"/>
+        <text x="950" y="1045" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a8a">Edit → opens New E-Tickets form with edit_id</text>
+        <text x="950" y="1067" text-anchor="middle" font-size="12" fill="#64748b">Update fare, PNR, sector, airline, passengers, PDF</text>
+
+        <rect x="700" y="1115" width="500" height="70" rx="12" fill="#fef2f2" stroke="#f87171" filter="url(#sh)"/>
+        <text x="950" y="1145" text-anchor="middle" font-size="13" font-weight="700" fill="#991b1b">Delete → remove DB row + PDF file</text>
+        <text x="950" y="1167" text-anchor="middle" font-size="12" fill="#b91c1c">Confirm carefully — action cannot be undone</text>
+
+        <rect x="700" y="1220" width="500" height="55" rx="12" fill="#f0fdfa" stroke="#5eead4" filter="url(#sh)"/>
+        <text x="950" y="1254" text-anchor="middle" font-size="13" font-weight="700" fill="#115e59">List refreshes — ticket inventory stays accurate</text>
+
+        <g stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr)">
+          <line x1="950" y1="550" x2="950" y2="570"/>
+          <line x1="950" y1="625" x2="950" y2="645"/>
+          <line x1="950" y1="685" x2="950" y2="720"/>
+          <line x1="900" y1="790" x2="750" y2="850"/>
+          <line x1="950" y1="810" x2="950" y2="850"/>
+          <line x1="1000" y1="790" x2="1135" y2="850"/>
+          <line x1="940" y1="898" x2="940" y2="930"/>
+          <line x1="940" y1="898" x2="940" y2="980"/>
+          <path d="M940 978 V1000 H950 V1015"/>
+          <line x1="950" y1="1085" x2="950" y2="1115"/>
+          <line x1="950" y1="1185" x2="950" y2="1220"/>
+        </g>
+
+        <!-- ========== COLUMN C: MASTER ========== -->
+        <rect x="1300" y="360" width="560" height="960" rx="20" fill="#faf8ff" stroke="#ddd6fe"/>
+        <rect x="1300" y="360" width="560" height="46" rx="20" fill="#7c3aed"/>
+        <rect x="1300" y="382" width="560" height="24" fill="#7c3aed"/>
+        <text x="1580" y="390" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">C. E-Tickets Master (Setup)</text>
+
+        <rect x="1320" y="425" width="520" height="58" rx="10" fill="#fffbeb" stroke="#fbbf24"/>
+        <text x="1340" y="448" font-size="12" font-weight="700" fill="#92400e">INSTRUCTION</text>
+        <text x="1340" y="468" font-size="12" fill="#78350f">Configure shared ticket settings before issuing tickets</text>
+
+        <rect x="1350" y="510" width="460" height="70" rx="12" fill="#f5f3ff" stroke="#c4b5fd" filter="url(#sh)"/>
+        <text x="1580" y="540" text-anchor="middle" font-size="14" font-weight="700" fill="#5b21b6">Important Info</text>
+        <text x="1580" y="562" text-anchor="middle" font-size="12" fill="#6d28d9">→ important_info.php · ticket_settings</text>
+
+        <rect x="1350" y="610" width="460" height="70" rx="12" fill="#f5f3ff" stroke="#c4b5fd" filter="url(#sh)"/>
+        <text x="1580" y="640" text-anchor="middle" font-size="14" font-weight="700" fill="#5b21b6">Banner Image</text>
+        <text x="1580" y="662" text-anchor="middle" font-size="12" fill="#6d28d9">→ image_master.php · Active banner</text>
+
+        <rect x="1350" y="710" width="460" height="90" rx="12" fill="#fffbeb" stroke="#fbbf24"/>
+        <text x="1580" y="740" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">How to update Important Info</text>
+        <text x="1580" y="762" text-anchor="middle" font-size="12" fill="#78350f">1. Open Important Info card</text>
+        <text x="1580" y="782" text-anchor="middle" font-size="12" fill="#78350f">2. Edit travel notes / ID rules</text>
+
+        <rect x="1350" y="825" width="460" height="90" rx="12" fill="#fffbeb" stroke="#fbbf24"/>
+        <text x="1580" y="855" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">How to update Banner</text>
+        <text x="1580" y="877" text-anchor="middle" font-size="12" fill="#78350f">1. Open Banner Image master</text>
+        <text x="1580" y="897" text-anchor="middle" font-size="12" fill="#78350f">2. Upload / activate image for tickets</text>
+
+        <rect x="1350" y="945" width="460" height="80" rx="12" fill="#f0fdfa" stroke="#5eead4" filter="url(#sh)"/>
+        <text x="1580" y="978" text-anchor="middle" font-size="13" font-weight="700" fill="#115e59">Settings apply to New E-Tickets preview</text>
+        <text x="1580" y="1000" text-anchor="middle" font-size="12" fill="#0f766e">Banner + Important Info appear on PDF</text>
+
+        <path d="M1580 1060 C 1500 1120 900 1120 600 1120" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#arrP)"/>
+        <rect x="980" y="1135" width="280" height="32" rx="16" fill="#fff" stroke="#7c3aed"/>
+        <text x="1120" y="1156" text-anchor="middle" font-size="12" font-weight="700" fill="#5b21b6">Feeds into ticket creation</text>
+
+        <rect x="1350" y="1180" width="460" height="90" rx="12" fill="#eff6ff" stroke="#93c5fd"/>
+        <text x="1580" y="1215" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a8a">Data stored</text>
+        <text x="1580" y="1238" text-anchor="middle" font-size="12" fill="#475569">ticket_settings · image_master · saved_tickets</text>
+        <text x="1580" y="1258" text-anchor="middle" font-size="12" fill="#475569">PDF files: uploads/tickets/</text>
+
+        <!-- Bottom strip -->
+        <rect x="40" y="1350" width="1820" height="70" rx="14" fill="#fff" stroke="#e2e8f0"/>
+        <text x="950" y="1378" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a">End-to-end E-Tickets lifecycle</text>
+        <text x="950" y="1402" text-anchor="middle" font-size="13" fill="#475569">Master setup → Create ticket (search flight + passengers + fare) → Save PDF → Manage in All E-Tickets (view / edit / delete) → Improve settings</text>
+      </svg>
+    </div>
+
+    <div class="instructions">
+      <div class="card">
+        <h2><span class="badge blue">A</span> New E-Tickets — How to create</h2>
+        <ol>
+          <li>Go to <strong>E-Tickets → New E-Tickets</strong> (`etickets.php`).</li>
+          <li>Enter <strong>PNR</strong>, booking date, mobile, and email.</li>
+          <li>Open <strong>Search Flight</strong>, choose One-way or Round-trip, select airports/dates, then search.</li>
+          <li>Pick the flight(s). Sector, airline, and flight details appear on the ticket preview.</li>
+          <li>Set passenger count and fill each passenger (name, type, ticket no., seat, meal, services).</li>
+          <li>Enter <strong>Base fare</strong>, <strong>Tax</strong>, and <strong>Total</strong> (you can hide fare if needed).</li>
+          <li>Review the live <strong>A4 ticket preview</strong>.</li>
+          <li>Click <strong>Save Ticket</strong> and/or <strong>Download Ticket</strong> to generate PDF and store the record.</li>
+        </ol>
+        <div class="note">Saving calls `ajax/save_ticket.php`, stores PDF under `uploads/tickets/`, and inserts/updates `saved_tickets` (including `passengers_json`).</div>
+      </div>
+
+      <div class="card">
+        <h2><span class="badge teal">B</span> All E-Tickets — How to manage</h2>
+        <ol>
+          <li>Go to <strong>E-Tickets → All E-Tickets</strong> (`eticketslist.php`).</li>
+          <li>Use <strong>From / To date</strong> filters by Created, Departure, or Arrival date.</li>
+          <li>Use the search box to find PNR, passenger names, airline, or sector.</li>
+          <li><strong>View</strong> — open the saved PDF.</li>
+          <li><strong>Edit</strong> — opens the New E-Tickets form with `edit_id` to change full ticket details.</li>
+          <li><strong>Quick Update</strong> — update key fields (PNR, fare, sector, airline, etc.) from the list modal.</li>
+          <li><strong>Delete</strong> — removes the database row and the PDF file.</li>
+        </ol>
+        <div class="note">Use date filters before large searches. Delete carefully — PDF and record are both removed.</div>
+      </div>
+
+      <div class="card">
+        <h2><span class="badge purple">C</span> E-Tickets Master — How to configure</h2>
+        <ol>
+          <li>Go to <strong>E-Tickets → E-Tickets Master</strong> (`e-ticket-master.php`).</li>
+          <li>Open <strong>Important Info</strong> to edit notes shown on tickets (ID rules, airport reporting time, etc.).</li>
+          <li>Open <strong>Banner Image</strong> to upload/activate the header banner used on tickets.</li>
+          <li>Save changes — new tickets pick up the active banner and important information automatically.</li>
+        </ol>
+        <div class="note">Master settings feed into New E-Tickets preview and generated PDFs. Configure these once before bulk ticket issuing.</div>
+      </div>
+
+      <div class="card">
+        <h2><span class="badge amber">!</span> Recommended daily workflow</h2>
+        <ol>
+          <li><strong>Setup once:</strong> Master → Important Info + Banner.</li>
+          <li><strong>Issue tickets:</strong> New E-Tickets → fill → preview → Save/Download.</li>
+          <li><strong>Follow up:</strong> All E-Tickets → filter by travel date → View / Edit / Resend PDF.</li>
+          <li><strong>Cleanup:</strong> Delete cancelled/wrong tickets so the list stays clean.</li>
+        </ol>
+        <div class="note">This module sits after Admin Login in the software workflow: Login → E-Tickets Master → New E-Tickets → All E-Tickets.</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

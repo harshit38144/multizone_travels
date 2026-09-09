@@ -1404,7 +1404,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-day-head-main {
             display: flex;
             align-items: center;
-            gap: 0.45rem;
+            gap: 0.55rem;
             min-width: 0;
             flex: 1 1 auto;
         }
@@ -1447,52 +1447,429 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-card {
-            border: 1px solid var(--q-border);
-            border-radius: var(--q-radius-sm);
-            margin-bottom: 0.75rem;
+            border: 1px solid #e8ecf1;
+            border-radius: 12px;
+            margin-bottom: 0.65rem;
             overflow: hidden;
-            box-shadow: var(--q-shadow-sm);
-            background: var(--q-card-bg);
+            box-shadow: none;
+            background: #fff;
         }
 
         .crm-quotation-gen .q-day-head {
-            background: var(--q-border-light);
-            padding: 0.55rem 0.85rem;
+            background: #fff;
+            padding: 0.85rem 1rem;
             font-weight: 700;
-            font-size: 0.82rem;
-            color: var(--q-text);
-            border-bottom: 1px solid var(--q-border);
+            font-size: 0.92rem;
+            color: #0f172a;
+            border-bottom: 1px solid transparent;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.5rem;
+            gap: 0.75rem;
+        }
+
+        .crm-quotation-gen .q-day-card:not(.is-open) .q-day-head {
+            border-bottom-color: transparent;
         }
 
         .crm-quotation-gen .q-day-head-label {
             min-width: 0;
+            font-weight: 700;
+            color: #0f172a;
         }
 
         .crm-quotation-gen .q-day-ai-suggest {
             flex-shrink: 0;
-            border-radius: 999px;
-            border: 1px solid var(--q-border);
-            background: var(--q-accent-soft);
-            color: var(--q-accent-dark);
-            font-weight: 600;
-            font-size: 0.72rem;
-            padding: 0.2rem 0.65rem;
+            border-radius: 8px;
+            border: 1.5px solid #e11d2e;
+            background: #fff;
+            color: #e11d2e;
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 0.4rem 0.85rem;
             line-height: 1.3;
         }
 
         .crm-quotation-gen .q-day-ai-suggest:hover:not(:disabled) {
-            background: var(--q-accent-soft);
-            border-color: var(--q-accent);
-            color: var(--q-accent-dark);
+            background: #fff1f2;
+            border-color: #e11d2e;
+            color: #be123c;
         }
 
         .crm-quotation-gen .q-day-ai-suggest:disabled {
             opacity: 0.7;
             cursor: wait;
+        }
+
+        .crm-quotation-gen .q-day-calendar-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: #e11d2e;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            font-size: 0.85rem;
+        }
+
+        /* —— Itinerary redesign (package search + selected + suppliers) —— */
+        .crm-quotation-gen .q-itin-section .q-wizard-section-subtitle {
+            margin: 0.15rem 0 0;
+            color: #64748b;
+            font-size: 0.84rem;
+            font-weight: 500;
+        }
+
+        .crm-quotation-gen .q-itin-package-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.9fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 991.98px) {
+            .crm-quotation-gen .q-itin-package-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .crm-quotation-gen .q-itin-pkg-card {
+            background: #fff;
+            border: 1px solid #e8ecf1;
+            border-radius: 14px;
+            padding: 1rem 1.1rem 1.1rem;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+            min-height: 220px;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-card-hd {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-hd-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #fff1f2;
+            color: #e11d2e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-hd-label {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-search-wrap {
+            position: relative;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-search-wrap .js-q-package-search {
+            padding-right: 2.4rem;
+            height: 44px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-search-wrap .js-q-package-search:focus {
+            border-color: #fda4af;
+            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
+        }
+
+        .crm-quotation-gen .q-itin-pkg-search-icon {
+            position: absolute;
+            right: 14px;
+            top: 14px;
+            color: #e11d2e;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-menu {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% + 6px);
+            z-index: 40;
+            background: #fff;
+            border: 1px solid #e8ecf1;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+            max-height: 320px;
+            overflow: auto;
+            padding: 0.25rem 0;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto auto auto auto;
+            gap: 0.55rem;
+            align-items: center;
+            width: 100%;
+            text-align: left;
+            border: 0;
+            background: transparent;
+            padding: 0.7rem 0.9rem;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item:last-child {
+            border-bottom: 0;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item:hover,
+        .crm-quotation-gen .q-itin-pkg-item.is-active {
+            background: #fff7f7;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item-title-wrap {
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-itin-best-match {
+            display: inline-block;
+            font-size: 0.62rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            color: #e11d2e;
+            background: #ffe4e6;
+            border-radius: 999px;
+            padding: 0.12rem 0.45rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item-title {
+            display: block;
+            font-weight: 700;
+            font-size: 0.86rem;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item-dest,
+        .crm-quotation-gen .q-itin-pkg-item-date {
+            font-size: 0.78rem;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item-duration {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #e11d2e;
+            white-space: nowrap;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item-tier {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #64748b;
+            background: #f1f5f9;
+            border-radius: 999px;
+            padding: 0.18rem 0.55rem;
+            white-space: nowrap;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item-chevron {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-empty {
+            padding: 1rem;
+            color: #64748b;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        @media (max-width: 767.98px) {
+            .crm-quotation-gen .q-itin-pkg-item {
+                grid-template-columns: 1fr auto;
+                grid-template-rows: auto auto;
+            }
+            .crm-quotation-gen .q-itin-pkg-item-dest,
+            .crm-quotation-gen .q-itin-pkg-item-duration,
+            .crm-quotation-gen .q-itin-pkg-item-tier,
+            .crm-quotation-gen .q-itin-pkg-item-date {
+                display: none;
+            }
+        }
+
+        .crm-quotation-gen .q-itin-selected-empty {
+            height: 100%;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #94a3b8;
+            padding: 1rem;
+        }
+
+        .crm-quotation-gen .q-itin-selected-empty-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: #fff1f2;
+            color: #e11d2e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .crm-quotation-gen .q-itin-selected-empty p {
+            margin: 0;
+            font-size: 0.85rem;
+            max-width: 220px;
+            line-height: 1.45;
+        }
+
+        .crm-quotation-gen .q-itin-selected-hd {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .crm-quotation-gen .q-itin-selected-badge-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #e11d2e;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .crm-quotation-gen .q-itin-selected-eyebrow {
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            color: #e11d2e;
+        }
+
+        .crm-quotation-gen .q-itin-selected-title {
+            margin: 0 0 0.65rem;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.25;
+        }
+
+        .crm-quotation-gen .q-itin-selected-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.1rem;
+            margin-bottom: 0.55rem;
+            font-size: 0.82rem;
+            color: #475569;
+        }
+
+        .crm-quotation-gen .q-itin-selected-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .crm-quotation-gen .q-itin-selected-meta i {
+            color: #e11d2e;
+        }
+
+        .crm-quotation-gen .q-itin-selected-updated {
+            margin: 0 0 1rem;
+            font-size: 0.78rem;
+            color: #94a3b8;
+        }
+
+        .crm-quotation-gen .q-itin-load-btn {
+            width: 100%;
+            border: 0;
+            border-radius: 10px;
+            background: #e11d2e;
+            color: #fff;
+            font-weight: 700;
+            padding: 0.7rem 1rem;
+            box-shadow: 0 8px 18px rgba(225, 29, 46, 0.22);
+        }
+
+        .crm-quotation-gen .q-itin-load-btn:hover:not(:disabled) {
+            background: #be123c;
+            color: #fff;
+        }
+
+        .crm-quotation-gen .q-itin-load-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .crm-quotation-gen .q-itin-info-banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            background: #fff5f5;
+            border: 1px solid #ffe4e6;
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 1rem;
+            color: #475569;
+            font-size: 0.84rem;
+            line-height: 1.45;
+        }
+
+        .crm-quotation-gen .q-itin-info-banner > i {
+            color: #e11d2e;
+            margin-top: 0.15rem;
+        }
+
+        .crm-quotation-gen .q-itin-suppliers-panel {
+            background: #fff;
+            border: 1px solid #e8ecf1;
+            border-radius: 14px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+        }
+
+        .crm-quotation-gen .q-itin-suppliers-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-itin-add-supplier-btn {
+            margin-top: 0.35rem;
+            border: 1.5px dashed #e11d2e;
+            color: #e11d2e;
+            background: #fff;
+            border-radius: 10px;
+            font-weight: 700;
+            padding: 0.45rem 0.9rem;
+        }
+
+        .crm-quotation-gen .q-itin-add-supplier-btn:hover {
+            background: #fff1f2;
+            color: #be123c;
+            border-color: #e11d2e;
         }
 
         .crm-quotation-gen .q-day-title-row {
@@ -1515,7 +1892,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: space-between;
             gap: 0.75rem;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0.75rem;
             flex-wrap: wrap;
         }
 
@@ -7662,42 +8039,62 @@ $qWizardSteps = [
 
                         <!-- Itinerary -->
                         <div class="q-wizard-step" id="qWizardSection4" data-q-step="4">
-                        <div class="q-card q-section-accordion">
+                        <div class="q-card q-section-accordion q-itin-section">
                             <div class="q-section-accordion-head q-wizard-section-head collapsed" data-target="#qSectionBody4" role="button" tabindex="0" aria-expanded="false">
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Itinerary</h3>
+                                    <p class="q-wizard-section-subtitle">Load a package or build your day-wise itinerary.</p>
                                 </div>
                                 <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody4" style="display:none;">
-                                <div class="q-package-suggest mb-3">
-                                    <label class="q-label d-block">Suggest from Package</label>
-                                    <div class="row q-row-tight align-items-end">
-                                        <div class="col-md-8 col-lg-9">
-                                            <div class="q-lead-combobox">
-                                                <input type="text" class="form-control js-q-package-search" placeholder="Search packages by title or destination..." autocomplete="off">
-                                                <div class="q-lead-menu js-q-package-menu" style="display:none;"></div>
-                                            </div>
-                                            <p class="q-hint mb-0 mt-1">Load day-wise itinerary from <strong>Packages</strong> (<a href="packages.php" target="_blank" rel="noopener">Manage Packages</a>).</p>
+                                <div class="q-itin-package-grid">
+                                    <div class="q-itin-pkg-card q-itin-pkg-search-card">
+                                        <div class="q-itin-pkg-card-hd">
+                                            <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
+                                            <span class="q-itin-pkg-hd-label">Search Existing Package</span>
                                         </div>
-                                        <div class="col-md-4 col-lg-3">
-                                            <button type="button" class="btn btn-q-primary btn-sm btn-block" id="qApplyPackageItinerary" disabled>
-                                                <i class="fas fa-suitcase-rolling mr-1"></i>Apply Itinerary
+                                        <div class="q-itin-pkg-search-wrap">
+                                            <input type="text" class="form-control js-q-package-search" placeholder="Search by destination or package name..." autocomplete="off">
+                                            <i class="fas fa-search q-itin-pkg-search-icon" aria-hidden="true"></i>
+                                            <div class="q-itin-pkg-menu js-q-package-menu" style="display:none;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="q-itin-pkg-card q-itin-pkg-selected-card" id="qSelectedPackageCard">
+                                        <div class="q-itin-selected-empty" id="qSelectedPackageEmpty">
+                                            <span class="q-itin-selected-empty-icon" aria-hidden="true"><i class="fas fa-suitcase"></i></span>
+                                            <p>Select a package from search to preview and load its itinerary.</p>
+                                        </div>
+                                        <div class="q-itin-selected-filled" id="qSelectedPackageFilled" style="display:none;">
+                                            <div class="q-itin-selected-hd">
+                                                <span class="q-itin-selected-badge-icon" aria-hidden="true"><i class="fas fa-suitcase"></i></span>
+                                                <span class="q-itin-selected-eyebrow">SELECTED PACKAGE</span>
+                                            </div>
+                                            <h4 class="q-itin-selected-title" id="qSelectedPackageTitle">—</h4>
+                                            <div class="q-itin-selected-meta" id="qSelectedPackageMeta"></div>
+                                            <p class="q-itin-selected-updated" id="qSelectedPackageUpdated"></p>
+                                            <button type="button" class="btn q-itin-load-btn" id="qApplyPackageItinerary" disabled>
+                                                <i class="fas fa-file-import mr-1"></i> Load Itinerary
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-                                <p class="q-hint">Days are generated from the Tentative Date and No of Nights. Use the AI button on each day to suggest that day.</p>
-                                <div class="q-itinerary-suppliers mb-3">
+
+                                <div class="q-itin-info-banner" role="note">
+                                    <i class="fas fa-magic" aria-hidden="true"></i>
+                                    <span>Day-wise itinerary is generated from the Tentative Date and No of Nights. Use the AI button on each day to suggest that day.</span>
+                                </div>
+
+                                <div class="q-itinerary-suppliers q-itin-suppliers-panel mb-3">
                                     <div class="q-itinerary-suppliers-hd">
-                                        <span class="q-label mb-0">Suppliers &amp; Rates</span>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="qAddItinerarySupplier">
-                                            <i class="fas fa-plus mr-1"></i>Add Supplier
-                                        </button>
+                                        <span class="q-itin-suppliers-title">Suppliers &amp; Rates</span>
                                     </div>
                                     <div id="qItinerarySupplierRows"></div>
+                                    <button type="button" class="btn q-itin-add-supplier-btn" id="qAddItinerarySupplier">
+                                        <i class="fas fa-plus mr-1"></i>Add Supplier
+                                    </button>
                                 </div>
-                                <div id="qItineraryDays"></div>
+                                <div id="qItineraryDays" class="q-itin-days"></div>
                             </div>
                         </div>
                             <div class="q-section-next-bar">
@@ -8117,8 +8514,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=116"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=13"></script>
+    <script src="crm/assets/quotation_generator.js?v=117"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=14"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>

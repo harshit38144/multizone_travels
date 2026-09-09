@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM Module — Full Detailed Workflow & Instructions</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --teal: #0d9488;
+      --amber: #d97706;
+      --red: #dc2626;
+      --grid: #eef2f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, system-ui, sans-serif;
+      background: #f1f5f9;
+      color: var(--ink);
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; padding: 12px 18px;
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .toolbar h1 { margin: 0; font-size: 15px; }
+    .toolbar p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+    .toolbar button {
+      border: 1px solid #cbd5e1; background: #fff; border-radius: 8px;
+      padding: 8px 14px; font-weight: 600; cursor: pointer;
+    }
+    .wrap { padding: 20px; max-width: 1480px; margin: 0 auto; }
+    .nav {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+    }
+    .nav a {
+      text-decoration: none; font-size: 13px; font-weight: 600;
+      padding: 8px 12px; border-radius: 999px;
+      background: #fff; border: 1px solid #e2e8f0; color: #334155;
+    }
+    .nav a:hover { border-color: #93c5fd; color: #1d4ed8; }
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .toc a {
+      display: block; text-decoration: none; color: #1e3a8a;
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px;
+      padding: 12px 14px; font-size: 13px; font-weight: 700;
+    }
+    .toc a span { display: block; font-weight: 500; color: #64748b; font-size: 11px; margin-top: 4px; }
+    .canvas {
+      background:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        #fff;
+      background-size: 28px 28px, 28px 28px, auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 14px 36px rgba(15,23,42,.08);
+      margin-bottom: 28px;
+      overflow: auto;
+    }
+    svg { width: 100%; height: auto; display: block; min-width: 1100px; }
+    section.mod {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 22px 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 20px rgba(15,23,42,.04);
+    }
+    section.mod h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    section.mod .sub {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 28px; height: 28px; padding: 0 8px; border-radius: 999px;
+      color: #fff; font-size: 13px; font-weight: 700;
+    }
+    .b-blue { background: var(--blue); }
+    .b-purple { background: var(--purple); }
+    .b-teal { background: var(--teal); }
+    .b-amber { background: var(--amber); }
+    .b-red { background: var(--red); }
+    .grid2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 14px;
+    }
+    .box {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: #f8fafc;
+    }
+    .box h3 { margin: 0 0 8px; font-size: 14px; }
+    .box ol, .box ul { margin: 0; padding-left: 18px; }
+    .box li { margin: 5px 0; font-size: 13px; line-height: 1.45; color: #334155; }
+    .note {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+      background: #fffbeb; border-left: 3px solid var(--amber);
+      font-size: 13px; color: #78350f;
+    }
+    .info {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+      background: #eff6ff; border-left: 3px solid var(--blue);
+      font-size: 13px; color: #1e3a8a;
+    }
+    .flow {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      margin: 12px 0 4px;
+    }
+    .chip {
+      background: #fff; border: 1px solid #cbd5e1; border-radius: 999px;
+      padding: 6px 12px; font-size: 12px; font-weight: 600; color: #334155;
+    }
+    .chip.ok { background: #f0fdfa; border-color: #5eead4; color: #115e59; }
+    .chip.warn { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .arrow { color: #94a3b8; font-weight: 700; }
+    table.deep {
+      width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px;
+    }
+    table.deep th, table.deep td {
+      border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; vertical-align: top;
+    }
+    table.deep th { background: #f1f5f9; font-size: 12px; }
+    @media print {
+      .toolbar { display: none; }
+      body { background: #fff; }
+      section.mod, .canvas { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>
+      <h1>CRM Module — Full Detailed Workflow &amp; Instructions</h1>
+      <p>Multizone Travels · Leads · Masters · Quotations · Bookings · Customers · Suppliers · Users · Reports · Settings</p>
+    </div>
+    <button type="button" onclick="window.print()">Print / Export PDF</button>
+  </div>
+
+  <div class="wrap">
+    <div class="nav">
+      <a href="login-feature-detailed-workflow.html">Login</a>
+      <a href="etickets-module-detailed-workflow.html">E-Tickets</a>
+      <a href="crm-module-detailed-workflow.html">CRM (this page)</a>
+    </div>
+
+    <div class="toc">
+      <a href="#overview">0. Overview<span>End-to-end CRM lifecycle</span></a>
+      <a href="#leads">1. Leads<span>Create, intake, stages, trash</span></a>
+      <a href="#masters">2. Masters<span>Cities, hotels, vehicles…</span></a>
+      <a href="#quotations">3. Quotations<span>6-step generator + list</span></a>
+      <a href="#bookings">4. Bookings<span>Confirm tour / bookings</span></a>
+      <a href="#customers">5. Customers<span>Customer records</span></a>
+      <a href="#suppliers">6. Suppliers<span>Vendor management</span></a>
+      <a href="#users">7. Users<span>CRM user accounts</span></a>
+      <a href="#reports">8. Reports<span>Analytics views</span></a>
+      <a href="#settings">9. Settings<span>Email + legacy import</span></a>
+    </div>
+
+    <!-- OVERVIEW DIAGRAM -->
+    <div class="canvas" id="overview">
+      <svg viewBox="0 0 1400 920" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CRM end-to-end lifecycle overview">
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+          </marker>
+          <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#0d9488"/>
+          </marker>
+          <filter id="s"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity=".08"/></filter>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#2563eb"/><stop offset="55%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#0d9488"/>
+          </linearGradient>
+        </defs>
+
+        <text x="700" y="40" text-anchor="middle" font-size="26" font-weight="750" fill="url(#g)">CRM — End-to-End Business Workflow</text>
+        <text x="700" y="66" text-anchor="middle" font-size="13" fill="#64748b">Admin Login → CRM sidebar → Operate every module below</text>
+
+        <!-- Row 1 -->
+        <g filter="url(#s)">
+          <rect x="40" y="100" width="200" height="90" rx="14" fill="#eff6ff" stroke="#93c5fd"/>
+          <text x="140" y="138" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">1. Masters Setup</text>
+          <text x="140" y="160" text-anchor="middle" font-size="11" fill="#64748b">Cities · Hotels · Vehicles</text>
+          <text x="140" y="176" text-anchor="middle" font-size="11" fill="#64748b">Sources · Terms · etc.</text>
+        </g>
+        <g filter="url(#s)">
+          <rect x="310" y="100" width="200" height="90" rx="14" fill="#f5f3ff" stroke="#c4b5fd"/>
+          <text x="410" y="138" text-anchor="middle" font-size="14" font-weight="700" fill="#5b21b6">2. Users &amp; Suppliers</text>
+          <text x="410" y="160" text-anchor="middle" font-size="11" fill="#64748b">Assign staff · Add vendors</text>
+          <text x="410" y="176" text-anchor="middle" font-size="11" fill="#64748b">Email settings ready</text>
+        </g>
+        <g filter="url(#s)">
+          <rect x="580" y="100" width="200" height="90" rx="14" fill="#eff6ff" stroke="#93c5fd"/>
+          <text x="680" y="138" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">3. Capture Lead</text>
+          <text x="680" y="160" text-anchor="middle" font-size="11" fill="#64748b">Create / Send form link</text>
+          <text x="680" y="176" text-anchor="middle" font-size="11" fill="#64748b">Approve pending intake</text>
+        </g>
+        <g filter="url(#s)">
+          <rect x="850" y="100" width="200" height="90" rx="14" fill="#f0fdfa" stroke="#5eead4"/>
+          <text x="950" y="138" text-anchor="middle" font-size="14" font-weight="700" fill="#115e59">4. Build Quotation</text>
+          <text x="950" y="160" text-anchor="middle" font-size="11" fill="#64748b">6 wizard steps</text>
+          <text x="950" y="176" text-anchor="middle" font-size="11" fill="#64748b">Save · Preview · PDF</text>
+        </g>
+        <g filter="url(#s)">
+          <rect x="1120" y="100" width="240" height="90" rx="14" fill="#f0fdfa" stroke="#5eead4"/>
+          <text x="1240" y="138" text-anchor="middle" font-size="14" font-weight="700" fill="#115e59">5. Confirm / Book</text>
+          <text x="1240" y="160" text-anchor="middle" font-size="11" fill="#64748b">Mark tour confirmed</text>
+          <text x="1240" y="176" text-anchor="middle" font-size="11" fill="#64748b">Lead stage → Confirmed</text>
+        </g>
+
+        <g stroke="#2563eb" stroke-width="2.5" fill="none" marker-end="url(#ab)">
+          <line x1="240" y1="145" x2="310" y2="145"/>
+          <line x1="510" y1="145" x2="580" y2="145"/>
+          <line x1="780" y1="145" x2="850" y2="145"/>
+          <line x1="1050" y1="145" x2="1120" y2="145"/>
+        </g>
+
+        <!-- Lead stages strip -->
+        <rect x="40" y="230" width="1320" height="100" rx="14" fill="#fff" stroke="#e2e8f0"/>
+        <text x="700" y="258" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a">Lead Stage Pipeline (auto-updates from quotation activity)</text>
+        <rect x="120" y="280" width="160" height="34" rx="17" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="200" y="302" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">New Lead</text>
+        <text x="300" y="302" font-size="16" fill="#94a3b8">→</text>
+        <rect x="320" y="280" width="160" height="34" rx="17" fill="#ffedd5" stroke="#ea580c"/>
+        <text x="400" y="302" text-anchor="middle" font-size="12" font-weight="700" fill="#9a3412">Quoted</text>
+        <text x="500" y="302" font-size="16" fill="#94a3b8">→</text>
+        <rect x="520" y="280" width="160" height="34" rx="17" fill="#dcfce7" stroke="#16a34a"/>
+        <text x="600" y="302" text-anchor="middle" font-size="12" font-weight="700" fill="#166534">Confirmed</text>
+        <text x="720" y="302" font-size="14" fill="#94a3b8">or</text>
+        <rect x="760" y="280" width="160" height="34" rx="17" fill="#fee2e2" stroke="#dc2626"/>
+        <text x="840" y="302" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b">Lost (manual)</text>
+        <text x="1100" y="302" font-size="12" fill="#64748b">Stages sync on Leads page</text>
+
+        <!-- Module map -->
+        <text x="700" y="380" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">CRM Sidebar Feature Map</text>
+
+        <g font-size="12">
+          <rect x="40" y="400" width="300" height="200" rx="14" fill="#f8fbff" stroke="#bfdbfe" filter="url(#s)"/>
+          <text x="190" y="428" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Leads</text>
+          <text x="60" y="455" fill="#334155">• All leads table + search/FY</text>
+          <text x="60" y="475" fill="#334155">• Create Lead form</text>
+          <text x="60" y="495" fill="#334155">• Send preference form link</text>
+          <text x="60" y="515" fill="#334155">• Pending intake approve/reject</text>
+          <text x="60" y="535" fill="#334155">• Attachments · Duplicate · Trash</text>
+          <text x="60" y="555" fill="#334155">• Stage select · Assign user</text>
+          <text x="60" y="575" fill="#334155">• Open quotation from lead</text>
+
+          <rect x="370" y="400" width="300" height="200" rx="14" fill="#faf8ff" stroke="#ddd6fe" filter="url(#s)"/>
+          <text x="520" y="428" text-anchor="middle" font-size="14" font-weight="700" fill="#5b21b6">Masters</text>
+          <text x="390" y="455" fill="#334155">• Cities · Lead Source</text>
+          <text x="390" y="475" fill="#334155">• Hotels · Cruises · Vehicles</text>
+          <text x="390" y="495" fill="#334155">• Sightseeing · Add-on Services</text>
+          <text x="390" y="515" fill="#334155">• Testimonials</text>
+          <text x="390" y="535" fill="#334155">• Quotation Terms &amp; Policies</text>
+          <text x="390" y="555" fill="#334155">• Used by leads &amp; quotations</text>
+          <text x="390" y="575" fill="#334155">• CRUD + view pages</text>
+
+          <rect x="700" y="400" width="300" height="200" rx="14" fill="#f3fffc" stroke="#99f6e4" filter="url(#s)"/>
+          <text x="850" y="428" text-anchor="middle" font-size="14" font-weight="700" fill="#115e59">Quotations</text>
+          <text x="720" y="455" fill="#334155">• Quotation list + Book/Confirm</text>
+          <text x="720" y="475" fill="#334155">• Generator wizard (6 steps)</text>
+          <text x="720" y="495" fill="#334155">• Templates</text>
+          <text x="720" y="515" fill="#334155">• Terms &amp; Policies</text>
+          <text x="720" y="535" fill="#334155">• Supplier email · PDF</text>
+          <text x="720" y="555" fill="#334155">• Costing / pricing options</text>
+          <text x="720" y="575" fill="#334155">• Link to lead</text>
+
+          <rect x="1030" y="400" width="330" height="200" rx="14" fill="#fffbeb" stroke="#fbbf24" filter="url(#s)"/>
+          <text x="1195" y="428" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">Ops &amp; Admin</text>
+          <text x="1050" y="455" fill="#334155">• Bookings (All / Add New)</text>
+          <text x="1050" y="475" fill="#334155">• Customers (All / Add New)</text>
+          <text x="1050" y="495" fill="#334155">• Suppliers directory</text>
+          <text x="1050" y="515" fill="#334155">• Users (CRM staff accounts)</text>
+          <text x="1050" y="535" fill="#334155">• Reports</text>
+          <text x="1050" y="555" fill="#334155">• Settings: Email + Legacy Import</text>
+          <text x="1050" y="575" fill="#334155">• Confirm tour drives booking state</text>
+        </g>
+
+        <!-- Feedback -->
+        <path d="M1240 190 C 1320 240 1320 700 680 700 C 200 700 80 620 140 505" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#at)"/>
+        <rect x="560" y="680" width="280" height="30" rx="15" fill="#fff" stroke="#0d9488"/>
+        <text x="700" y="700" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e">Reports + feedback improve process</text>
+
+        <rect x="40" y="760" width="1320" height="120" rx="14" fill="#fff" stroke="#e2e8f0"/>
+        <text x="700" y="795" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Recommended operating order</text>
+        <text x="700" y="825" text-anchor="middle" font-size="13" fill="#334155">Settings &amp; Masters → Users/Suppliers → Leads → Quotation Generator → Confirm Tour → Manage list → Reports</text>
+        <text x="700" y="852" text-anchor="middle" font-size="12" fill="#64748b">Detailed instructions for every feature are in the sections below</text>
+      </svg>
+    </div>
+
+    <!-- 1 LEADS -->
+    <section class="mod" id="leads">
+      <h2><span class="badge b-blue">1</span> Leads</h2>
+      <p class="sub">Page: <code>crm/leads.php</code> · Intake: <code>crm/lead_intake_pending.php</code> · Form: lead create/edit modal</p>
+
+      <div class="flow">
+        <span class="chip">Open CRM → Leads</span><span class="arrow">→</span>
+        <span class="chip">Create / Intake / Search</span><span class="arrow">→</span>
+        <span class="chip">Assign + Stage</span><span class="arrow">→</span>
+        <span class="chip ok">Generate Quotation</span><span class="arrow">→</span>
+        <span class="chip ok">Confirmed / Lost</span>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>How to create a lead (manual)</h3>
+          <ol>
+            <li>Click <strong>Create Lead</strong>.</li>
+            <li>Enter guest name, phone, email.</li>
+            <li>Select <strong>Lead Source</strong> (from Lead Source master).</li>
+            <li>Choose <strong>Assign To</strong> (self or CRM user).</li>
+            <li>Select services (Tour Package, Flight, Hotel, Cruise, Vehicle, etc.).</li>
+            <li>Pick destination(s), travel dates, nights, adults/children.</li>
+            <li>Add tour preferences / notes / attachments if needed.</li>
+            <li>Save — system creates Lead UID (e.g. LD-0007).</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>How to capture lead via customer form link</h3>
+          <ol>
+            <li>Click <strong>Send Link</strong> (preference form).</li>
+            <li>Choose fields to include and copy/send the link.</li>
+            <li>Customer submits the public form.</li>
+            <li>Submission appears under <strong>Pending</strong>.</li>
+            <li>Open Pending → review data.</li>
+            <li><strong>Approve</strong> to convert into a CRM lead, or <strong>Reject / Delete</strong>.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>Leads list features</h3>
+          <ul>
+            <li>Search by name, phone, destination, quotation UID, etc.</li>
+            <li>Filter by Financial Year.</li>
+            <li>Columns: Lead ID, Guest, Destination, Travel Date, Services, Source, Assigned, Stage, Actions.</li>
+            <li>Column visibility settings (per admin).</li>
+            <li>Pagination (10 / 25 / 50 per page).</li>
+            <li>View / Edit / Call / More menu (duplicate, delete, quotation).</li>
+            <li><strong>Trash</strong> — soft-deleted leads; restore available.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>Stage rules (important)</h3>
+          <ul>
+            <li><strong>New Lead</strong> — created, no quotation yet.</li>
+            <li><strong>Quoted</strong> — quotation exists for the lead (auto).</li>
+            <li><strong>Confirmed</strong> — quotation marked tour confirmed / booked (auto).</li>
+            <li><strong>Lost</strong> — manual mark when opportunity is closed lost.</li>
+            <li>Auto stages update from quotation activity; you can still mark Lost.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="info">Instruction tip: Always assign an owner and set destination/travel date so the lead list and quotation prefill stay accurate.</div>
+    </section>
+
+    <!-- 2 MASTERS -->
+    <section class="mod" id="masters">
+      <h2><span class="badge b-purple">2</span> Masters</h2>
+      <p class="sub">CRM → Masters submenu · reusable reference data for leads &amp; quotations</p>
+
+      <table class="deep">
+        <thead>
+          <tr>
+            <th>Master</th>
+            <th>Page</th>
+            <th>What you do</th>
+            <th>Used by</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Cities</strong></td>
+            <td><code>city_master.php</code> / create</td>
+            <td>Add/edit cities linked to countries; used for locations &amp; suppliers</td>
+            <td>Suppliers, geo lookups</td>
+          </tr>
+          <tr>
+            <td><strong>Lead Source</strong></td>
+            <td><code>lead_source_master.php</code></td>
+            <td>Maintain sources (Website, Referral, Walk-in, etc.)</td>
+            <td>Lead form source dropdown</td>
+          </tr>
+          <tr>
+            <td><strong>Hotels</strong></td>
+            <td><code>hotel_master.php</code> / create</td>
+            <td>Create hotel inventory (city, category, details)</td>
+            <td>Quotation Hotel Details step</td>
+          </tr>
+          <tr>
+            <td><strong>Cruises</strong></td>
+            <td><code>cruise_master.php</code> / create / view</td>
+            <td>Manage cruise products</td>
+            <td>Lead services + packages</td>
+          </tr>
+          <tr>
+            <td><strong>Vehicles</strong></td>
+            <td><code>vehicle_master.php</code> / create / view</td>
+            <td>Manage transfer/vehicle options</td>
+            <td>Lead services + quotation costing</td>
+          </tr>
+          <tr>
+            <td><strong>Sightseeing</strong></td>
+            <td><code>sightseeing_master.php</code> (+ destination/create/view)</td>
+            <td>Manage sightseeing activities by destination</td>
+            <td>Itinerary planning</td>
+          </tr>
+          <tr>
+            <td><strong>Add-on Services</strong></td>
+            <td><code>addon_service_master.php</code></td>
+            <td>Extra paid services (visa assist, insurance, etc.)</td>
+            <td>Quotation / costing</td>
+          </tr>
+          <tr>
+            <td><strong>Testimonials</strong></td>
+            <td><code>testimonial_master.php</code></td>
+            <td>Store customer testimonials for marketing/quotes</td>
+            <td>Presentation content</td>
+          </tr>
+          <tr>
+            <td><strong>Quotation Terms &amp; Policies</strong></td>
+            <td><code>quotation_terms_master.php</code></td>
+            <td>Create reusable terms blocks for quotations</td>
+            <td>Quotation wizard step 5</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note"><strong>Instruction:</strong> Complete Masters before heavy quoting. Missing hotels/terms slow down the Quotation Generator. Typical CRUD: open master → Add → fill form → Save → Edit/View/Delete from list.</div>
+    </section>
+
+    <!-- 3 QUOTATIONS -->
+    <section class="mod" id="quotations">
+      <h2><span class="badge b-teal">3</span> Quotations</h2>
+      <p class="sub">List: <code>quotation-generator-list.php</code> · Editor: <code>quotation_generator.php</code> · Templates · Terms</p>
+
+      <div class="flow">
+        <span class="chip">Lead / New Quote</span><span class="arrow">→</span>
+        <span class="chip">Guest &amp; Tour</span><span class="arrow">→</span>
+        <span class="chip">Flight/Train</span><span class="arrow">→</span>
+        <span class="chip">Hotels</span><span class="arrow">→</span>
+        <span class="chip">Itinerary</span><span class="arrow">→</span>
+        <span class="chip">Terms</span><span class="arrow">→</span>
+        <span class="chip">Pricing</span><span class="arrow">→</span>
+        <span class="chip ok">Save / PDF / Mail / Book</span>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>A) Quotation list — instructions</h3>
+          <ol>
+            <li>Open <strong>CRM → Quotations → Quotations</strong>.</li>
+            <li>Search/filter existing quotes.</li>
+            <li>Click a row to <strong>edit</strong> in the generator.</li>
+            <li>Use <strong>Book / Confirmed</strong> to open Confirm Tour modal.</li>
+            <li>Use menu to <strong>Delete</strong> (permanent).</li>
+            <li>Create new from list or from a Lead action.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>B) Templates &amp; Terms</h3>
+          <ol>
+            <li><strong>Templates</strong> — reusable quotation layouts/content starters.</li>
+            <li><strong>Terms &amp; Policies</strong> — maintain policy text used in wizard step 5.</li>
+            <li>Keep terms updated seasonally (cancellation, payment, baggage).</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>C) Generator wizard — step by step</h3>
+          <ol>
+            <li><strong>Guest &amp; Tour</strong> — guest name, phone, email, destination, dates, pax, nights, link/select lead.</li>
+            <li><strong>Flight / Train</strong> — add sectors, search flights (same style as e-tickets), arrival/departure, suppliers.</li>
+            <li><strong>Hotel Details</strong> — city-wise hotels, check-in/out, rooms, meal plan; search hotel master.</li>
+            <li><strong>Itinerary</strong> — day-wise plan, titles/descriptions, images (search/import), AI suggest (if configured), sightseeing/suppliers.</li>
+            <li><strong>Terms &amp; Policies</strong> — pick/edit policy content from master.</li>
+            <li><strong>Pricing</strong> — cost sheet (flight, hotel, vehicle, addons), margins, selling price options / packages.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>D) After building the quote</h3>
+          <ul>
+            <li><strong>Save</strong> — stores quotation JSON + meta in <code>crm_quotations</code>.</li>
+            <li><strong>Preview / PDF</strong> — client-ready document.</li>
+            <li><strong>Supplier mail</strong> — email hotels/flight suppliers with attachments.</li>
+            <li><strong>Confirm Tour</strong> — marks booking confirmed; lead stage becomes Confirmed.</li>
+            <li>Editing an existing quote repairs/normalizes legacy formats when needed.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="info"><strong>Instruction:</strong> Prefill from Lead whenever possible so guest, destination, and dates stay consistent. Complete Flight → Hotel → Itinerary before Pricing for accurate costing.</div>
+    </section>
+
+    <!-- 4 BOOKINGS -->
+    <section class="mod" id="bookings">
+      <h2><span class="badge b-blue">4</span> Bookings</h2>
+      <p class="sub">Sidebar: All Bookings · Add New Booking · Confirm flow lives on Quotations list today</p>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>Menu structure</h3>
+          <ul>
+            <li><strong>All Bookings</strong> — <code>crm/bookings.php</code> (list of confirmed tours/bookings).</li>
+            <li><strong>Add New Booking</strong> — <code>crm/booking_add.php</code> (manual booking entry).</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>How booking confirmation works (live today)</h3>
+          <ol>
+            <li>Open Quotations list.</li>
+            <li>Click <strong>Book</strong> on a quotation.</li>
+            <li>Fill Confirm Tour modal details.</li>
+            <li>Save confirmation — quotation flagged <code>tour_confirmed</code>.</li>
+            <li>Linked lead stage moves to <strong>Confirmed</strong>.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="note"><strong>Instruction:</strong> Treat “Confirm Tour” on Quotations as the operational booking gate. Use Bookings menu for dedicated booking records/management when those screens are in use.</div>
+    </section>
+
+    <!-- 5 CUSTOMERS -->
+    <section class="mod" id="customers">
+      <h2><span class="badge b-purple">5</span> Customers</h2>
+      <p class="sub">Sidebar: All Customers · Add New Customer</p>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>Purpose</h3>
+          <ul>
+            <li>Store confirmed / repeat guest profiles separately from active leads.</li>
+            <li>Keep contact history for future tours and remarketing.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>How to use</h3>
+          <ol>
+            <li>Open <strong>CRM → Customers → All Customers</strong>.</li>
+            <li>Search existing customer by name/phone/email.</li>
+            <li>Click <strong>Add New Customer</strong> to create a profile.</li>
+            <li>Link future leads/quotations to known customers when repeating business.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="info"><strong>Instruction:</strong> After a lead is Confirmed, maintain the guest as a Customer for long-term relationship management.</div>
+    </section>
+
+    <!-- 6 SUPPLIERS -->
+    <section class="mod" id="suppliers">
+      <h2><span class="badge b-teal">6</span> Suppliers</h2>
+      <p class="sub">Page: <code>crm/suppliers.php</code> · Hotel / Flight / Ground / other vendor directory</p>
+
+      <div class="flow">
+        <span class="chip">Add Supplier</span><span class="arrow">→</span>
+        <span class="chip">Contacts + Services</span><span class="arrow">→</span>
+        <span class="chip">City / Places</span><span class="arrow">→</span>
+        <span class="chip ok">Use in Quotation / Mail</span>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>How to add a supplier</h3>
+          <ol>
+            <li>Open <strong>CRM → Suppliers</strong>.</li>
+            <li>Click Add Supplier.</li>
+            <li>Enter supplier name, website, city/country.</li>
+            <li>Add one or more contacts (name, email, mobile).</li>
+            <li>Select <strong>Supplier Of</strong> services (hotel, flight, vehicle, etc.).</li>
+            <li>Attach places/destinations they cover.</li>
+            <li>Set Active and Save.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>Features</h3>
+          <ul>
+            <li>List with filters by city / service type.</li>
+            <li>Edit / delete supplier.</li>
+            <li>Primary contact shown in list.</li>
+            <li>Used in quotation hotel/flight supplier pickers.</li>
+            <li>Used when sending supplier emails from quotation.</li>
+            <li>Supports legacy import of old suppliers.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note"><strong>Instruction:</strong> Keep emails accurate — supplier mail from quotations depends on these contacts.</div>
+    </section>
+
+    <!-- 7 USERS -->
+    <section class="mod" id="users">
+      <h2><span class="badge b-blue">7</span> Users</h2>
+      <p class="sub">Page: <code>crm/users.php</code> · CRM staff accounts for assignment</p>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>How to manage users</h3>
+          <ol>
+            <li>Open <strong>CRM → Users</strong>.</li>
+            <li>Add user: username, password, full name, user type.</li>
+            <li>Optional profile image upload.</li>
+            <li>Edit / soft-delete users as needed.</li>
+            <li>Active users appear in Lead <strong>Assign To</strong> list.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>Why it matters</h3>
+          <ul>
+            <li>Controls who owns each lead.</li>
+            <li>Shows assignee avatar/initials on Leads table.</li>
+            <li>Supports team workload visibility.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="info"><strong>Instruction:</strong> Create CRM users before assigning leads. Use clear usernames so the Leads “Assigned” column stays readable.</div>
+    </section>
+
+    <!-- 8 REPORTS -->
+    <section class="mod" id="reports">
+      <h2><span class="badge b-amber">8</span> Reports</h2>
+      <p class="sub">Sidebar: <code>crm/reports.php</code> · performance &amp; pipeline analytics</p>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>What reports are for</h3>
+          <ul>
+            <li>Lead volume by stage / source / assignee.</li>
+            <li>Quotation conversion (Quoted → Confirmed).</li>
+            <li>Revenue / booking performance over date ranges.</li>
+            <li>Team productivity and lost-reason analysis.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>How to use</h3>
+          <ol>
+            <li>Open <strong>CRM → Reports</strong>.</li>
+            <li>Select date range / financial year.</li>
+            <li>Filter by user, destination, or stage if available.</li>
+            <li>Export or share findings with management.</li>
+            <li>Feed insights back into Masters pricing and lead sources.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="note"><strong>Instruction:</strong> Review reports weekly. High “Lost” or stuck “Quoted” leads usually mean follow-up or pricing issues.</div>
+    </section>
+
+    <!-- 9 SETTINGS -->
+    <section class="mod" id="settings">
+      <h2><span class="badge b-red">9</span> Settings</h2>
+      <p class="sub">CRM → Settings · Email Configuration · Email Master · Import Legacy Data</p>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>Email Configuration</h3>
+          <ol>
+            <li>Open <strong>Settings → Email Configuration</strong> (<code>office_settings.php</code>).</li>
+            <li>Configure office/SMTP related options used for CRM mail.</li>
+            <li>Save and test sending if available.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>Email Master</h3>
+          <ol>
+            <li>Open <strong>Settings → Email Master</strong>.</li>
+            <li>Maintain sender identities (from name / from email).</li>
+            <li>These populate quotation supplier mail “From” options.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>Import Legacy Data</h3>
+          <ol>
+            <li>Open <strong>Settings → Import Legacy Data</strong>.</li>
+            <li>Run staged import: suppliers → customers/leads → quotations.</li>
+            <li>Use <strong>Repair quotations</strong> if older JSON formats need fixing.</li>
+            <li>Use <strong>Create leads from quotations</strong> if leads list is incomplete.</li>
+            <li>Cleanup temporary staging tables when finished.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>Settings checklist</h3>
+          <ul>
+            <li>SMTP / senders working before mailing quotes.</li>
+            <li>Legacy import only on staging/backup-aware runs.</li>
+            <li>After import, verify Leads + Quotation List + open one quote editor.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="info"><strong>Instruction:</strong> Configure Settings first on a new deployment, then Masters, then start creating live leads/quotations.</div>
+    </section>
+
+    <!-- CROSS MODULE -->
+    <section class="mod" id="cross">
+      <h2><span class="badge b-teal">∞</span> Full CRM lifecycle (put it together)</h2>
+      <div class="flow">
+        <span class="chip">Login</span><span class="arrow">→</span>
+        <span class="chip">Settings + Masters + Users + Suppliers</span><span class="arrow">→</span>
+        <span class="chip">Create / Approve Lead</span><span class="arrow">→</span>
+        <span class="chip">Quotation Wizard 1–6</span><span class="arrow">→</span>
+        <span class="chip">Save + Send PDF/Mail</span><span class="arrow">→</span>
+        <span class="chip ok">Confirm Tour / Booking</span><span class="arrow">→</span>
+        <span class="chip ok">Customer record</span><span class="arrow">→</span>
+        <span class="chip">Reports &amp; improve</span>
+      </div>
+      <div class="grid2" style="margin-top:14px;">
+        <div class="box">
+          <h3>Daily agent workflow</h3>
+          <ol>
+            <li>Check <strong>Pending</strong> intake forms.</li>
+            <li>Work <strong>New Lead</strong> queue — call, update notes, assign.</li>
+            <li>Create / update quotations for active leads.</li>
+            <li>Follow up Quoted leads; confirm wins.</li>
+            <li>Mark lost deals; clean Trash periodically.</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>Manager workflow</h3>
+          <ol>
+            <li>Maintain Masters quality (hotels, terms, sources).</li>
+            <li>Review Suppliers &amp; Users.</li>
+            <li>Monitor Confirmed vs Lost in Reports.</li>
+            <li>Audit Email Master senders.</li>
+            <li>Approve process changes / legacy imports carefully.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How Your Software Works — Client Workflow</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --grid: #eef2f7;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --teal: #0d9488;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, system-ui, sans-serif;
+      background: #f1f5f9;
+      color: var(--ink);
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; padding: 12px 18px;
+      background: rgba(255,255,255,.94);
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .toolbar h1 { margin: 0; font-size: 16px; }
+    .toolbar p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+    .toolbar button {
+      border: 1px solid #cbd5e1; background: #fff; border-radius: 8px;
+      padding: 8px 14px; font-weight: 600; cursor: pointer;
+    }
+    .stage { padding: 20px; overflow: auto; }
+    .canvas {
+      width: min(100%, 1600px);
+      margin: 0 auto;
+      background:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        var(--bg);
+      background-size: 32px 32px, 32px 32px, auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(15,23,42,.08);
+    }
+    svg { width: 100%; height: auto; display: block; }
+    @media print {
+      .toolbar { display: none; }
+      body, .stage { background: #fff; padding: 0; }
+      .canvas { box-shadow: none; border: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>
+      <h1>How Your Software Works — End-to-End Workflow</h1>
+      <p>Client-friendly view · from first visit to continuous improvement</p>
+    </div>
+    <button type="button" onclick="window.print()">Print / Export PDF</button>
+  </div>
+
+  <div class="stage">
+    <div class="canvas">
+      <svg viewBox="0 0 1600 980" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Client software workflow graph">
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+          </marker>
+          <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#0d9488"/>
+          </marker>
+          <filter id="s" x="-15%" y="-15%" width="130%" height="140%">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f172a" flood-opacity=".09"/>
+          </filter>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="55%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#0d9488"/>
+          </linearGradient>
+        </defs>
+
+        <text x="800" y="48" text-anchor="middle" font-size="30" font-weight="750" fill="url(#g)">How Your Software Works</text>
+        <text x="800" y="78" text-anchor="middle" font-size="15" fill="#64748b">A simple end-to-end journey from signup to continuous improvement</text>
+
+        <!-- Row 1: stages 1-4 -->
+        <g filter="url(#s)">
+          <rect x="40" y="120" width="330" height="220" rx="20" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/>
+          <circle cx="78" cy="158" r="18" fill="#2563eb"/>
+          <text x="78" y="164" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">1</text>
+          <text x="110" y="164" font-size="18" font-weight="700" fill="#1e3a8a">Discover &amp; Sign Up</text>
+          <text x="60" y="205" font-size="14" fill="#334155">• Visit website or mobile app</text>
+          <text x="60" y="230" font-size="14" fill="#334155">• Create account / login</text>
+          <text x="60" y="255" font-size="14" fill="#334155">• Verify via OTP or email</text>
+          <text x="60" y="280" font-size="14" fill="#334155">• Or continue with Google / Apple</text>
+          <text x="60" y="310" font-size="13" fill="#64748b">First contact with your product</text>
+        </g>
+
+        <g filter="url(#s)">
+          <rect x="430" y="120" width="330" height="220" rx="20" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.6"/>
+          <circle cx="468" cy="158" r="18" fill="#7c3aed"/>
+          <text x="468" y="164" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">2</text>
+          <text x="500" y="164" font-size="18" font-weight="700" fill="#5b21b6">Secure Access</text>
+          <text x="450" y="205" font-size="14" fill="#334155">• Identity is verified</text>
+          <text x="450" y="230" font-size="14" fill="#334155">• Secure session is created</text>
+          <text x="450" y="255" font-size="14" fill="#334155">• Permissions are assigned</text>
+          <!-- diamond -->
+          <path d="M595 290 L635 315 L595 340 L555 315 Z" fill="#fff" stroke="#7c3aed" stroke-width="1.8"/>
+          <text x="595" y="312" text-anchor="middle" font-size="10" font-weight="700" fill="#5b21b6">Admin</text>
+          <text x="595" y="324" text-anchor="middle" font-size="10" font-weight="700" fill="#5b21b6">or User?</text>
+        </g>
+
+        <g filter="url(#s)">
+          <rect x="820" y="120" width="330" height="220" rx="20" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/>
+          <circle cx="858" cy="158" r="18" fill="#2563eb"/>
+          <text x="858" y="164" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">3</text>
+          <text x="890" y="164" font-size="18" font-weight="700" fill="#1e3a8a">Personal Dashboard</text>
+          <text x="840" y="205" font-size="14" fill="#334155">• Home overview screen</text>
+          <text x="840" y="230" font-size="14" fill="#334155">• Easy navigation menu</text>
+          <text x="840" y="255" font-size="14" fill="#334155">• Profile &amp; settings</text>
+          <text x="840" y="280" font-size="14" fill="#334155">• Alerts &amp; notifications</text>
+          <text x="840" y="310" font-size="13" fill="#64748b">One place to manage everything</text>
+        </g>
+
+        <g filter="url(#s)">
+          <rect x="1210" y="120" width="350" height="220" rx="20" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.6"/>
+          <circle cx="1248" cy="158" r="18" fill="#0d9488"/>
+          <text x="1248" y="164" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">4</text>
+          <text x="1280" y="164" font-size="18" font-weight="700" fill="#115e59">Use Core Features</text>
+          <text x="1230" y="205" font-size="14" fill="#334155">• Manage users / products</text>
+          <text x="1230" y="230" font-size="14" fill="#334155">• Search &amp; filter records</text>
+          <text x="1230" y="255" font-size="14" fill="#334155">• Create, edit, delete data</text>
+          <text x="1230" y="280" font-size="14" fill="#334155">• Upload files &amp; view reports</text>
+          <text x="1230" y="310" font-size="13" fill="#64748b">Daily business work happens here</text>
+        </g>
+
+        <!-- arrows row 1 -->
+        <g stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#ab)">
+          <line x1="370" y1="230" x2="430" y2="230"/>
+          <line x1="760" y1="230" x2="820" y2="230"/>
+          <line x1="1150" y1="230" x2="1210" y2="230"/>
+        </g>
+
+        <!-- Row 2: stages 5-8 -->
+        <g filter="url(#s)">
+          <rect x="40" y="420" width="330" height="220" rx="20" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.6"/>
+          <circle cx="78" cy="458" r="18" fill="#7c3aed"/>
+          <text x="78" y="464" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">5</text>
+          <text x="110" y="464" font-size="18" font-weight="700" fill="#5b21b6">Smart Processing</text>
+          <text x="60" y="505" font-size="14" fill="#334155">• Checks entered information</text>
+          <text x="60" y="530" font-size="14" fill="#334155">• Applies your business rules</text>
+          <text x="60" y="555" font-size="14" fill="#334155">• Confirms user permissions</text>
+          <text x="60" y="580" font-size="14" fill="#334155">• Handles errors safely</text>
+          <text x="60" y="610" font-size="13" fill="#64748b">Keeps operations accurate &amp; secure</text>
+        </g>
+
+        <g filter="url(#s)">
+          <rect x="430" y="420" width="330" height="220" rx="20" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/>
+          <circle cx="468" cy="458" r="18" fill="#2563eb"/>
+          <text x="468" y="464" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">6</text>
+          <text x="500" y="464" font-size="18" font-weight="700" fill="#1e3a8a">Save &amp; Connect</text>
+          <text x="450" y="505" font-size="14" fill="#334155">• Data stored securely</text>
+          <text x="450" y="530" font-size="14" fill="#334155">• Payments (Stripe / Razorpay)</text>
+          <text x="450" y="555" font-size="14" fill="#334155">• Email, SMS &amp; push alerts</text>
+          <text x="450" y="580" font-size="14" fill="#334155">• Maps, files &amp; analytics</text>
+          <text x="450" y="610" font-size="13" fill="#64748b">System + trusted partners</text>
+        </g>
+
+        <g filter="url(#s)">
+          <rect x="820" y="420" width="330" height="220" rx="20" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.6"/>
+          <circle cx="858" cy="458" r="18" fill="#7c3aed"/>
+          <text x="858" y="464" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">7</text>
+          <text x="890" y="464" font-size="18" font-weight="700" fill="#5b21b6">Quality Check &amp; Launch</text>
+          <text x="840" y="505" font-size="14" fill="#334155">• Testing before release</text>
+          <text x="840" y="530" font-size="14" fill="#334155">• Review in staging</text>
+          <text x="840" y="555" font-size="14" fill="#334155">• Deploy to live production</text>
+          <text x="840" y="580" font-size="14" fill="#334155">• Safe rollout process</text>
+          <text x="840" y="610" font-size="13" fill="#64748b">Only approved updates go live</text>
+        </g>
+
+        <g filter="url(#s)">
+          <rect x="1210" y="420" width="350" height="220" rx="20" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.6"/>
+          <circle cx="1248" cy="458" r="18" fill="#0d9488"/>
+          <text x="1248" y="464" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">8</text>
+          <text x="1280" y="464" font-size="18" font-weight="700" fill="#115e59">Monitor &amp; Improve</text>
+          <text x="1230" y="505" font-size="14" fill="#334155">• Track performance &amp; crashes</text>
+          <text x="1230" y="530" font-size="14" fill="#334155">• Security &amp; backup checks</text>
+          <text x="1230" y="555" font-size="14" fill="#334155">• Fix bugs &amp; release updates</text>
+          <text x="1230" y="580" font-size="14" fill="#334155">• Collect user feedback</text>
+          <text x="1230" y="610" font-size="13" fill="#64748b">Software keeps getting better</text>
+        </g>
+
+        <!-- connectors row2 + down from 4 -->
+        <g stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#ab)">
+          <path d="M1385 340 V 390 H 205 V 420"/>
+          <line x1="370" y1="530" x2="430" y2="530"/>
+          <line x1="760" y1="530" x2="820" y2="530"/>
+          <line x1="1150" y1="530" x2="1210" y2="530"/>
+        </g>
+        <text x="760" y="380" text-anchor="middle" font-size="12" fill="#64748b">When users take action, the system processes it</text>
+
+        <!-- Feedback loop -->
+        <path d="M1385 640 C 1480 720 900 760 1385 230" fill="none" stroke="#0d9488" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#at)"/>
+        <rect x="1040" y="700" width="190" height="30" rx="15" fill="#fff" stroke="#0d9488"/>
+        <text x="1135" y="720" text-anchor="middle" font-size="13" font-weight="700" fill="#0f766e">Customer Feedback</text>
+
+        <!-- Bottom summary strip -->
+        <rect x="40" y="780" width="1520" height="160" rx="18" fill="#fff" stroke="#e2e8f0"/>
+        <text x="800" y="820" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">In one sentence</text>
+        <text x="800" y="855" text-anchor="middle" font-size="15" fill="#334155">Users enter securely → work from a dashboard → the system processes &amp; saves data → trusted services connect →</text>
+        <text x="800" y="880" text-anchor="middle" font-size="15" fill="#334155">updates are tested &amp; launched → performance is monitored → feedback improves the product.</text>
+
+        <g font-size="12" fill="#64748b">
+          <rect x="180" y="905" width="14" height="14" rx="3" fill="#eff6ff" stroke="#2563eb"/>
+          <text x="202" y="917">User experience</text>
+          <rect x="360" y="905" width="14" height="14" rx="3" fill="#f5f3ff" stroke="#7c3aed"/>
+          <text x="382" y="917">Security &amp; quality</text>
+          <rect x="560" y="905" width="14" height="14" rx="3" fill="#f0fdfa" stroke="#0d9488"/>
+          <text x="582" y="917">Business value &amp; growth</text>
+          <line x1="820" y1="912" x2="870" y2="912" stroke="#2563eb" stroke-width="2.5" marker-end="url(#ab)"/>
+          <text x="884" y="917">Forward flow</text>
+          <path d="M1040 912 C1060 900 1080 924 1100 912" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="1114" y="917">Improvement loop</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

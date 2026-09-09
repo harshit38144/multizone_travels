@@ -4,11 +4,35 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 include_once('connection.php'); // make sure connection exists
+require_once __DIR__ . '/../includes/login_lockout.php';
 
 if (isset($_POST['adminlogin'])) {
 
-    $name = mysqli_real_escape_string($conn, $_POST['name']);
-    $pass = mysqli_real_escape_string($conn, $_POST['pass']);
+    $nameRaw = trim((string) ($_POST['name'] ?? ''));
+    $passRaw = (string) ($_POST['pass'] ?? '');
+    $name = mysqli_real_escape_string($conn, $nameRaw);
+    $pass = mysqli_real_escape_string($conn, $passRaw);
+
+    // Hybrid lockout check (IP + username) before hitting credentials query
+    $lockStatus = adminLoginGetLockStatus($conn, $nameRaw);
+    if (!empty($lockStatus['locked'])) {
+        $remaining = (int) ($lockStatus['remaining'] ?? 0);
+        $_SESSION['msg'] = (string) ($lockStatus['message'] ?? 'Too many failed login attempts. Please wait and try again.');
+        $_SESSION['msg_type'] = 'error';
+        $_SESSION['login_lockout_until'] = time() + max(1, $remaining);
+        $_SESSION['login_lockout_seconds'] = max(1, $remaining);
+
+        $ip = adminLoginClientIp();
+        $logMsg = "Blocked Login Attempt (lockout {$remaining}s): username ({$name}) ip ({$ip})";
+        mysqli_query(
+            $conn,
+            "INSERT INTO admin_log_history (admin_id, message)
+             VALUES (0,'" . mysqli_real_escape_string($conn, $logMsg) . "')"
+        );
+
+        header('Location: index.php');
+        exit;
+    }
 
     $query = "SELECT * FROM admin WHERE name='$name' AND password='$pass'";
     $run = mysqli_query($conn, $query);
@@ -21,6 +45,9 @@ if (isset($_POST['adminlogin'])) {
     if (mysqli_num_rows($run) > 0) {
 
         $data = mysqli_fetch_assoc($run);
+
+        adminLoginClearFailures($conn, $nameRaw);
+        unset($_SESSION['login_lockout_until'], $_SESSION['login_lockout_seconds']);
 
         $_SESSION['id'] = $data['id'];
         $_SESSION['name'] = $data['name'];
@@ -42,17 +69,29 @@ if (isset($_POST['adminlogin'])) {
 
     } else {
 
+        $failStatus = adminLoginRecordFailure($conn, $nameRaw);
+        $remaining = (int) ($failStatus['remaining'] ?? 0);
+        if (!empty($failStatus['locked']) && $remaining > 0) {
+            $_SESSION['login_lockout_until'] = time() + $remaining;
+            $_SESSION['login_lockout_seconds'] = $remaining;
+        } else {
+            unset($_SESSION['login_lockout_until'], $_SESSION['login_lockout_seconds']);
+        }
+
         // FAILED LOGIN LOG
-        $msg = "Failed Login Attempt: username ($name)";
+        $ip = adminLoginClientIp();
+        $failCount = (int) ($failStatus['fail_count'] ?? 0);
+        $msg = "Failed Login Attempt: username ($name) ip ($ip) fails ($failCount)";
 
         mysqli_query(
             $conn,
             "INSERT INTO admin_log_history (admin_id, message)
-             VALUES (0,'$msg')"
+             VALUES (0,'" . mysqli_real_escape_string($conn, $msg) . "')"
         );
 
-        $_SESSION['msg'] = 'Invalid Username or Password!';
+        $_SESSION['msg'] = (string) ($failStatus['message'] ?? 'Invalid Username or Password!');
         $_SESSION['msg_type'] = 'error';
+        $_SESSION['login_last_user'] = $nameRaw;
         header("Location: index.php");
         exit;
     }

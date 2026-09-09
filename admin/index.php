@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'connection.php';
+require_once __DIR__ . '/includes/login_lockout.php';
 $msg = "";
 $msg_type = "error";
 if (isset($_SESSION['msg'])) {
@@ -8,6 +9,14 @@ if (isset($_SESSION['msg'])) {
   $msg_type = isset($_SESSION['msg_type']) ? $_SESSION['msg_type'] : (strpos($msg, 'sent') !== false || strpos($msg, 'reset') !== false ? 'success' : 'error');
   unset($_SESSION['msg']);
   unset($_SESSION['msg_type']);
+}
+
+$lockoutRemaining = 0;
+if (!empty($_SESSION['login_lockout_until'])) {
+  $lockoutRemaining = max(0, (int) $_SESSION['login_lockout_until'] - time());
+  if ($lockoutRemaining <= 0) {
+    unset($_SESSION['login_lockout_until'], $_SESSION['login_lockout_seconds']);
+  }
 }
 ?>
 <!DOCTYPE html>
@@ -284,6 +293,33 @@ if (isset($_SESSION['msg'])) {
     }
     .btn-login:active { transform:translateY(0); }
 
+    .login-lockout-banner {
+      display: none;
+      margin: 0 0 18px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(245,158,11,.35);
+      background: rgba(245,158,11,.12);
+      color: #fde68a;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .login-lockout-banner.is-visible { display: block; }
+    .login-lockout-banner strong { color: #fff; }
+    .login-lockout-banner .lock-count {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      color: #fbbf24;
+    }
+    #loginForm.is-locked .btn-login {
+      opacity: .55;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    #loginForm.is-locked input {
+      opacity: .75;
+    }
+
     /* divider */
     .or-divider {
       display:flex; align-items:center; gap:12px;
@@ -523,12 +559,17 @@ if (isset($_SESSION['msg'])) {
 
       <!-- <div class="or-divider"><span>or sign in with credentials</span></div> -->
 
-      <form id="loginForm" action="action.php" method="post">
+      <div id="loginLockoutBanner" class="login-lockout-banner<?= $lockoutRemaining > 0 ? ' is-visible' : '' ?>" role="alert" aria-live="polite">
+        <i class="fas fa-hourglass-half mr-1"></i>
+        Too many failed attempts. Try again in <span class="lock-count" id="lockCountdown"><?= (int) $lockoutRemaining ?></span>s.
+      </div>
+
+      <form id="loginForm" action="action.php" method="post" class="<?= $lockoutRemaining > 0 ? 'is-locked' : '' ?>">
         <div class="field">
           <label>Username / Email</label>
           <div class="field-wrap">
             <i class="far fa-envelope f-icon"></i>
-            <input type="text" name="name" id="username" placeholder="name@example.com" required autocomplete="username">
+            <input type="text" name="name" id="username" placeholder="name@example.com" required autocomplete="username" <?= $lockoutRemaining > 0 ? 'readonly' : '' ?>>
           </div>
         </div>
 
@@ -536,7 +577,7 @@ if (isset($_SESSION['msg'])) {
           <label>Password</label>
           <div class="field-wrap">
             <i class="fas fa-lock f-icon"></i>
-            <input type="password" name="pass" id="password" placeholder="Enter your password" required autocomplete="current-password">
+            <input type="password" name="pass" id="password" placeholder="Enter your password" required autocomplete="current-password" <?= $lockoutRemaining > 0 ? 'readonly' : '' ?>>
             <i class="far fa-eye toggle-pw" id="togglePassword"></i>
           </div>
           <div class="row-fp">
@@ -544,8 +585,8 @@ if (isset($_SESSION['msg'])) {
           </div>
         </div>
 
-        <button type="submit" name="adminlogin" class="btn-login" id="btnLoginSubmit">
-          <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+        <button type="submit" name="adminlogin" class="btn-login" id="btnLoginSubmit" <?= $lockoutRemaining > 0 ? 'disabled' : '' ?>>
+          <i class="fas fa-sign-in-alt mr-2"></i> <span id="btnLoginLabel">Sign In</span>
         </button>
       </form>
 
@@ -665,11 +706,50 @@ if (isset($_SESSION['msg'])) {
     });
 
     /* ── Login submit loading ── */
-    document.getElementById('loginForm').addEventListener('submit', function(){
+    document.getElementById('loginForm').addEventListener('submit', function(e){
+      if (this.classList.contains('is-locked')) {
+        e.preventDefault();
+        return;
+      }
       const btn = document.getElementById('btnLoginSubmit');
       btn.style.opacity = '.75';
       btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Signing in...';
     });
+
+    /* ── Hybrid lockout countdown ── */
+    (function(){
+      var remaining = <?= (int) $lockoutRemaining ?>;
+      if (remaining <= 0) return;
+
+      var form = document.getElementById('loginForm');
+      var banner = document.getElementById('loginLockoutBanner');
+      var countEl = document.getElementById('lockCountdown');
+      var btn = document.getElementById('btnLoginSubmit');
+      var userInp = document.getElementById('username');
+      var passInp = document.getElementById('password');
+
+      function unlockForm(){
+        form.classList.remove('is-locked');
+        banner.classList.remove('is-visible');
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> <span id="btnLoginLabel">Sign In</span>';
+        userInp.readOnly = false;
+        passInp.readOnly = false;
+      }
+
+      function tick(){
+        if (remaining <= 0) {
+          unlockForm();
+          return;
+        }
+        countEl.textContent = String(remaining);
+        btn.innerHTML = '<i class="fas fa-hourglass-half mr-2"></i> Wait ' + remaining + 's';
+        remaining -= 1;
+        setTimeout(tick, 1000);
+      }
+      tick();
+    })();
 
     document.getElementById('forgotPasswordForm').addEventListener('submit', function(){
       const btn = document.getElementById('btnForgotSubmit');
@@ -683,7 +763,7 @@ if (isset($_SESSION['msg'])) {
       Swal.fire({
         icon: '<?php echo $msg_type; ?>',
         title: '<?php echo $msg_type === "error" ? "Access Denied" : "Notification"; ?>',
-        text: '<?php echo addslashes($msg); ?>',
+        text: <?= json_encode($msg, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
         background: '#0f1524',
         color: '#e2e8f0',
         confirmButtonColor: '#6366f1',
