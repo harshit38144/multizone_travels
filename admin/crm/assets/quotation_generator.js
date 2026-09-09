@@ -71,10 +71,17 @@
             $head.removeClass('collapsed').attr('aria-expanded', 'true');
             $body.stop(true, true).slideDown(150, function () {
                 onAccordionBodyShown($body);
+                if (typeof syncUnlockedWizardSections === 'function') {
+                    syncUnlockedWizardSections();
+                }
             });
         } else {
             $head.addClass('collapsed').attr('aria-expanded', 'false');
-            $body.stop(true, true).slideUp(150);
+            $body.stop(true, true).slideUp(150, function () {
+                if (typeof syncUnlockedWizardSections === 'function') {
+                    syncUnlockedWizardSections();
+                }
+            });
         }
     }
 
@@ -117,6 +124,13 @@
             if ($(e.target).closest('[data-accordion-ignore]').length) {
                 return;
             }
+            toggleAccordionHead($(this));
+        }
+    });
+
+    $(document).on('keydown', '.q-terms-item-head', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
             toggleAccordionHead($(this));
         }
     });
@@ -417,18 +431,29 @@
         }
         var $selection = data.$selection;
         var $dropdown = data.$dropdown;
-        if (!$selection || !$dropdown) {
+        if (!$selection) {
             return;
         }
-        var $search = $selection.find('.q-supplier-inline-search-field');
-        var $host = $dropdown.find('.select2-search--dropdown');
-        if ($search.length && $host.length) {
-            $host.append($search);
+        var $search = $selection.find('.select2-search__field, .q-supplier-inline-search-field');
+        if ($search.length) {
+            if ($dropdown && $dropdown.length) {
+                var $host = $dropdown.find('.select2-search--dropdown');
+                if ($host.length) {
+                    $host.append($search);
+                } else {
+                    $search.remove();
+                }
+            } else {
+                $search.remove();
+            }
+        }
+        if ($dropdown && $dropdown.length) {
+            $dropdown.find('.q-supplier-inline-search-field').removeClass('q-supplier-inline-search-field');
+            $dropdown.removeClass('q-supplier-inline-search');
         }
         $search.removeClass('q-supplier-inline-search-field');
         $selection.removeClass('q-supplier-searching');
         $selection.find('.select2-selection__rendered').removeClass('q-supplier-search-host');
-        $dropdown.removeClass('q-supplier-inline-search');
     }
 
     function qMountSupplierInlineSearch($sel) {
@@ -475,7 +500,7 @@
                 $sel.select2('destroy');
             } catch (e) { /* ignore */ }
         }
-        $sel.off('select2:opening.qSupplierPrev select2:open.qCreateFooter select2:open.qInlineSearch select2:closing.qInlineSearch');
+        $sel.off('select2:opening.qSupplierPrev select2:open.qCreateFooter select2:open.qInlineSearch select2:closing.qInlineSearch select2:close.qInlineSearch select2:select.qCloseOnPick');
     }
 
     function qTriggerSupplierCreateFromSelect($sel) {
@@ -587,8 +612,38 @@
                 qMountSupplierInlineSearch($open);
             }, 0);
         });
-        $sel.off('select2:closing.qInlineSearch').on('select2:closing.qInlineSearch', function () {
-            qRestoreSupplierSearchField($(this));
+        $sel.off('select2:closing.qInlineSearch select2:close.qInlineSearch')
+            .on('select2:closing.qInlineSearch select2:close.qInlineSearch', function () {
+                qRestoreSupplierSearchField($(this));
+            });
+        $sel.off('select2:select.qCloseOnPick').on('select2:select.qCloseOnPick', function (e) {
+            var $this = $(this);
+            var pickedId = '';
+            if (e && e.params && e.params.data) {
+                pickedId = String(e.params.data.id || '');
+            } else {
+                pickedId = String($this.val() || '');
+            }
+            qRestoreSupplierSearchField($this);
+            // Always close after a real pick (Create is handled by change handler).
+            window.setTimeout(function () {
+                qRestoreSupplierSearchField($this);
+                try {
+                    if ($this.data('select2')) {
+                        $this.select2('close');
+                    }
+                } catch (err) { /* ignore */ }
+                // Ensure selection label is visible (inline search can leave placeholder overlay).
+                var $selection = $this.data('select2') && $this.data('select2').$selection;
+                if ($selection) {
+                    $selection.removeClass('q-supplier-searching');
+                    $selection.find('.select2-selection__rendered').removeClass('q-supplier-search-host');
+                    $selection.find('.select2-search__field, .q-supplier-inline-search-field').remove();
+                }
+                if (pickedId && pickedId !== '__create__') {
+                    $this.trigger('change');
+                }
+            }, 0);
         });
         $sel.off('select2:open.qCreateFooter').on('select2:open.qCreateFooter', function () {
             var $open = $(this);
@@ -605,7 +660,7 @@
             qInitSupplierSelect2($(this), { placeholder: 'Select' });
         });
         $scope.find('.h-supplier').each(function () {
-            qInitSupplierSelect2($(this), { placeholder: 'Select supplier' });
+            qInitSupplierSelect2($(this), { placeholder: 'Select' });
         });
         $scope.find('.q-itin-supplier').each(function () {
             qInitSupplierSelect2($(this), { placeholder: 'Select supplier' });
@@ -998,7 +1053,8 @@
         var list = (typeof Q_HOTEL_SUPPLIERS !== 'undefined' && Array.isArray(Q_HOTEL_SUPPLIERS))
             ? Q_HOTEL_SUPPLIERS
             : [];
-        var html = '<option value="">Select supplier</option>';
+        var emptyLabel = options.emptyLabel || 'Select supplier';
+        var html = '<option value="">' + emptyLabel + '</option>';
         var found = false;
         list.forEach(function (s) {
             if (!s) {
@@ -1152,11 +1208,11 @@
                 curName = '';
             }
             qDestroySupplierSelect2($sel);
-            $sel.html(hotelSupplierOptionsHtml(curVal, curName, { allowCreate: true }));
+            $sel.html(hotelSupplierOptionsHtml(curVal, curName, { allowCreate: true, emptyLabel: 'Select' }));
             if (preferSelect && preferSelect.$el && preferSelect.$el[0] === $sel[0] && preferSelect.id) {
                 $sel.val(String(preferSelect.id));
             }
-            qInitSupplierSelect2($sel, { placeholder: 'Select supplier' });
+            qInitSupplierSelect2($sel, { placeholder: 'Select' });
             $sel.data('prevSupplierVal', $sel.val() || '');
         });
     }
@@ -1205,55 +1261,105 @@
         };
     }
 
+    function hotelFieldWrap(opts) {
+        opts = opts || {};
+        var extraClass = opts.extraClass || '';
+        var ico = opts.ico;
+        var caret = opts.caret !== false;
+        var control = opts.control || '';
+        var stepper = !!opts.stepper;
+        var icoHtml = ico
+            ? ('<i class="q-hotel-ico fas ' + ico + '" aria-hidden="true"></i>')
+            : '';
+        var stepperHtml = stepper
+            ? ('<div class="q-hotel-stepper">' +
+                '<button type="button" class="q-hotel-step-btn" data-hotel-step="-1" title="Decrease" aria-label="Decrease"><i class="fas fa-minus"></i></button>' +
+                '<button type="button" class="q-hotel-step-btn" data-hotel-step="1" title="Increase" aria-label="Increase"><i class="fas fa-plus"></i></button>' +
+                '</div>')
+            : '';
+        return '' +
+            '<div class="q-hotel-field q-hotel-combo ' + extraClass + (ico ? '' : ' q-hotel-field-no-ico') + (stepper ? ' q-hotel-field-stepper' : '') + '">' +
+            '<div class="q-hotel-input-wrap">' +
+            icoHtml +
+            control +
+            stepperHtml +
+            (caret ? '<i class="q-hotel-caret fas fa-chevron-down" aria-hidden="true"></i>' : '') +
+            '</div>' +
+            (opts.menuClass ? ('<div class="q-hotel-menu ' + opts.menuClass + '" style="display:none;"></div>') : '') +
+            '</div>';
+    }
+
     function hotelRowHtml(data) {
         var d = normalizeHotelData(data);
         return '' +
-            '<div class="q-repeat-row q-hotel-row">' +
+            '<div class="q-hotel-row">' +
             '<input type="hidden" class="h-city-id" value="' + esc(d.city_id) + '">' +
             '<input type="hidden" class="h-hotel-id" value="' + esc(d.hotel_id) + '">' +
-            '<button type="button" class="btn btn-sm btn-outline-danger q-remove" data-remove=".q-hotel-row"><i class="fas fa-times"></i></button>' +
-            '<div class="q-hotel-fields mb-2">' +
-            '<div class="q-hotel-field q-hotel-combo">' +
-            '<label class="q-label">City</label>' +
-            '<input type="text" class="form-control form-control-sm h-city" value="' + esc(d.city) + '" autocomplete="off" placeholder="Type city">' +
-            '<div class="q-hotel-menu q-hotel-city-menu" style="display:none;"></div></div>' +
-            '<div class="q-hotel-field q-hotel-combo q-hotel-field-hotel">' +
-            '<label class="q-label">Hotel</label>' +
-            '<input type="text" class="form-control form-control-sm h-name" value="' + esc(d.name) + '" autocomplete="off" placeholder="Search or type hotel name">' +
-            '<div class="q-hotel-menu q-hotel-name-menu" style="display:none;"></div></div>' +
-            '<div class="q-hotel-field q-hotel-combo q-hotel-field-wide">' +
-            '<label class="q-label">Room Type</label>' +
-            '<input type="text" class="form-control form-control-sm h-room" value="' + esc(d.room_type) + '" autocomplete="off" placeholder="e.g. Deluxe Room">' +
-            '<div class="q-hotel-menu q-hotel-room-menu" style="display:none;"></div></div>' +
-            '<div class="q-hotel-field q-hotel-field-narrow">' +
-            '<label class="q-label">Rooms</label>' +
-            '<input type="number" min="0" class="form-control form-control-sm h-rooms" value="' + esc(d.rooms) + '"></div>' +
-            '<div class="q-hotel-field q-hotel-combo q-hotel-field-narrow q-hotel-field-meal">' +
-            '<label class="q-label">Meal</label>' +
-            '<input type="text" class="form-control form-control-sm h-meal" value="' + esc(d.meal_plan) + '" autocomplete="off" placeholder="CP / MAP / AP">' +
-            '<div class="q-hotel-menu q-hotel-meal-menu" style="display:none;"></div></div>' +
-            '<div class="q-hotel-field q-hotel-field-narrow">' +
-            '<label class="q-label">Nts</label>' +
-            '<input type="number" min="0" class="form-control form-control-sm h-nights" value="' + esc(d.nights) + '"></div>' +
-            '<div class="q-hotel-field">' +
-            '<label class="q-label">Check In</label>' +
-            '<input type="date" class="form-control form-control-sm h-checkin" value="' + esc(d.checkin) + '"></div>' +
-            '<div class="q-hotel-field">' +
-            '<label class="q-label">Check Out</label>' +
-            '<input type="date" class="form-control form-control-sm h-checkout" value="' + esc(d.checkout) + '"></div>' +
-            '</div>' +
-            '<div class="row q-row-tight align-items-end q-hotel-rate-row">' +
-            '<div class="col-md-2">' +
-            '<div class="form-group mb-0">' +
-            '<label class="q-label">Rate</label>' +
-            '<input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm h-rate" value="' + esc(d.rate) + '">' +
-            '</div></div>' +
-            '<div class="col-md-4 col-lg-3">' +
-            '<div class="form-group mb-0">' +
-            '<label class="q-label">Supplier</label>' +
+            '<div class="q-hotel-fields">' +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-city',
+                ico: 'fa-map-marker-alt',
+                menuClass: 'q-hotel-city-menu',
+                control: '<input type="text" class="form-control h-city" value="' + esc(d.city) + '" autocomplete="off" placeholder="City">'
+            }) +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-hotel',
+                ico: 'fa-hotel',
+                menuClass: 'q-hotel-name-menu',
+                control: '<input type="text" class="form-control h-name" value="' + esc(d.name) + '" autocomplete="off" placeholder="Hotel">'
+            }) +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-room',
+                ico: 'fa-bed',
+                menuClass: 'q-hotel-room-menu',
+                control: '<input type="text" class="form-control h-room" value="' + esc(d.room_type) + '" autocomplete="off" placeholder="Room Type">'
+            }) +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-rooms',
+                ico: false,
+                caret: false,
+                stepper: true,
+                control: '<input type="number" min="0" class="form-control h-rooms" value="' + esc(d.rooms !== '' && d.rooms != null ? d.rooms : '0') + '" placeholder="0">'
+            }) +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-meal',
+                ico: 'fa-utensils',
+                menuClass: 'q-hotel-meal-menu',
+                control: '<input type="text" class="form-control h-meal" value="' + esc(d.meal_plan) + '" autocomplete="off" placeholder="Meal">'
+            }) +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-nts',
+                ico: false,
+                caret: false,
+                stepper: true,
+                control: '<input type="number" min="0" class="form-control h-nights" value="' + esc(d.nights !== '' && d.nights != null ? d.nights : '0') + '" placeholder="0">'
+            }) +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-date',
+                ico: false,
+                caret: false,
+                control: '<input type="date" class="form-control h-checkin" value="' + esc(d.checkin) + '">'
+            }) +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-date',
+                ico: false,
+                caret: false,
+                control: '<input type="date" class="form-control h-checkout" value="' + esc(d.checkout) + '">'
+            }) +
+            hotelFieldWrap({
+                extraClass: 'q-hotel-field-rate',
+                ico: 'fa-rupee-sign',
+                caret: false,
+                control: '<input type="number" min="0" step="1" inputmode="numeric" class="form-control h-rate" value="' + esc(d.rate) + '" placeholder="0">'
+            }) +
+            // Same Select2 supplier control pattern as Flight / Train details.
+            '<div class="q-hotel-field q-hotel-field-supplier">' +
             '<select class="form-control form-control-sm h-supplier">' +
-            hotelSupplierOptionsHtml(d.supplier_id, d.supplier, { allowCreate: true }) +
-            '</select></div></div>' +
+            hotelSupplierOptionsHtml(d.supplier_id, d.supplier, { allowCreate: true, emptyLabel: 'Select' }) +
+            '</select></div>' +
+            '<div class="q-hotel-field q-hotel-field-action">' +
+            '<button type="button" class="btn q-hotel-row-remove q-remove" data-remove=".q-hotel-row" title="Remove hotel" aria-label="Remove hotel"><i class="fas fa-trash-alt"></i></button>' +
+            '</div>' +
             '</div></div>';
     }
 
@@ -1263,12 +1369,7 @@
         var label = cat.label || defaultHotelCategoryLabel(0);
         return '' +
             '<div class="q-hotel-category" data-cat-id="' + esc(id) + '">' +
-            '<div class="q-hotel-category-hd">' +
             '<input type="hidden" class="q-hotel-cat-label" value="' + esc(label) + '">' +
-            '<div class="q-hotel-category-actions">' +
-            '<button type="button" class="btn btn-q-primary btn-sm q-add-hotel-in-cat"><i class="fas fa-plus mr-1"></i>Add Hotel</button>' +
-            '<button type="button" class="btn btn-outline-danger btn-sm q-remove-hotel-cat" title="Remove option"><i class="fas fa-trash-alt"></i></button>' +
-            '</div></div>' +
             '<div class="q-hotel-rows"></div>' +
             '</div>';
     }
@@ -1317,9 +1418,7 @@
             return String($(this).attr('data-cat-id') || '') === String(qActiveHotelCategoryId || '');
         }).addClass('is-active');
         var canRemove = $panels.length > 1;
-        $panels.each(function () {
-            $(this).find('.q-remove-hotel-cat').prop('disabled', !canRemove).toggle(canRemove);
-        });
+        $('#qRemoveHotelCategory').prop('disabled', !canRemove).toggle(canRemove);
     }
 
     function setActiveHotelCategory(catId) {
@@ -1339,7 +1438,7 @@
             var supplierId = parseInt($r.find('.h-supplier').val(), 10) || 0;
             var $hSup = $r.find('.h-supplier');
             var supplierName = $.trim($hSup.find('option:selected').attr('data-name') || $hSup.find('option:selected').text() || '');
-            if (!supplierId || supplierName.indexOf('Create new') === 0 || supplierName === 'Select supplier') {
+            if (!supplierId || supplierName.indexOf('Create new') === 0 || supplierName === 'Select supplier' || supplierName === 'Select') {
                 supplierName = '';
                 supplierId = 0;
             }
@@ -1458,7 +1557,7 @@
                 if (typeof initHotelRow === 'function') {
                     initHotelRow($row);
                 }
-                qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select supplier' });
+                qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select' });
             });
             $wrap.append($panel);
         });
@@ -6401,7 +6500,10 @@
             // except keep Next on every unlocked section before Pricing.
             var $nextBar = $(this).find('.q-section-next-bar');
             if ($nextBar.length) {
-                $nextBar.toggle(unlocked && step < Q_WIZARD_TOTAL);
+                var $body = $('#qSectionBody' + step);
+                var bodyOpen = $body.length ? $body.is(':visible') : false;
+                // Next lives inside the open section body only (no stack of buttons when collapsed).
+                $nextBar.toggle(unlocked && step < Q_WIZARD_TOTAL && bodyOpen);
             }
         });
     }
@@ -6922,7 +7024,7 @@
             var $row = $(hotelRowHtml(data || {}));
             $panel.find('.q-hotel-rows').append($row);
             initHotelRow($row);
-            qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select supplier' });
+            qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select' });
             recalcCosts();
             saveFormDraftToStorage();
         };
@@ -7095,6 +7197,47 @@
             addHotelCategory();
             saveFormDraftToStorage();
         });
+        $('#qAddHotelBtn').on('click', function () {
+            var $panel = getHotelCategoryPanels().filter('.is-active').first();
+            if (!$panel.length) {
+                $panel = getHotelCategoryPanels().first();
+            }
+            if (!$panel.length) {
+                addHotelCategory();
+                $panel = getHotelCategoryPanels().first();
+            }
+            qActiveHotelCategoryId = String($panel.attr('data-cat-id') || '');
+            refreshHotelCategoryTabs();
+            var $row = $(hotelRowHtml({}));
+            $panel.find('.q-hotel-rows').append($row);
+            initHotelRow($row);
+            qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select' });
+            renderPricingSheets();
+            saveFormDraftToStorage();
+        });
+
+        $(document).on('click', '#qHotelCategories .q-hotel-step-btn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var step = parseInt($(this).attr('data-hotel-step'), 10) || 0;
+            var $wrap = $(this).closest('.q-hotel-input-wrap');
+            var $input = $wrap.find('input.h-rooms, input.h-nights').first();
+            if (!$input.length) {
+                return;
+            }
+            var min = parseInt($input.attr('min'), 10);
+            if (isNaN(min)) {
+                min = 0;
+            }
+            var cur = parseInt($input.val(), 10);
+            if (isNaN(cur)) {
+                cur = 0;
+            }
+            var next = Math.max(min, cur + step);
+            $input.val(String(next)).trigger('change').trigger('input');
+            renderPricingSheets();
+            saveFormDraftToStorage();
+        });
         $(document).on('click', '.q-hotel-cat-tab', function () {
             setActiveHotelCategory($(this).attr('data-cat-id'));
             saveFormDraftToStorage();
@@ -7104,25 +7247,17 @@
             renderPricingSheets();
             saveFormDraftToStorage();
         });
-        $(document).on('click', '.q-add-hotel-in-cat', function () {
-            var $panel = $(this).closest('.q-hotel-category');
-            qActiveHotelCategoryId = String($panel.attr('data-cat-id') || '');
-            refreshHotelCategoryTabs();
-            var $row = $(hotelRowHtml({}));
-            $panel.find('.q-hotel-rows').append($row);
-            initHotelRow($row);
-            qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select supplier' });
-            renderPricingSheets();
-            saveFormDraftToStorage();
-        });
-        $(document).on('click', '.q-remove-hotel-cat', function () {
+        $('#qRemoveHotelCategory').on('click', function () {
             if (getHotelCategoryPanels().length <= 1) {
                 return;
             }
             if (!window.confirm('Remove this hotel option and its hotels?')) {
                 return;
             }
-            var $panel = $(this).closest('.q-hotel-category');
+            var $panel = getHotelCategoryPanels().filter('.is-active').first();
+            if (!$panel.length) {
+                return;
+            }
             var removedId = String($panel.attr('data-cat-id') || '');
             snapshotPricingSheets();
             $panel.remove();

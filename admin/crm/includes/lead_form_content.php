@@ -2784,13 +2784,38 @@ if (empty($leadSourceOptions)) {
                     }
 
                     var debounceTimer = null;
+                    var suppressSuggestUntil = 0;
+
+                    function canShowSuggest() {
+                        return Date.now() >= suppressSuggestUntil;
+                    }
 
                     $input.off('.leadDepCity').on('focus.leadDepCity click.leadDepCity', function () {
-                        fetchSuggestions($input, $menu, jQuery.trim(String($input.val() || '')));
+                        if (!canShowSuggest()) {
+                            return;
+                        }
+                        var query = jQuery.trim(String($input.val() || ''));
+                        // Only open suggestions on click/focus when the field is empty.
+                        if (query !== '') {
+                            hideMenu($menu);
+                            return;
+                        }
+                        fetchSuggestions($input, $menu, query);
                     }).on('input.leadDepCity', function () {
+                        if (!canShowSuggest()) {
+                            return;
+                        }
                         var query = jQuery.trim(String($input.val() || ''));
                         window.clearTimeout(debounceTimer);
+                        // Cleared field → show popular list; typing → search; otherwise hide.
+                        if (query === '') {
+                            fetchSuggestions($input, $menu, query);
+                            return;
+                        }
                         debounceTimer = window.setTimeout(function () {
+                            if (!canShowSuggest()) {
+                                return;
+                            }
                             fetchSuggestions($input, $menu, query);
                         }, 300);
                     }).on('keydown.leadDepCity', function (e) {
@@ -2805,18 +2830,25 @@ if (empty($leadSourceOptions)) {
 
                     $menu.off('.leadDepCity').on('mousedown.leadDepCity', '.tp-departure-item', function (e) {
                         e.preventDefault();
+                        e.stopPropagation();
                         var city = String(jQuery(this).attr('data-city') || '').trim();
                         var code = String(jQuery(this).attr('data-code') || '').trim();
                         var label = String(jQuery(this).attr('data-label') || '').trim();
                         if (!city) {
                             return;
                         }
+                        // Cancel pending search so AJAX/debounce cannot reopen the list.
+                        window.clearTimeout(debounceTimer);
+                        requestSeq += 1;
+                        suppressSuggestUntil = Date.now() + 400;
                         $input
-                            .val(label || (code ? (city + ', ' + code) : city))
+                            .val(city)
                             .attr('data-airport-code', code)
                             .attr('data-city', city)
-                            .trigger('change');
+                            .attr('data-label', label || (code ? (city + ', ' + code) : city));
                         hideMenu($menu);
+                        $input.trigger('change');
+                        $input.blur();
                     });
                 });
 

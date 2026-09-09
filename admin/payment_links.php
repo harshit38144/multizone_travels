@@ -270,7 +270,7 @@ $avatarColors = ['#c41e20', '#0d9488', '#2563eb', '#7c3aed', '#ea580c', '#0891b2
                         <h5 class="modal-title mb-0" id="payLinkCreateModalLabel">
                             <i class="fas fa-link mr-2"></i>New Payment Link
                         </h5>
-                        <div class="pay-link-modal-sub">Create and share a payment link with your customer</div>
+                        <!-- <div class="pay-link-modal-sub">Create and share a payment link with your customer</div> -->
                     </div>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>

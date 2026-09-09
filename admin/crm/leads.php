@@ -354,7 +354,22 @@ function crmLeadsSearchWhereSql(mysqli $conn, string $search): string
     return ' AND (' . implode(' OR ', $conditions) . ')';
 }
 
-function crmLeadsPageUrl(int $listPage, int $perPage = 25, string $fy = '', string $search = ''): string
+function crmLeadsStageWhereSql(string $stage): string
+{
+    $stage = trim($stage);
+    if ($stage === '') {
+        return '';
+    }
+    $options = crmLeadStageOptions();
+    if (!isset($options[$stage])) {
+        return '';
+    }
+    $safe = addslashes($stage);
+
+    return " AND `stage` = '{$safe}'";
+}
+
+function crmLeadsPageUrl(int $listPage, int $perPage = 25, string $fy = '', string $search = '', string $stage = ''): string
 {
     $params = [];
     if ($listPage > 1) {
@@ -368,6 +383,9 @@ function crmLeadsPageUrl(int $listPage, int $perPage = 25, string $fy = '', stri
     }
     if ($search !== '') {
         $params['q'] = $search;
+    }
+    if ($stage !== '' && isset(crmLeadStageOptions()[$stage])) {
+        $params['stage'] = $stage;
     }
     if (empty($params)) {
         return 'crm/leads.php';
@@ -391,6 +409,10 @@ if (crmFinancialYearRange($fyFilter) === null) {
 $searchFilter = trim((string) ($_GET['q'] ?? ''));
 if (mb_strlen($searchFilter) > 120) {
     $searchFilter = mb_substr($searchFilter, 0, 120);
+}
+$stageFilter = trim((string) ($_GET['stage'] ?? ''));
+if ($stageFilter !== '' && !isset($leadStageOptions[$stageFilter])) {
+    $stageFilter = '';
 }
 $financialYearOptions = crmFinancialYearOptions($conn);
 $totalPages = 1;
@@ -487,7 +509,7 @@ if ($tableCheck && $tableCheck->num_rows > 0) {
 
 if ($hasLeadsTable) {
     $activeWhere = crmLeadActiveWhereSql();
-    $listWhere = $activeWhere . crmFinancialYearWhereSql($fyFilter) . crmLeadsSearchWhereSql($conn, $searchFilter);
+    $listWhere = $activeWhere . crmFinancialYearWhereSql($fyFilter) . crmLeadsSearchWhereSql($conn, $searchFilter) . crmLeadsStageWhereSql($stageFilter);
     $countRes = $conn->query('SELECT COUNT(*) AS c FROM crm_leads WHERE ' . $listWhere);
     if ($countRes) {
         $totalLeads = (int) ($countRes->fetch_assoc()['c'] ?? 0);
@@ -622,11 +644,15 @@ foreach ($destinationLookup as $destId => $destName) {
             justify-content: flex-end;
             gap: 0.55rem;
             margin-left: auto;
+            overflow: visible;
+            padding-top: 0.35rem;
+            padding-right: 0.35rem;
         }
 
         .crm-leads-ui .page-title-actions .btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             font-weight: 600;
             border-radius: 8px;
             height: 38px;
@@ -646,6 +672,19 @@ foreach ($destinationLookup as $destId => $destName) {
             background: #f9fafb;
             border-color: #9ca3af;
             color: #111827;
+        }
+
+        .crm-leads-ui .page-title-actions .btn-icon-square {
+            width: 38px;
+            min-width: 38px;
+            max-width: 38px;
+            height: 38px;
+            padding: 0;
+            flex: 0 0 38px;
+        }
+
+        .crm-leads-ui .page-title-actions .btn-icon-square .mr-1 {
+            margin-right: 0 !important;
         }
 
         .crm-leads-ui table.crm-leads-table .is-col-hidden,
@@ -845,8 +884,8 @@ foreach ($destinationLookup as $destId => $destName) {
             background: #fff;
         }
 
-        .crm-leads-ui .filter-bar .query-filter {
-            min-width: 130px;
+        .crm-leads-ui .filter-bar .stage-filter {
+            min-width: 140px;
             height: 38px;
             border-radius: 6px;
             border: 1px solid #dbeafe;
@@ -972,8 +1011,35 @@ foreach ($destinationLookup as $destId => $destName) {
             box-shadow: 0 1px 2px rgba(100, 116, 139, 0.1);
         }
 
-        .crm-leads-ui .filter-bar-actions .trash-count-badge {
-            margin-left: 0.35rem;
+        .crm-leads-ui .leads-trash-wrap {
+            position: relative;
+            display: inline-flex;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+        .crm-leads-ui .page-title-actions .leads-trash-btn {
+            position: relative;
+            overflow: visible;
+        }
+
+        .crm-leads-ui .leads-trash-wrap .trash-count-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            z-index: 2;
+            margin: 0;
+            min-width: 1.15rem;
+            height: 1.15rem;
+            padding: 0 0.28rem;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            line-height: 1.15rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            box-shadow: 0 0 0 2px #f4f6f9;
         }
 
         .crm-leads-ui .btn-query-add {
@@ -1289,6 +1355,14 @@ foreach ($destinationLookup as $destId => $destName) {
 
         .crm-leads-ui table.crm-leads-table tbody tr:hover td {
             background: #fafafa;
+        }
+
+        .crm-leads-ui table.crm-leads-table tbody tr.is-tour-confirmed td {
+            background: #e8f5e9;
+        }
+
+        .crm-leads-ui table.crm-leads-table tbody tr.is-tour-confirmed:hover td {
+            background: #dcedc8;
         }
 
         .crm-leads-ui table.crm-leads-table input[type="checkbox"] {
@@ -2760,10 +2834,6 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #64748b;
         }
 
-        #btnOpenDeletedLeadsModal .trash-count-badge {
-            margin-left: 0.35rem;
-        }
-
         #deletedLeadsModal .deleted-leads-pagination {
             display: none;
             flex-wrap: wrap;
@@ -3335,11 +3405,19 @@ foreach ($destinationLookup as $destId => $destName) {
                             <h1 class="page-title">Leads</h1>
                         </div>
                         <div class="page-title-actions">
-                            <button type="button" class="btn btn-outline-leads" id="btnOpenLeadsColumnSettings" title="Column settings">
-                                <i class="fas fa-cog mr-1"></i> 
+                            <span class="leads-trash-wrap">
+                                <button type="button" class="btn btn-outline-leads btn-icon-square leads-trash-btn" id="btnOpenDeletedLeadsModal" title="Deleted leads">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <?php if ($deletedLeadsCount > 0) { ?>
+                                    <span class="badge badge-danger trash-count-badge"><?= (int) $deletedLeadsCount ?></span>
+                                <?php } ?>
+                            </span>
+                            <button type="button" class="btn btn-outline-leads btn-icon-square" id="btnOpenLeadsColumnSettings" title="Column settings">
+                                <i class="fas fa-cog"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-leads" id="btnOpenSendLinkModal">
-                                <i class="fas fa-external-link-alt mr-1"></i> 
+                            <button type="button" class="btn btn-outline-leads btn-icon-square" id="btnOpenSendLinkModal" title="Send link">
+                                <i class="fas fa-external-link-alt"></i>
                             </button>
                             <!-- <button type="button" class="btn btn-outline-leads" id="btnImportLeads" title="Import leads from spreadsheet">
                                 <i class="fas fa-file-import mr-1"></i> Import Leads
@@ -3354,31 +3432,28 @@ foreach ($destinationLookup as $destId => $destName) {
                        
 
                         <div class="filter-bar">
-                            <select class="query-filter form-control" style="width:auto; flex:0 0 auto;">
-                                <option>All Queries</option>
-                            </select>
                             <div class="search-wrap">
                                 <i class="fas fa-search"></i>
                                 <input type="search" class="form-control leads-search-input" placeholder="Search queries, client, company, destination..." value="<?= htmlspecialchars($searchFilter, ENT_QUOTES, 'UTF-8') ?>" aria-label="Search leads">
                             </div>
+                            <select class="stage-filter form-control leads-stage-select" style="width:auto; flex:0 0 auto;" aria-label="Filter by stage">
+                                <option value="">All Stages</option>
+                                <?php foreach ($leadStageOptions as $stageKey => $stageLabel) { ?>
+                                    <option value="<?= htmlspecialchars((string) $stageKey, ENT_QUOTES, 'UTF-8') ?>" <?= $stageFilter === (string) $stageKey ? 'selected' : '' ?>><?= htmlspecialchars((string) $stageLabel, ENT_QUOTES, 'UTF-8') ?></option>
+                                <?php } ?>
+                            </select>
                             <select class="form-control leads-fy-select" style="width:auto; flex:0 0 auto;" aria-label="Financial year">
                                 <?php foreach ($financialYearOptions as $fyOption) { ?>
                                     <option value="<?= htmlspecialchars((string) $fyOption['value'], ENT_QUOTES, 'UTF-8') ?>" <?= $fyFilter === (string) $fyOption['value'] ? 'selected' : '' ?>><?= htmlspecialchars((string) $fyOption['label'], ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php } ?>
                             </select>
+                            <?php if ($pendingIntakeCount > 0) { ?>
                             <div class="filter-bar-actions">
-                                <?php if ($pendingIntakeCount > 0) { ?>
-                                    <a href="crm/lead_intake_pending.php" class="btn btn-warning btn-sm">
-                                        <i class="fas fa-user-clock mr-1"></i> Pending (<?= (int) $pendingIntakeCount ?>)
-                                    </a>
-                                <?php } ?>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnOpenDeletedLeadsModal" title="Deleted leads">
-                                    <i class="fas fa-trash-alt mr-1"></i> Trash
-                                    <?php if ($deletedLeadsCount > 0) { ?>
-                                        <span class="badge badge-danger trash-count-badge"><?= (int) $deletedLeadsCount ?></span>
-                                    <?php } ?>
-                                </button>
+                                <a href="crm/lead_intake_pending.php" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-user-clock mr-1"></i> Pending (<?= (int) $pendingIntakeCount ?>)
+                                </a>
                             </div>
+                            <?php } ?>
                         </div>
 
                         <div class="table-wrap">
@@ -3437,8 +3512,12 @@ foreach ($destinationLookup as $destId => $destName) {
                                                 $leadSourceHover = '—';
                                             }
                                             $leadIdSourceTitle = 'Lead Source: ' . $leadSourceHover;
+                                            $rowStage = (string) ($lead['stage'] ?? 'new_lead');
+                                            $rowTourConfirmed = ($rowStage === 'confirmed')
+                                                || !empty($lead['latest_is_tour_confirmed'])
+                                                || !empty($lead['is_tour_confirmed']);
                                         ?>
-                                            <tr data-lead-id="<?= (int) $lead['id'] ?>">
+                                            <tr data-lead-id="<?= (int) $lead['id'] ?>"<?= $rowTourConfirmed ? ' class="is-tour-confirmed"' : '' ?>>
                                                 <td class="col-ld-lead">
                                                     <button type="button" class="lead-id-cell js-lead-row-expand"
                                                         data-lead-id="<?= (int) $lead['id'] ?>"
@@ -3599,7 +3678,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                             $latestQuotationId = (int) ($lead['latest_quotation_id'] ?? 0);
                                                             $latestIsDraft = (($lead['latest_quotation_status'] ?? '') === 'draft');
                                                             $latestTourConfirmed = !empty($lead['latest_is_tour_confirmed']);
-                                                            $viewOpensPreview = ($leadStage === 'quoted' && !$latestIsDraft && $latestQuotationId > 0);
+                                                            $viewOpensPreview = (in_array($leadStage, ['quoted', 'confirmed'], true) && !$latestIsDraft && $latestQuotationId > 0);
                                                             $viewTitle = $viewOpensPreview ? 'Preview Quotation' : 'View Quotation';
                                                             ?>
                                                             <?php if ($viewOpensPreview) { ?>
@@ -3664,7 +3743,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                                     <a class="dropdown-item" href="<?= htmlspecialchars((string) $lead['latest_quotation_href'], ENT_QUOTES, 'UTF-8') ?>">
                                                                         <i class="fas fa-edit mr-2 text-muted"></i> Edit Quotation
                                                                     </a>
-                                                                    <?php if (($leadStage ?? '') === 'quoted'
+                                                                    <?php if (in_array(($leadStage ?? ''), ['quoted', 'confirmed'], true)
                                                                         && (($lead['latest_quotation_status'] ?? '') !== 'draft')
                                                                         && (int) ($lead['latest_quotation_id'] ?? 0) > 0) { ?>
                                                                     <button type="button"
@@ -3714,7 +3793,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                     <nav aria-label="Leads pagination">
                                         <ul class="pagination pagination-sm mb-0">
                                             <li class="page-item <?= $listPage <= 1 ? 'disabled' : '' ?>">
-                                                <a class="page-link" href="<?= htmlspecialchars(crmLeadsPageUrl($listPage - 1, $perPage, $fyFilter, $searchFilter), ENT_QUOTES, 'UTF-8') ?>">Prev</a>
+                                                <a class="page-link" href="<?= htmlspecialchars(crmLeadsPageUrl($listPage - 1, $perPage, $fyFilter, $searchFilter, $stageFilter), ENT_QUOTES, 'UTF-8') ?>">Prev</a>
                                             </li>
                                             <?php
                                             $startPage = max(1, $listPage - 2);
@@ -3722,11 +3801,11 @@ foreach ($destinationLookup as $destId => $destName) {
                                             for ($p = $startPage; $p <= $endPage; $p++) {
                                             ?>
                                                 <li class="page-item <?= $p === $listPage ? 'active' : '' ?>">
-                                                    <a class="page-link" href="<?= htmlspecialchars(crmLeadsPageUrl($p, $perPage, $fyFilter, $searchFilter), ENT_QUOTES, 'UTF-8') ?>"><?= (int) $p ?></a>
+                                                    <a class="page-link" href="<?= htmlspecialchars(crmLeadsPageUrl($p, $perPage, $fyFilter, $searchFilter, $stageFilter), ENT_QUOTES, 'UTF-8') ?>"><?= (int) $p ?></a>
                                                 </li>
                                             <?php } ?>
                                             <li class="page-item <?= $listPage >= $totalPages ? 'disabled' : '' ?>">
-                                                <a class="page-link" href="<?= htmlspecialchars(crmLeadsPageUrl($listPage + 1, $perPage, $fyFilter, $searchFilter), ENT_QUOTES, 'UTF-8') ?>">Next</a>
+                                                <a class="page-link" href="<?= htmlspecialchars(crmLeadsPageUrl($listPage + 1, $perPage, $fyFilter, $searchFilter, $stageFilter), ENT_QUOTES, 'UTF-8') ?>">Next</a>
                                             </li>
                                         </ul>
                                     </nav>
@@ -4129,6 +4208,7 @@ foreach ($destinationLookup as $destId => $destName) {
     var leadsListPerPage = <?= (int) $perPage ?>;
     var leadsListFy = <?= json_encode($fyFilter, JSON_UNESCAPED_UNICODE) ?>;
     var leadsListSearch = <?= json_encode($searchFilter, JSON_UNESCAPED_UNICODE) ?>;
+    var leadsListStage = <?= json_encode($stageFilter, JSON_UNESCAPED_UNICODE) ?>;
     var leadsSearchDebounceTimer = null;
     var sendLinkDefaultFields = <?= json_encode($sendLinkDefaultFields, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
     var sendLinkCompanyName = <?= json_encode($sendLinkCompanyName, JSON_UNESCAPED_UNICODE) ?>;
@@ -6006,13 +6086,17 @@ foreach ($destinationLookup as $destId => $destName) {
             page: 1,
             per_page: leadsListPerPage,
             fy: leadsListFy,
-            q: leadsListSearch
+            q: leadsListSearch,
+            stage: leadsListStage
         }, params || {});
         if (!query.fy) {
             delete query.fy;
         }
         if (!query.q) {
             delete query.q;
+        }
+        if (!query.stage) {
+            delete query.stage;
         }
         if (Number(query.page) <= 1) {
             delete query.page;
@@ -6053,7 +6137,15 @@ foreach ($destinationLookup as $destId => $destName) {
         if (fy === leadsListFy) {
             return;
         }
-        window.location.href = crmLeadsListUrl({ fy: fy, page: 1, q: leadsListSearch });
+        window.location.href = crmLeadsListUrl({ fy: fy, page: 1 });
+    });
+
+    $('.leads-stage-select').on('change', function () {
+        var stage = String($(this).val() || '');
+        if (stage === leadsListStage) {
+            return;
+        }
+        window.location.href = crmLeadsListUrl({ stage: stage, page: 1 });
     });
 
     $('.leads-per-page-select').on('change', function () {
@@ -6061,7 +6153,7 @@ foreach ($destinationLookup as $destId => $destName) {
         if (perPage === leadsListPerPage) {
             return;
         }
-        window.location.href = crmLeadsListUrl({ per_page: perPage, fy: leadsListFy, q: leadsListSearch, page: 1 });
+        window.location.href = crmLeadsListUrl({ per_page: perPage, page: 1 });
     });
 
     var $activeSvcPopup = null;
@@ -6194,10 +6286,12 @@ foreach ($destinationLookup as $destId => $destName) {
 
     function updateTrashBadge(count) {
         var $btn = $('#btnOpenDeletedLeadsModal');
-        var $badge = $btn.find('.trash-count-badge');
+        var $wrap = $btn.closest('.leads-trash-wrap');
+        var $host = $wrap.length ? $wrap : $btn;
+        var $badge = $host.children('.trash-count-badge');
         if (count > 0) {
             if (!$badge.length) {
-                $btn.append('<span class="badge badge-danger trash-count-badge">' + count + '</span>');
+                $host.append('<span class="badge badge-danger trash-count-badge">' + count + '</span>');
             } else {
                 $badge.text(count);
             }
