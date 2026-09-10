@@ -139,10 +139,7 @@
         toggleAccordionHead($(this));
     });
 
-    $(document).on('click', '.q-day-head', function (e) {
-        if ($(e.target).closest('.q-day-ai-suggest').length) {
-            return;
-        }
+    $(document).on('click', '.q-day-head', function () {
         toggleAccordionHead($(this));
     });
 
@@ -1268,21 +1265,24 @@
         var caret = opts.caret !== false;
         var control = opts.control || '';
         var stepper = !!opts.stepper;
+        if (stepper) {
+            return '' +
+                '<div class="q-hotel-field q-hotel-combo ' + extraClass + ' q-hotel-field-no-ico q-hotel-field-stepper">' +
+                '<div class="q-hotel-stepper-control">' +
+                '<button type="button" class="q-hotel-step-btn" data-hotel-step="-1" title="Decrease" aria-label="Decrease">−</button>' +
+                control +
+                '<button type="button" class="q-hotel-step-btn" data-hotel-step="1" title="Increase" aria-label="Increase">+</button>' +
+                '</div>' +
+                '</div>';
+        }
         var icoHtml = ico
             ? ('<i class="q-hotel-ico fas ' + ico + '" aria-hidden="true"></i>')
             : '';
-        var stepperHtml = stepper
-            ? ('<div class="q-hotel-stepper">' +
-                '<button type="button" class="q-hotel-step-btn" data-hotel-step="-1" title="Decrease" aria-label="Decrease"><i class="fas fa-minus"></i></button>' +
-                '<button type="button" class="q-hotel-step-btn" data-hotel-step="1" title="Increase" aria-label="Increase"><i class="fas fa-plus"></i></button>' +
-                '</div>')
-            : '';
         return '' +
-            '<div class="q-hotel-field q-hotel-combo ' + extraClass + (ico ? '' : ' q-hotel-field-no-ico') + (stepper ? ' q-hotel-field-stepper' : '') + '">' +
+            '<div class="q-hotel-field q-hotel-combo ' + extraClass + (ico ? '' : ' q-hotel-field-no-ico') + '">' +
             '<div class="q-hotel-input-wrap">' +
             icoHtml +
             control +
-            stepperHtml +
             (caret ? '<i class="q-hotel-caret fas fa-chevron-down" aria-hidden="true"></i>' : '') +
             '</div>' +
             (opts.menuClass ? ('<div class="q-hotel-menu ' + opts.menuClass + '" style="display:none;"></div>') : '') +
@@ -1816,12 +1816,12 @@
     }
 
     function appendCityCreateAction($menu, typed) {
-        $menu.append('<div class="q-hotel-menu-divider"></div>');
+        $menu.find('.q-hotel-menu-create-footer').remove();
         $menu.append(
-            $('<button type="button" class="q-hotel-menu-item q-hotel-menu-item-create q-hotel-city-create"></button>')
+            $('<button type="button" class="q-hotel-menu-create-footer q-hotel-city-create"></button>')
                 .attr('data-name', typed || '')
-                .html('<i class="fas fa-plus-circle mr-2 text-primary"></i>Create' +
-                    (typed ? ' "' + esc(typed) + '"' : ''))
+                .html('<i class="fas fa-plus-circle" aria-hidden="true"></i><span>Create' +
+                    (typed ? ' "' + esc(typed) + '"' : '') + '</span>')
         );
     }
 
@@ -1832,23 +1832,24 @@
         var dest = getQuotationDestinationFilter();
 
         if (!dest.name) {
-            $menu.empty().append(
+            var $emptyList = $('<div class="q-hotel-menu-list"></div>').append(
                 '<div class="q-hotel-menu-empty">Set Destination in Tour Information (Step 1) to see cities from City Master</div>'
             );
+            $menu.empty().append($emptyList);
             appendCityCreateAction($menu, typed);
             $menu.show();
             return;
         }
 
         fetchCityMasterCities(typed, function (cities) {
-            $menu.empty();
+            var $list = $('<div class="q-hotel-menu-list"></div>');
             if (!cities.length) {
                 if (typed) {
-                    $menu.append(
+                    $list.append(
                         '<div class="q-hotel-menu-empty">No cities found for "' + esc(typed) + '"</div>'
                     );
                 } else {
-                    $menu.append(
+                    $list.append(
                         '<div class="q-hotel-menu-empty">No cities in City Master' +
                         (dest.name ? ' for ' + esc(dest.name) : '') + '</div>'
                     );
@@ -1864,9 +1865,10 @@
                     if (sub) {
                         $btn.append($('<span class="q-hotel-menu-sub"></span>').text(sub));
                     }
-                    $menu.append($btn);
+                    $list.append($btn);
                 });
             }
+            $menu.empty().append($list);
             appendCityCreateAction($menu, typed);
             $menu.show();
         });
@@ -2083,12 +2085,12 @@
     }
 
     function appendHotelCreateAction($menu, typed) {
-        $menu.append('<div class="q-hotel-menu-divider"></div>');
+        $menu.find('.q-hotel-menu-create-footer').remove();
         $menu.append(
-            $('<button type="button" class="q-hotel-menu-item q-hotel-menu-item-create q-hotel-name-create"></button>')
+            $('<button type="button" class="q-hotel-menu-create-footer q-hotel-name-create"></button>')
                 .attr('data-name', typed || '')
-                .html('<i class="fas fa-plus-circle mr-2 text-primary"></i>Create' +
-                    (typed ? ' "' + esc(typed) + '"' : ''))
+                .html('<i class="fas fa-plus-circle" aria-hidden="true"></i><span>Create' +
+                    (typed ? ' "' + esc(typed) + '"' : '') + '</span>')
         );
     }
 
@@ -2099,27 +2101,28 @@
         var dest = getQuotationDestinationFilter();
 
         if (!dest.name) {
-            $menu.empty().append(
+            var $emptyList = $('<div class="q-hotel-menu-list"></div>').append(
                 '<div class="q-hotel-menu-empty">Set Destination in Tour Information (Step 1) to see hotels from Hotel Master</div>'
             );
+            $menu.empty().append($emptyList);
             appendHotelCreateAction($menu, typed);
             $menu.show();
             return;
         }
 
         fetchQuotationHotelsSearch(typed, cityId, function (hotels) {
-            $menu.empty();
+            var $list = $('<div class="q-hotel-menu-list"></div>');
             var cache = getHotelRowCache($row);
             cache.hotels = hotels;
             setHotelRowCache($row, cache);
 
             if (!hotels.length) {
                 if (typed) {
-                    $menu.append(
+                    $list.append(
                         '<div class="q-hotel-menu-empty">No hotels found for "' + esc(typed) + '"</div>'
                     );
                 } else {
-                    $menu.append(
+                    $list.append(
                         '<div class="q-hotel-menu-empty">Hotels for ' + esc(dest.name) + ' from Hotel Master — type to filter</div>'
                     );
                 }
@@ -2133,9 +2136,10 @@
                     if (sub) {
                         $btn.append($('<span class="q-hotel-menu-sub"></span>').text(sub));
                     }
-                    $menu.append($btn);
+                    $list.append($btn);
                 });
             }
+            $menu.empty().append($list);
             appendHotelCreateAction($menu, typed);
             $menu.show();
         });
@@ -2666,9 +2670,6 @@
                 '<span class="q-day-calendar-icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>' +
                 '<span class="q-day-head-label"></span>' +
                 '</div>' +
-                '<button type="button" class="btn btn-sm q-day-ai-suggest" title="AI Suggest this day">' +
-                '<i class="fas fa-magic mr-1"></i>Suggest Day' +
-                '</button>' +
                 '</div>' +
                 '<div class="q-day-body q-accordion-body" id="' + dayBodyId + '" style="display:none;">' +
                 '<div class="row">' +
@@ -3337,8 +3338,7 @@
         }
 
         var $modalBtn = $('#qDayAiGenerate').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Generating...');
-        var $btns = $card.find('.q-day-ai-suggest, .q-day-ai-btn').prop('disabled', true);
-        $card.find('.q-day-ai-suggest').html('<i class="fas fa-spinner fa-spin mr-1"></i>Suggesting...');
+        var $btns = $card.find('.q-day-ai-btn').prop('disabled', true);
 
         $.ajax({
             url: absUrl('crm/ajax/ai_suggest_itinerary_day.php'),
@@ -3372,12 +3372,11 @@
         }).always(function () {
             $modalBtn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate');
             $btns.prop('disabled', false);
-            $card.find('.q-day-ai-suggest').html('<i class="fas fa-magic mr-1"></i>Suggest Day');
         });
     }
 
     function initAISuggestDay() {
-        $(document).on('click', '.q-day-ai-suggest, .q-day-ai-btn', function (e) {
+        $(document).on('click', '.q-day-ai-btn', function (e) {
             e.preventDefault();
             openDayAiModal($(this).closest('.q-day-card'));
         });
@@ -7220,8 +7219,11 @@
             e.preventDefault();
             e.stopPropagation();
             var step = parseInt($(this).attr('data-hotel-step'), 10) || 0;
-            var $wrap = $(this).closest('.q-hotel-input-wrap');
-            var $input = $wrap.find('input.h-rooms, input.h-nights').first();
+            var $control = $(this).closest('.q-hotel-stepper-control');
+            var $input = $control.find('input.h-rooms, input.h-nights').first();
+            if (!$input.length) {
+                $input = $(this).closest('.q-hotel-field').find('input.h-rooms, input.h-nights').first();
+            }
             if (!$input.length) {
                 return;
             }

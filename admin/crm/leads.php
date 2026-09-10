@@ -531,6 +531,7 @@ if ($hasLeadsTable) {
 
 crmLeadsAttachQuotationLines($conn, $leadRows);
 crmLeadsEnrichDisplayFromQuotations($conn, $leadRows);
+crmLeadsResolveMissingQuotationActions($conn, $leadRows);
 crmLeadsSyncFeatureStages($conn, $leadRows);
 
 $deletedLeadsCount = $hasLeadsTable ? crmLeadsDeletedCount($conn) : 0;
@@ -1246,7 +1247,7 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui table.crm-leads-table tbody td.col-actions {
             text-align: center;
             vertical-align: middle;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .crm-leads-ui table.crm-leads-table thead th.col-actions,
@@ -1885,7 +1886,7 @@ foreach ($destinationLookup as $destId => $destName) {
             white-space: nowrap;
             width: 100%;
             max-width: 100%;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .crm-leads-ui .action-btns .btn-icon {
@@ -2039,7 +2040,8 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #616161 !important;
         }
 
-        .crm-leads-ui .action-btns .btn-more:hover {
+        .crm-leads-ui .action-btns .btn-more:hover,
+        .crm-leads-ui .action-btns .btn-more[aria-expanded="true"] {
             background: #eeeeee;
             color: #424242 !important;
             border-color: #bdbdbd;
@@ -2050,12 +2052,26 @@ foreach ($destinationLookup as $destId => $destName) {
             display: none;
         }
 
-        .crm-leads-ui .lead-actions-menu {
+        .crm-leads-ui .lead-actions-menu,
+        body > .lead-actions-menu.lead-actions-menu-portal {
             min-width: 10.5rem;
             padding: 0.35rem 0;
-            border-color: #e2e8f0;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.35rem;
+            background: #fff;
             box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-            z-index: 1060;
+            z-index: 2060;
+        }
+
+        body > .lead-actions-menu.lead-actions-menu-portal {
+            display: none;
+            position: fixed;
+            margin: 0;
+            float: none;
+        }
+
+        body > .lead-actions-menu.lead-actions-menu-portal.show {
+            display: block;
         }
 
         .crm-leads-ui table.crm-leads-table tbody tr.is-actions-dropdown-open {
@@ -2078,40 +2094,54 @@ foreach ($destinationLookup as $destId => $destName) {
             z-index: 52;
         }
 
-        .crm-leads-ui .lead-actions-menu .dropdown-item {
+        .crm-leads-ui .lead-actions-menu .dropdown-item,
+        body > .lead-actions-menu .dropdown-item {
             display: flex;
             align-items: center;
             padding: 0.45rem 0.85rem;
             font-size: calc(0.8125rem + 1px);
             font-weight: 500;
             color: #334155;
+            width: 100%;
+            clear: both;
+            text-align: left;
+            background: transparent;
+            border: 0;
         }
 
-        .crm-leads-ui .lead-actions-menu .dropdown-item i {
+        .crm-leads-ui .lead-actions-menu .dropdown-item i,
+        body > .lead-actions-menu .dropdown-item i {
             width: 1.1rem;
             text-align: center;
         }
 
         .crm-leads-ui .lead-actions-menu .dropdown-item:hover,
-        .crm-leads-ui .lead-actions-menu .dropdown-item:focus {
+        .crm-leads-ui .lead-actions-menu .dropdown-item:focus,
+        body > .lead-actions-menu .dropdown-item:hover,
+        body > .lead-actions-menu .dropdown-item:focus {
             background: #f8fafc;
             color: #1e293b;
+            text-decoration: none;
         }
 
         .crm-leads-ui .lead-actions-menu .dropdown-item.text-danger:hover,
-        .crm-leads-ui .lead-actions-menu .dropdown-item.text-danger:focus {
+        .crm-leads-ui .lead-actions-menu .dropdown-item.text-danger:focus,
+        body > .lead-actions-menu .dropdown-item.text-danger:hover,
+        body > .lead-actions-menu .dropdown-item.text-danger:focus {
             background: #fef2f2;
             color: #dc2626;
         }
 
         .crm-leads-ui .lead-actions-menu .dropdown-item.disabled,
-        .crm-leads-ui .lead-actions-menu .dropdown-item:disabled {
+        .crm-leads-ui .lead-actions-menu .dropdown-item:disabled,
+        body > .lead-actions-menu .dropdown-item.disabled,
+        body > .lead-actions-menu .dropdown-item:disabled {
             opacity: 0.45;
             pointer-events: none;
         }
 
         .crm-leads-ui td.col-actions {
-            overflow: hidden;
+            overflow: visible;
             white-space: nowrap;
             text-align: center;
         }
@@ -3673,11 +3703,26 @@ foreach ($destinationLookup as $destId => $destName) {
                                                 </td>
                                                 <td class="col-actions">
                                                     <div class="action-btns">
-                                                        <?php if (!empty($lead['latest_quotation_href'])) {
-                                                            $latestQuotationHref = (string) $lead['latest_quotation_href'];
+                                                        <?php
+                                                            $latestQuotationHref = trim((string) ($lead['latest_quotation_href'] ?? ''));
                                                             $latestQuotationId = (int) ($lead['latest_quotation_id'] ?? 0);
+                                                            if ($latestQuotationHref === '' && $latestQuotationId > 0) {
+                                                                $latestQuotationHref = 'crm/quotation_generator.php?id=' . $latestQuotationId;
+                                                            }
+                                                            if ($latestQuotationHref === '' && !empty($lead['quotation_groups'][0]['current_href'])) {
+                                                                $latestQuotationHref = (string) $lead['quotation_groups'][0]['current_href'];
+                                                                $latestQuotationId = (int) ($lead['quotation_groups'][0]['quotation_id'] ?? $latestQuotationId);
+                                                            }
+                                                            $hasQuotationAction = ($latestQuotationHref !== '')
+                                                                || $latestQuotationId > 0
+                                                                || !empty($lead['has_quotation'])
+                                                                || in_array($leadStage, ['quoted', 'confirmed'], true);
+                                                        ?>
+                                                        <?php if ($hasQuotationAction && $latestQuotationHref !== '') {
                                                             $latestIsDraft = (($lead['latest_quotation_status'] ?? '') === 'draft');
-                                                            $latestTourConfirmed = !empty($lead['latest_is_tour_confirmed']);
+                                                            $latestTourConfirmed = !empty($lead['latest_is_tour_confirmed'])
+                                                                || !empty($lead['is_tour_confirmed'])
+                                                                || ($leadStage === 'confirmed');
                                                             $viewOpensPreview = (in_array($leadStage, ['quoted', 'confirmed'], true) && !$latestIsDraft && $latestQuotationId > 0);
                                                             $viewTitle = $viewOpensPreview ? 'Preview Quotation' : 'View Quotation';
                                                             ?>
@@ -3723,8 +3768,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                             data-lead-email="<?= htmlspecialchars((string) ($lead['customer_email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
                                                             data-lead-phone="<?= htmlspecialchars((string) ($lead['customer_phone'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                                                             <button type="button"
-                                                                class="btn-icon btn-more dropdown-toggle"
-                                                                data-toggle="dropdown"
+                                                                class="btn-icon btn-more js-lead-actions-toggle"
                                                                 aria-haspopup="true"
                                                                 aria-expanded="false"
                                                                 title="More actions">
@@ -3739,17 +3783,17 @@ foreach ($destinationLookup as $destId => $destName) {
                                                                 <button type="button" class="dropdown-item js-lead-action-preview" data-lead-id="<?= (int) $lead['id'] ?>">
                                                                     <i class="far fa-eye mr-2 text-muted"></i> Preview Lead
                                                                 </button>
-                                                                <?php if (!empty($lead['latest_quotation_href'])) { ?>
-                                                                    <a class="dropdown-item" href="<?= htmlspecialchars((string) $lead['latest_quotation_href'], ENT_QUOTES, 'UTF-8') ?>">
+                                                                <?php if ($latestQuotationHref !== '') { ?>
+                                                                    <a class="dropdown-item" href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>">
                                                                         <i class="fas fa-edit mr-2 text-muted"></i> Edit Quotation
                                                                     </a>
                                                                     <?php if (in_array(($leadStage ?? ''), ['quoted', 'confirmed'], true)
                                                                         && (($lead['latest_quotation_status'] ?? '') !== 'draft')
-                                                                        && (int) ($lead['latest_quotation_id'] ?? 0) > 0) { ?>
+                                                                        && $latestQuotationId > 0) { ?>
                                                                     <button type="button"
                                                                         class="dropdown-item js-lead-q-preview"
-                                                                        data-quotation-id="<?= (int) $lead['latest_quotation_id'] ?>"
-                                                                        data-edit-href="<?= htmlspecialchars((string) $lead['latest_quotation_href'], ENT_QUOTES, 'UTF-8') ?>">
+                                                                        data-quotation-id="<?= $latestQuotationId ?>"
+                                                                        data-edit-href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>">
                                                                         <i class="far fa-file-alt mr-2 text-muted"></i> Preview Quotation
                                                                     </button>
                                                                     <?php } ?>
@@ -5363,15 +5407,120 @@ foreach ($destinationLookup as $destId => $destName) {
         });
     });
 
-    $(document).on('show.bs.dropdown', '.lead-actions-more', function () {
+    var $activeLeadActionsMenu = null;
+    var $activeLeadActionsWrap = null;
+
+    function closeLeadActionsMenu() {
+        if ($activeLeadActionsMenu && $activeLeadActionsMenu.length) {
+            $activeLeadActionsMenu
+                .removeClass('show lead-actions-menu-portal')
+                .css({ display: '', position: '', left: '', top: '', right: '', zIndex: '', visibility: '' });
+            if ($activeLeadActionsWrap && $activeLeadActionsWrap.length) {
+                $activeLeadActionsWrap.append($activeLeadActionsMenu);
+                $activeLeadActionsWrap.removeClass('show');
+                $activeLeadActionsWrap.find('.js-lead-actions-toggle').attr('aria-expanded', 'false');
+            }
+        }
         $('.crm-leads-ui table.crm-leads-table tbody tr.is-actions-dropdown-open')
-            .not($(this).closest('tr'))
             .removeClass('is-actions-dropdown-open');
-        $(this).closest('tr').addClass('is-actions-dropdown-open');
+        $activeLeadActionsMenu = null;
+        $activeLeadActionsWrap = null;
+    }
+
+    function openLeadActionsMenu($wrap) {
+        if (!$wrap || !$wrap.length) {
+            return;
+        }
+        var $btn = $wrap.find('.js-lead-actions-toggle').first();
+        var $menu = $wrap.children('.lead-actions-menu');
+        if (!$menu.length && $activeLeadActionsWrap && $activeLeadActionsWrap[0] === $wrap[0] && $activeLeadActionsMenu) {
+            $menu = $activeLeadActionsMenu;
+        }
+        if (!$btn.length || !$menu.length) {
+            return;
+        }
+
+        if ($activeLeadActionsWrap && $activeLeadActionsWrap[0] === $wrap[0] && $activeLeadActionsMenu) {
+            closeLeadActionsMenu();
+            return;
+        }
+
+        closeLeadActionsMenu();
+
+        var $row = $wrap.closest('tr');
+        $row.addClass('is-actions-dropdown-open');
+        $wrap.addClass('show');
+        $btn.attr('aria-expanded', 'true');
+
+        if ($menu.parent()[0] !== document.body) {
+            $menu.appendTo(document.body);
+        }
+
+        $menu.addClass('show lead-actions-menu-portal').css({
+            display: 'block',
+            visibility: 'hidden',
+            position: 'fixed',
+            zIndex: 2060,
+            left: 0,
+            top: 0,
+            right: 'auto'
+        });
+
+        var rect = $btn[0].getBoundingClientRect();
+        var menuWidth = $menu.outerWidth() || 168;
+        var menuHeight = $menu.outerHeight() || 180;
+        var gap = 4;
+        var left = rect.right - menuWidth;
+        left = Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8));
+        var top = rect.bottom + gap;
+        if (top + menuHeight > window.innerHeight - 8) {
+            top = Math.max(8, rect.top - menuHeight - gap);
+        }
+
+        $menu.css({
+            left: left + 'px',
+            top: top + 'px',
+            visibility: 'visible'
+        });
+
+        $activeLeadActionsMenu = $menu;
+        $activeLeadActionsWrap = $wrap;
+    }
+
+    $(document).on('click', '.js-lead-actions-toggle', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openLeadActionsMenu($(this).closest('.lead-actions-more'));
     });
 
-    $(document).on('hide.bs.dropdown hidden.bs.dropdown', '.lead-actions-more', function () {
-        $(this).closest('tr').removeClass('is-actions-dropdown-open');
+    $(document).on('click', function (e) {
+        if ($(e.target).closest('.lead-actions-more, body > .lead-actions-menu-portal').length) {
+            return;
+        }
+        closeLeadActionsMenu();
+    });
+
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeLeadActionsMenu();
+        }
+    });
+
+    $(window).on('resize scroll', function () {
+        if ($activeLeadActionsMenu) {
+            closeLeadActionsMenu();
+        }
+    });
+
+    $('.crm-leads-ui .table-wrap').on('scroll', function () {
+        if ($activeLeadActionsMenu) {
+            closeLeadActionsMenu();
+        }
+    });
+
+    $(document).on('click', 'body > .lead-actions-menu-portal .dropdown-item', function () {
+        // Close after choosing an action (links navigate away anyway).
+        window.setTimeout(closeLeadActionsMenu, 0);
     });
 
     $(document).on('click', '.js-lead-action-preview, .js-lead-row-expand', function (e) {

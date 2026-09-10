@@ -385,6 +385,35 @@ function crmQuotationNormalizePhone($phone): string
     return preg_replace('/\D+/', '', (string) $phone);
 }
 
+/**
+ * Match phones allowing country-code vs local 10-digit differences.
+ */
+function crmQuotationPhonesMatch($a, $b): bool
+{
+    $a = crmQuotationNormalizePhone($a);
+    $b = crmQuotationNormalizePhone($b);
+    if ($a === '' || $b === '') {
+        return false;
+    }
+    if ($a === $b) {
+        return true;
+    }
+    $a10 = strlen($a) > 10 ? substr($a, -10) : $a;
+    $b10 = strlen($b) > 10 ? substr($b, -10) : $b;
+
+    return strlen($a10) >= 10 && strlen($b10) >= 10 && $a10 === $b10;
+}
+
+function crmQuotationPhoneKey($phone): string
+{
+    $digits = crmQuotationNormalizePhone($phone);
+    if ($digits === '') {
+        return '';
+    }
+
+    return strlen($digits) > 10 ? substr($digits, -10) : $digits;
+}
+
 function crmQuotationNormalizeEmail($email): string
 {
     return strtolower(trim((string) $email));
@@ -418,7 +447,7 @@ function crmQuotationResolveLeadId(mysqli $conn, array $quotation): int
         );
         if ($res) {
             while ($row = $res->fetch_assoc()) {
-                if (crmQuotationNormalizePhone($row['customer_phone'] ?? '') === $phone) {
+                if (crmQuotationPhonesMatch($row['customer_phone'] ?? '', $phone)) {
                     return (int) ($row['id'] ?? 0);
                 }
             }
@@ -877,7 +906,7 @@ function crmLeadHasLinkedQuotation(mysqli $conn, int $leadId, array $leadRow = [
         while ($row = $res2->fetch_assoc()) {
             $qPhone = crmQuotationNormalizePhone($row['mobile_no'] ?? '');
             $qEmail = crmQuotationNormalizeEmail($row['email'] ?? '');
-            if ($phone !== '' && $qPhone !== '' && $qPhone === $phone) {
+            if ($phone !== '' && $qPhone !== '' && crmQuotationPhonesMatch($qPhone, $phone)) {
                 return true;
             }
             if ($email !== '' && $qEmail !== '' && $qEmail === $email) {
@@ -926,7 +955,7 @@ function crmLeadHasConfirmedQuotation(mysqli $conn, int $leadId, array $leadRow 
         while ($row = $res2->fetch_assoc()) {
             $qPhone = crmQuotationNormalizePhone($row['mobile_no'] ?? '');
             $qEmail = crmQuotationNormalizeEmail($row['email'] ?? '');
-            if ($phone !== '' && $qPhone !== '' && $qPhone === $phone) {
+            if ($phone !== '' && $qPhone !== '' && crmQuotationPhonesMatch($qPhone, $phone)) {
                 return true;
             }
             if ($email !== '' && $qEmail !== '' && $qEmail === $email) {
@@ -965,10 +994,10 @@ function crmLeadsAttachQuotationLines(mysqli $conn, array &$leadRows): void
             continue;
         }
         $leadById[$lid] = true;
-        $phone = crmQuotationNormalizePhone($lead['customer_phone'] ?? '');
+        $phoneKey = crmQuotationPhoneKey($lead['customer_phone'] ?? '');
         $email = crmQuotationNormalizeEmail($lead['customer_email'] ?? '');
-        if ($phone !== '') {
-            $phones[$phone][] = $lid;
+        if ($phoneKey !== '') {
+            $phones[$phoneKey][] = $lid;
         }
         if ($email !== '') {
             $emails[$email][] = $lid;
@@ -1012,10 +1041,10 @@ function crmLeadsAttachQuotationLines(mysqli $conn, array &$leadRows): void
             }
 
             $targetLead = 0;
-            $phone = crmQuotationNormalizePhone($row['mobile_no'] ?? '');
+            $phoneKey = crmQuotationPhoneKey($row['mobile_no'] ?? '');
             $email = crmQuotationNormalizeEmail($row['email'] ?? '');
-            if ($phone !== '' && !empty($phones[$phone])) {
-                $targetLead = (int) $phones[$phone][0];
+            if ($phoneKey !== '' && !empty($phones[$phoneKey])) {
+                $targetLead = (int) $phones[$phoneKey][0];
             } elseif ($email !== '' && !empty($emails[$email])) {
                 $targetLead = (int) $emails[$email][0];
             }
@@ -1024,6 +1053,7 @@ function crmLeadsAttachQuotationLines(mysqli $conn, array &$leadRows): void
                 $row['lead_id'] = $targetLead;
                 $quotations[] = $row;
                 $matchedIds[$qid] = true;
+                crmQuotationPersistLeadLink($conn, $qid, $targetLead);
             }
         }
     }
@@ -1089,16 +1119,144 @@ function crmLeadsAttachQuotationLines(mysqli $conn, array &$leadRows): void
         $lead['has_quotation'] = !empty($leadQuotations);
         $lead['is_tour_confirmed'] = false;
         $lead['latest_is_tour_confirmed'] = false;
+
+        $confirmedPick = null;
         foreach ($leadQuotations as $qRow) {
             $qid = (int) ($qRow['id'] ?? 0);
             $rowConfirmed = (int) ($qRow['tour_confirmed'] ?? 0) === 1;
+            if ($rowConfirmed) {
+                $lead['is_tour_confirmed'] = true;
+                if ($confirmedPick === null && $qid > 0) {
+                    $confirmedPick = $qRow;
+                }
+            }
             if ($lead['latest_quotation_id'] > 0 && $qid === $lead['latest_quotation_id']) {
                 $lead['latest_quotation_status'] = (string) ($qRow['status'] ?? '');
                 $lead['latest_is_tour_confirmed'] = $rowConfirmed;
             }
-            if ($rowConfirmed) {
-                $lead['is_tour_confirmed'] = true;
+        }
+
+        // Confirmed leads should open the confirmed quotation (eye + confirmed book), not a newer draft.
+        if ($confirmedPick !== null) {
+            $cqid = (int) ($confirmedPick['id'] ?? 0);
+            if ($cqid > 0) {
+                $lead['latest_quotation_id'] = $cqid;
+                $lead['latest_quotation_href'] = 'crm/quotation_generator.php?id=' . $cqid;
+                $lead['latest_quotation_status'] = (string) ($confirmedPick['status'] ?? '');
+                $lead['latest_is_tour_confirmed'] = true;
             }
+        } elseif ($lead['latest_quotation_id'] > 0 && $lead['latest_quotation_href'] === '') {
+            $lead['latest_quotation_href'] = 'crm/quotation_generator.php?id=' . (int) $lead['latest_quotation_id'];
+        }
+    }
+    unset($lead);
+}
+
+/**
+ * Fill missing latest quotation href/id for quoted/confirmed leads (Actions eye button).
+ *
+ * @param array<int, array<string, mixed>> $leadRows
+ */
+function crmLeadsResolveMissingQuotationActions(mysqli $conn, array &$leadRows): void
+{
+    if (empty($leadRows)) {
+        return;
+    }
+
+    if (!function_exists('crmLeadNormalizeStage')) {
+        require_once __DIR__ . '/lead_db.php';
+    }
+
+    crmEnsureQuotationTables($conn);
+
+    foreach ($leadRows as &$lead) {
+        $href = trim((string) ($lead['latest_quotation_href'] ?? ''));
+        $qid = (int) ($lead['latest_quotation_id'] ?? 0);
+        if ($href !== '' && $qid > 0) {
+            continue;
+        }
+
+        $stage = crmLeadNormalizeStage($lead['stage'] ?? 'new_lead');
+        $needs = $qid > 0
+            || !empty($lead['has_quotation'])
+            || !empty($lead['is_tour_confirmed'])
+            || in_array($stage, ['quoted', 'confirmed'], true);
+        if (!$needs) {
+            continue;
+        }
+
+        if ($qid > 0 && $href === '') {
+            $lead['latest_quotation_href'] = 'crm/quotation_generator.php?id=' . $qid;
+            $lead['has_quotation'] = true;
+            continue;
+        }
+
+        $leadId = (int) ($lead['id'] ?? 0);
+        if ($leadId <= 0) {
+            continue;
+        }
+
+        $qRow = null;
+        $preferConfirmed = ($stage === 'confirmed' || !empty($lead['is_tour_confirmed']));
+        $sql = 'SELECT `id`, `status`, `tour_confirmed`
+                FROM `crm_quotations`
+                WHERE `lead_id` = ' . $leadId;
+        if ($preferConfirmed) {
+            $sql .= ' ORDER BY (`tour_confirmed` = 1) DESC, `id` DESC LIMIT 1';
+        } else {
+            $sql .= ' ORDER BY `id` DESC LIMIT 1';
+        }
+        $res = $conn->query($sql);
+        if ($res) {
+            $qRow = $res->fetch_assoc() ?: null;
+        }
+
+        if (!$qRow) {
+            $phoneKey = crmQuotationPhoneKey($lead['customer_phone'] ?? '');
+            $email = crmQuotationNormalizeEmail($lead['customer_email'] ?? '');
+            $res2 = $conn->query(
+                'SELECT `id`, `status`, `tour_confirmed`, `mobile_no`, `email`
+                 FROM `crm_quotations`
+                 WHERE (`lead_id` IS NULL OR `lead_id` = 0)
+                 ORDER BY `id` DESC
+                 LIMIT 300'
+            );
+            while ($res2 && ($cand = $res2->fetch_assoc())) {
+                $phoneOk = $phoneKey !== '' && crmQuotationPhonesMatch($cand['mobile_no'] ?? '', $phoneKey);
+                $emailOk = $email !== '' && crmQuotationNormalizeEmail($cand['email'] ?? '') === $email;
+                if (!$phoneOk && !$emailOk) {
+                    continue;
+                }
+                if ($preferConfirmed && (int) ($cand['tour_confirmed'] ?? 0) !== 1) {
+                    if ($qRow === null) {
+                        $qRow = $cand;
+                    }
+                    continue;
+                }
+                $qRow = $cand;
+                break;
+            }
+            if ($qRow && (int) ($qRow['id'] ?? 0) > 0) {
+                crmQuotationPersistLeadLink($conn, (int) $qRow['id'], $leadId);
+            }
+        }
+
+        if (!$qRow) {
+            continue;
+        }
+
+        $foundId = (int) ($qRow['id'] ?? 0);
+        if ($foundId <= 0) {
+            continue;
+        }
+
+        $lead['latest_quotation_id'] = $foundId;
+        $lead['latest_quotation_href'] = 'crm/quotation_generator.php?id=' . $foundId;
+        $lead['latest_quotation_status'] = (string) ($qRow['status'] ?? '');
+        $lead['has_quotation'] = true;
+        $lead['latest_is_tour_confirmed'] = (int) ($qRow['tour_confirmed'] ?? 0) === 1;
+        if ($lead['latest_is_tour_confirmed']) {
+            $lead['is_tour_confirmed'] = true;
         }
     }
     unset($lead);

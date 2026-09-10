@@ -314,31 +314,38 @@ if (!function_exists('crmLeadsEnrichDisplayFromQuotations')) {
             $qRow = null;
 
             if ($qid > 0) {
-                $res = $conn->query('SELECT `destination`, `tentative_date`, `no_of_nights` FROM `crm_quotations` WHERE `id` = ' . $qid . ' LIMIT 1');
+                $res = $conn->query(
+                    'SELECT `id`, `destination`, `tentative_date`, `no_of_nights`, `tour_confirmed`, `status`
+                     FROM `crm_quotations` WHERE `id` = ' . $qid . ' LIMIT 1'
+                );
                 $qRow = ($res && ($row = $res->fetch_assoc())) ? $row : null;
             }
 
             if (!$qRow) {
-                $phone = preg_replace('/\D+/', '', (string) ($lead['customer_phone'] ?? ''));
-                if (strlen($phone) > 10) {
-                    $phone = substr($phone, -10);
+                $phoneKey = function_exists('crmQuotationPhoneKey')
+                    ? crmQuotationPhoneKey($lead['customer_phone'] ?? '')
+                    : preg_replace('/\D+/', '', (string) ($lead['customer_phone'] ?? ''));
+                if (strlen((string) $phoneKey) > 10) {
+                    $phoneKey = substr((string) $phoneKey, -10);
                 }
-                if ($phone !== '') {
-                    $stmt = $conn->prepare(
-                        'SELECT `id`, `destination`, `tentative_date`, `no_of_nights`
+                if ($phoneKey !== '') {
+                    $res = $conn->query(
+                        'SELECT `id`, `destination`, `tentative_date`, `no_of_nights`, `tour_confirmed`, `status`, `mobile_no`
                          FROM `crm_quotations`
-                         WHERE REPLACE(REPLACE(REPLACE(`mobile_no`, " ", ""), "-", ""), "+", "") LIKE ?
-                         ORDER BY `id` DESC LIMIT 1'
+                         ORDER BY `id` DESC LIMIT 200'
                     );
-                    if ($stmt) {
-                        $like = '%' . $phone;
-                        $stmt->bind_param('s', $like);
-                        $stmt->execute();
-                        $res = $stmt->get_result();
-                        $qRow = $res ? $res->fetch_assoc() : null;
-                        $stmt->close();
-                        if ($qRow) {
-                            $lead['latest_quotation_id'] = (int) ($qRow['id'] ?? 0);
+                    while ($res && ($cand = $res->fetch_assoc())) {
+                        $matched = function_exists('crmQuotationPhonesMatch')
+                            ? crmQuotationPhonesMatch($cand['mobile_no'] ?? '', $phoneKey)
+                            : false;
+                        if (!$matched) {
+                            $candDigits = preg_replace('/\D+/', '', (string) ($cand['mobile_no'] ?? ''));
+                            $candKey = strlen($candDigits) > 10 ? substr($candDigits, -10) : $candDigits;
+                            $matched = ($candKey !== '' && $candKey === $phoneKey);
+                        }
+                        if ($matched) {
+                            $qRow = $cand;
+                            break;
                         }
                     }
                 }
@@ -346,6 +353,26 @@ if (!function_exists('crmLeadsEnrichDisplayFromQuotations')) {
 
             if (!$qRow) {
                 continue;
+            }
+
+            $foundId = (int) ($qRow['id'] ?? 0);
+            if ($foundId > 0) {
+                if ((int) ($lead['latest_quotation_id'] ?? 0) <= 0) {
+                    $lead['latest_quotation_id'] = $foundId;
+                }
+                if (trim((string) ($lead['latest_quotation_href'] ?? '')) === '') {
+                    $lead['latest_quotation_href'] = 'crm/quotation_generator.php?id=' . $foundId;
+                }
+                $lead['has_quotation'] = true;
+                if ((int) ($qRow['tour_confirmed'] ?? 0) === 1) {
+                    $lead['is_tour_confirmed'] = true;
+                    $lead['latest_is_tour_confirmed'] = true;
+                    $lead['latest_quotation_id'] = $foundId;
+                    $lead['latest_quotation_href'] = 'crm/quotation_generator.php?id=' . $foundId;
+                }
+                if (($lead['latest_quotation_status'] ?? '') === '' && (int) ($lead['latest_quotation_id'] ?? 0) === $foundId) {
+                    $lead['latest_quotation_status'] = (string) ($qRow['status'] ?? '');
+                }
             }
 
             $destination = trim((string) ($qRow['destination'] ?? ''));
