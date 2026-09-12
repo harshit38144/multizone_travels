@@ -21,7 +21,7 @@ if (strpos($scriptPath, '/crm/') !== false || preg_match('#/crm/[^/]+\.php$#', $
 // Menu Groups
 $eticketsPages = ['etickets', 'eticketslist', 'e-ticket-master'];
 $crmPages = ['crm_leads', 'crm_lead_add', 'crm_lead_intake_pending'];
-$mastersPages = ['crm_city_master', 'crm_city_create', 'crm_lead_source_master', 'crm_hotel_master', 'crm_hotel_create', 'crm_airline_master', 'crm_airline_create', 'crm_cruise_master', 'crm_cruise_create', 'crm_cruise_view', 'crm_vehicle_master', 'crm_vehicle_create', 'crm_vehicle_view', 'crm_addon_service_master', 'crm_addon_service_view', 'crm_sightseeing_master', 'crm_sightseeing_create', 'crm_sightseeing_destination', 'crm_sightseeing_view', 'crm_testimonial_master', 'crm_testimonial_create', 'crm_quotation_terms_master', 'geo_import'];
+$mastersPages = ['crm_lead_source_master', 'crm_hotel_master', 'crm_hotel_create', 'crm_airline_master', 'crm_airline_create', 'crm_cruise_master', 'crm_cruise_create', 'crm_cruise_view', 'crm_vehicle_master', 'crm_vehicle_create', 'crm_vehicle_view', 'crm_addon_service_master', 'crm_addon_service_view', 'crm_sightseeing_master', 'crm_sightseeing_create', 'crm_sightseeing_destination', 'crm_sightseeing_view', 'crm_testimonial_master', 'crm_testimonial_create', 'crm_quotation_terms_master', 'geo_import'];
 $quotationsPages = ['crm_quotation_templates', 'crm_quotation-generator-list', 'crm_quotation_generator'];
 $bookingsPages = ['crm_bookings', 'crm_booking_add'];
 $crmCustomersPages = ['crm_customers', 'crm_customer_add'];
@@ -489,13 +489,6 @@ $crmParentPages = array_merge(
                 </p>
               </a>
               <ul class="nav nav-treeview">
-                <li class="nav-item">
-                  <a href="crm/city_master.php"
-                    class="nav-link <?= in_array($page, ['crm_city_master', 'crm_city_create'], true) ? 'active' : '' ?>">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Cities</p>
-                  </a>
-                </li>
                 <li class="nav-item">
                   <a href="crm/lead_source_master.php"
                     class="nav-link <?= ($page === 'crm_lead_source_master') ? 'active' : '' ?>">

@@ -113,7 +113,31 @@
       cleanSearch = params.length ? ('?' + params.join('&')) : ''
     }
 
-    return rel + cleanSearch + hash
+    return canonicalizeTabPath(rel + cleanSearch + hash)
+  }
+
+  /**
+   * Map removed/legacy routes onto their replacement page so the tab bar
+   * does not open two tabs for the same screen (e.g. city_master → hotel_master).
+   */
+  function canonicalizeTabPath (path) {
+    if (!path) return path
+    var hash = ''
+    var hashIdx = path.indexOf('#')
+    if (hashIdx >= 0) {
+      hash = path.slice(hashIdx)
+      path = path.slice(0, hashIdx)
+    }
+    var qIdx = path.indexOf('?')
+    var file = (qIdx === -1 ? path : path.slice(0, qIdx)).replace(/^\/+/, '').toLowerCase()
+    var aliases = {
+      'crm/city_master.php': 'crm/hotel_master.php',
+      'crm/city_create.php': 'crm/hotel_master.php'
+    }
+    if (aliases[file]) {
+      return aliases[file] + hash
+    }
+    return path + hash
   }
 
   function tabIdFromPath (path) {
@@ -529,21 +553,41 @@
     if (saved && Array.isArray(saved.tabs)) {
       saved.tabs.forEach(function (t) {
         if (!t || !t.path) return
-        var id = tabIdFromPath(t.path)
+        var path = canonicalizeTabPath(normalizePath(t.path) || t.path)
+        if (!path) return
+        var id = tabIdFromPath(path)
         if (findTab(id)) {
           var ex = findTab(id)
-          if (t.title) ex.title = t.title
+          // Prefer Hotels title over legacy "City Master" / "Hotel Master" duplicates
+          if (t.title && t.title !== 'City Master' && t.title !== 'Cities') {
+            ex.title = t.title
+          } else if (id.indexOf('hotel_master.php') !== -1) {
+            ex.title = 'Hotel Master'
+          }
           return
         }
         if (t.pinned) return // dashboard already added
-        openTab(t.path, t.title || titleFromPath(t.path), { pushHistory: false })
+        var title = t.title
+        if (title === 'City Master' || title === 'Cities') {
+          title = titleFromPath(path)
+        }
+        openTab(path, title || titleFromPath(path), { pushHistory: false })
       })
       if (saved.mru && Array.isArray(saved.mru)) {
-        state.mru = saved.mru.filter(function (id) { return !!findTab(id) })
+        state.mru = saved.mru
+          .map(function (id) { return tabIdFromPath(canonicalizeTabPath(id) || id) })
+          .filter(function (id) { return !!findTab(id) })
+        // de-dupe MRU
+        state.mru = state.mru.filter(function (id, idx, arr) {
+          return arr.indexOf(id) === idx
+        })
       }
     }
 
     var activate = openParam || (saved && saved.activeId) || tabIdFromPath(cfg.dashboardUrl)
+    if (saved && saved.activeId && !openParam) {
+      activate = tabIdFromPath(canonicalizeTabPath(saved.activeId) || saved.activeId)
+    }
     if (openParam) {
       var openTitle = titleFromPath(openParam)
       openTab(openParam, openTitle, { pushHistory: false })

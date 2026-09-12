@@ -219,12 +219,13 @@ $qPreviewMeta = [
     'email' => 'holidays@multizonetravels.com',
     'website' => 'www.multizonetravels.com',
     'address' => 'Bye Pass Road, Dibadih, Doranda, Ranchi - 834002, Jharkhand, India',
-    'services' => 'FLIGHTS | HOTELS | HOLIDAYS | VISA | FOREX',
+    'services' => 'FLIGHTS • HOTELS • HOLIDAYS • VISA • FOREX',
     'social' => [
         ['type' => 'facebook', 'url' => 'https://www.facebook.com/', 'icon' => 'fab fa-facebook-f'],
         ['type' => 'twitter', 'url' => 'https://twitter.com/', 'icon' => 'fab fa-twitter'],
-        ['type' => 'google', 'url' => 'https://plus.google.com/', 'icon' => 'fab fa-google-plus-g'],
-        ['type' => 'web', 'url' => 'https://www.multizonetravels.com/', 'icon' => 'fas fa-globe'],
+        ['type' => 'linkedin', 'url' => 'https://www.linkedin.com/', 'icon' => 'fab fa-linkedin-in'],
+        ['type' => 'instagram', 'url' => 'https://www.instagram.com/', 'icon' => 'fab fa-instagram'],
+        ['type' => 'youtube', 'url' => 'https://www.youtube.com/', 'icon' => 'fab fa-youtube'],
     ],
     'quotation_uid' => (string) ($quotation['quotation_uid'] ?? ($prefill['quotation_uid'] ?? '')),
 ];
@@ -6900,148 +6901,558 @@ $qWizardSteps = [
             background: var(--q-border);
         }
 
-        /* Quotation preview modal */
+        /* Quotation preview modal — branded */
         #qPreviewModal .modal-dialog {
-            max-width: 920px;
+            max-width: 960px;
         }
 
         #qPreviewModal .modal-body {
             padding: 0;
-            background: #fff;
+            background: #f7f7f8;
         }
 
-        .q-preview-doc {
-            font-family: Arial, Helvetica, sans-serif;
-            color: #222;
-            font-size: 13px;
-            line-height: 1.45;
-            padding: 18px 22px 24px;
+        #qPreviewModal .qp-modal-content {
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        .q-preview-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #cfcfcf;
-            margin-bottom: 12px;
+        #qPreviewModal .qp-modal-header {
+            background: #c4121a;
+            color: #fff;
+            border-bottom: none;
+            padding: 12px 18px;
+            align-items: center;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .q-preview-logo img {
-            max-height: 52px;
-            width: auto;
-        }
-
-        .q-preview-title-block {
-            flex: 1;
-            text-align: center;
-            padding: 0 8px;
-        }
-
-        .q-preview-title-block h1 {
-            margin: 0;
-            font-size: 1.15rem;
+        #qPreviewModal .qp-modal-header .modal-title {
+            font-size: 1.05rem;
             font-weight: 700;
             letter-spacing: 0.02em;
-            text-transform: uppercase;
-            color: #111;
         }
 
-        .q-preview-title-block .q-preview-duration {
+        #qPreviewModal .qp-modal-hint {
+            display: block;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 11px;
             margin-top: 2px;
-            font-size: 0.95rem;
-            font-weight: 700;
+        }
+
+        #qPreviewModal .qp-modal-unsaved {
+            color: #ffe08a !important;
+        }
+
+        #qPreviewModal .qp-modal-close {
+            color: #fff;
+            text-shadow: none;
+            opacity: 0.9;
+        }
+
+        #qPreviewModal .qp-modal-footer {
+            background: #fff;
+            border-top: 1px solid #e8e8ea;
+            padding: 12px 16px;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        #qPreviewModal .qp-btn-close {
+            border: 1.5px solid #c4121a;
+            color: #c4121a;
+            background: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+
+        #qPreviewModal .qp-btn-close:hover {
+            background: #fff5f5;
+            color: #a10e15;
+            border-color: #a10e15;
+        }
+
+        #qPreviewModal .qp-btn-edit {
+            background: #c4121a;
+            border-color: #c4121a;
+            color: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+
+        #qPreviewModal .qp-btn-edit:hover {
+            background: #a10e15;
+            border-color: #a10e15;
+            color: #fff;
+        }
+
+        #qPreviewModal .qp-btn-print {
+            background: transparent;
+            border: 1px solid #c5c5c8;
+            color: #555;
+            font-weight: 500;
+            padding: 6px 14px;
+        }
+
+        #qPreviewModal .qp-btn-print:hover {
+            background: #f3f3f4;
             color: #333;
         }
 
-        .q-preview-ref-block {
-            text-align: right;
-            min-width: 150px;
-            font-size: 12px;
+        .q-preview-doc {
+            --qp-red: #c4121a;
+            --qp-red-bright: #e11d2e;
+            --qp-red-dark: #9a0f15;
+            --qp-ink: #1f1f22;
+            --qp-muted: #6b6b73;
+            --qp-line: #e4e4e8;
+            --qp-soft: #f6f6f8;
+            --qp-card: #fafafa;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--qp-ink);
+            font-size: 13px;
             line-height: 1.5;
+            padding: 22px 24px 28px;
+            background: #fff;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .q-preview-ref-block .ref {
+        /* —— Document header —— */
+        .qp-doc-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            padding-bottom: 16px;
+            margin-bottom: 18px;
+            border-bottom: 2px solid var(--qp-line);
+        }
+
+        .qp-logo img {
+            max-height: 56px;
+            width: auto;
+            display: block;
+        }
+
+        .qp-title-block {
+            flex: 1;
+            text-align: center;
+            padding: 0 6px;
+        }
+
+        .qp-mtn-svg {
+            width: 72px;
+            height: 36px;
+            margin: 0 auto 6px;
+            display: block;
+        }
+
+        .qp-title-block h1 {
+            margin: 0;
+            font-size: 1.12rem;
             font-weight: 700;
-            color: #111;
+            letter-spacing: 0.01em;
+            color: var(--qp-ink);
+            line-height: 1.3;
         }
 
-        .q-preview-table {
+        .qp-title-block .q-preview-dest-title,
+        .qp-dest-red {
+            color: var(--qp-red);
+            font-weight: 800;
+        }
+
+        .qp-duration-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .qp-duration-line {
+            width: 36px;
+            height: 2px;
+            background: var(--qp-red);
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-duration {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--qp-ink);
+            white-space: nowrap;
+        }
+
+        .qp-ref-card {
+            background: #f0f0f2;
+            border-radius: 8px;
+            padding: 10px 14px;
+            min-width: 168px;
+            font-size: 12px;
+            line-height: 1.55;
+            text-align: left;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-ref-card .qp-ref-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .qp-ref-card .qp-ref-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .qp-ref-card .qp-ref-ico {
+            color: var(--qp-red);
+            width: 14px;
+            text-align: center;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .qp-ref-card .ref {
+            font-weight: 700;
+            color: var(--qp-ink);
+            word-break: break-all;
+        }
+
+        /* —— Section heads —— */
+        .qp-sec {
+            margin-bottom: 18px;
+        }
+
+        .qp-sec-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .qp-sec-head-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .qp-sec-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--qp-red);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-sec-title {
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--qp-ink);
+            white-space: nowrap;
+        }
+
+        .qp-sec-line {
+            flex: 1;
+            height: 2px;
+            background: var(--qp-red);
+            min-width: 24px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-sec-slogan {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: var(--qp-muted);
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .qp-itin-title {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin: 4px 0 14px;
+            flex-wrap: wrap;
+        }
+
+        .qp-itin-title .qp-bar {
+            display: inline-block;
+            background: var(--qp-red);
+            color: #fff;
+            font-weight: 800;
+            font-size: 12px;
+            letter-spacing: 0.06em;
+            padding: 5px 10px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-itin-title .qp-itin-red {
+            color: var(--qp-red);
+            font-weight: 800;
+            font-size: 15px;
+            letter-spacing: 0.04em;
+        }
+
+        /* —— Info / data cards —— */
+        .qp-info-card {
+            display: grid;
+            gap: 0;
+            border: 1px solid var(--qp-line);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            margin-bottom: 4px;
+        }
+
+        .qp-info-card.qp-cols-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .qp-info-card.qp-cols-5 {
+            grid-template-columns: repeat(5, 1fr);
+        }
+
+        .qp-info-cell {
+            padding: 10px 12px;
+            border-right: 1px solid var(--qp-line);
+            text-align: center;
+            min-width: 0;
+        }
+
+        .qp-info-cell:last-child {
+            border-right: none;
+        }
+
+        .qp-info-label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--qp-muted);
+            margin-bottom: 4px;
+        }
+
+        .qp-info-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--qp-ink);
+            word-break: break-word;
+        }
+
+        /* —— Tables —— */
+        .q-preview-table,
+        .qp-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 14px;
+            margin-bottom: 6px;
             font-size: 12px;
         }
 
+        .qp-table th,
+        .qp-table td,
         .q-preview-table th,
         .q-preview-table td {
-            border: 1px solid #bdbdbd;
-            padding: 6px 8px;
+            border: 1px solid #dddde2;
+            padding: 8px 8px;
             vertical-align: middle;
         }
 
+        .qp-table th,
         .q-preview-table th {
-            background: #d9d9d9;
+            background: #f0f0f3;
             font-weight: 700;
             text-align: center;
-            color: #111;
+            color: var(--qp-ink);
+            font-size: 11px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
+        .qp-table td,
         .q-preview-table td {
             text-align: center;
         }
 
+        .qp-table td.text-left,
         .q-preview-table td.text-left {
             text-align: left;
         }
 
+        .qp-table td.text-right,
         .q-preview-table td.text-right {
             text-align: right;
         }
 
+        .qp-table tbody tr:nth-child(even):not(.q-preview-layover):not(.qp-layover),
+        .q-preview-table tbody tr:nth-child(even):not(.q-preview-layover):not(.qp-layover) {
+            background: #fafafb;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .q-preview-layover td,
+        .qp-layover td {
+            background: #fff8e1 !important;
+            font-size: 12px;
+            text-align: left !important;
+            color: #7a5c00;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         .q-preview-section-title {
-            background: #d9d9d9;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            padding: 7px 10px;
-            margin: 16px 0 10px;
-            font-size: 12px;
-            color: #111;
+            display: none;
         }
 
-        .q-preview-day {
-            margin-bottom: 14px;
+        /* —— Day itinerary —— */
+        .q-preview-day,
+        .qp-day {
+            margin-bottom: 12px;
+            border: 1px solid var(--qp-line);
+            border-left: 4px solid var(--qp-red);
+            border-radius: 0 8px 8px 0;
+            background: #fff;
+            padding: 12px 14px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .q-preview-day-head {
-            background: #d9d9d9;
+        .q-preview-day-head,
+        .qp-day-head {
+            background: transparent;
             font-weight: 700;
-            text-transform: uppercase;
-            padding: 7px 10px;
-            font-size: 12px;
+            text-transform: none;
+            padding: 0;
+            font-size: 13px;
             margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
         }
 
-        .q-preview-day-body {
-            padding: 0 4px;
+        .qp-day-badge {
+            display: inline-block;
+            background: var(--qp-red);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            padding: 3px 9px;
+            border-radius: 4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .q-preview-day-body p {
+        .qp-day-meta {
+            color: var(--qp-muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .qp-day-meta i {
+            color: var(--qp-red);
+            margin-right: 4px;
+        }
+
+        .qp-day-title {
+            font-weight: 700;
+            color: var(--qp-ink);
+            width: 100%;
+            margin-top: 2px;
+        }
+
+        .qp-day-title i {
+            color: var(--qp-red);
+            margin-right: 6px;
+        }
+
+        .q-preview-day-body,
+        .qp-day-body {
+            padding: 0;
+            color: #3a3a40;
+            font-size: 12.5px;
+        }
+
+        .q-preview-day-body p,
+        .qp-day-body p {
             margin: 0 0 8px;
         }
 
-        .q-preview-day-body ul {
+        .q-preview-day-body ul,
+        .qp-day-body ul {
             margin: 0 0 8px 18px;
             padding: 0;
         }
 
-        .q-preview-day-body img {
+        .q-preview-day-body img,
+        .qp-day-body img {
             max-width: 280px;
             height: auto;
             border-radius: 4px;
             margin-top: 6px;
+        }
+
+        .qp-day-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .qp-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            padding: 3px 9px;
+            border-radius: 999px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-pill-overnight {
+            background: #fde8ea;
+            color: var(--qp-red);
+        }
+
+        .qp-pill-meal {
+            background: #eef6ff;
+            color: #1d4ed8;
+        }
+
+        .q-preview-itinerary-meta {
+            font-size: 11px;
+            color: var(--qp-muted);
+            margin-bottom: 10px;
         }
 
         .q-preview-rich {
@@ -7053,8 +7464,265 @@ $qWizardSteps = [
         }
 
         .q-preview-rich ul {
-            margin: 0 0 8px 18px;
+            margin: 0;
             padding: 0;
+            list-style: none;
+        }
+
+        /* —— Inclusions —— */
+        .qp-incl-banner {
+            background: linear-gradient(90deg, var(--qp-red-dark), var(--qp-red-bright));
+            color: #fff;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            text-align: center;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-banner .qp-incl-kicker {
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            font-weight: 700;
+            opacity: 0.9;
+            margin-bottom: 2px;
+        }
+
+        .qp-incl-banner .qp-incl-main {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin: 0;
+        }
+
+        .qp-incl-banner .qp-incl-sub {
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            margin-top: 4px;
+            opacity: 0.92;
+        }
+
+        .qp-incl-edit.q-preview-rich ul {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .qp-incl-edit.q-preview-rich ul li {
+            background: #fff;
+            border: 1px solid var(--qp-line);
+            border-radius: 8px;
+            padding: 10px 12px 10px 36px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            font-size: 12.5px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-edit.q-preview-rich ul li::before {
+            content: "\f00c";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 12px;
+            top: 11px;
+            color: #16a34a;
+            font-size: 12px;
+        }
+
+        .qp-incl-edit.q-preview-rich > *:not(ul) {
+            background: #fff;
+            border: 1px solid var(--qp-line);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+        }
+
+        /* —— Terms —— */
+        .qp-terms-card {
+            border: 1px solid var(--qp-line);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .qp-terms-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--qp-line);
+            background: #fafafa;
+        }
+
+        .qp-terms-head .qp-bar {
+            width: 4px;
+            height: 22px;
+            background: var(--qp-red);
+            border-radius: 2px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-terms-head h3 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .q-preview-policy-block,
+        .qp-policy-block {
+            padding: 12px 14px;
+            margin-bottom: 0;
+            border-bottom: 1px solid var(--qp-line);
+        }
+
+        .q-preview-policy-block:last-child,
+        .qp-policy-block:last-child {
+            border-bottom: none;
+        }
+
+        .q-preview-policy-title,
+        .qp-policy-title {
+            font-weight: 700;
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: var(--qp-red);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .q-preview-policy-title::before,
+        .qp-policy-title::before {
+            content: "\f00c";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            font-size: 11px;
+            color: var(--qp-red);
+        }
+
+        .qp-policy-block .q-preview-rich ul li {
+            position: relative;
+            padding-left: 4px;
+            margin-bottom: 4px;
+        }
+
+        /* —— Exclusions —— */
+        .qp-excl-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .qp-excl-head .qp-bar {
+            width: 4px;
+            height: 22px;
+            background: var(--qp-red);
+            border-radius: 2px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-excl-head h3 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qp-excl-head h3 i {
+            color: var(--qp-red);
+        }
+
+        .qp-excl-edit.q-preview-rich ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .qp-excl-edit.q-preview-rich ul li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: #fff;
+            border: 1px solid #f3d0d4;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12.5px;
+        }
+
+        .qp-excl-edit.q-preview-rich ul li::before {
+            content: "\f05e";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            background: #fde8ea;
+            color: var(--qp-red);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            line-height: 28px;
+            text-align: center;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* —— Tour cost —— */
+        .qp-tour-cost {
+            margin: 16px 0 8px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--qp-line);
+        }
+
+        .qp-tour-cost-head {
+            background: var(--qp-red);
+            color: #fff;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 10px 14px;
+            font-size: 13px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-tour-cost .q-preview-table,
+        .qp-tour-cost .qp-table,
+        .q-preview-cost {
+            margin: 0;
+            border: none;
+        }
+
+        .qp-tour-cost .q-preview-table th,
+        .qp-tour-cost .q-preview-table td,
+        .q-preview-cost th,
+        .q-preview-cost td {
+            border-left: none;
+            border-right: none;
+            border-color: var(--qp-line);
+            padding: 10px 14px;
         }
 
         .q-preview-cost td:first-child {
@@ -7064,30 +7732,48 @@ $qWizardSteps = [
         .q-preview-cost td:last-child {
             text-align: right;
             white-space: nowrap;
+            font-weight: 600;
         }
 
-        .q-preview-cost tr:last-child td {
+        .qp-tour-cost .q-preview-cost tbody tr:last-child td,
+        .q-preview-cost tr.qp-cost-total td {
+            background: #2a2a2e;
+            color: #fff;
             font-weight: 700;
+            border-color: #2a2a2e;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-tour-cost .q-preview-cost tbody tr:last-child td:last-child,
+        .q-preview-cost tr.qp-cost-total td:last-child {
+            color: #ff6b73;
+            font-size: 1.05rem;
         }
 
         .q-preview-gst-note {
             font-size: 11px;
-            color: #666;
-            margin-top: 6px;
+            color: var(--qp-muted);
+            margin-top: 8px;
+            padding: 0 2px;
         }
 
-        .q-preview-footer {
-            margin-top: 28px;
+        /* —— Footer contact —— */
+        .q-preview-footer,
+        .qp-footer {
+            margin-top: 32px;
             text-align: center;
-            padding-top: 8px;
-            border-top: none;
+            padding-top: 18px;
+            border-top: 2px solid var(--qp-line);
         }
 
-        .q-preview-expert {
+        .q-preview-expert,
+        .qp-expert {
             margin-bottom: 0;
         }
 
-        .q-preview-expert-avatar {
+        .q-preview-expert-avatar,
+        .qp-expert-avatar {
             width: 88px;
             height: 88px;
             border-radius: 50%;
@@ -7099,78 +7785,110 @@ $qWizardSteps = [
             justify-content: center;
             font-size: 1.75rem;
             font-weight: 700;
-            margin: 0 auto 10px;
-            border: none;
+            margin: 0 auto 12px;
+            border: 3px solid #f0f0f2;
         }
 
-        .q-preview-expert-avatar img {
+        .q-preview-expert-avatar img,
+        .qp-expert-avatar img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
         }
 
-        .q-preview-expert-name {
-            font-size: 15px;
+        .qp-expert-name-block {
+            margin-bottom: 10px;
+        }
+
+        .qp-expert-fullname {
+            display: block;
+            color: var(--qp-red);
+            font-weight: 800;
+            font-size: 16px;
             margin-bottom: 6px;
-            font-weight: 400;
-            color: #555;
-            line-height: 1.35;
         }
 
-        .q-preview-expert-name .q-preview-expert-fullname {
-            color: #c0392b;
-            font-weight: 700;
+        .qp-expert-role-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
-        .q-preview-expert-name .q-preview-expert-sep {
-            color: #999;
-            margin: 0 4px;
-            font-weight: 400;
+        .qp-expert-role-wrap .qp-duration-line {
+            width: 40px;
         }
 
-        .q-preview-expert-name .q-preview-expert-role {
-            color: #555;
-            font-weight: 500;
+        .qp-expert-role {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--qp-muted);
         }
 
-        .q-preview-expert-lines {
+        .q-preview-expert-lines,
+        .qp-expert-lines {
             font-size: 13px;
-            line-height: 1.55;
-            color: #222;
+            line-height: 1.7;
+            color: var(--qp-ink);
             margin-bottom: 14px;
-        }
-
-        .q-preview-expert-lines .q-preview-phone-primary {
-            font-weight: 700;
-            color: #111;
-        }
-
-        .q-preview-services-bar {
             display: inline-block;
-            background: #c0392b;
+            text-align: left;
+        }
+
+        .qp-contact-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 2px;
+        }
+
+        .qp-contact-row i {
+            color: var(--qp-red);
+            width: 16px;
+            text-align: center;
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+
+        .q-preview-expert-lines .q-preview-phone-primary,
+        .qp-phone-primary {
+            font-weight: 700;
+            color: var(--qp-ink);
+        }
+
+        .q-preview-services-bar,
+        .qp-services-bar {
+            display: inline-block;
+            background: var(--qp-red);
             color: #fff;
             font-weight: 700;
-            font-size: 12px;
-            letter-spacing: 0.06em;
-            padding: 10px 36px;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            padding: 10px 28px;
             border-radius: 999px;
-            margin: 4px auto 14px;
+            margin: 6px auto 14px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .q-preview-social {
+        .q-preview-social,
+        .qp-social {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 10px;
-            margin-top: 2px;
+            margin-top: 4px;
+            margin-bottom: 12px;
         }
 
-        .q-preview-social a {
-            width: 28px;
-            height: 28px;
+        .q-preview-social a,
+        .qp-social a {
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
@@ -7178,20 +7896,36 @@ $qWizardSteps = [
             color: #fff !important;
             text-decoration: none;
             font-size: 13px;
+            background: var(--qp-red);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .q-preview-social a.fb { background: #3b5998; }
-        .q-preview-social a.tw { background: #55acee; }
-        .q-preview-social a.gp { background: #dd4b39; }
-        .q-preview-social a.web { background: #95a5a6; }
+        .q-preview-social a.fb,
+        .qp-social a.fb { background: #3b5998; }
+        .q-preview-social a.tw,
+        .qp-social a.tw { background: #1da1f2; }
+        .q-preview-social a.li,
+        .qp-social a.li { background: #0077b5; }
+        .q-preview-social a.ig,
+        .qp-social a.ig { background: #e1306c; }
+        .q-preview-social a.yt,
+        .qp-social a.yt { background: #ff0000; }
+        .q-preview-social a.gp,
+        .qp-social a.gp { background: #dd4b39; }
+        .q-preview-social a.web,
+        .qp-social a.web { background: #6b7280; }
 
-        .q-preview-layover td {
-            background: #fff9e6;
-            font-size: 12px;
+        .qp-tagline {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            color: var(--qp-red);
+            text-transform: uppercase;
+            margin-top: 4px;
         }
 
+        /* —— Editable —— */
         .q-preview-editable {
             cursor: text;
             outline: none;
@@ -7214,7 +7948,7 @@ $qWizardSteps = [
         }
 
         .q-preview-editable:hover {
-            background: rgba(0, 0, 0, 0.035);
+            background: rgba(196, 18, 26, 0.04);
         }
 
         .q-preview-editable:focus,
@@ -7224,15 +7958,34 @@ $qWizardSteps = [
             box-shadow: none;
         }
 
-        .q-preview-policy-block {
-            margin-bottom: 12px;
-        }
+        @media (max-width: 720px) {
+            .qp-doc-head {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
 
-        .q-preview-policy-title {
-            font-weight: 700;
-            font-size: 12px;
-            margin-bottom: 4px;
-            color: #333;
+            .qp-ref-card {
+                width: 100%;
+            }
+
+            .qp-info-card.qp-cols-3,
+            .qp-info-card.qp-cols-5 {
+                grid-template-columns: 1fr;
+            }
+
+            .qp-info-cell {
+                border-right: none;
+                border-bottom: 1px solid var(--qp-line);
+            }
+
+            .qp-info-cell:last-child {
+                border-bottom: none;
+            }
+
+            .qp-sec-slogan {
+                width: 100%;
+            }
         }
 
         @media print {
@@ -7259,6 +8012,12 @@ $qWizardSteps = [
                 outline: none !important;
                 box-shadow: none !important;
                 background: transparent !important;
+            }
+
+            #qPreviewPrintArea,
+            #qPreviewPrintArea * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
         }
 
@@ -8086,6 +8845,10 @@ $qWizardSteps = [
                                             <div class="q-side-grid-label"><i class="fas fa-moon"></i> Nights</div>
                                             <div class="q-side-grid-value"><?= htmlspecialchars((string) $leadSidebar['travel']['nights'], ENT_QUOTES, 'UTF-8') ?></div>
                                         </div>
+                                        <div class="q-side-grid-item">
+                                            <div class="q-side-grid-label"><i class="fas fa-star"></i> Hotel Star Category</div>
+                                            <div class="q-side-grid-value"><?= htmlspecialchars((string) ($leadSidebar['travel']['hotel_star_category'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></div>
+                                        </div>
                                     </div>
                                     <div class="q-side-travellers">
                                         <div class="q-side-travellers-label">Traveller Info</div>
@@ -8854,29 +9617,29 @@ $qWizardSteps = [
 
     <div class="modal fade" id="qPreviewModal" tabindex="-1" role="dialog" aria-labelledby="qPreviewModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-            <div class="modal-content">
-                <div class="modal-header py-2">
-                    <div>
-                        <h5 class="modal-title mb-0" id="qPreviewModalLabel">Quotation Preview</h5>
-                        <small class="text-muted">Click any text to edit directly</small>
-                        <small id="qPreviewUnsavedHint" class="text-warning d-none ml-2"><i class="fas fa-circle" style="font-size:7px;vertical-align:middle;"></i> Unsaved changes</small>
+            <div class="modal-content qp-modal-content">
+                <div class="modal-header qp-modal-header">
+                    <div class="qp-modal-title-wrap">
+                        <h5 class="modal-title mb-0" id="qPreviewModalLabel"><i class="fas fa-eye mr-2"></i>Quotation Preview</h5>
+                        <small class="qp-modal-hint">Click any text to edit directly</small>
+                        <small id="qPreviewUnsavedHint" class="qp-modal-unsaved d-none ml-2"><i class="fas fa-circle" style="font-size:7px;vertical-align:middle;"></i> Unsaved changes</small>
                     </div>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close qp-modal-close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div id="qPreviewPrintArea" class="q-preview-doc"></div>
                 </div>
-                <div class="modal-footer py-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger btn-sm" id="qPreviewEditBtn" title="Open full quotation editor">
+                <div class="modal-footer qp-modal-footer">
+                    <button type="button" class="btn qp-btn-close btn-sm" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn qp-btn-edit btn-sm" id="qPreviewEditBtn" title="Open full quotation editor">
                         <i class="fas fa-edit mr-1"></i> Edit Quotation
                     </button>
                     <button type="button" class="btn btn-success btn-sm d-none" id="qPreviewSaveBtn" disabled>
                         <i class="fas fa-save mr-1"></i>Save Changes
                     </button>
-                    <button type="button" class="btn btn-primary btn-sm" id="qPreviewPrintBtn">
+                    <button type="button" class="btn qp-btn-print btn-sm" id="qPreviewPrintBtn">
                         <i class="fas fa-print mr-1"></i> Print
                     </button>
                 </div>
@@ -8903,7 +9666,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=130"></script>
+    <script src="crm/assets/quotation_generator.js?v=133"></script>
     <script src="crm/assets/quotation_flight_search.js?v=14"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

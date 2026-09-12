@@ -1,8 +1,7 @@
 <?php
 /**
- * Legacy route — create city opens as modal on city_master.php
+ * Legacy city create route — City Master UI removed from CRM.
  */
 require_once __DIR__ . '/bootstrap.php';
-
-header('Location: city_master.php?open=create');
+header('Location: hotel_master.php');
 exit;

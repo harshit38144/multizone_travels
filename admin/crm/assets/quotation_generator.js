@@ -1258,6 +1258,144 @@
         };
     }
 
+    function parseHotelIsoDate(str) {
+        var iso = normalizeLegacyDateInput(str);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+            return null;
+        }
+        var d = new Date(iso + 'T00:00:00');
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatHotelIsoDate(d) {
+        if (!d || isNaN(d.getTime())) {
+            return '';
+        }
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        return d.getFullYear() + '-' + mm + '-' + dd;
+    }
+
+    function addHotelDays(iso, days) {
+        var d = parseHotelIsoDate(iso);
+        if (!d) {
+            return '';
+        }
+        var n = parseInt(days, 10);
+        if (isNaN(n)) {
+            n = 0;
+        }
+        d.setDate(d.getDate() + n);
+        return formatHotelIsoDate(d);
+    }
+
+    function hotelNightsBetween(checkin, checkout) {
+        var a = parseHotelIsoDate(checkin);
+        var b = parseHotelIsoDate(checkout);
+        if (!a || !b) {
+            return null;
+        }
+        return Math.round((b.getTime() - a.getTime()) / 86400000);
+    }
+
+    /** Check-Out = Check-In + Nights */
+    function syncHotelCheckoutFromNights($row) {
+        if (!$row || !$row.length) {
+            return;
+        }
+        var checkin = $row.find('.h-checkin').val();
+        var nights = parseInt($row.find('.h-nights').val(), 10);
+        if (!checkin || isNaN(nights) || nights < 0) {
+            return;
+        }
+        if (nights === 0) {
+            return;
+        }
+        var checkout = addHotelDays(checkin, nights);
+        if (checkout) {
+            $row.find('.h-checkout').val(checkout);
+        }
+    }
+
+    /** Nights = Check-Out − Check-In */
+    function syncHotelNightsFromDates($row) {
+        if (!$row || !$row.length) {
+            return;
+        }
+        var nights = hotelNightsBetween($row.find('.h-checkin').val(), $row.find('.h-checkout').val());
+        if (nights == null || nights < 0) {
+            return;
+        }
+        $row.find('.h-nights').val(String(nights));
+    }
+
+    function getQuotationTravelDate() {
+        return normalizeLegacyDateInput($('#q_tentative_date').val() || '');
+    }
+
+    function getPreviousHotelCheckout($panel) {
+        if (!$panel || !$panel.length) {
+            return '';
+        }
+        var $prev = $panel.find('.q-hotel-row').last();
+        if (!$prev.length) {
+            return '';
+        }
+        syncHotelCheckoutFromNights($prev);
+        var checkout = String($prev.find('.h-checkout').val() || '').trim();
+        if (checkout) {
+            return checkout;
+        }
+        return String($prev.find('.h-checkin').val() || '').trim();
+    }
+
+    /** Defaults for a newly added hotel row in the active option. */
+    function buildNewHotelRowDefaults($panel) {
+        var isFirst = !$panel || !$panel.find('.q-hotel-row').length;
+        var checkin = '';
+        if (isFirst) {
+            // First hotel Check-In = Travel Date (Tentative Date from Tour Information).
+            checkin = getQuotationTravelDate();
+        } else {
+            checkin = getPreviousHotelCheckout($panel);
+            if (!checkin) {
+                checkin = getQuotationTravelDate();
+            }
+        }
+        var nights = 1;
+        var checkout = checkin ? addHotelDays(checkin, nights) : '';
+        return {
+            checkin: checkin,
+            nights: nights,
+            checkout: checkout
+        };
+    }
+
+    /** Keep each option's first hotel Check-In aligned with Travel Date. */
+    function syncFirstHotelCheckinFromTravelDate(force) {
+        var travelDate = getQuotationTravelDate();
+        if (!travelDate) {
+            return;
+        }
+        getHotelCategoryPanels().each(function () {
+            var $first = $(this).find('.q-hotel-row').first();
+            if (!$first.length) {
+                return;
+            }
+            var cur = String($first.find('.h-checkin').val() || '').trim();
+            if (!force && cur) {
+                return;
+            }
+            $first.find('.h-checkin').val(travelDate);
+            var nights = parseInt($first.find('.h-nights').val(), 10);
+            if (isNaN(nights) || nights < 1) {
+                nights = 1;
+                $first.find('.h-nights').val(String(nights));
+            }
+            syncHotelCheckoutFromNights($first);
+        });
+    }
+
     function hotelFieldWrap(opts) {
         opts = opts || {};
         var extraClass = opts.extraClass || '';
@@ -5396,6 +5534,63 @@
         }
     }
 
+    function qpMountainSvg() {
+        return '<svg class="qp-mtn-svg" viewBox="0 0 80 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+            '<circle cx="62" cy="10" r="7" fill="#f5a623"/>' +
+            '<path d="M2 38 L22 12 L32 24 L46 6 L78 38 Z" fill="#c4121a"/>' +
+            '<path d="M2 38 L18 18 L28 28 L40 14 L58 38 Z" fill="#e11d2e" opacity="0.85"/>' +
+            '</svg>';
+    }
+
+    function qpSectionHead(iconFa, title, slogan) {
+        return '<div class="qp-sec-head">' +
+            '<div class="qp-sec-head-left">' +
+            '<span class="qp-sec-icon"><i class="' + esc(iconFa) + '"></i></span>' +
+            '<span class="qp-sec-title">' + esc(title) + '</span>' +
+            '<span class="qp-sec-line"></span>' +
+            '</div>' +
+            (slogan ? '<div class="qp-sec-slogan">' + esc(slogan) + '</div>' : '') +
+            '</div>';
+    }
+
+    function qpInfoCell(label, valueHtml) {
+        return '<div class="qp-info-cell">' +
+            '<span class="qp-info-label">' + esc(label) + '</span>' +
+            '<div class="qp-info-value">' + valueHtml + '</div>' +
+            '</div>';
+    }
+
+    function inferItineraryPills(day) {
+        var text = ((day && day.title) || '') + ' ' + String((day && day.description) || '').replace(/<[^>]*>/g, ' ');
+        text = text.toLowerCase();
+        var pills = [];
+        if (/overnight|night stay|stay overnight|hotel stay|check[- ]?in/.test(text)) {
+            pills.push({ cls: 'qp-pill-overnight', icon: 'fas fa-moon', label: 'Overnight' });
+        }
+        var meals = [];
+        if (/breakfast|\bbb\b|\bcp\b/.test(text)) meals.push('Breakfast');
+        if (/lunch/.test(text)) meals.push('Lunch');
+        if (/dinner/.test(text)) meals.push('Dinner');
+        if (!meals.length && /\b(map|ap|ai)\b|meal plan|meals? included/.test(text)) {
+            meals.push('Meals');
+        }
+        if (meals.length) {
+            pills.push({ cls: 'qp-pill-meal', icon: 'fas fa-utensils', label: meals.join(' · ') });
+        }
+        return pills;
+    }
+
+    function qpSocialClass(type) {
+        type = String(type || '').toLowerCase();
+        if (type === 'facebook') return 'fb';
+        if (type === 'twitter' || type === 'x') return 'tw';
+        if (type === 'linkedin') return 'li';
+        if (type === 'instagram') return 'ig';
+        if (type === 'youtube') return 'yt';
+        if (type === 'google' || type === 'googleplus' || type === 'google-plus') return 'gp';
+        return 'web';
+    }
+
     function buildPreviewHtml(p) {
         var flights = JSON.parse(p.flights_json || '[]');
         var hotelsRaw = JSON.parse(p.hotels_json || '[]');
@@ -5413,52 +5608,63 @@
         var todayLong = formatPreviewLongDate(new Date().toISOString().slice(0, 10));
         var paxChildren = children > 0 ? String(children) : '0';
         var nightsLabel = nights + ' Nights / ' + days + ' Days';
-        var durationLabel = nights + ' Nts / ' + days + ' Days';
 
         var html = '';
 
-        html += '<div class="q-preview-head">';
-        html += '<div class="q-preview-logo"><img src="' + esc(logoUrl) + '" alt="Multi Zone Travels"></div>';
-        html += '<div class="q-preview-title-block">';
-        html += '<h1>Quotation For ' + previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-dest-title' }) + '</h1>';
-        html += '<div class="q-preview-duration">' +
-            previewEditable(durationLabel, 'no_of_nights', { type: 'nights_label', placeholder: '0 Nts / 1 Days' }) +
+        /* —— 1. Header —— */
+        html += '<div class="qp-doc-head q-preview-head">';
+        html += '<div class="qp-logo q-preview-logo"><img src="' + esc(logoUrl) + '" alt="Multi Zone Travels"></div>';
+        html += '<div class="qp-title-block q-preview-title-block">';
+        html += qpMountainSvg();
+        html += '<h1>Tour Quotation – ' +
+            previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-dest-title qp-dest-red' }) +
+            '</h1>';
+        html += '<div class="qp-duration-wrap">' +
+            '<span class="qp-duration-line"></span>' +
+            '<div class="qp-duration q-preview-duration">' +
+            previewEditable(nightsLabel, 'no_of_nights', { type: 'nights_label', placeholder: '0 Nights / 1 Days' }) +
+            '</div>' +
+            '<span class="qp-duration-line"></span>' +
             '</div>';
         html += '</div>';
-        html += '<div class="q-preview-ref-block">';
-        html += '<div class="ref">REF: ' + esc(previewRefNo(p)) + '</div>';
-        html += '<div>Quotation Date: ' + esc(todayLong) + '</div>';
+        html += '<div class="qp-ref-card q-preview-ref-block">';
+        html += '<div class="qp-ref-row"><i class="fas fa-hashtag qp-ref-ico"></i><div class="ref">REF: ' + esc(previewRefNo(p)) + '</div></div>';
+        html += '<div class="qp-ref-row"><i class="far fa-calendar-alt qp-ref-ico"></i><div>Quotation Date: ' + esc(todayLong) + '</div></div>';
         html += '</div></div>';
 
-        html += '<table class="q-preview-table"><thead><tr>' +
-            '<th>Guest Name</th><th>Mobile No</th><th>Email Address</th>' +
-            '</tr></thead><tbody><tr>' +
-            previewTd(previewVal(p.guest_name), 'guest_name') +
-            previewTd(previewVal(p.mobile_no), 'mobile_no') +
-            previewTd(previewVal(p.email), 'email') +
-            '</tr></tbody></table>';
+        /* —— 2. Guest Information —— */
+        html += '<div class="qp-sec">';
+        html += qpSectionHead('fas fa-user', 'Guest Information', 'TRAVEL MORE • EXPLORE BEYOND');
+        html += '<div class="qp-info-card qp-cols-3">';
+        html += qpInfoCell('Guest Name', previewEditable(previewVal(p.guest_name), 'guest_name', { cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('Mobile', previewEditable(previewVal(p.mobile_no), 'mobile_no', { cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('Email', previewEditable(previewVal(p.email), 'email', { cls: 'q-preview-cell-edit' }));
+        html += '</div></div>';
 
-        html += '<table class="q-preview-table"><thead><tr>' +
-            '<th>Destination</th><th>No Of Nights</th><th>Tentative Date</th><th>No Of Adults</th><th>No Of Children</th>' +
-            '</tr></thead><tbody><tr>' +
-            previewTd(destination.toUpperCase(), 'destination', { tdCls: 'text-left' }) +
-            previewTd(nightsLabel, 'no_of_nights', { type: 'nights_label' }) +
-            previewTd(formatPreviewSlashDate(p.tentative_date), 'tentative_date', { type: 'date' }) +
-            previewTd(String(adults), 'no_of_adults', { type: 'int' }) +
-            previewTd(paxChildren, 'no_of_children', { type: 'int' }) +
-            '</tr></tbody></table>';
+        /* —— 3. Travel Details —— */
+        html += '<div class="qp-sec">';
+        html += qpSectionHead('fas fa-plane', 'Travel Details', 'DISCOVER • EXPERIENCE • BELONG');
+        html += '<div class="qp-info-card qp-cols-5">';
+        html += qpInfoCell('Destination', previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('No Of Nights', previewEditable(nightsLabel, 'no_of_nights', { type: 'nights_label', cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('Tentative Date', previewEditable(formatPreviewSlashDate(p.tentative_date), 'tentative_date', { type: 'date', cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('Adults', previewEditable(String(adults), 'no_of_adults', { type: 'int', cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('Children', previewEditable(paxChildren, 'no_of_children', { type: 'int', cls: 'q-preview-cell-edit' }));
+        html += '</div></div>';
 
+        /* —— 4. Flight Details —— */
         if (flights.length) {
-            html += '<div class="q-preview-section-title">Flight Details</div>';
-            html += '<table class="q-preview-table"><thead><tr>' +
-                '<th>Departure</th><th>From</th><th>To</th><th>Arrival</th><th>Flight</th>' +
+            html += '<div class="qp-sec">';
+            html += qpSectionHead('fas fa-plane-departure', 'Flight Details', 'FLY HIGHER • EXPLORE FURTHER');
+            html += '<table class="q-preview-table qp-table"><thead><tr>' +
+                '<th>#</th><th>Departure</th><th>From</th><th>To</th><th>Arrival</th><th>Airline &amp; Flight</th>' +
                 '</tr></thead><tbody>';
             flights.forEach(function (f, fi) {
                 var d = normalizeFlightData(f);
                 var layoverText = '';
                 if (d.layover_time || d.layover_at) {
                     layoverText = 'Layover at ' + (d.layover_at || '—') + ': ' + (d.layover_time || '—');
-                    html += '<tr class="q-preview-layover"><td colspan="5">' +
+                    html += '<tr class="q-preview-layover qp-layover"><td colspan="6">' +
                         previewEditable(layoverText, 'flight.' + fi + '.layover', {
                             type: 'layover',
                             cls: 'q-preview-cell-edit'
@@ -5472,6 +5678,7 @@
                     flightLabel = d.name || d.fl_tr_no || '';
                 }
                 html += '<tr>' +
+                    '<td>' + (fi + 1) + '</td>' +
                     previewTd(formatPreviewFlightDateTime(d.dep_date, d.dep_time), 'flight.' + fi + '.dep_datetime', { type: 'datetime' }) +
                     previewTd(previewVal(d.from), 'flight.' + fi + '.from', { tdCls: 'text-left' }) +
                     previewTd(previewVal(d.to), 'flight.' + fi + '.to', { tdCls: 'text-left' }) +
@@ -5479,7 +5686,7 @@
                     previewTd(previewVal(flightLabel), 'flight.' + fi + '.flight_label', { type: 'flight_label', tdCls: 'text-left' }) +
                     '</tr>';
             });
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
         }
 
         var pricingOptions = Array.isArray(p.pricing_options) ? p.pricing_options : [];
@@ -5512,6 +5719,15 @@
             return (ppa > 0) || (qt > 0) || (pkg > 0);
         }
 
+        function wrapTourCostBlock(innerTableHtml, gstNoteHtml) {
+            var out = '<div class="qp-tour-cost">';
+            out += '<div class="qp-tour-cost-head">Tour Cost</div>';
+            out += innerTableHtml;
+            out += '</div>';
+            if (gstNoteHtml) out += gstNoteHtml;
+            return out;
+        }
+
         function buildPreviewTourCostTable(opt, opts) {
             opts = opts || {};
             var editable = !!opts.editable;
@@ -5520,9 +5736,12 @@
                 var csFull = typeof p.cost_sheet_json === 'string' ? JSON.parse(p.cost_sheet_json || '{}') : (p.cost_sheet || {});
                 if (csFull && csFull.tour_cost) tourCost = csFull.tour_cost;
             } catch (e) { /* ignore */ }
+            var gstNote = '';
+            if (opts.showGst && !parseInt(p.hide_gst_note, 10)) {
+                gstNote = '<div class="q-preview-gst-note">* GST as applicable will be charged extra.</div>';
+            }
             if (tourCost && parseFloat(tourCost.grand_total) > 0) {
-                var blockTc = '<div class="q-preview-section-title">Tour Cost</div>';
-                blockTc += '<table class="q-preview-table q-preview-cost"><tbody>';
+                var blockTc = '<table class="q-preview-table qp-table q-preview-cost"><tbody>';
                 var adultRate = parseFloat(tourCost.adult_rate) || 0;
                 var adultQty = parseInt(tourCost.adults, 10) || adults;
                 if (adultRate > 0) {
@@ -5541,12 +5760,9 @@
                 if (!parseInt(tourCost.hide_gst, 10) && parseFloat(tourCost.gst_amount) > 0) {
                     blockTc += '<tr><td>GST (' + esc(String(tourCost.gst_percent || 5)) + '%)</td><td>' + esc(money(tourCost.gst_amount)) + '</td></tr>';
                 }
-                blockTc += '<tr><td><strong>Grand Total</strong></td><td><strong>' + esc(money(tourCost.grand_total)) + '</strong></td></tr>';
+                blockTc += '<tr class="qp-cost-total"><td><strong>Grand Total</strong></td><td><strong>' + esc(money(tourCost.grand_total)) + '</strong></td></tr>';
                 blockTc += '</tbody></table>';
-                if (opts.showGst && !parseInt(p.hide_gst_note, 10)) {
-                    blockTc += '<div class="q-preview-gst-note">* GST as applicable will be charged extra.</div>';
-                }
-                return blockTc;
+                return wrapTourCostBlock(blockTc, gstNote);
             }
             var ppa = parseFloat(opt && opt.price_per_adult);
             var qt = parseFloat(String((opt && opt.quotation_total) || '').replace(/,/g, ''));
@@ -5559,8 +5775,7 @@
             }
             var adultTotal = ppa > 0 ? ppa * adults : (pkg > 0 ? pkg : qt);
             var totalVal = qt > 0 ? qt : (pkg > 0 ? pkg : adultTotal);
-            var block = '<div class="q-preview-section-title">Tour Cost</div>';
-            block += '<table class="q-preview-table q-preview-cost"><tbody>';
+            var block = '<table class="q-preview-table qp-table q-preview-cost"><tbody>';
             if (ppa > 0) {
                 block += '<tr><td>INR ';
                 if (editable) {
@@ -5571,7 +5786,7 @@
                 block += ' X ' + esc(adults) + ' Adults</td>' +
                     '<td>' + esc(money(ppa * adults)) + '</td></tr>';
             }
-            block += '<tr><td><strong>Total</strong></td><td><strong>';
+            block += '<tr class="qp-cost-total"><td><strong>Total</strong></td><td><strong>';
             if (editable) {
                 block += previewEditable(money(totalVal), 'quotation_total', { type: 'money' });
             } else {
@@ -5579,12 +5794,10 @@
             }
             block += '</strong></td></tr>';
             block += '</tbody></table>';
-            if (opts.showGst && !parseInt(p.hide_gst_note, 10)) {
-                block += '<div class="q-preview-gst-note">* GST as applicable will be charged extra.</div>';
-            }
-            return block;
+            return wrapTourCostBlock(block, gstNote);
         }
 
+        /* —— 5. Hotel Details —— */
         var hasHotels = hotelsData.categories.some(function (cat) {
             return (cat.hotels || []).length > 0;
         });
@@ -5600,14 +5813,16 @@
                         title += ' (Recommended)';
                     }
                 }
-                html += '<div class="q-preview-section-title">' + esc(title) + '</div>';
-                html += '<table class="q-preview-table"><thead><tr>' +
-                    '<th>City</th><th>Hotel</th><th>Nts</th><th>Room Type</th><th>Check In</th><th>Check Out</th><th>Meals</th>' +
+                html += '<div class="qp-sec">';
+                html += qpSectionHead('fas fa-bed', title, 'STAY COMFORTABLE • STAY INSPIRED');
+                html += '<table class="q-preview-table qp-table"><thead><tr>' +
+                    '<th>#</th><th>City</th><th>Hotel</th><th>Nights</th><th>Room Type</th><th>Check-In</th><th>Check-Out</th><th>Meals</th>' +
                     '</tr></thead><tbody>';
                 (cat.hotels || []).forEach(function (h, hi) {
                     var d = normalizeHotelData(h);
                     var base = 'hotel.' + idx + '.' + hi + '.';
                     html += '<tr>' +
+                        '<td>' + (hi + 1) + '</td>' +
                         previewTd(previewVal(d.city), base + 'city', { tdCls: 'text-left' }) +
                         previewTd(previewVal(d.name), base + 'name', { tdCls: 'text-left' }) +
                         previewTd(previewVal(d.nights), base + 'nights', { type: 'int' }) +
@@ -5617,7 +5832,7 @@
                         previewTd(previewVal(d.meal_plan, 'CP'), base + 'meal_plan') +
                         '</tr>';
                 });
-                html += '</tbody></table>';
+                html += '</tbody></table></div>';
 
                 // Multiple hotel options: show that option's Tour Cost right under its hotels.
                 if (multiHotelOptions) {
@@ -5635,6 +5850,7 @@
             });
         }
 
+        /* —— 6. Day Wise Itinerary —— */
         if (!parseInt(p.without_itinerary, 10)) {
             var itineraryHtml = '';
             var costSheetPreview = {};
@@ -5650,7 +5866,7 @@
                 return (item.supplier && String(item.supplier).trim()) || (item.rate !== '' && item.rate != null);
             });
             if (itinEntries.length) {
-                itineraryHtml += '<div class="q-preview-itinerary-meta small text-muted mb-2">';
+                itineraryHtml += '<div class="q-preview-itinerary-meta">';
                 itinEntries.forEach(function (item, idx) {
                     if (idx > 0) {
                         itineraryHtml += '<br>';
@@ -5679,40 +5895,97 @@
                     return;
                 }
                 var meta = previewDayMeta(p.tentative_date, di);
-                var headPrefix = meta.dayName ? (meta.dayName + ' DAY ' + (di + 1)) : ('DAY ' + (di + 1));
+                var pills = inferItineraryPills(day);
+                itineraryHtml += '<div class="q-preview-day qp-day">';
+                itineraryHtml += '<div class="q-preview-day-head qp-day-head">';
+                itineraryHtml += '<span class="qp-day-badge">DAY ' + (di + 1) + '</span>';
                 if (meta.dateDash) {
-                    headPrefix += ' | ' + meta.dateDash;
+                    itineraryHtml += '<span class="qp-day-meta"><i class="far fa-calendar-alt"></i>' +
+                        esc((meta.dayName ? meta.dayName + ' · ' : '') + meta.dateDash) + '</span>';
+                } else if (meta.dayName) {
+                    itineraryHtml += '<span class="qp-day-meta"><i class="far fa-calendar-alt"></i>' + esc(meta.dayName) + '</span>';
                 }
-                itineraryHtml += '<div class="q-preview-day">';
-                itineraryHtml += '<div class="q-preview-day-head">' + esc(headPrefix) + ' | ' +
+                itineraryHtml += '<div class="qp-day-title"><i class="fas fa-map-marker-alt"></i>' +
                     previewEditable(previewVal(day.title, ''), 'itinerary.' + di + '.title', {
                         placeholder: 'Day title'
                     }) + '</div>';
-                itineraryHtml += '<div class="q-preview-day-body">';
+                itineraryHtml += '</div>';
+                itineraryHtml += '<div class="q-preview-day-body qp-day-body">';
                 itineraryHtml += previewEditable(day.description || '', 'itinerary.' + di + '.description', {
                     type: 'html',
                     multiline: true,
                     cls: 'q-preview-rich'
                 });
+                if (pills.length) {
+                    itineraryHtml += '<div class="qp-day-pills">';
+                    pills.forEach(function (pill) {
+                        itineraryHtml += '<span class="qp-pill ' + pill.cls + '"><i class="' + pill.icon + '"></i>' +
+                            esc(pill.label) + '</span>';
+                    });
+                    itineraryHtml += '</div>';
+                }
                 itineraryHtml += '</div></div>';
             });
             if (itineraryHtml) {
-                html += '<div class="q-preview-section-title">Day Wise Itinerary</div>';
+                html += '<div class="qp-sec">';
+                html += '<div class="qp-itin-title"><span class="qp-bar">DAY WISE</span><span class="qp-itin-red">ITINERARY</span></div>';
                 html += itineraryHtml;
+                html += '</div>';
             }
         }
 
+        /* —— 7. Inclusions —— */
         if (previewHasHtmlContent(p.inclusion)) {
-            html += '<div class="q-preview-section-title">Inclusions</div>';
-            html += previewEditable(p.inclusion || '', 'inclusion', { type: 'html', multiline: true, cls: 'q-preview-rich' });
+            html += '<div class="qp-sec">';
+            html += '<div class="qp-incl-banner">' +
+                '<div class="qp-incl-kicker">TRAVEL QUOTATION</div>' +
+                '<div class="qp-incl-main">INCLUSIONS</div>' +
+                '<div class="qp-incl-sub">WHAT\'S INCLUDED IN YOUR PACKAGE</div>' +
+                '</div>';
+            html += previewEditable(p.inclusion || '', 'inclusion', {
+                type: 'html',
+                multiline: true,
+                cls: 'q-preview-rich qp-incl-edit'
+            });
+            html += '</div>';
         }
 
+        /* —— 8. Terms —— */
+        var policyBlocks = [
+            { key: 'payment_policy', title: 'Payment Policy', html: p.payment_policy },
+            { key: 'cancellation_policy', title: 'Cancellation Policy', html: p.cancellation_policy },
+            { key: 'terms_conditions', title: 'Terms & Conditions', html: p.terms_conditions },
+            { key: 'other_details', title: 'Other Details', html: p.other_details }
+        ];
+        var policyHtml = '';
+        policyBlocks.forEach(function (b) {
+            if (!previewHasHtmlContent(b.html)) return;
+            policyHtml += '<div class="q-preview-policy-block qp-policy-block">';
+            policyHtml += '<div class="q-preview-policy-title qp-policy-title">' + esc(b.title) + '</div>';
+            policyHtml += previewEditable(b.html || '', b.key, { type: 'html', multiline: true, cls: 'q-preview-rich' });
+            policyHtml += '</div>';
+        });
+        if (policyHtml) {
+            html += '<div class="qp-sec">';
+            html += '<div class="qp-terms-card">';
+            html += '<div class="qp-terms-head"><span class="qp-bar"></span><h3>Quotation Terms &amp; Conditions</h3></div>';
+            html += policyHtml;
+            html += '</div></div>';
+        }
+
+        /* —— 9. Exclusions —— */
         if (previewHasHtmlContent(p.exclusion)) {
-            html += '<div class="q-preview-section-title">Exclusion</div>';
-            html += previewEditable(p.exclusion || '', 'exclusion', { type: 'html', multiline: true, cls: 'q-preview-rich' });
+            html += '<div class="qp-sec">';
+            html += '<div class="qp-excl-head"><span class="qp-bar"></span><h3><i class="fas fa-ban"></i> Exclusions</h3></div>';
+            html += previewEditable(p.exclusion || '', 'exclusion', {
+                type: 'html',
+                multiline: true,
+                cls: 'q-preview-rich qp-excl-edit'
+            });
+            html += '</div>';
         }
 
-        // Single hotel option: keep Tour Cost in the original place (after inclusions/exclusions).
+        /* —— 10. Tour Cost (single hotel option) —— */
         if (!multiHotelOptions) {
             var pricePerAdult = parseFloat(p.price_per_adult);
             var quotationTotal = parseFloat(String(p.quotation_total || '').replace(/,/g, ''));
@@ -5745,73 +6018,61 @@
             }
         }
 
-        var policyBlocks = [
-            { key: 'payment_policy', title: 'Payment Policy', html: p.payment_policy },
-            { key: 'cancellation_policy', title: 'Cancellation Policy', html: p.cancellation_policy },
-            { key: 'terms_conditions', title: 'Terms & Conditions', html: p.terms_conditions },
-            { key: 'other_details', title: 'Other Details', html: p.other_details }
-        ];
-        var policyHtml = '';
-        policyBlocks.forEach(function (b) {
-            if (!previewHasHtmlContent(b.html)) return;
-            policyHtml += '<div class="q-preview-policy-block">';
-            policyHtml += '<div class="q-preview-policy-title">' + esc(b.title) + '</div>';
-            policyHtml += previewEditable(b.html || '', b.key, { type: 'html', multiline: true, cls: 'q-preview-rich' });
-            policyHtml += '</div>';
-        });
-        if (policyHtml) {
-            html += '<div class="q-preview-section-title">Quotation Terms &amp; Conditions</div>';
-            html += policyHtml;
-        }
-
-        html += '<div class="q-preview-footer">';
-        html += '<div class="q-preview-expert">';
+        /* —— 11. Footer contact —— */
+        html += '<div class="q-preview-footer qp-footer">';
+        html += '<div class="q-preview-expert qp-expert">';
         var expertPhoto = Q_PREVIEW_META.expert_photo ? absUrl(Q_PREVIEW_META.expert_photo) : '';
         var expertName = Q_PREVIEW_META.expert_name || 'Raju Gupta';
         var expertTitle = Q_PREVIEW_META.expert_title || 'Holiday Expert';
         if (expertPhoto) {
-            html += '<div class="q-preview-expert-avatar"><img src="' + esc(expertPhoto) + '" alt="' + esc(expertName) + '"></div>';
+            html += '<div class="q-preview-expert-avatar qp-expert-avatar"><img src="' + esc(expertPhoto) + '" alt="' + esc(expertName) + '"></div>';
         } else {
-            html += '<div class="q-preview-expert-avatar">' + esc(previewExpertInitial(expertName)) + '</div>';
+            html += '<div class="q-preview-expert-avatar qp-expert-avatar">' + esc(previewExpertInitial(expertName)) + '</div>';
         }
-        html += '<div class="q-preview-expert-name">' +
-            '<span class="q-preview-expert-fullname">' + esc(expertName) + '</span>' +
-            '<span class="q-preview-expert-sep">|</span>' +
-            '<span class="q-preview-expert-role">' + esc(expertTitle) + '</span>' +
+        html += '<div class="qp-expert-name-block">';
+        html += '<span class="qp-expert-fullname q-preview-expert-fullname">' + esc(expertName) + '</span>';
+        html += '<div class="qp-expert-role-wrap">' +
+            '<span class="qp-duration-line"></span>' +
+            '<span class="qp-expert-role q-preview-expert-role">' + esc(String(expertTitle).toUpperCase()) + '</span>' +
+            '<span class="qp-duration-line"></span>' +
             '</div>';
-        html += '<div class="q-preview-expert-lines">';
+        html += '</div>';
+        html += '<div class="q-preview-expert-lines qp-expert-lines">';
         if (Q_PREVIEW_META.phone) {
-            html += '<div class="q-preview-phone-primary">' + esc(Q_PREVIEW_META.phone) + '</div>';
+            html += '<div class="qp-contact-row"><i class="fas fa-phone-alt"></i><span class="q-preview-phone-primary qp-phone-primary">' + esc(Q_PREVIEW_META.phone) + '</span></div>';
         }
         if (Q_PREVIEW_META.phone_alt) {
-            html += '<div>' + esc(Q_PREVIEW_META.phone_alt) + '</div>';
+            html += '<div class="qp-contact-row"><i class="fas fa-phone"></i><span>' + esc(Q_PREVIEW_META.phone_alt) + '</span></div>';
         }
         if (Q_PREVIEW_META.email) {
-            html += '<div>' + esc(Q_PREVIEW_META.email) + '</div>';
+            html += '<div class="qp-contact-row"><i class="fas fa-envelope"></i><span>' + esc(Q_PREVIEW_META.email) + '</span></div>';
         }
         if (Q_PREVIEW_META.website) {
-            html += '<div>' + esc(Q_PREVIEW_META.website) + '</div>';
+            html += '<div class="qp-contact-row"><i class="fas fa-globe"></i><span>' + esc(Q_PREVIEW_META.website) + '</span></div>';
         }
         if (Q_PREVIEW_META.address) {
-            html += '<div>' + esc(Q_PREVIEW_META.address) + '</div>';
+            html += '<div class="qp-contact-row"><i class="fas fa-map-marker-alt"></i><span>' + esc(Q_PREVIEW_META.address) + '</span></div>';
         }
         html += '</div></div>';
-        html += '<div class="q-preview-services-bar">' +
-            esc(Q_PREVIEW_META.services || 'FLIGHTS | HOTELS | HOLIDAYS | VISA | FOREX') +
-            '</div>';
+        var servicesText = Q_PREVIEW_META.services || 'FLIGHTS • HOTELS • HOLIDAYS • VISA • FOREX';
+        servicesText = String(servicesText).replace(/\s*\|\s*/g, ' • ');
+        html += '<div class="q-preview-services-bar qp-services-bar">' + esc(servicesText) + '</div>';
         var social = Array.isArray(Q_PREVIEW_META.social) ? Q_PREVIEW_META.social : [];
         if (social.length) {
-            html += '<div class="q-preview-social">';
+            html += '<div class="q-preview-social qp-social">';
             social.forEach(function (s) {
-                var cls = 'web';
-                if (s.type === 'facebook') cls = 'fb';
-                else if (s.type === 'twitter') cls = 'tw';
-                else if (s.type === 'google') cls = 'gp';
+                var cls = qpSocialClass(s.type);
+                var icon = s.icon || 'fas fa-globe';
+                if (s.type === 'google' && (!s.icon || String(s.icon).indexOf('google') >= 0)) {
+                    // Map legacy Google+ meta to YouTube-style when no dedicated youtube entry.
+                    icon = s.icon || 'fab fa-youtube';
+                }
                 html += '<a class="' + cls + '" href="' + esc(s.url || '#') + '" target="_blank" rel="noopener">' +
-                    '<i class="' + esc(s.icon || 'fas fa-globe') + '"></i></a>';
+                    '<i class="' + esc(icon) + '"></i></a>';
             });
             html += '</div>';
         }
+        html += '<div class="qp-tagline">JOURNEYS BEYOND BORDERS</div>';
         html += '</div>';
 
         return html;
@@ -5878,7 +6139,7 @@
             }
         });
 
-        $(document).on('click', '#qPreviewPrintArea td, #qPreviewPrintArea .q-preview-day-head, #qPreviewPrintArea .q-preview-day-body, #qPreviewPrintArea .q-preview-policy-block, #qPreviewPrintArea .q-preview-rich', function (e) {
+        $(document).on('click', '#qPreviewPrintArea td, #qPreviewPrintArea .qp-info-cell, #qPreviewPrintArea .q-preview-day-head, #qPreviewPrintArea .qp-day-head, #qPreviewPrintArea .q-preview-day-body, #qPreviewPrintArea .qp-day-body, #qPreviewPrintArea .q-preview-policy-block, #qPreviewPrintArea .qp-policy-block, #qPreviewPrintArea .q-preview-rich', function (e) {
             var $target = $(e.target);
             if ($target.closest('.q-preview-editable').length) return;
             var $edit = $(this).find('.q-preview-editable').first();
@@ -7020,10 +7281,15 @@
             if (!$panel.length) {
                 $panel = getHotelCategoryPanels().first();
             }
-            var $row = $(hotelRowHtml(data || {}));
+            var rowData = data || {};
+            if (!rowData.checkin && !rowData.check_in) {
+                rowData = $.extend({}, buildNewHotelRowDefaults($panel), rowData);
+            }
+            var $row = $(hotelRowHtml(rowData));
             $panel.find('.q-hotel-rows').append($row);
             initHotelRow($row);
             qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select' });
+            syncHotelCheckoutFromNights($row);
             recalcCosts();
             saveFormDraftToStorage();
         };
@@ -7207,10 +7473,11 @@
             }
             qActiveHotelCategoryId = String($panel.attr('data-cat-id') || '');
             refreshHotelCategoryTabs();
-            var $row = $(hotelRowHtml({}));
+            var $row = $(hotelRowHtml(buildNewHotelRowDefaults($panel)));
             $panel.find('.q-hotel-rows').append($row);
             initHotelRow($row);
             qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select' });
+            syncHotelCheckoutFromNights($row);
             renderPricingSheets();
             saveFormDraftToStorage();
         });
@@ -7237,6 +7504,9 @@
             }
             var next = Math.max(min, cur + step);
             $input.val(String(next)).trigger('change').trigger('input');
+            if ($input.hasClass('h-nights')) {
+                syncHotelCheckoutFromNights($input.closest('.q-hotel-row'));
+            }
             renderPricingSheets();
             saveFormDraftToStorage();
         });
@@ -7451,16 +7721,27 @@
             saveFormDraftToStorage();
         });
 
-        $(document).on('change', '.h-checkin, .h-checkout', function () {
+        $(document).on('change input', '.h-nights', function () {
             var $row = $(this).closest('.q-hotel-row');
-            var inDt = $row.find('.h-checkin').val();
-            var outDt = $row.find('.h-checkout').val();
-            if (inDt && outDt && window.moment) {
-                var nights = moment(outDt).diff(moment(inDt), 'days');
-                if (nights > 0) {
-                    $row.find('.h-nights').val(nights);
-                }
+            syncHotelCheckoutFromNights($row);
+            saveFormDraftToStorage();
+        });
+
+        $(document).on('change', '.h-checkin', function () {
+            var $row = $(this).closest('.q-hotel-row');
+            var nights = parseInt($row.find('.h-nights').val(), 10);
+            if (!isNaN(nights) && nights > 0) {
+                syncHotelCheckoutFromNights($row);
+            } else {
+                syncHotelNightsFromDates($row);
             }
+            saveFormDraftToStorage();
+        });
+
+        $(document).on('change', '.h-checkout', function () {
+            var $row = $(this).closest('.q-hotel-row');
+            syncHotelNightsFromDates($row);
+            saveFormDraftToStorage();
         });
 
         $(document).on('click', function (e) {
@@ -7613,7 +7894,12 @@
             recalcCosts();
         });
 
-        $('#q_tentative_date').on('change', function () { scheduleItineraryRebuild(); });
+        $('#q_tentative_date').on('change', function () {
+            // First hotel Check-In follows Travel Date when date is set/changed.
+            syncFirstHotelCheckinFromTravelDate(true);
+            scheduleItineraryRebuild();
+            saveFormDraftToStorage();
+        });
         $('#q_nights').on('input change', function () { scheduleItineraryRebuild(); });
         $('#q_adults').on('input change', recalcCosts);
 
@@ -8181,6 +8467,8 @@
         }
         ensureHotelCategoriesReady();
         ensureItinerarySupplierRows();
+        // Fill empty first-hotel Check-In from Travel Date (Tentative Date).
+        syncFirstHotelCheckinFromTravelDate(false);
         if (!$('#qPricingSheetsHost .q-pricing-option-sheet').length) {
             renderPricingSheets();
         }

@@ -537,6 +537,22 @@ function crmLeadRowToSidebarPanel(mysqli $conn, array $row, array $destinationLo
     $queryType = $leadSource !== '' ? $leadSource : 'Client';
     $nightsLabel = $nights > 0 ? $nights . ' Night' . ($nights === 1 ? '' : 's') : '—';
 
+    $hotelCategories = $payload['tp_hotel_category'] ?? [];
+    if (!is_array($hotelCategories)) {
+        $hotelCategories = $hotelCategories !== '' && $hotelCategories !== null ? [$hotelCategories] : [];
+    }
+    $hotelCatLabels = [];
+    foreach ($hotelCategories as $cat) {
+        $cat = trim((string) $cat);
+        if ($cat === '') {
+            continue;
+        }
+        if (!in_array($cat, $hotelCatLabels, true)) {
+            $hotelCatLabels[] = $cat;
+        }
+    }
+    $hotelStarCategory = !empty($hotelCatLabels) ? implode(', ', $hotelCatLabels) : '—';
+
     require_once __DIR__ . '/quotation_db.php';
     $storedStage = crmLeadNormalizeStage($row['stage'] ?? 'new_lead');
     $displayStage = $storedStage;
@@ -560,6 +576,7 @@ function crmLeadRowToSidebarPanel(mysqli $conn, array $row, array $destinationLo
             'destination' => !empty($destNames) ? implode(', ', $destNames) : '—',
             'travel_date' => crmLeadFormatDisplayDate((string) ($payload['tp_travel_date'] ?? '')),
             'nights' => $nightsLabel,
+            'hotel_star_category' => $hotelStarCategory,
             'travellers' => crmLeadFormatTravellerInfo($guestInitial, $guestName, $adults, $children, $childAges),
         ],
         'basic' => [

@@ -49,9 +49,9 @@ if (!function_exists('mz_is_tab_shell')) {
 if (mz_is_tab_shell()) :
 ?>
 <link rel="stylesheet" href="custom/tabs.css">
-<script src="custom/tabs.js"></script>
+<script src="custom/tabs.js?v=2"></script>
 <?php elseif (!mz_is_embed_request()) : ?>
-<script src="custom/tabs.js"></script>
+<script src="custom/tabs.js?v=2"></script>
 <?php endif; ?>
 
 <!-- DataTables -->
