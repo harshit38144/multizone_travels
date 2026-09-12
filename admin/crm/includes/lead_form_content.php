@@ -3200,6 +3200,7 @@ if (empty($leadSourceOptions)) {
                     $guestsPicker.find('.js-tp-rg-summary').text(guestParts.join(', '));
 
                     $hiddenInputs.find('.js-tp-rg-input-rooms').val(state.rooms);
+                    $hiddenInputs.find('.js-tp-rg-input-adults').val(state.adults);
                     $hiddenInputs.find('.js-tp-rg-input-children').val(state.children);
                     $hiddenInputs.find('.js-tp-rg-input-pets').val(state.petsEnabled ? state.pets : 0);
 

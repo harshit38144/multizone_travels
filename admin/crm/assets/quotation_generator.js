@@ -26,13 +26,106 @@
 
     function fmtDayDate(baseStr, offset) {
         if (!baseStr) return '';
-        var d = new Date(baseStr + 'T00:00:00');
+        var iso = normalizeLegacyDateInput(baseStr);
+        if (!iso) return '';
+        var d = new Date(iso + 'T00:00:00');
         if (isNaN(d.getTime())) return '';
         d.setDate(d.getDate() + offset);
         var dd = String(d.getDate()).padStart(2, '0');
         var mm = String(d.getMonth() + 1).padStart(2, '0');
         var yyyy = d.getFullYear();
-        return dd + '-' + mm + '-' + yyyy + ' ' + DAY_NAMES[d.getDay()];
+        return dd + '/' + mm + '/' + yyyy + ' ' + DAY_NAMES[d.getDay()];
+    }
+
+    function normalizeLegacyDateInput(val) {
+        val = String(val || '').trim();
+        if (!val || val === '0000-00-00') return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        var m = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (m) {
+            return m[3] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[1]).padStart(2, '0');
+        }
+        if (typeof moment !== 'undefined') {
+            var parsed = moment(val, ['DD/MM/YYYY', 'DD-MM-YYYY', 'D MMM YYYY', 'DD MMM YYYY'], true);
+            if (parsed.isValid()) return parsed.format('YYYY-MM-DD');
+        }
+        return val;
+    }
+
+    /** Display format used across Quotation Generator inputs. */
+    function formatDisplayDate(val) {
+        var iso = normalizeLegacyDateInput(val);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+            return String(val || '').trim();
+        }
+        var parts = iso.split('-');
+        return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+
+    function setDateInputValue($input, val) {
+        if (!$input || !$input.length) {
+            return;
+        }
+        var display = val ? formatDisplayDate(val) : '';
+        $input.val(display);
+        if ($input.hasClass('hasDatepicker') && $.fn.datepicker) {
+            try {
+                $input.datepicker('setDate', display || null);
+            } catch (e) { /* ignore */ }
+        }
+    }
+
+    function initQuotationDatePickers($root) {
+        if (!$.fn.datepicker) {
+            return;
+        }
+        var $scope = $root && $root.length ? $root : $('.crm-quotation-gen');
+        if (!$scope.length) {
+            $scope = $(document);
+        }
+        $scope.find('input.js-q-date-input').each(function () {
+            var $input = $(this);
+            var current = formatDisplayDate($input.val());
+            if (current !== String($input.val() || '').trim()) {
+                $input.val(current);
+            }
+            if ($input.hasClass('hasDatepicker')) {
+                try {
+                    $input.datepicker('destroy');
+                } catch (e) { /* ignore */ }
+            }
+            $input.attr({
+                placeholder: 'dd/mm/yyyy',
+                autocomplete: 'off',
+                inputmode: 'numeric'
+            });
+            $input.datepicker({
+                dateFormat: 'dd/mm/yy',
+                changeMonth: true,
+                changeYear: true,
+                yearRange: 'c-5:c+15',
+                showButtonPanel: true,
+                closeText: 'Done',
+                currentText: 'Today',
+                prevText: '',
+                nextText: '',
+                beforeShow: function (input, inst) {
+                    inst.dpDiv.addClass('crm-q-datepicker');
+                    inst.dpDiv.css({ zIndex: 2200 });
+                },
+                onSelect: function () {
+                    $(this).trigger('change');
+                },
+                onClose: function () {
+                    $(this).blur();
+                }
+            });
+            if (current) {
+                try {
+                    $input.datepicker('setDate', current);
+                } catch (e2) { /* ignore */ }
+            }
+        });
     }
 
     /* ------------------------------------------------------------------ */
@@ -179,21 +272,6 @@
         }
     }
 
-    function normalizeLegacyDateInput(val) {
-        val = String(val || '').trim();
-        if (!val || val === '0000-00-00') return '';
-        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
-        var m = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if (m) {
-            return m[3] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[1]).padStart(2, '0');
-        }
-        if (typeof moment !== 'undefined') {
-            var parsed = moment(val, ['DD/MM/YYYY', 'DD-MM-YYYY', 'D MMM YYYY', 'DD MMM YYYY'], true);
-            if (parsed.isValid()) return parsed.format('YYYY-MM-DD');
-        }
-        return val;
-    }
-
     function normalizeFlightData(data) {
         data = data || {};
         return {
@@ -221,7 +299,7 @@
             var dt = parseFlightDateTime(dateVal, timeVal);
             return dt ? moment(dt) : null;
         }
-        var dateStr = String(dateVal || '').trim();
+        var dateStr = normalizeLegacyDateInput(dateVal);
         var timeStr = String(timeVal || '').trim();
         if (!dateStr) {
             return null;
@@ -229,7 +307,7 @@
         if (!timeStr) {
             timeStr = '00:00';
         }
-        var m = moment(dateStr + ' ' + timeStr, ['YYYY-MM-DD HH:mm', 'YYYY-MM-DD HH:mm:ss'], true);
+        var m = moment(dateStr + ' ' + timeStr, ['YYYY-MM-DD HH:mm', 'YYYY-MM-DD HH:mm:ss', 'DD/MM/YYYY HH:mm'], true);
         return m.isValid() ? m : null;
     }
 
@@ -366,6 +444,7 @@
         });
         renumberFlightRows();
         qInitSupplierSelect2In($('#qFlightRows'));
+        initQuotationDatePickers($('#qFlightRows'));
         refreshFlightLayovers();
     }
 
@@ -716,7 +795,7 @@
     }
 
     function parseFlightDateTime(dateVal, timeVal) {
-        var dateStr = String(dateVal || '').trim();
+        var dateStr = normalizeLegacyDateInput(dateVal);
         var timeStr = String(timeVal || '').trim();
         if (!dateStr) {
             return null;
@@ -888,13 +967,13 @@
             '<div class="q-ft-col q-ft-col-depart">' +
             '<span class="q-ft-label">Departure</span>' +
             '<div class="q-flight-datetime">' +
-            '<input type="date" class="form-control form-control-sm f-dep-date" value="' + esc(d.dep_date) + '" title="Departure date">' +
+            '<input type="text" class="form-control form-control-sm f-dep-date js-q-date-input" value="' + esc(formatDisplayDate(d.dep_date)) + '" placeholder="dd/mm/yyyy" autocomplete="off" title="Departure date">' +
             '<input type="time" class="form-control form-control-sm f-dep-time" value="' + esc(d.dep_time) + '" title="Departure time">' +
             '</div></div>' +
             '<div class="q-ft-col q-ft-col-arrive">' +
             '<span class="q-ft-label">Arrival</span>' +
             '<div class="q-flight-datetime">' +
-            '<input type="date" class="form-control form-control-sm f-arr-date" value="' + esc(d.arr_date) + '" title="Arrival date">' +
+            '<input type="text" class="form-control form-control-sm f-arr-date js-q-date-input" value="' + esc(formatDisplayDate(d.arr_date)) + '" placeholder="dd/mm/yyyy" autocomplete="off" title="Arrival date">' +
             '<input type="time" class="form-control form-control-sm f-arr-time" value="' + esc(d.arr_time) + '" title="Arrival time">' +
             '</div></div>' +
             '<div class="q-ft-col q-ft-col-fare">' +
@@ -921,9 +1000,9 @@
         var out = [];
         $('#qFlightRows .q-flight-row').each(function () {
             var $r = $(this);
-            var depDate = $r.find('.f-dep-date').val();
+            var depDate = normalizeLegacyDateInput($r.find('.f-dep-date').val());
             var depTime = $r.find('.f-dep-time').val();
-            var arrDate = $r.find('.f-arr-date').val();
+            var arrDate = normalizeLegacyDateInput($r.find('.f-arr-date').val());
             var arrTime = $r.find('.f-arr-time').val();
             var flNo = $r.find('.f-fl-no').val();
             var fare = $r.find('.f-fare').val();
@@ -1313,7 +1392,7 @@
         }
         var checkout = addHotelDays(checkin, nights);
         if (checkout) {
-            $row.find('.h-checkout').val(checkout);
+            setDateInputValue($row.find('.h-checkout'), checkout);
         }
     }
 
@@ -1342,11 +1421,11 @@
             return '';
         }
         syncHotelCheckoutFromNights($prev);
-        var checkout = String($prev.find('.h-checkout').val() || '').trim();
+        var checkout = normalizeLegacyDateInput($prev.find('.h-checkout').val() || '');
         if (checkout) {
             return checkout;
         }
-        return String($prev.find('.h-checkin').val() || '').trim();
+        return normalizeLegacyDateInput($prev.find('.h-checkin').val() || '');
     }
 
     /** Defaults for a newly added hotel row in the active option. */
@@ -1382,11 +1461,11 @@
             if (!$first.length) {
                 return;
             }
-            var cur = String($first.find('.h-checkin').val() || '').trim();
+            var cur = normalizeLegacyDateInput($first.find('.h-checkin').val() || '');
             if (!force && cur) {
                 return;
             }
-            $first.find('.h-checkin').val(travelDate);
+            setDateInputValue($first.find('.h-checkin'), travelDate);
             var nights = parseInt($first.find('.h-nights').val(), 10);
             if (isNaN(nights) || nights < 1) {
                 nights = 1;
@@ -1476,13 +1555,13 @@
                 extraClass: 'q-hotel-field-date',
                 ico: false,
                 caret: false,
-                control: '<input type="date" class="form-control h-checkin" value="' + esc(d.checkin) + '">'
+                control: '<input type="text" class="form-control h-checkin js-q-date-input" value="' + esc(formatDisplayDate(d.checkin)) + '" placeholder="dd/mm/yyyy" autocomplete="off">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-date',
                 ico: false,
                 caret: false,
-                control: '<input type="date" class="form-control h-checkout" value="' + esc(d.checkout) + '">'
+                control: '<input type="text" class="form-control h-checkout js-q-date-input" value="' + esc(formatDisplayDate(d.checkout)) + '" placeholder="dd/mm/yyyy" autocomplete="off">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-rate',
@@ -1570,8 +1649,8 @@
         $panel.find('.q-hotel-rows .q-hotel-row').each(function () {
             var $r = $(this);
             var hotelId = parseInt($r.find('.h-hotel-id').val(), 10) || 0;
-            var checkin = $r.find('.h-checkin').val();
-            var checkout = $r.find('.h-checkout').val();
+            var checkin = normalizeLegacyDateInput($r.find('.h-checkin').val());
+            var checkout = normalizeLegacyDateInput($r.find('.h-checkout').val());
             var rate = $r.find('.h-rate').val();
             var supplierId = parseInt($r.find('.h-supplier').val(), 10) || 0;
             var $hSup = $r.find('.h-supplier');
@@ -2445,6 +2524,9 @@
     }
 
     function initHotelRow($row, callback) {
+        if ($row && $row.length) {
+            initQuotationDatePickers($row);
+        }
         var hotelId = parseInt($row.find('.h-hotel-id').val(), 10) || 0;
         if (hotelId > 0) {
             if (callback) callback();
@@ -2928,7 +3010,7 @@
             $('[name=destination]').val(pkg.destination);
         }
 
-        if (parseFloat(pkg.sale_price) > 0 && rawNumber('.q-cost[data-key="land"]') <= 0) {
+        if (parseFloat(pkg.sale_price) > 0 && getItineraryLandTotal() <= 0 && rawNumber('.q-cost[data-key="land"]') <= 0) {
             $('.q-cost[data-key="land"]').val(parseFloat(pkg.sale_price).toFixed(2));
         }
 
@@ -3348,7 +3430,7 @@
                     nights: nights,
                     adults: parseInt($('#q_adults').val(), 10) || 2,
                     children: parseInt($('#q_children').val(), 10) || 0,
-                    start_date: $('#q_tentative_date').val() || '',
+                    start_date: normalizeLegacyDateInput($('#q_tentative_date').val() || ''),
                     notes: ($('#qAiItineraryNotes').val() || '').trim(),
                     exclude_quotation_id: parseInt($('#q_id').val(), 10) || 0
                 }
@@ -3598,15 +3680,81 @@
     /* Custom cost rows + multi option pricing sheets                      */
     /* ------------------------------------------------------------------ */
     var qPricingOptionsState = {};
+    var qExtraCostTargetCatId = '';
+
+    function openExtraCostModal(catId) {
+        qExtraCostTargetCatId = String(catId || '');
+        if (!qExtraCostTargetCatId) {
+            return;
+        }
+        $('#qExtraCostError').addClass('d-none').text('');
+        $('#qExtraCostName').val('');
+        $('#qExtraCostAmount').val('');
+        $('#qExtraCostModal').modal('show');
+    }
+
+    function saveExtraCostFromModal() {
+        var id = String(qExtraCostTargetCatId || '');
+        var name = $.trim($('#qExtraCostName').val() || '');
+        var amountRaw = $.trim($('#qExtraCostAmount').val() || '');
+        var amount = parseFloat(amountRaw);
+        var $err = $('#qExtraCostError');
+        if (!id) {
+            $err.removeClass('d-none').text('No pricing option selected.');
+            return;
+        }
+        if (!name) {
+            $err.removeClass('d-none').text('Please enter a name.');
+            $('#qExtraCostName').trigger('focus');
+            return;
+        }
+        if (amountRaw === '' || isNaN(amount) || amount < 0) {
+            $err.removeClass('d-none').text('Please enter a valid amount.');
+            $('#qExtraCostAmount').trigger('focus');
+            return;
+        }
+        snapshotPricingSheets();
+        if (!qPricingOptionsState[id]) {
+            qPricingOptionsState[id] = defaultPricingSheetState();
+        }
+        qPricingOptionsState[id].custom = (qPricingOptionsState[id].custom || []).filter(customCostRowHasData);
+        qPricingOptionsState[id].custom.push({
+            label: formatExtraCostDisplayName(name),
+            amount: Math.round(amount * 100) / 100
+        });
+        $('#qExtraCostModal').modal('hide');
+        // Skip DOM snapshot — new row exists only in state until re-render.
+        renderPricingSheets({ skipSnapshot: true });
+        saveFormDraftToStorage();
+    }
+
+    function formatExtraCostDisplayName(name) {
+        name = String(name || '').trim().replace(/\s+/g, ' ');
+        if (!name) {
+            return '';
+        }
+        return name.replace(/\b([a-z])/g, function (m, c) {
+            return c.toUpperCase();
+        });
+    }
 
     function customCostRowHtml(data) {
         data = data || {};
+        if (!customCostRowHasData(data)) {
+            return '<div class="q-custom-cost q-custom-cost-empty" aria-hidden="true"></div>';
+        }
+        var label = String(data.label || '').trim();
+        var amount = data.amount != null ? data.amount : '';
         return '' +
             '<div class="form-group q-custom-cost mb-1">' +
-            '<input type="text" class="form-control form-control-sm cc-label" placeholder="Label" value="' + esc(data.label) + '">' +
+            '<div class="q-custom-cost-row">' +
+            '<span class="q-custom-cost-ico" aria-hidden="true"><i class="fas fa-tag"></i></span>' +
+            '<input type="text" class="form-control form-control-sm cc-label" placeholder="Cost name" value="' + esc(label) + '" title="' + esc(label) + '" aria-label="Extra cost name">' +
             '<div class="q-custom-cost-amt">' +
-            '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost cc-amount" value="' + esc(data.amount) + '">' +
-            '<button type="button" class="btn btn-outline-danger btn-sm q-remove" data-remove=".q-custom-cost" title="Remove"><i class="fas fa-times"></i></button>' +
+            '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost cc-amount" value="' + esc(amount) + '" placeholder="0" aria-label="Extra cost amount">' +
+            '</div>' +
+            '<button type="button" class="btn q-custom-cost-remove q-remove" data-remove=".q-custom-cost" title="Remove extra cost" aria-label="Remove">' +
+            '<i class="fas fa-times"></i></button>' +
             '</div></div>';
     }
 
@@ -3621,7 +3769,7 @@
                 travel_insurance: ''
             },
             custom: [],
-            user_edited: { flight_train: 0, hotel: 0 },
+            user_edited: { flight_train: 0, hotel: 0, land: 0 },
             profit_percent: '',
             profit_amount: '',
             price_per_adult: '',
@@ -3648,7 +3796,8 @@
             custom: custom,
             user_edited: {
                 flight_train: $sheet.find('.q-cost[data-key="flight_train"]').attr('data-user-edited') === '1' ? 1 : 0,
-                hotel: $sheet.find('.q-cost[data-key="hotel"]').attr('data-user-edited') === '1' ? 1 : 0
+                hotel: $sheet.find('.q-cost[data-key="hotel"]').attr('data-user-edited') === '1' ? 1 : 0,
+                land: $sheet.find('.q-cost[data-key="land"]').attr('data-user-edited') === '1' ? 1 : 0
             },
             profit_percent: $sheet.find('.q-sheet-profit-percent').val() || '',
             profit_amount: $sheet.find('.q-sheet-profit-amount').val() || '',
@@ -3685,6 +3834,118 @@
         ];
     }
 
+    function pricingCostHasAmount(val) {
+        var n = parseFloat(val);
+        return !isNaN(n) && n > 0;
+    }
+
+    function getItineraryLandTotal() {
+        try {
+            var meta = typeof collectItineraryMeta === 'function' ? collectItineraryMeta() : {};
+            var entries = typeof normalizeItinerarySupplierEntries === 'function'
+                ? normalizeItinerarySupplierEntries(meta)
+                : [];
+            var total = 0;
+            (entries || []).forEach(function (item) {
+                var rate = parseFloat(item && item.rate);
+                if (!isNaN(rate) && rate > 0) {
+                    total += rate;
+                }
+            });
+            return total;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function customCostRowHasData(row) {
+        if (!row) {
+            return false;
+        }
+        var label = String(row.label || '').trim();
+        return !!label || pricingCostHasAmount(row.amount);
+    }
+
+    /** Only show pricing rows that already have rates from earlier sections (or saved amounts). */
+    function getVisiblePricingFixedKeys(cats, statesByCatId) {
+        cats = cats || [];
+        statesByCatId = statesByCatId || {};
+        var flightTotal = sumNumericFields('#qFlightRows .f-fare');
+        var hasFlightRate = flightTotal > 0;
+        var landFromItin = getItineraryLandTotal() > 0;
+        var anyHotelRate = cats.some(function (cat) {
+            return hotelTotalForCategory(cat) > 0;
+        });
+        var saved = {};
+        pricingFixedCostKeys().forEach(function (row) {
+            saved[row.key] = false;
+        });
+        cats.forEach(function (cat) {
+            var st = statesByCatId[cat.id] || qPricingOptionsState[cat.id] || defaultPricingSheetState();
+            var fixed = st.fixed || {};
+            Object.keys(saved).forEach(function (key) {
+                if (pricingCostHasAmount(fixed[key])) {
+                    saved[key] = true;
+                }
+            });
+        });
+        Object.keys(qPricingOptionsState || {}).forEach(function (id) {
+            var fixed = (qPricingOptionsState[id] || {}).fixed || {};
+            Object.keys(saved).forEach(function (key) {
+                if (pricingCostHasAmount(fixed[key])) {
+                    saved[key] = true;
+                }
+            });
+        });
+
+        return pricingFixedCostKeys().filter(function (row) {
+            if (row.key === 'flight_train') {
+                return saved.flight_train || hasFlightRate;
+            }
+            if (row.key === 'hotel') {
+                return saved.hotel || anyHotelRate;
+            }
+            if (row.key === 'land') {
+                return saved.land || landFromItin;
+            }
+            return !!saved[row.key];
+        });
+    }
+
+    function getVisibleCustomCosts(state) {
+        return ((state && state.custom) || []).filter(customCostRowHasData);
+    }
+
+    /** Extra costs shown in the matrix (filled rows only; add via modal). */
+    function getRenderableCustomCosts(state) {
+        return getVisibleCustomCosts(state);
+    }
+
+    function getMatrixCustomLabels(cats, maxCustom) {
+        maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
+        cats = cats || [];
+        var labels = [];
+        var activeCustoms = getVisibleCustomCosts(qPricingOptionsState[qActiveHotelCategoryId] || {});
+        for (var i = 0; i < maxCustom; i++) {
+            var label = '';
+            if (activeCustoms[i] && String(activeCustoms[i].label || '').trim()) {
+                label = String(activeCustoms[i].label).trim();
+            }
+            if (!label) {
+                cats.some(function (cat) {
+                    var row = getVisibleCustomCosts(qPricingOptionsState[cat.id] || {})[i];
+                    if (row && String(row.label || '').trim()) {
+                        label = String(row.label).trim();
+                        return true;
+                    }
+                    return false;
+                });
+            }
+            labels.push(label || 'Extra Cost');
+        }
+        return labels;
+    }
+
     function pricingOptionBadge(idx, isActive) {
         if (isActive) {
             return '<span class="q-pricing-option-badge is-selected"><i class="fas fa-check"></i> Selected</span>';
@@ -3708,7 +3969,7 @@
         return label;
     }
 
-    function pricingOptionColumnHtml(cat, state, idx, maxCustom) {
+    function pricingOptionColumnHtml(cat, state, idx, maxCustom, visibleKeys) {
         cat = cat || {};
         state = state || defaultPricingSheetState();
         var fixed = state.fixed || {};
@@ -3716,6 +3977,7 @@
         var title = pricingOptionTitle(cat, idx);
         var isActive = String(id) === String(qActiveHotelCategoryId);
         maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
+        visibleKeys = visibleKeys || pricingFixedCostKeys();
         var html = '<div class="q-pricing-option-sheet' + (isActive ? ' is-active' : '') + '" data-cat-id="' + esc(id) + '">';
         html += '<div class="q-pricing-option-hd">';
         html += '<div class="q-pricing-option-hd-top">';
@@ -3729,34 +3991,57 @@
         }
         html += '</div></div></div>';
         html += '</div><div class="q-pricing-option-body">';
-        pricingFixedCostKeys().forEach(function (row) {
-            var synced = (row.key === 'flight_train' || row.key === 'hotel') ? ' q-cost-synced' : '';
+        visibleKeys.forEach(function (row) {
+            var synced = (row.key === 'flight_train' || row.key === 'hotel' || row.key === 'land') ? ' q-cost-synced' : '';
             var edited = state.user_edited && parseInt(state.user_edited[row.key], 10) === 1 ? '1' : '0';
-            html += '<div class="q-pricing-amount-cell">' +
+            html += '<div class="q-pricing-amount-cell" data-cost-key="' + esc(row.key) + '">' +
                 '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + row.key + '" value="' + esc(fixed[row.key] != null ? fixed[row.key] : '') + '" data-user-edited="' + edited + '" placeholder="0">' +
                 '</div>';
         });
+        // Keep hidden inputs for non-visible fixed keys so saved values are not lost on re-render.
+        pricingFixedCostKeys().forEach(function (row) {
+            if (visibleKeys.some(function (v) { return v.key === row.key; })) {
+                return;
+            }
+            var edited = state.user_edited && parseInt(state.user_edited[row.key], 10) === 1 ? '1' : '0';
+            html += '<input type="hidden" class="q-cost" data-key="' + row.key + '" value="' + esc(fixed[row.key] != null ? fixed[row.key] : '') + '" data-user-edited="' + edited + '">';
+        });
         html += '<div class="q-custom-cost-rows">';
-        var customs = state.custom || [];
-        var customCount = Math.max(1, maxCustom);
-        for (var ci = 0; ci < customCount; ci++) {
+        var customs = getRenderableCustomCosts(state);
+        for (var ci = 0; ci < maxCustom; ci++) {
             html += customCostRowHtml(customs[ci] || {});
         }
         html += '</div>';
         html += '<div class="q-pricing-amount-cell q-pricing-add-cell">' +
-            '<button type="button" class="btn btn-outline-secondary btn-sm q-add-cost-row" title="Add extra cost"><i class="fas fa-plus"></i></button>' +
+            '<button type="button" class="btn q-add-cost-row" title="Add extra cost">' +
+            '<i class="fas fa-plus"></i><span>Add Extra Cost</span></button>' +
             '</div>';
 
-        html += '<div class="q-sheet-profit-compact">' +
-            '<span class="q-sheet-profit-compact-label">Profit %</span>' +
-            '<input type="number" step="0.01" class="q-sheet-profit-percent q-sum-pct" placeholder="0" value="' + esc(state.profit_percent || '') + '" title="Profit %">' +
-            '<span class="q-sheet-total-mini q-sum-total" data-display="total">₹ 0</span>' +
+        html += '<div class="q-sheet-profit-block">';
+        html += '<div class="q-profit-line">' +
+            '<span class="q-profit-line-label">Total Cost</span>' +
+            '<div class="q-profit-readonly q-sum-total" data-display="total">0</div>' +
             '</div>';
+        html += '<div class="q-profit-line q-profit-add-line">' +
+            '<span class="q-profit-line-label">Add Profit</span>' +
+            '<div class="q-profit-inputs">' +
+            '<div class="q-profit-row">' +
+            '<div class="input-group input-group-sm q-profit-pct-group">' +
+            '<input type="number" step="0.01" min="0" class="form-control q-sheet-profit-percent q-sum-pct" placeholder="0" value="' + esc(state.profit_percent || '') + '" title="Profit %">' +
+            '<div class="input-group-append"><span class="input-group-text">%</span></div>' +
+            '</div>' +
+            '<span class="q-profit-or">OR</span>' +
+            '<input type="number" step="0.01" min="0" class="form-control form-control-sm q-sheet-profit-amount" placeholder="Amount" value="' + esc(state.profit_amount || '') + '" title="Profit amount">' +
+            '</div>' +
+            '<div class="q-profit-calc-hint q-sum-profit" data-display="profit"></div>' +
+            '</div></div>';
+        html += '<div class="q-profit-line">' +
+            '<span class="q-profit-line-label">Package Total</span>' +
+            '<div class="q-profit-readonly q-sum-selling" data-display="selling">0</div>' +
+            '</div>';
+        html += '</div>';
         html += tourCostCardShellHtml();
         html += '<input type="hidden" class="q-sheet-total-cost" value="0">';
-        html += '<input type="hidden" class="q-sheet-profit-amount" value="' + esc(state.profit_amount || '') + '">';
-        html += '<span class="q-sum-profit d-none" data-display="profit">₹ 0</span>';
-        html += '<span class="q-sum-selling d-none" data-display="selling">₹ 0</span>';
         html += '<input type="hidden" class="q-sheet-package-total" value="0">';
         html += '<input type="hidden" class="q-sheet-price-per-adult" value="' + esc(state.price_per_adult || '') + '"' +
             (parseInt(state.price_per_adult_edited, 10) === 1 ? ' data-user-edited="1"' : '') + '>';
@@ -3766,58 +4051,124 @@
         return html;
     }
 
-    function pricingLabelsColumnHtml(maxCustom) {
-        maxCustom = Math.max(1, parseInt(maxCustom, 10) || 1);
+    function pricingLabelsColumnHtml(maxCustom, visibleKeys, customLabels) {
+        maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
+        visibleKeys = visibleKeys || pricingFixedCostKeys();
         var html = '<div class="q-pricing-labels-col">';
         html += '<div class="q-pricing-labels-hd"></div>';
         html += '<div class="q-pricing-option-body">';
-        pricingFixedCostKeys().forEach(function (row) {
-            html += '<div class="q-pricing-row-label"><i class="' + row.icon + '" aria-hidden="true"></i><span>' + esc(row.label) + '</span></div>';
+        visibleKeys.forEach(function (row) {
+            html += '<div class="q-pricing-row-label" data-cost-key="' + esc(row.key) + '"><i class="' + row.icon + '" aria-hidden="true"></i><span>' + esc(row.label) + '</span></div>';
         });
         for (var i = 0; i < maxCustom; i++) {
             html += '<div class="q-pricing-row-label q-pricing-custom-label">' +
-                (i === 0 ? '<i class="fas fa-ellipsis-h" aria-hidden="true"></i><span>Extra Costs</span>' : '') +
+                (i === 0
+                    ? '<i class="fas fa-ellipsis-h" aria-hidden="true"></i><span>Extra Costs</span>'
+                    : '') +
                 '</div>';
         }
-        html += '<div class="q-pricing-row-label q-pricing-add-label"></div>';
+        html += '<div class="q-pricing-row-label q-pricing-add-label">' +
+            (maxCustom === 0
+                ? '<i class="fas fa-ellipsis-h" aria-hidden="true"></i><span>Extra Costs</span>'
+                : '') +
+            '</div>';
         html += '</div></div>';
         return html;
     }
 
-    function renderPricingSheets() {
-        snapshotPricingSheets();
-        var data = collectHotelCategories();
-        var $host = $('#qPricingSheetsHost');
-        if (!$host.length) {
+    function renderPricingSheets(opts) {
+        opts = opts || {};
+        if (qPricingRenderLock) {
             return;
         }
-        $host.empty();
-        var cats = data.categories || [];
-        if (!cats.length) {
-            cats = [{ id: 'opt_1', label: defaultHotelCategoryLabel(0), hotels: [] }];
-        }
-        if (!qActiveHotelCategoryId || !cats.some(function (c) { return String(c.id) === String(qActiveHotelCategoryId); })) {
-            qActiveHotelCategoryId = String(cats[0].id || '');
-        }
-        $host.css('--q-opt-count', String(cats.length));
-        $host.toggleClass('is-single-option', cats.length === 1);
-        var maxCustom = 0;
-        cats.forEach(function (cat) {
-            var st = qPricingOptionsState[cat.id] || defaultPricingSheetState();
-            maxCustom = Math.max(maxCustom, (st.custom || []).length);
-        });
-        $host.append(pricingLabelsColumnHtml(maxCustom));
-        cats.forEach(function (cat, idx) {
-            var state = qPricingOptionsState[cat.id] || defaultPricingSheetState();
-            $host.append(pricingOptionColumnHtml(cat, state, idx, maxCustom));
-        });
-        Object.keys(qPricingOptionsState).forEach(function (key) {
-            if (!cats.some(function (c) { return String(c.id) === String(key); })) {
-                delete qPricingOptionsState[key];
+        qPricingRenderLock = true;
+        try {
+            if (!opts.skipSnapshot) {
+                snapshotPricingSheets();
             }
+            var data = collectHotelCategories();
+            var $host = $('#qPricingSheetsHost');
+            if (!$host.length) {
+                return;
+            }
+            $host.empty();
+            var cats = data.categories || [];
+            if (!cats.length) {
+                cats = [{ id: 'opt_1', label: defaultHotelCategoryLabel(0), hotels: [] }];
+            }
+            if (!qActiveHotelCategoryId || !cats.some(function (c) { return String(c.id) === String(qActiveHotelCategoryId); })) {
+                qActiveHotelCategoryId = String(cats[0].id || '');
+            }
+            // Keep state keyed to current category ids (also match loose string/number ids).
+            var catIds = {};
+            cats.forEach(function (cat) {
+                catIds[String(cat.id)] = true;
+            });
+            // If save targeted an id that isn't in cats (stale), merge into active sheet.
+            Object.keys(qPricingOptionsState).forEach(function (key) {
+                if (!catIds[String(key)]) {
+                    var orphan = qPricingOptionsState[key];
+                    var activeId = String(qActiveHotelCategoryId || cats[0].id);
+                    if (orphan && orphan.custom && orphan.custom.length && qPricingOptionsState[activeId]) {
+                        qPricingOptionsState[activeId].custom = (qPricingOptionsState[activeId].custom || [])
+                            .concat(orphan.custom)
+                            .filter(customCostRowHasData);
+                    } else if (orphan && orphan.custom && orphan.custom.length && !qPricingOptionsState[activeId]) {
+                        qPricingOptionsState[activeId] = orphan;
+                    }
+                    delete qPricingOptionsState[key];
+                }
+            });
+            $host.css('--q-opt-count', String(cats.length));
+            $host.toggleClass('is-single-option', cats.length === 1);
+            var maxCustom = 0;
+            cats.forEach(function (cat) {
+                var st = qPricingOptionsState[cat.id] || defaultPricingSheetState();
+                maxCustom = Math.max(maxCustom, getRenderableCustomCosts(st).length);
+            });
+            var visibleKeys = getVisiblePricingFixedKeys(cats, qPricingOptionsState);
+            var customLabels = getMatrixCustomLabels(cats, maxCustom);
+            qPricingVisSig = getPricingVisibilitySignature(cats);
+            $host.append(pricingLabelsColumnHtml(maxCustom, visibleKeys, customLabels));
+            cats.forEach(function (cat, idx) {
+                var state = qPricingOptionsState[cat.id] || defaultPricingSheetState();
+                $host.append(pricingOptionColumnHtml(cat, state, idx, maxCustom, visibleKeys));
+            });
+            renderTourCostRows();
+            recalcCosts();
+        } finally {
+            qPricingRenderLock = false;
+        }
+    }
+
+    var qPricingVisSig = '';
+    var qPricingRenderLock = false;
+
+    function getPricingVisibilitySignature(cats) {
+        cats = cats || (collectHotelCategories().categories || []);
+        if (!cats.length) {
+            cats = [{ id: 'opt_1', hotels: [] }];
+        }
+        var keys = getVisiblePricingFixedKeys(cats, qPricingOptionsState).map(function (r) {
+            return r.key;
+        }).join(',');
+        var custom = 0;
+        cats.forEach(function (cat) {
+            custom = Math.max(custom, getRenderableCustomCosts(qPricingOptionsState[cat.id] || {}).length);
         });
-        renderTourCostRows();
-        recalcCosts();
+        return keys + '#' + custom;
+    }
+
+    function refreshPricingVisibilityIfNeeded() {
+        if (qPricingRenderLock) {
+            return;
+        }
+        var data = collectHotelCategories();
+        var cats = data.categories || [];
+        var sig = getPricingVisibilitySignature(cats);
+        if (sig !== qPricingVisSig) {
+            renderPricingSheets();
+        }
     }
 
     function sumNumericFields(selector) {
@@ -3842,8 +4193,9 @@
         if (!cat) return;
         if (!isSheetCostUserEdited($sheet, 'hotel')) {
             var hotelTotal = hotelTotalForCategory(cat);
-            var count = (cat.hotels || []).length;
-            $sheet.find('.q-cost[data-key="hotel"]').val(count ? hotelTotal.toFixed(2) : '');
+            $sheet.find('.q-cost[data-key="hotel"]').val(
+                hotelTotal > 0 ? hotelTotal.toFixed(2) : ''
+            );
         }
     }
 
@@ -3851,9 +4203,19 @@
         if (!isSheetCostUserEdited($sheet, 'flight_train')) {
             var flightTotal = sumNumericFields('#qFlightRows .f-fare');
             $sheet.find('.q-cost[data-key="flight_train"]').val(
-                $('#qFlightRows .q-flight-row').length ? flightTotal.toFixed(2) : ''
+                flightTotal > 0 ? flightTotal.toFixed(2) : ''
             );
         }
+    }
+
+    function syncSheetLandFromItinerary($sheet) {
+        if (isSheetCostUserEdited($sheet, 'land')) {
+            return;
+        }
+        var landTotal = getItineraryLandTotal();
+        $sheet.find('.q-cost[data-key="land"]').val(
+            landTotal > 0 ? landTotal.toFixed(2) : ''
+        );
     }
 
     function formatInrDisplay(n) {
@@ -4090,14 +4452,16 @@
                 });
             }
         }
-        html += tourCostRowHtml({
-            key: 'infant',
-            icon: 'fas fa-baby',
-            name: 'Infant',
-            rate: qTourCostState.infant_rate,
-            qty: 1,
-            amountText: 'INR 0.00'
-        });
+        if (pricingCostHasAmount(qTourCostState.infant_rate)) {
+            html += tourCostRowHtml({
+                key: 'infant',
+                icon: 'fas fa-baby',
+                name: 'Infant',
+                rate: qTourCostState.infant_rate,
+                qty: 1,
+                amountText: 'INR 0.00'
+            });
+        }
         html += tourCostRowHtml({
             key: 'subtotal',
             icon: 'fas fa-calculator',
@@ -4388,6 +4752,7 @@
     function recalcOnePricingSheet($sheet, adults) {
         syncSheetFlightFromServices($sheet);
         syncSheetHotelFromCategory($sheet);
+        syncSheetLandFromItinerary($sheet);
 
         var total = 0;
         $sheet.find('.q-cost').each(function () {
@@ -4395,21 +4760,27 @@
             if (!isNaN(v)) total += v;
         });
         $sheet.find('.q-sheet-total-cost').val(money(total));
-        $sheet.find('.q-sum-total').text(formatInrDisplay(total));
+        $sheet.find('.q-sum-total').text(money(total));
 
         var profit = 0;
         var pct = parseFloat($sheet.find('.q-sheet-profit-percent').val());
         var amt = parseFloat($sheet.find('.q-sheet-profit-amount').val());
-        if (!isNaN(amt) && amt > 0) {
+        var usingAmount = !isNaN(amt) && amt > 0;
+        if (usingAmount) {
             profit = amt;
         } else if (!isNaN(pct) && pct > 0) {
             profit = total * pct / 100;
         }
         var pkgBase = total + profit;
-        $sheet.find('.q-sum-profit').text(formatInrDisplay(profit));
+        var $profitHint = $sheet.find('.q-sum-profit');
+        if (profit > 0) {
+            $profitHint.text('Rs ' + money(profit)).addClass('is-visible');
+        } else {
+            $profitHint.text('').removeClass('is-visible');
+        }
         $sheet.find('.q-sheet-adult-lbl').text(adults);
         $('#qPricingSheetsHost .q-matrix-adult-lbl').text(adults);
-        $sheet.find('.q-sum-selling').text(formatInrDisplay(pkgBase));
+        $sheet.find('.q-sum-selling').text(money(pkgBase));
         $sheet.find('.q-sheet-package-total').val(money(pkgBase));
 
         var $ppa = $sheet.find('.q-sheet-price-per-adult');
@@ -4468,6 +4839,7 @@
         $('#qPricingSheetsHost .q-pricing-option-sheet').removeClass('is-active');
         $('#qPricingSheetsHost .q-pricing-option-sheet[data-cat-id="' + String(qActiveHotelCategoryId || '').replace(/"/g, '\\"') + '"]').addClass('is-active');
         syncLegacyPricingFieldsFromActiveSheet();
+        refreshPricingVisibilityIfNeeded();
     }
 
     function collectPricingOptionsPayload() {
@@ -4954,7 +5326,7 @@
             mobile_no: $('[name=mobile_no]').val(),
             email: $('[name=email]').val(),
             destination: $('[name=destination]').val(),
-            tentative_date: $('#q_tentative_date').val(),
+            tentative_date: normalizeLegacyDateInput($('#q_tentative_date').val()),
             no_of_nights: $('#q_nights').val(),
             no_of_adults: $('#q_adults').val(),
             no_of_children: $('#q_children').val(),
@@ -5164,8 +5536,8 @@
         d.setDate(d.getDate() + offset);
         return {
             dayName: DAY_NAMES[d.getDay()].toUpperCase(),
-            dateDash: String(d.getDate()).padStart(2, '0') + '-' +
-                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            dateDash: String(d.getDate()).padStart(2, '0') + '/' +
+                String(d.getMonth() + 1).padStart(2, '0') + '/' +
                 d.getFullYear()
         };
     }
@@ -5236,7 +5608,7 @@
             }
         }
         return {
-            date: toIsoDateFromPreview(datePart) || datePart,
+            date: formatDisplayDate(toIsoDateFromPreview(datePart) || datePart) || datePart,
             time: timePart
         };
     }
@@ -5282,7 +5654,11 @@
 
         function setInput($input, val) {
             if (!$input || !$input.length) return;
-            $input.val(val);
+            if ($input.hasClass('js-q-date-input')) {
+                setDateInputValue($input, val);
+            } else {
+                $input.val(val);
+            }
             $input.trigger('change');
         }
 
@@ -5853,41 +6229,6 @@
         /* —— 6. Day Wise Itinerary —— */
         if (!parseInt(p.without_itinerary, 10)) {
             var itineraryHtml = '';
-            var costSheetPreview = {};
-            try {
-                costSheetPreview = typeof p.cost_sheet_json === 'string'
-                    ? JSON.parse(p.cost_sheet_json || '{}')
-                    : (p.cost_sheet || {});
-            } catch (previewCsErr) {
-                costSheetPreview = {};
-            }
-            var itinMeta = costSheetPreview.itinerary_meta || {};
-            var itinEntries = normalizeItinerarySupplierEntries(itinMeta).filter(function (item) {
-                return (item.supplier && String(item.supplier).trim()) || (item.rate !== '' && item.rate != null);
-            });
-            if (itinEntries.length) {
-                itineraryHtml += '<div class="q-preview-itinerary-meta">';
-                itinEntries.forEach(function (item, idx) {
-                    if (idx > 0) {
-                        itineraryHtml += '<br>';
-                    }
-                    var bits = [];
-                    if (item.supplier) {
-                        bits.push('Supplier: ' + esc(item.supplier));
-                    }
-                    if (item.rate !== '' && item.rate != null) {
-                        if (idx === 0) {
-                            bits.push('Rate: ' + previewEditable(String(item.rate), 'itinerary_meta.rate', {
-                                placeholder: 'Rate'
-                            }));
-                        } else {
-                            bits.push('Rate: ' + esc(String(item.rate)));
-                        }
-                    }
-                    itineraryHtml += bits.join(' &nbsp;|&nbsp; ');
-                });
-                itineraryHtml += '</div>';
-            }
             itinerary.forEach(function (day, di) {
                 var dayTitle = day && day.title ? String(day.title).trim() : '';
                 var dayDesc = day && day.description ? String(day.description).replace(/<[^>]*>/g, '').trim() : '';
@@ -6237,7 +6578,7 @@
             $('[name=destination]').val(lead.destination);
         }
         if (lead.tentative_date) {
-            $('#q_tentative_date').val(lead.tentative_date);
+            setDateInputValue($('#q_tentative_date'), lead.tentative_date);
         }
         if (lead.no_of_nights != null && lead.no_of_nights !== '') {
             $('#q_nights').val(parseInt(lead.no_of_nights, 10) || 0);
@@ -6316,7 +6657,10 @@
         $('[name=mobile_no]').val(p.mobile_no || '');
         $('[name=email]').val(p.email || '');
         $('[name=destination]').val(p.destination || '');
-        $('#q_tentative_date').val(p.tentative_date && p.tentative_date !== '0000-00-00' ? p.tentative_date : '');
+        setDateInputValue(
+            $('#q_tentative_date'),
+            p.tentative_date && p.tentative_date !== '0000-00-00' ? p.tentative_date : ''
+        );
         $('#q_nights').val(p.no_of_nights || 0);
         $('#q_adults').val(p.no_of_adults || 1);
         $('#q_children').val(p.no_of_children || 0);
@@ -6475,6 +6819,7 @@
         if (!tourCostRowsPresent()) {
             renderTourCostRows();
         }
+        initQuotationDatePickers();
         recalcCosts();
         saveFormDraftToStorage();
     }
@@ -7240,10 +7585,12 @@
         initPackageSuggest();
         initAISuggestDay();
         initPreviewInlineEditing();
+        initQuotationDatePickers();
 
         function addFlightSegment(data) {
             var $row = $(flightRowHtml(data || {}));
             $('#qFlightRows').append($row);
+            initQuotationDatePickers($row);
             qInitSupplierSelect2($row.find('.f-supplier'), { placeholder: 'Select' });
             renumberFlightRows();
             recalcCosts();
@@ -7267,6 +7614,7 @@
         window.qQuotationAddFlightJourney = function (rows, opts) {
             appendFlightJourneyCard(rows || [], opts || {});
             qInitSupplierSelect2In($('#qFlightRows'));
+            initQuotationDatePickers($('#qFlightRows'));
             renumberFlightRows();
             recalcCosts();
         };
@@ -7413,11 +7761,13 @@
         });
 
         $(document).on('input change', '#qItinerarySupplierRows .q-itin-rate', function () {
+            recalcCosts();
             saveFormDraftToStorage();
         });
 
         $('#qAddItinerarySupplier').on('click', function () {
             addItinerarySupplierRow({});
+            recalcCosts();
             saveFormDraftToStorage();
         });
 
@@ -7430,6 +7780,7 @@
             qDestroySupplierSelect2($row.find('.q-itin-supplier'));
             $row.remove();
             refreshItinerarySupplierRemoveState();
+            recalcCosts();
             saveFormDraftToStorage();
         });
 
@@ -7551,16 +7902,26 @@
         $(document).on('click', '.q-add-cost-row', function () {
             var $sheet = $(this).closest('.q-pricing-option-sheet');
             var id = String($sheet.attr('data-cat-id') || '');
-            snapshotPricingSheets();
+            if (!id) {
+                var $active = getActivePricingSheet();
+                id = String($active.attr('data-cat-id') || '');
+            }
             if (!id) {
                 return;
             }
-            if (!qPricingOptionsState[id]) {
-                qPricingOptionsState[id] = defaultPricingSheetState();
-            }
-            qPricingOptionsState[id].custom = qPricingOptionsState[id].custom || [];
-            qPricingOptionsState[id].custom.push({ label: '', amount: '' });
-            renderPricingSheets();
+            openExtraCostModal(id);
+        });
+        $(document).on('submit', '#qExtraCostForm', function (e) {
+            e.preventDefault();
+            saveExtraCostFromModal();
+        });
+        $(document).on('shown.bs.modal', '#qExtraCostModal', function () {
+            $('#qExtraCostName').trigger('focus');
+        });
+        $(document).on('hidden.bs.modal', '#qExtraCostModal', function () {
+            qExtraCostTargetCatId = '';
+            $('#qExtraCostForm')[0].reset();
+            $('#qExtraCostError').addClass('d-none').text('');
         });
         $(document).on('input change', '#qHotelCategories .q-hotel-row input, #qHotelCategories .q-hotel-row select', function () {
             saveFormDraftToStorage();
@@ -7831,6 +8192,9 @@
 
         $(document).on('input change', '.q-cost', recalcCosts);
         $(document).on('input change', '.q-sheet-profit-percent, .q-sheet-profit-amount', recalcCosts);
+        $(document).on('input change', '.cc-label', function () {
+            saveFormDraftToStorage();
+        });
         $(document).on('input', '.q-sheet-profit-percent', function () {
             if ($(this).val()) {
                 $(this).closest('.q-pricing-option-sheet').find('.q-sheet-profit-amount').val('');
@@ -8326,7 +8690,10 @@
         });
         $('#qSaveBtn').on('click', function (e) {
             e.preventDefault();
-            saveQuotation();
+            flushPreviewActiveEdit();
+            window.setTimeout(function () {
+                saveQuotation($('#qSaveBtn'));
+            }, 80);
         });
         $('#qSaveDraftBtn').on('click', function (e) {
             e.preventDefault();
@@ -8463,10 +8830,12 @@
             }
             recalcCosts();
             restoreWizardStepOnLoad();
+            initQuotationDatePickers();
             saveFormDraftToStorage();
         }
         ensureHotelCategoriesReady();
         ensureItinerarySupplierRows();
+        initQuotationDatePickers();
         // Fill empty first-hotel Check-In from Travel Date (Tentative Date).
         syncFirstHotelCheckinFromTravelDate(false);
         if (!$('#qPricingSheetsHost .q-pricing-option-sheet').length) {

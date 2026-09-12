@@ -39,6 +39,14 @@ try {
     $email = trim($_POST['email'] ?? '');
     $destination = trim($_POST['destination'] ?? '');
     $tentativeDate = trim($_POST['tentative_date'] ?? '');
+    if ($tentativeDate !== '') {
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $tentativeDate, $m)) {
+            $tentativeDate = sprintf('%04d-%02d-%02d', (int) $m[3], (int) $m[2], (int) $m[1]);
+        } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tentativeDate)) {
+            $ts = strtotime($tentativeDate);
+            $tentativeDate = $ts ? date('Y-m-d', $ts) : '';
+        }
+    }
     $tentativeDate = ($tentativeDate !== '') ? $tentativeDate : null;
     $nights = max(0, (int) ($_POST['no_of_nights'] ?? 0));
     $adults = max(1, (int) ($_POST['no_of_adults'] ?? 1));
