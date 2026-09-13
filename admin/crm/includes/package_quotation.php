@@ -43,13 +43,25 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
     }
     $updatedSelect = $hasUpdatedAt ? 'p.updated_at' : 'NULL AS updated_at';
 
+    $hasFeaturedImage = false;
+    $imgCol = $conn->query("SHOW COLUMNS FROM `packages` LIKE 'featured_image'");
+    if ($imgCol && $imgCol->num_rows > 0) {
+        $hasFeaturedImage = true;
+    }
+    $imageSelect = $hasFeaturedImage ? 'p.featured_image' : "'' AS featured_image";
+
+    $dayTitlesSelect = "(SELECT GROUP_CONCAT(pi.title ORDER BY pi.day_number ASC, pi.id ASC SEPARATOR '|||')
+             FROM package_itineraries pi
+             WHERE pi.package_id = p.id AND TRIM(IFNULL(pi.title, '')) <> '') AS day_titles";
+
     if ($query === '') {
-        $sql = "SELECT p.id, p.title, p.duration_nights, p.duration_days, p.sale_price, p.status, {$updatedSelect},
+        $sql = "SELECT p.id, p.title, p.duration_nights, p.duration_days, p.sale_price, p.status, {$updatedSelect}, {$imageSelect},
                 (SELECT GROUP_CONCAT(d.name ORDER BY d.name SEPARATOR ', ')
                  FROM destinations d
                  INNER JOIN package_destination_map pdm ON pdm.destination_id = d.id
                  WHERE pdm.package_id = p.id) AS dest_names,
-                {$catSelect}
+                {$catSelect},
+                {$dayTitlesSelect}
             FROM packages p
             WHERE p.status IN ('Published', 'Draft')
             ORDER BY p.id DESC
@@ -57,12 +69,13 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
         $res = $conn->query($sql);
     } else {
         $like = '%' . $query . '%';
-        $sql = "SELECT p.id, p.title, p.duration_nights, p.duration_days, p.sale_price, p.status, {$updatedSelect},
+        $sql = "SELECT p.id, p.title, p.duration_nights, p.duration_days, p.sale_price, p.status, {$updatedSelect}, {$imageSelect},
                 (SELECT GROUP_CONCAT(d.name ORDER BY d.name SEPARATOR ', ')
                  FROM destinations d
                  INNER JOIN package_destination_map pdm ON pdm.destination_id = d.id
                  WHERE pdm.package_id = p.id) AS dest_names,
-                {$catSelect}
+                {$catSelect},
+                {$dayTitlesSelect}
             FROM packages p
             WHERE p.status IN ('Published', 'Draft')
               AND (
@@ -72,6 +85,10 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
                         INNER JOIN package_destination_map pdm ON pdm.destination_id = d.id
                         WHERE pdm.package_id = p.id AND d.name LIKE ?
                     )
+                 OR EXISTS (
+                        SELECT 1 FROM package_itineraries pi
+                        WHERE pi.package_id = p.id AND pi.title LIKE ?
+                    )
               )
             ORDER BY p.id DESC
             LIMIT " . (int) $limit;
@@ -79,7 +96,7 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
         if (!$stmt) {
             return [];
         }
-        $stmt->bind_param('ss', $like, $like);
+        $stmt->bind_param('sss', $like, $like, $like);
         $stmt->execute();
         $res = $stmt->get_result();
     }
@@ -103,6 +120,16 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
             if ($destNames !== '') {
                 $sub[] = $destNames;
             }
+            $dayTitles = [];
+            $dayTitlesRaw = trim((string) ($row['day_titles'] ?? ''));
+            if ($dayTitlesRaw !== '') {
+                foreach (explode('|||', $dayTitlesRaw) as $dayTitle) {
+                    $dayTitle = trim($dayTitle);
+                    if ($dayTitle !== '') {
+                        $dayTitles[] = $dayTitle;
+                    }
+                }
+            }
             $rows[] = [
                 'id' => (int) ($row['id'] ?? 0),
                 'title' => $label,
@@ -113,8 +140,11 @@ function crmSearchPackagesForQuotation(mysqli $conn, string $query, int $limit =
                 'updated_at' => (string) ($row['updated_at'] ?? ''),
                 'sale_price' => (float) ($row['sale_price'] ?? 0),
                 'status' => (string) ($row['status'] ?? ''),
+                'featured_image' => trim((string) ($row['featured_image'] ?? '')),
+                'image' => trim((string) ($row['featured_image'] ?? '')),
                 'label' => $label,
                 'sub_label' => implode(' · ', $sub),
+                'day_titles' => $dayTitles,
             ];
         }
     }

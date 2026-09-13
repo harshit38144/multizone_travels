@@ -373,9 +373,16 @@
         var priceLabel = (typeof tot === 'number' && !isNaN(tot))
             ? Math.round(tot).toLocaleString('en-IN', { maximumFractionDigits: 0 })
             : String(Math.round(parseFloat(tot) || 0));
+        var seatsLeftMeta = item._qfsMeta ? item._qfsMeta.seatsLeft : null;
+        var seatsHtml = '';
+        if (seatsLeftMeta !== null && seatsLeftMeta !== undefined && !isNaN(parseInt(seatsLeftMeta, 10))) {
+            seatsHtml = '<div class="text-muted" style="font-size:11px; margin-top:4px;">' +
+                parseInt(seatsLeftMeta, 10) + ' seat' + (parseInt(seatsLeftMeta, 10) === 1 ? '' : 's') + ' left</div>';
+        }
         cardHtml += '</div>' +
             '<div class="qfs-price-col">' +
             '<div class="qfs-price-value">₹' + priceLabel + '</div>' +
+            seatsHtml +
             '</div></div></div>';
         return cardHtml;
     }
@@ -485,13 +492,21 @@
             if (typeof duration !== 'number') {
                 duration = parseInt(duration, 10) || 150;
             }
+            var seatsLeft = parseInt(journey.seatsLeft, 10);
+            if (isNaN(seatsLeft)) {
+                seatsLeft = parseInt(item.seatsLeft, 10);
+            }
+            if (isNaN(seatsLeft)) {
+                seatsLeft = null;
+            }
             item._qfsId = prefix + '-' + index;
             item._qfsMeta = {
                 price: price,
                 duration: duration,
                 dtime: moment(dTimeRaw).isValid() ? moment(dTimeRaw).valueOf() : 0,
                 atime: moment(aTimeRaw).isValid() ? moment(aTimeRaw).valueOf() : 0,
-                stops: flightsArray.length > 1 ? (flightsArray.length - 1) : 0
+                stops: flightsArray.length > 1 ? (flightsArray.length - 1) : 0,
+                seatsLeft: seatsLeft
             };
             return item;
         });
@@ -501,6 +516,17 @@
         var meta = item._qfsMeta || {};
         var stopFilter = qfsResultsState.stopFilter;
         var timeFilter = qfsResultsState.timeFilter;
+        var requiredSeats = parseInt(qfsResultsState.requiredSeats, 10);
+        if (isNaN(requiredSeats) || requiredSeats < 1) {
+            requiredSeats = 1;
+        }
+
+        if (meta.seatsLeft !== null && meta.seatsLeft !== undefined) {
+            var seatsLeft = parseInt(meta.seatsLeft, 10);
+            if (isNaN(seatsLeft) || seatsLeft < requiredSeats) {
+                return false;
+            }
+        }
 
         if (stopFilter !== 'all') {
             var cardStops = parseInt(meta.stops, 10);
@@ -596,7 +622,10 @@
         if (!filtered.length) {
             $wrap.html(
                 qfsBuildPaginationHtml(listKey, 1, 0) +
-                '<div class="alert alert-info mb-0">No flights match the selected filters.</div>'
+                '<div class="alert alert-info mb-0">No flights with at least ' +
+                (parseInt(qfsResultsState.requiredSeats, 10) || 1) +
+                ' seat' + ((parseInt(qfsResultsState.requiredSeats, 10) || 1) === 1 ? '' : 's') +
+                ' available match the selected filters.</div>'
             );
             return;
         }
@@ -646,6 +675,23 @@
         var date = opts.date || '';
         var returnDate = opts.returnDate || '';
         var tType = opts.tType || 'ONEWAY';
+        var adults = parseInt(opts.adults, 10);
+        var children = parseInt(opts.children, 10);
+        if (isNaN(adults) || adults < 1) {
+            adults = 1;
+        }
+        if (isNaN(children) || children < 0) {
+            children = 0;
+        }
+        var nonStopOnly = !!opts.nonStopOnly;
+        var paxLabel = adults + ' Adult' + (adults > 1 ? 's' : '');
+        if (children > 0) {
+            paxLabel += ', ' + children + ' Child' + (children > 1 ? 'ren' : '');
+        }
+        if (nonStopOnly) {
+            paxLabel += ' · Non-stop';
+        }
+        var requiredSeats = adults + children;
 
         qfsSelectedOnward = null;
         qfsSelectedReturn = null;
@@ -664,14 +710,21 @@
             returning: qfsPrepareFlightList(rFlights, 'return'),
             onwardPage: 1,
             returnPage: 1,
-            stopFilter: 'all',
+            stopFilter: nonStopOnly ? '0' : 'all',
             timeFilter: 'all',
             sortType: 'price',
-            sortOrder: 'asc'
+            sortOrder: 'asc',
+            nonStopOnly: nonStopOnly,
+            requiredSeats: requiredSeats,
+            adults: adults,
+            children: children
         };
 
         var modalBody = $('#qfsFlightsModalBody');
         modalBody.empty();
+
+        var stopAllCls = nonStopOnly ? 'btn btn-sm btn-outline-secondary qfs-flight-filter-btn' : 'btn btn-sm btn-secondary active qfs-flight-filter-btn';
+        var stopZeroCls = nonStopOnly ? 'btn btn-sm btn-secondary active qfs-flight-filter-btn' : 'btn btn-sm btn-outline-secondary qfs-flight-filter-btn';
 
         var sortHtml = '<div class="d-flex justify-content-end align-items-center w-100 mt-2 pb-2" style="font-size: 14px; border-bottom: 1px solid #eee;">' +
             '<label class="mb-0 mr-2" style="font-weight: 600; color: #555; font-size: 13px;"><i class="fa fa-sort-amount-desc"></i> Sort By:</label>' +
@@ -685,8 +738,8 @@
             '<div class="row m-0"><div class="col-md-5 p-0 d-flex align-items-center">' +
             '<label class="mb-0 mr-2" style="font-weight: 600; color: #555;"><i class="fa fa-filter"></i> Stops:</label>' +
             '<div class="btn-group qfs-filter-group-stops" role="group">' +
-            '<button type="button" class="btn btn-sm btn-secondary active qfs-flight-filter-btn" data-filter="stops" data-value="all">All</button>' +
-            '<button type="button" class="btn btn-sm btn-outline-secondary qfs-flight-filter-btn" data-filter="stops" data-value="0">Non-Stop</button>' +
+            '<button type="button" class="' + stopAllCls + '" data-filter="stops" data-value="all">All</button>' +
+            '<button type="button" class="' + stopZeroCls + '" data-filter="stops" data-value="0">Non-Stop</button>' +
             '<button type="button" class="btn btn-sm btn-outline-secondary qfs-flight-filter-btn" data-filter="stops" data-value="1">1 Stop</button>' +
             '<button type="button" class="btn btn-sm btn-outline-secondary qfs-flight-filter-btn" data-filter="stops" data-value="2">2+ Stops</button>' +
             '</div></div><div class="col-md-7 p-0 d-flex align-items-center justify-content-end">' +
@@ -703,7 +756,7 @@
             $('#qfsFlightsModal .modal-dialog').css('max-width', '1200px');
             var rightTitle = to + ' - ' + from + " <span style='color:#ccc'>|</span> " + moment(returnDate).format('DD/MM/YYYY');
             var leftTitle = from + ' - ' + to + " <span style='color:#ccc'>|</span> " + moment(date).format('DD/MM/YYYY');
-            $('#qfsFlightsModalTitle').html('<div class="row w-100 m-0"><div class="col-md-6 text-center">' + leftTitle + '</div><div class="col-md-6 text-center" style="border-left:1px solid #ccc;">' + rightTitle + '</div></div>' + sortHtml);
+            $('#qfsFlightsModalTitle').html('<div class="row w-100 m-0"><div class="col-md-6 text-center">' + leftTitle + '</div><div class="col-md-6 text-center" style="border-left:1px solid #ccc;">' + rightTitle + '</div></div><div class="w-100 text-center mt-1" style="font-size:12px;color:#64748b;">' + paxLabel + '</div>' + sortHtml);
             modalBody.html(
                 '<div class="row mt-2">' +
                 '<div class="col-md-6" id="qfsOnwardCol"><div id="qfsOnwardList"></div></div>' +
@@ -712,7 +765,7 @@
             );
         } else {
             $('#qfsFlightsModal .modal-dialog').css('max-width', '900px');
-            $('#qfsFlightsModalTitle').html('<div class="w-100 text-center">' + from + ' - ' + to + " <span style='color:#ccc'>|</span> " + moment(date).format('DD/MM/YYYY') + '</div>' + sortHtml);
+            $('#qfsFlightsModalTitle').html('<div class="w-100 text-center">' + from + ' - ' + to + " <span style='color:#ccc'>|</span> " + moment(date).format('DD/MM/YYYY') + " <span style='color:#ccc'>|</span> " + paxLabel + '</div>' + sortHtml);
             modalBody.html('<div id="qfsOnewayList"></div>');
         }
 
@@ -751,12 +804,20 @@
         return code.substring(0, 3);
     }
 
-    function qfsBuildViaSearchPayload(sectorInfos, isDomestic, pax) {
+    function qfsBuildViaSearchPayload(sectorInfos, isDomestic, adults, children) {
+        var adt = parseInt(adults, 10);
+        var chd = parseInt(children, 10);
+        if (isNaN(adt) || adt < 1) {
+            adt = 1;
+        }
+        if (isNaN(chd) || chd < 0) {
+            chd = 0;
+        }
         return {
             sectorInfos: sectorInfos,
             prefAirlines: [{ code: 'ALL', name: 'ALL' }],
             class: 'ALL',
-            paxCount: { adt: parseInt(pax, 10) || 1, chd: 0, inf: 0 },
+            paxCount: { adt: adt, chd: chd, inf: 0 },
             route: 'ALL',
             disc: false,
             multiHop: false,
@@ -806,6 +867,44 @@
         return { flights: flights, rFlights: rFlights };
     }
 
+    function qfsReadGuestCounts() {
+        var adults = parseInt($('#q_adults').val(), 10);
+        var children = parseInt($('#q_children').val(), 10);
+        if (isNaN(adults) || adults < 1) {
+            adults = 1;
+        }
+        if (isNaN(children) || children < 0) {
+            children = 0;
+        }
+        return { adults: adults, children: children };
+    }
+
+    function qfsSyncPaxFromQuotation() {
+        var counts = qfsReadGuestCounts();
+        $('#qfsAdults').val(counts.adults);
+        $('#qfsChildren').val(counts.children);
+    }
+
+    function qfsSyncPaxToQuotation() {
+        var adults = parseInt($('#qfsAdults').val(), 10);
+        var children = parseInt($('#qfsChildren').val(), 10);
+        if (isNaN(adults) || adults < 1) {
+            adults = 1;
+        }
+        if (isNaN(children) || children < 0) {
+            children = 0;
+        }
+        $('#qfsAdults').val(adults);
+        $('#qfsChildren').val(children);
+        if ($('#q_adults').length) {
+            $('#q_adults').val(adults).trigger('change');
+        }
+        if ($('#q_children').length) {
+            $('#q_children').val(children).trigger('change');
+        }
+        return { adults: adults, children: children };
+    }
+
     function prefillQfsSearchFromQuotation() {
         var today = qfsTodayYmd();
         var tomorrow = qfsTomorrowYmd();
@@ -814,6 +913,7 @@
         if (!$('#qfsApiReturnDate').val() || $('#qfsApiReturnDate').val() < today) {
             $('#qfsApiReturnDate').val(tomorrow);
         }
+        qfsSyncPaxFromQuotation();
     }
 
     $(function () {
@@ -892,7 +992,10 @@
             var to = qfsGetAirportCode($('#qfsApiTo'), '');
             var fromCity = ($('#qfsApiFrom').attr('data-city') || fromVal).split(',')[0].replace(/\(.*?\)/g, '').trim();
             var toCity = ($('#qfsApiTo').attr('data-city') || toVal).split(',')[0].replace(/\(.*?\)/g, '').trim();
-            var pax = parseInt($('#q_adults').val(), 10) || 1;
+            var paxCounts = qfsSyncPaxToQuotation();
+            var adults = paxCounts.adults;
+            var children = paxCounts.children;
+            var nonStopOnly = $('#qfsNonStop').is(':checked');
             var tType = $('input[name="qfs_tripType"]:checked').val() === 'roundtrip' ? 'ROUNDTRIP' : 'ONEWAY';
             var returnDate = $('#qfsApiReturnDate').val().trim();
 
@@ -901,7 +1004,15 @@
                 return;
             }
 
-            qfsSearchContext = { from: from, to: to, date: date, returnDate: returnDate };
+            qfsSearchContext = {
+                from: from,
+                to: to,
+                date: date,
+                returnDate: returnDate,
+                adults: adults,
+                children: children,
+                nonStopOnly: nonStopOnly
+            };
             qfsSelectedOnward = null;
             qfsSelectedReturn = null;
             qfsSelectedOnwardId = '';
@@ -938,7 +1049,10 @@
                     toCity: toCity,
                     date: date,
                     returnDate: returnDate,
-                    tType: tType
+                    tType: tType,
+                    adults: adults,
+                    children: children,
+                    nonStopOnly: nonStopOnly
                 });
             }
 
@@ -953,8 +1067,8 @@
             }
 
             if (useDualIntlRoundTrip) {
-                var onwardPayload = qfsBuildViaSearchPayload([sectorInfos[0]], false, pax);
-                var returnPayload = qfsBuildViaSearchPayload([sectorInfos[1]], false, pax);
+                var onwardPayload = qfsBuildViaSearchPayload([sectorInfos[0]], false, adults, children);
+                var returnPayload = qfsBuildViaSearchPayload([sectorInfos[1]], false, adults, children);
 
                 $.when(
                     $.ajax({
@@ -986,7 +1100,7 @@
                 url: 'ajax/via_search.php',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify(qfsBuildViaSearchPayload(sectorInfos, isDomesticSearch, pax)),
+                data: JSON.stringify(qfsBuildViaSearchPayload(sectorInfos, isDomesticSearch, adults, children)),
                 success: function (res) {
                     handleQfsSearchSuccess(res);
                 },

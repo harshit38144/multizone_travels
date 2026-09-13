@@ -3758,7 +3758,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                             <?php } ?>
                                                         <?php } else { ?>
                                                             <a href="crm/quotation_generator.php?lead_id=<?= (int) $lead['id'] ?>"
-                                                                class="btn-icon btn-create-quote"
+                                                                class="btn-icon btn-create-quote js-open-quotation-tab"
                                                                 title="Create Quotation">
                                                                 <i class="fas fa-plus"></i>
                                                             </a>
@@ -3784,7 +3784,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                                     <i class="far fa-eye mr-2 text-muted"></i> Preview Lead
                                                                 </button>
                                                                 <?php if ($latestQuotationHref !== '') { ?>
-                                                                    <a class="dropdown-item" href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>">
+                                                                    <a class="dropdown-item js-open-quotation-tab" href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>">
                                                                         <i class="fas fa-edit mr-2 text-muted"></i> Edit Quotation
                                                                     </a>
                                                                     <?php if (in_array(($leadStage ?? ''), ['quoted', 'confirmed'], true)
@@ -5659,6 +5659,31 @@ foreach ($destinationLookup as $destId => $destName) {
         setLeadQPreviewDirty(false);
     });
 
+    function openQuotationInWorkspaceTab(href, title) {
+        href = String(href || '').trim();
+        if (!href || href === '#') {
+            return false;
+        }
+        title = title || 'Edit Quotation';
+        try {
+            if (window.parent && window.parent !== window && window.parent.MZTabWorkspace
+                && typeof window.parent.MZTabWorkspace.open === 'function') {
+                window.parent.MZTabWorkspace.open(href, title, { pushHistory: true });
+                return true;
+            }
+        } catch (err) { /* ignore */ }
+        window.location.href = href;
+        return true;
+    }
+
+    $(document).on('click', 'a.js-open-quotation-tab', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var href = String($(this).attr('href') || '').trim();
+        var title = $(this).hasClass('btn-create-quote') ? 'Create Quotation' : 'Edit Quotation';
+        openQuotationInWorkspaceTab(href, title);
+    });
+
     $('#leadQPreviewEditBtn').on('click', function (e) {
         e.preventDefault();
         if (leadQPreviewDirty) {
@@ -5672,17 +5697,7 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
         $('#leadQuotationPreviewModal').modal('hide');
-
-        // Prefer opening the editor in a separate workspace tab so Leads stays put.
-        try {
-            if (window.parent && window.parent !== window && window.parent.MZTabWorkspace
-                && typeof window.parent.MZTabWorkspace.open === 'function') {
-                window.parent.MZTabWorkspace.open(href, 'Edit Quotation', { pushHistory: true });
-                return;
-            }
-        } catch (err) { /* ignore */ }
-
-        window.location.href = href;
+        openQuotationInWorkspaceTab(href, 'Edit Quotation');
     });
 
     $(document).on('click', '#btnLeadExpandEdit', function () {

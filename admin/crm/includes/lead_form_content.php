@@ -3986,6 +3986,44 @@ if (empty($leadSourceOptions)) {
 
                     jQuery(document).trigger('crm:lead-created', [response]);
 
+                    // Notify open quotation tabs so Adults/Children refresh from lead Guests
+                    try {
+                        var syncedLeadId = 0;
+                        if (response.lead && response.lead.id) {
+                            syncedLeadId = parseInt(response.lead.id, 10) || 0;
+                        }
+                        if (!syncedLeadId) {
+                            syncedLeadId = parseInt($form.find('[name="lead_id"]').val(), 10) || 0;
+                        }
+                        var syncedAdults = (response.lead && response.lead.no_of_adults != null)
+                            ? parseInt(response.lead.no_of_adults, 10)
+                            : parseInt($form.find('[name="tp_adults"]').val(), 10);
+                        var syncedChildren = (response.lead && response.lead.no_of_children != null)
+                            ? parseInt(response.lead.no_of_children, 10)
+                            : parseInt($form.find('[name="tp_children"]').val(), 10);
+                        if (isNaN(syncedAdults) || syncedAdults < 1) {
+                            syncedAdults = 1;
+                        }
+                        if (isNaN(syncedChildren) || syncedChildren < 0) {
+                            syncedChildren = 0;
+                        }
+                        if (syncedLeadId > 0) {
+                            var paxMsg = {
+                                type: 'mz-data-changed',
+                                resource: 'leads',
+                                lead_id: syncedLeadId,
+                                no_of_adults: syncedAdults,
+                                no_of_children: syncedChildren,
+                                at: Date.now()
+                            };
+                            if (window.parent && window.parent !== window) {
+                                window.parent.postMessage(paxMsg, '*');
+                            } else {
+                                window.postMessage(paxMsg, '*');
+                            }
+                        }
+                    } catch (ePaxSync) { /* ignore */ }
+
                     if ($form.is('#leadCreateFormModal')) {
                         window.setTimeout(function () {
                             jQuery('#leadFormModal').modal('hide');

@@ -120,6 +120,16 @@ if (!$quotation && $leadId > 0) {
     if ($sidebarLeadId > 0) {
         $leadRow = crmLeadFetchById($conn, $sidebarLeadId, false);
     }
+    // Prefer live lead guest counts so Edit Lead → Edit Quotation stays in sync
+    if ($leadRow && !$isArchivedView && !empty($prefill)) {
+        $leadGuestPrefill = crmLeadRowToQuotationPrefill($leadRow, $destinationLookup);
+        if (isset($leadGuestPrefill['no_of_adults'])) {
+            $prefill['no_of_adults'] = max(1, (int) $leadGuestPrefill['no_of_adults']);
+        }
+        if (isset($leadGuestPrefill['no_of_children'])) {
+            $prefill['no_of_children'] = max(0, (int) $leadGuestPrefill['no_of_children']);
+        }
+    }
 }
 
 $leadSidebar = $leadRow ? crmLeadRowToSidebarPanel($conn, $leadRow, $destinationLookup) : null;
@@ -1400,7 +1410,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-head.q-accordion-head {
-            cursor: pointer;
+            cursor: default;
         }
 
         .crm-quotation-gen .q-day-head-main {
@@ -1409,17 +1419,6 @@ $qWizardSteps = [
             gap: 0.55rem;
             min-width: 0;
             flex: 1 1 auto;
-        }
-
-        .crm-quotation-gen .q-day-head .toggle-icon {
-            flex-shrink: 0;
-            color: #e11d2e;
-            font-size: 0.72rem;
-            transition: transform 0.2s ease;
-        }
-
-        .crm-quotation-gen .q-day-head.collapsed .toggle-icon {
-            transform: rotate(-90deg);
         }
 
         .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-list {
@@ -1512,33 +1511,114 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-day-card {
             border: 1px solid #e8ecf1;
-            border-radius: 12px;
-            margin-bottom: 0.65rem;
+            border-radius: 14px;
+            margin-bottom: 0.85rem;
             overflow: hidden;
-            box-shadow: none;
+            box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
             background: #fff;
+            display: none;
         }
 
-        .crm-quotation-gen .q-day-head {
+        .crm-quotation-gen .q-day-card.is-active {
+            display: block;
+        }
+
+        .crm-quotation-gen .q-day-toolbar {
             background: #fff;
-            padding: 0.85rem 1rem;
-            font-weight: 700;
-            font-size: 0.92rem;
-            color: #0f172a;
-            border-bottom: 1px solid transparent;
+            padding: 1rem 1.15rem;
+            border-bottom: 1px solid #eef2f7;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
+            gap: 0.85rem;
+            flex-wrap: wrap;
         }
 
-        .crm-quotation-gen .q-day-card:not(.is-open) .q-day-head {
-            border-bottom-color: transparent;
+        .crm-quotation-gen .q-day-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .crm-quotation-gen .q-day-toolbar-text {
+            min-width: 0;
         }
 
         .crm-quotation-gen .q-day-head-label {
-            min-width: 0;
             font-weight: 700;
+            font-size: 0.98rem;
+            color: #0f172a;
+            line-height: 1.25;
+        }
+
+        .crm-quotation-gen .q-day-head-sub {
+            margin-top: 0.15rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: #94a3b8;
+        }
+
+        .crm-quotation-gen .q-day-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+        }
+
+        .crm-quotation-gen .q-day-nav-btn {
+            border: 1.5px solid #e2e8f0;
+            background: #fff;
+            color: #334155;
+            font-weight: 600;
+            font-size: 0.78rem;
+            border-radius: 8px;
+            padding: 0.45rem 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-day-nav-btn:hover:not(:disabled) {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-day-nav-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .crm-quotation-gen .q-day-nav-btn.q-day-nav-primary {
+            background: #c62828;
+            border-color: #c62828;
+            color: #fff;
+        }
+
+        .crm-quotation-gen .q-day-nav-btn.q-day-nav-primary:hover:not(:disabled) {
+            background: #b71c1c;
+            border-color: #b71c1c;
+            color: #fff;
+        }
+
+        .crm-quotation-gen .q-day-more-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            background: #fff;
+            color: #64748b;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crm-quotation-gen .q-day-more-btn:hover {
+            background: #f8fafc;
             color: #0f172a;
         }
 
@@ -1566,16 +1646,16 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-calendar-icon {
-            width: 34px;
-            height: 34px;
+            width: 40px;
+            height: 40px;
             border-radius: 10px;
-            background: #e11d2e;
+            background: #c62828;
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             flex: 0 0 auto;
-            font-size: 0.85rem;
+            font-size: 0.95rem;
         }
 
         /* —— Itinerary redesign (package search + selected + suppliers) —— */
@@ -1586,77 +1666,175 @@ $qWizardSteps = [
             font-weight: 500;
         }
 
-        .crm-quotation-gen .q-itin-package-grid {
+        .crm-quotation-gen .q-itin-workspace {
             display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.9fr);
+            grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
             gap: 1rem;
             margin-bottom: 1rem;
+            align-items: stretch;
         }
 
         @media (max-width: 991.98px) {
-            .crm-quotation-gen .q-itin-package-grid {
+            .crm-quotation-gen .q-itin-workspace {
                 grid-template-columns: 1fr;
+                align-items: start;
             }
+
+            .crm-quotation-gen .q-itin-side-col,
+            .crm-quotation-gen .q-itin-pkg-card.q-itin-pkg-selected-card {
+                height: auto;
+                min-height: 0;
+            }
+        }
+
+        .crm-quotation-gen .q-itin-pkg-card.q-itin-pkg-search-card {
+            overflow: visible;
+            position: relative;
+            z-index: 5;
+        }
+
+        .crm-quotation-gen .q-itin-main-col {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-width: 0;
+            position: relative;
+            z-index: 4;
+            height: 100%;
+        }
+
+        .crm-quotation-gen .q-itin-side-col {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 100%;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-card.q-itin-pkg-selected-card {
+            flex: 1 1 auto;
+            height: 100%;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .crm-quotation-gen .q-itin-pkg-card {
             background: #fff;
             border: 1px solid #e8ecf1;
             border-radius: 14px;
-            padding: 1rem 1.1rem 1.1rem;
-            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-            min-height: 220px;
+            padding: 1rem 1.15rem 1.15rem;
+            box-shadow: 0 6px 22px rgba(15, 23, 42, 0.05);
         }
 
         .crm-quotation-gen .q-itin-pkg-card-hd {
             display: flex;
-            align-items: center;
-            gap: 0.55rem;
-            margin-bottom: 0.85rem;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-hd-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.7rem;
+            min-width: 0;
+            flex: 1 1 auto;
         }
 
         .crm-quotation-gen .q-itin-pkg-hd-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 8px;
-            background: #fff1f2;
-            color: #e11d2e;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #fdecee;
+            color: #c62828;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.78rem;
+            font-size: 0.85rem;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-hd-text {
+            min-width: 0;
         }
 
         .crm-quotation-gen .q-itin-pkg-hd-label {
-            font-weight: 700;
-            font-size: 0.95rem;
+            display: block;
+            font-weight: 800;
+            font-size: 1rem;
             color: #0f172a;
+            line-height: 1.25;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-hd-sub {
+            display: block;
+            margin-top: 0.2rem;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 500;
+            line-height: 1.35;
+        }
+
+        .crm-quotation-gen .q-itin-search-body {
+            display: block;
         }
 
         .crm-quotation-gen .q-itin-pkg-search-wrap {
             position: relative;
+            z-index: 30;
         }
 
         .crm-quotation-gen .q-itin-pkg-search-wrap .js-q-package-search {
+            padding-left: 2.45rem;
             padding-right: 2.4rem;
-            height: 44px;
-            border-radius: 10px;
+            height: 46px;
+            border-radius: 12px;
             border: 1px solid #e2e8f0;
             font-size: 0.9rem;
+            background: #fff;
         }
 
         .crm-quotation-gen .q-itin-pkg-search-wrap .js-q-package-search:focus {
-            border-color: #fda4af;
-            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
+            border-color: #f1a9ae;
+            box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.12);
         }
 
-        .crm-quotation-gen .q-itin-pkg-search-icon {
+        .crm-quotation-gen .q-itin-pkg-search-icon-left {
             position: absolute;
-            right: 14px;
-            top: 14px;
-            color: #e11d2e;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
             pointer-events: none;
             z-index: 2;
+            font-size: 0.9rem;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-search-clear {
+            position: absolute;
+            right: 10px;
+            top: 23px;
+            transform: translateY(-50%);
+            width: 26px;
+            height: 26px;
+            border: 0;
+            border-radius: 50%;
+            background: #f1f5f9;
+            color: #64748b;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 3;
+            cursor: pointer;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-search-clear:hover {
+            background: #ffe4e6;
+            color: #c62828;
         }
 
         .crm-quotation-gen .q-itin-pkg-menu {
@@ -1664,138 +1842,168 @@ $qWizardSteps = [
             left: 0;
             right: 0;
             top: calc(100% + 6px);
-            z-index: 40;
+            z-index: 50;
+            margin-top: 0;
             background: #fff;
             border: 1px solid #e8ecf1;
             border-radius: 12px;
-            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
-            max-height: 320px;
+            box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
+            max-height: 280px;
             overflow: auto;
-            padding: 0.25rem 0;
+            padding: 0.35rem;
         }
 
         .crm-quotation-gen .q-itin-pkg-item {
-            display: grid;
-            grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto auto auto auto;
-            gap: 0.55rem;
-            align-items: center;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
             width: 100%;
             text-align: left;
             border: 0;
             background: transparent;
-            padding: 0.7rem 0.9rem;
-            border-bottom: 1px solid #f1f5f9;
+            padding: 0.7rem 0.75rem;
+            border-radius: 10px;
             cursor: pointer;
+            color: #0f172a;
         }
 
-        .crm-quotation-gen .q-itin-pkg-item:last-child {
-            border-bottom: 0;
+        .crm-quotation-gen .q-itin-pkg-item:hover {
+            background: #f8fafc;
         }
 
-        .crm-quotation-gen .q-itin-pkg-item:hover,
         .crm-quotation-gen .q-itin-pkg-item.is-active {
-            background: #fff7f7;
+            background: #fff1f2;
         }
 
-        .crm-quotation-gen .q-itin-pkg-item-title-wrap {
+        .crm-quotation-gen .q-itin-pkg-item-pin {
+            color: #64748b;
+            flex: 0 0 auto;
+            width: 1rem;
+            text-align: center;
+            margin-top: 0.15rem;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item.is-active .q-itin-pkg-item-pin {
+            color: #c62828;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
             min-width: 0;
-        }
-
-        .crm-quotation-gen .q-itin-best-match {
-            display: inline-block;
-            font-size: 0.62rem;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            color: #e11d2e;
-            background: #ffe4e6;
-            border-radius: 999px;
-            padding: 0.12rem 0.45rem;
-            margin-bottom: 0.2rem;
+            flex: 1 1 auto;
         }
 
         .crm-quotation-gen .q-itin-pkg-item-title {
             display: block;
             font-weight: 700;
-            font-size: 0.86rem;
+            font-size: 0.88rem;
             color: #0f172a;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            line-height: 1.3;
+            min-width: 0;
         }
 
-        .crm-quotation-gen .q-itin-pkg-item-dest,
-        .crm-quotation-gen .q-itin-pkg-item-date {
-            font-size: 0.78rem;
-            color: #64748b;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .crm-quotation-gen .q-itin-pkg-item.is-active .q-itin-pkg-item-title {
+            color: #b71c1c;
         }
 
-        .crm-quotation-gen .q-itin-pkg-item-duration {
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: #e11d2e;
-            white-space: nowrap;
-        }
-
-        .crm-quotation-gen .q-itin-pkg-item-tier {
-            font-size: 0.68rem;
-            font-weight: 700;
-            color: #64748b;
-            background: #f1f5f9;
-            border-radius: 999px;
-            padding: 0.18rem 0.55rem;
-            white-space: nowrap;
-        }
-
-        .crm-quotation-gen .q-itin-pkg-item-chevron {
+        .crm-quotation-gen .q-itin-pkg-item-days {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 500;
             color: #94a3b8;
-            font-size: 0.75rem;
+            line-height: 1.4;
+            white-space: normal;
+            overflow: visible;
+            word-break: break-word;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-item.is-active .q-itin-pkg-item-days {
+            color: #fb7185;
         }
 
         .crm-quotation-gen .q-itin-pkg-empty {
-            padding: 1rem;
+            padding: 0.9rem 0.75rem;
             color: #64748b;
-            font-size: 0.85rem;
+            font-size: 0.84rem;
             text-align: center;
         }
 
-        @media (max-width: 767.98px) {
-            .crm-quotation-gen .q-itin-pkg-item {
-                grid-template-columns: 1fr auto;
-                grid-template-rows: auto auto;
-            }
-            .crm-quotation-gen .q-itin-pkg-item-dest,
-            .crm-quotation-gen .q-itin-pkg-item-duration,
-            .crm-quotation-gen .q-itin-pkg-item-tier,
-            .crm-quotation-gen .q-itin-pkg-item-date {
-                display: none;
-            }
+        .crm-quotation-gen .q-itin-selected-card-hd {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .crm-quotation-gen .q-itin-selected-hd {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-itin-selected-badge-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: #c62828;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-itin-selected-eyebrow {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-itin-selected-more {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #94a3b8;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crm-quotation-gen .q-itin-selected-more:hover {
+            background: #f8fafc;
+            color: #0f172a;
         }
 
         .crm-quotation-gen .q-itin-selected-empty {
-            height: 100%;
-            min-height: 180px;
+            flex: 1 1 auto;
+            min-height: 220px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
             color: #94a3b8;
-            padding: 1rem;
+            padding: 1rem 0.5rem;
         }
 
         .crm-quotation-gen .q-itin-selected-empty-icon {
-            width: 48px;
-            height: 48px;
+            width: 52px;
+            height: 52px;
             border-radius: 14px;
-            background: #fff1f2;
-            color: #e11d2e;
+            background: #fdecee;
+            color: #c62828;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.15rem;
+            font-size: 1.2rem;
             margin-bottom: 0.75rem;
         }
 
@@ -1806,78 +2014,110 @@ $qWizardSteps = [
             line-height: 1.45;
         }
 
-        .crm-quotation-gen .q-itin-selected-hd {
+        .crm-quotation-gen .q-itin-selected-filled {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .crm-quotation-gen .q-itin-selected-preview {
+            display: flex;
+            gap: 0.85rem;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            flex: 1 1 auto;
+        }
+
+        .crm-quotation-gen .q-itin-selected-image-wrap {
+            width: 92px;
+            height: 92px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f1f5f9;
+            flex: 0 0 auto;
+            position: relative;
+        }
+
+        .crm-quotation-gen .q-itin-selected-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .crm-quotation-gen .q-itin-selected-image-fallback {
+            position: absolute;
+            inset: 0;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.65rem;
-        }
-
-        .crm-quotation-gen .q-itin-selected-badge-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 8px;
-            background: #e11d2e;
-            color: #fff;
-            display: inline-flex;
-            align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
+            color: #c62828;
+            background: linear-gradient(145deg, #ffe4e6 0%, #fdecee 100%);
+            font-size: 1.5rem;
         }
 
-        .crm-quotation-gen .q-itin-selected-eyebrow {
-            font-size: 0.68rem;
-            font-weight: 800;
-            letter-spacing: 0.06em;
-            color: #e11d2e;
+        .crm-quotation-gen .q-itin-selected-info {
+            min-width: 0;
+            flex: 1 1 auto;
         }
 
         .crm-quotation-gen .q-itin-selected-title {
-            margin: 0 0 0.65rem;
-            font-size: 1.25rem;
+            margin: 0 0 0.55rem;
+            font-size: 1.05rem;
             font-weight: 800;
             color: #0f172a;
-            line-height: 1.25;
+            line-height: 1.3;
         }
 
         .crm-quotation-gen .q-itin-selected-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.75rem 1.1rem;
+            gap: 0.4rem;
             margin-bottom: 0.55rem;
-            font-size: 0.82rem;
-            color: #475569;
         }
 
         .crm-quotation-gen .q-itin-selected-meta span {
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
+            gap: 0.3rem;
+            background: #f1f5f9;
+            color: #475569;
+            border-radius: 999px;
+            padding: 0.22rem 0.6rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1.2;
         }
 
         .crm-quotation-gen .q-itin-selected-meta i {
-            color: #e11d2e;
+            color: #c62828;
+            font-size: 0.7rem;
         }
 
         .crm-quotation-gen .q-itin-selected-updated {
-            margin: 0 0 1rem;
-            font-size: 0.78rem;
+            margin: 0;
+            font-size: 0.76rem;
             color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
         }
 
         .crm-quotation-gen .q-itin-load-btn {
             width: 100%;
             border: 0;
             border-radius: 10px;
-            background: #e11d2e;
+            background: #c62828;
             color: #fff;
             font-weight: 700;
-            padding: 0.7rem 1rem;
-            box-shadow: 0 8px 18px rgba(225, 29, 46, 0.22);
+            padding: 0.75rem 1rem;
+            box-shadow: 0 8px 18px rgba(198, 40, 40, 0.22);
+            margin-top: auto;
         }
 
         .crm-quotation-gen .q-itin-load-btn:hover:not(:disabled) {
-            background: #be123c;
+            background: #b71c1c;
             color: #fff;
         }
 
@@ -1887,31 +2127,19 @@ $qWizardSteps = [
             box-shadow: none;
         }
 
-        .crm-quotation-gen .q-itin-info-banner {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.65rem;
-            background: #fff5f5;
-            border: 1px solid #ffe4e6;
-            border-radius: 12px;
-            padding: 0.85rem 1rem;
-            margin-bottom: 1rem;
-            color: #475569;
-            font-size: 0.84rem;
-            line-height: 1.45;
-        }
-
-        .crm-quotation-gen .q-itin-info-banner > i {
-            color: #e11d2e;
-            margin-top: 0.15rem;
-        }
-
         .crm-quotation-gen .q-itin-suppliers-panel {
             background: #fff;
             border: 1px solid #e8ecf1;
             border-radius: 14px;
-            padding: 1rem 1.1rem;
-            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+            padding: 1rem 1.15rem 1.1rem;
+            box-shadow: 0 6px 22px rgba(15, 23, 42, 0.05);
+        }
+
+        .crm-quotation-gen .q-itin-suppliers-hd-left {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            min-width: 0;
         }
 
         .crm-quotation-gen .q-itin-suppliers-title {
@@ -1921,34 +2149,24 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-add-supplier-btn {
-            margin-top: 0.35rem;
-            border: 1.5px dashed #e11d2e;
-            color: #e11d2e;
+            margin-top: 0;
+            border: 1.5px solid #f1a9ae;
+            color: #c62828;
             background: #fff;
             border-radius: 10px;
             font-weight: 700;
-            padding: 0.45rem 0.9rem;
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
         }
 
         .crm-quotation-gen .q-itin-add-supplier-btn:hover {
             background: #fff1f2;
-            color: #be123c;
-            border-color: #e11d2e;
-        }
-
-        .crm-quotation-gen .q-day-title-row {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .crm-quotation-gen .q-day-title-row .q-day-title {
-            flex: 1 1 auto;
-            min-width: 0;
+            color: #b71c1c;
+            border-color: #e57373;
         }
 
         .crm-quotation-gen .q-itinerary-suppliers {
-            margin-top: 0.15rem;
+            margin-top: 0;
         }
 
         .crm-quotation-gen .q-itinerary-suppliers-hd {
@@ -1956,23 +2174,68 @@ $qWizardSteps = [
             align-items: center;
             justify-content: space-between;
             gap: 0.75rem;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.85rem;
             flex-wrap: wrap;
         }
 
-        .crm-quotation-gen .q-itin-supplier-row {
-            margin-bottom: 0.55rem;
+        .crm-quotation-gen .q-itin-suppliers-table {
+            width: 100%;
+            margin: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .crm-quotation-gen .q-itin-suppliers-table thead th {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            border-bottom: 1px solid #eef2f7;
+            padding: 0.45rem 0.55rem;
+            background: transparent;
+        }
+
+        .crm-quotation-gen .q-itin-suppliers-table tbody td {
+            padding: 0.55rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .crm-quotation-gen .q-itin-suppliers-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .crm-quotation-gen .q-itin-sup-idx {
+            font-weight: 700;
+            color: #64748b;
+            font-size: 0.88rem;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-row .q-itin-supplier,
+        .crm-quotation-gen .q-itin-supplier-row .q-itin-rate,
+        .crm-quotation-gen .q-itin-supplier-row .select2-container .select2-selection--single {
+            border-radius: 8px !important;
+            min-height: 38px;
         }
 
         .crm-quotation-gen .q-itin-supplier-row .q-itin-supplier-remove {
-            height: 38px;
-            width: 38px;
+            height: 36px;
+            width: 36px;
             padding: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 10px;
+            border-radius: 8px;
             margin-bottom: 0;
+            border: 1px solid #fecaca;
+            background: #fff1f2;
+            color: #c62828;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-row .q-itin-supplier-remove:hover:not(:disabled) {
+            background: #ffe4e6;
+            color: #b71c1c;
         }
 
         .crm-quotation-gen .q-itin-supplier-row .q-itin-rate {
@@ -1986,23 +2249,38 @@ $qWizardSteps = [
             margin: 0;
         }
 
+        .crm-quotation-gen .q-itin-days {
+            margin-top: 0.25rem;
+        }
+
+        .crm-quotation-gen .q-day-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .crm-quotation-gen .q-day-title-row .q-day-title {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
         .crm-quotation-gen .q-day-ai-btn {
             flex: 0 0 auto;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+            border-radius: 8px;
             border: 0;
-            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+            background: #c62828;
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(15, 118, 110, 0.28);
-            padding: 0;
+            font-weight: 600;
+            font-size: 0.78rem;
+            padding: 0.45rem 0.75rem;
+            line-height: 1.2;
         }
 
         .crm-quotation-gen .q-day-ai-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+            background: #b71c1c;
             color: #fff;
         }
 
@@ -2085,7 +2363,65 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-body {
-            padding: 0.5rem 0.65rem;
+            padding: 1rem 1.15rem 1.15rem;
+        }
+
+        .crm-quotation-gen .q-day-main-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.9fr);
+            gap: 1rem;
+            align-items: stretch;
+        }
+
+        @media (max-width: 991.98px) {
+            .crm-quotation-gen .q-day-main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .crm-quotation-gen .q-floating-field {
+            position: relative;
+            margin-bottom: 0.85rem;
+        }
+
+        .crm-quotation-gen .q-floating-label {
+            position: absolute;
+            top: -0.55rem;
+            left: 0.75rem;
+            z-index: 2;
+            background: #fff;
+            padding: 0 0.3rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #c62828;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .crm-quotation-gen .q-floating-field .q-day-title {
+            border: 1.5px solid #c62828;
+            border-radius: 8px;
+            font-weight: 700;
+            color: #0f172a;
+            height: auto;
+            min-height: 46px;
+            padding: 0.7rem 0.85rem;
+            box-shadow: none;
+        }
+
+        .crm-quotation-gen .q-floating-field .q-day-title:focus {
+            border-color: #c62828;
+            box-shadow: 0 0 0 0.15rem rgba(198, 40, 40, 0.12);
+        }
+
+        .crm-quotation-gen .q-day-editor-wrap {
+            position: relative;
+        }
+
+        .crm-quotation-gen .q-day-editor-wrap .note-editor.note-frame {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
         }
 
         .crm-quotation-gen .q-day-body .note-editor {
@@ -2093,32 +2429,244 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-body .note-toolbar {
-            background: var(--q-border-light);
-            padding: 0.2rem;
+            background: #f8fafc !important;
+            border-bottom: 1px solid #eef2f7 !important;
+            padding: 0.35rem 0.45rem;
         }
 
-        .crm-quotation-gen .q-day-image-col {
+        .crm-quotation-gen .q-day-body .note-editing-area .note-editable {
+            min-height: 180px;
+            font-size: 0.9rem;
+            line-height: 1.55;
+            color: #334155;
+        }
+
+        .crm-quotation-gen .q-day-char-count {
+            text-align: right;
+            margin-top: 0.35rem;
+            font-size: 0.72rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .crm-quotation-gen .q-day-image-panel {
+            border: 1px solid #e8ecf1;
+            border-radius: 12px;
+            padding: 0.85rem;
+            background: #fff;
             display: flex;
             flex-direction: column;
-            gap: 0.35rem;
+            gap: 0.65rem;
             height: 100%;
+        }
+
+        .crm-quotation-gen .q-day-image-hd {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .crm-quotation-gen .q-day-image-hd-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 0.88rem;
+        }
+
+        .crm-quotation-gen .q-day-image-hd-left i {
+            color: #c62828;
+        }
+
+        .crm-quotation-gen .q-day-image-count {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
         }
 
         .crm-quotation-gen .q-day-image-actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.35rem;
+            gap: 0.4rem;
         }
 
-        .crm-quotation-gen .q-day-image-actions .btn {
+        .crm-quotation-gen .q-day-img-btn {
+            border: 1.5px solid #e2e8f0;
+            background: #fff;
+            color: #334155;
+            font-weight: 600;
+            font-size: 0.74rem;
+            border-radius: 8px;
+            padding: 0.4rem 0.65rem;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-day-img-btn:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-day-img-btn.q-day-img-remove {
+            color: #c62828;
+            border-color: #fecaca;
+        }
+
+        .crm-quotation-gen .q-day-img-btn.q-day-img-remove:hover {
+            background: #fff1f2;
+            border-color: #fca5a5;
+            color: #b71c1c;
+        }
+
+        .crm-quotation-gen .q-day-meta-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .crm-quotation-gen .q-day-meta-row {
+                grid-template-columns: 1fr;
+            }
+
+            .crm-quotation-gen .q-day-nav-btn span {
+                display: none;
+            }
+        }
+
+        .crm-quotation-gen .q-day-meta-card {
+            border: 1px solid #e8ecf1;
+            border-radius: 12px;
+            background: #fff;
+            padding: 0.75rem 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-day-meta-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #fdebee;
+            color: #c62828;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            font-size: 0.95rem;
+        }
+
+        .crm-quotation-gen .q-day-meta-text {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .crm-quotation-gen .q-day-meta-label {
+            display: block;
             font-size: 0.72rem;
-            padding: 0.3rem 0.55rem;
-            border-radius: 999px;
+            color: #94a3b8;
+            font-weight: 500;
+            line-height: 1.2;
         }
 
-        .crm-quotation-gen .q-clear-day-image {
-            padding-left: 0.45rem !important;
-            padding-right: 0.45rem !important;
+        .crm-quotation-gen .q-day-meta-value {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.3;
+            margin-top: 0.1rem;
+            min-height: 1.3em;
+            outline: none;
+            border-radius: 4px;
+            cursor: text;
+            padding: 0.05rem 0.15rem;
+            margin-left: -0.15rem;
+        }
+
+        .crm-quotation-gen .q-day-meta-value.is-empty {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .crm-quotation-gen .q-day-meta-value.is-editing,
+        .crm-quotation-gen .q-day-meta-value:focus {
+            background: #fff7f7;
+            box-shadow: inset 0 -2px 0 #c62828;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .crm-quotation-gen .q-day-meta-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+            flex: 0 0 auto;
+            padding-left: 0.55rem;
+            border-left: 1px solid #eef2f7;
+        }
+
+        .crm-quotation-gen .q-day-meta-actions .btn {
+            border: 0;
+            background: transparent;
+            color: #64748b;
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 0.25rem 0.4rem;
+            line-height: 1.2;
+            box-shadow: none;
+        }
+
+        .crm-quotation-gen .q-day-meta-actions .btn:hover {
+            color: #0f172a;
+            background: #f8fafc;
+        }
+
+        .crm-quotation-gen .q-day-meta-actions .q-day-meta-remove {
+            color: #c62828;
+        }
+
+        .crm-quotation-gen .q-day-meta-actions .q-day-meta-remove:hover {
+            color: #b71c1c;
+            background: #fff1f2;
+        }
+
+        .crm-quotation-gen .q-img-preview-wrap {
+            flex: 1 1 auto;
+            min-height: 180px;
+            border: 1px solid #e8ecf1;
+            border-radius: 10px;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .crm-quotation-gen .q-img-preview {
+            width: 100%;
+            height: 100%;
+            max-height: 240px;
+            object-fit: cover;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .crm-quotation-gen .q-img-preview-empty {
+            text-align: center;
+            padding: 0.85rem;
+            font-size: 0.78rem;
+            color: var(--q-text-muted);
+        }
+
+        .crm-quotation-gen .q-img-preview-wrap.has-image .q-img-preview-empty {
+            display: none;
         }
 
         .qii-image-search {
@@ -2274,37 +2822,6 @@ $qWizardSteps = [
             .qii-image-search .qii-results-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-        }
-
-        .crm-quotation-gen .q-img-preview-wrap {
-            flex: 1 1 auto;
-            min-height: 140px;
-            border: 1px dashed var(--q-border);
-            border-radius: var(--q-radius);
-            background: var(--q-border-light);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.35rem;
-            overflow: hidden;
-        }
-
-        .crm-quotation-gen .q-img-preview {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: var(--q-radius);
-            display: none;
-        }
-
-        .crm-quotation-gen .q-img-preview-empty {
-            text-align: center;
-            padding: 0.35rem;
-            font-size: 0.75rem;
-            color: var(--q-text-muted);
-        }
-
-        .crm-quotation-gen .q-img-preview-wrap.has-image .q-img-preview-empty {
-            display: none;
         }
 
         .crm-quotation-gen .q-cost-sheet .form-group.row {
@@ -3629,16 +4146,46 @@ $qWizardSteps = [
             font-size: 0.8rem;
         }
 
+        .qfs-flight-search .qfs-search-modal-content {
+            border-radius: 0;
+            border: 1px solid #ddd;
+            box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+        }
+
         .qfs-flight-search .qfs-search-hd {
-            background: #f8fafc;
+            background: #f4f6f9;
             font-weight: bold;
-            border-bottom: 1px solid var(--q-border);
+            border-bottom: 1px solid #ddd;
+            padding: 0.75rem 1rem;
         }
 
         .qfs-flight-search .qfs-search-body {
             background: #fff;
             border-top: none;
             overflow: visible;
+            padding: 15px;
+        }
+
+        .qfs-flight-search .qfs-search-body label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #334155;
+            margin-bottom: 0.25rem;
+        }
+
+        .qfs-flight-search .qfs-pax-hint {
+            font-size: 0.75rem;
+            line-height: 1.35;
+        }
+
+        .qfs-flight-search .qfs-nonstop-check .form-check-label {
+            font-size: 0.9rem;
+            color: #0f172a;
+            cursor: pointer;
+        }
+
+        .qfs-flight-search .qfs-nonstop-check .form-check-input {
+            margin-top: 0.2rem;
         }
 
         /* Keep airport suggestions visible outside the modal edge */
@@ -3658,6 +4205,8 @@ $qWizardSteps = [
 
         .qfs-flight-search .qfs-date-wrapper input {
             padding-right: 30px;
+            padding-top: 6px;
+            padding-bottom: 6px;
         }
 
         .qfs-flight-search .qfs-calendar-icon {
@@ -3702,30 +4251,72 @@ $qWizardSteps = [
             border-radius: 50%;
             background: #fff;
             color: #64748b;
-            padding: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.85rem;
-            line-height: 1;
+            padding: 0;
         }
 
         .qfs-flight-search .qfs-swap-btn:hover {
-            background: #fff1f2;
-            border-color: #fecaca;
-            color: #e11d2e;
+            color: #0d6efd;
+            border-color: #93c5fd;
+            background: #eff6ff;
         }
 
         [data-theme="dark"] .qfs-flight-search .qfs-swap-btn {
-            background: var(--mz-theme-bg-elevated, #2a2e38);
-            border-color: var(--mz-theme-border, #454b58);
-            color: var(--q-text, #e5e7eb);
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--q-border) !important;
+            color: var(--q-text-muted) !important;
         }
 
         [data-theme="dark"] .qfs-flight-search .qfs-swap-btn:hover {
-            background: rgba(225, 29, 46, 0.18);
-            border-color: rgba(225, 29, 46, 0.45);
-            color: #fecaca;
+            color: #93c5fd !important;
+            border-color: #60a5fa !important;
+        }
+
+        .qfs-flight-search .qfs-airport-suggest,
+        .qfs-airport-suggest-open {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            width: 100%;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-height: 250px;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] .qfs-flight-search .qfs-airport-suggest,
+        [data-theme="dark"] .qfs-airport-suggest-open {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--q-border) !important;
+            color: var(--q-text) !important;
+        }
+
+        .qfs-flight-search .qfs-suggest-item:hover,
+        .qfs-airport-suggest-open .qfs-suggest-item:hover {
+            background: #f1f5f9;
+        }
+
+        [data-theme="dark"] .qfs-flight-search .qfs-suggest-item:hover,
+        [data-theme="dark"] .qfs-airport-suggest-open .qfs-suggest-item:hover {
+            background: rgba(148, 163, 184, 0.15) !important;
+        }
+
+        .qfs-flight-search .qfs-search-btn {
+            background-color: #6ba2c7;
+            border-color: #6ba2c7;
+            margin: 0;
+            min-width: 96px;
+            font-weight: 600;
+        }
+
+        .qfs-flight-search .qfs-search-btn:hover,
+        .qfs-flight-search .qfs-search-btn:focus {
+            background-color: #5a91b6;
+            border-color: #5a91b6;
         }
 
         .qfs-flight-search .qfs-airport-suggest,
@@ -4536,7 +5127,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-wizard.is-scroll-mode .q-stepper {
             position: sticky;
-            top: 0;
+            top: var(--q-wizard-chrome-offset, 0px);
             z-index: 40;
             background: #fff;
             margin-bottom: 0.85rem;
@@ -4550,7 +5141,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-wizard.is-scroll-mode .q-wizard-step {
             display: none;
-            scroll-margin-top: 96px;
+            scroll-margin-top: var(--q-wizard-scroll-offset, 110px);
             padding: 0.35rem 0 1.35rem;
             margin-bottom: 0.35rem;
             border-bottom: 1px solid var(--q-border-light);
@@ -5976,6 +6567,34 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-amount-cell {
             position: relative;
+            gap: 0.4rem;
+        }
+
+        .crm-quotation-gen .q-pricing-amount-cell.has-supplier {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .crm-quotation-gen .q-pricing-amount-cell.has-supplier .q-cost {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: none;
+            width: auto !important;
+        }
+
+        .crm-quotation-gen .q-pricing-supplier-name {
+            flex: 0 1 46%;
+            min-width: 0;
+            max-width: 9.5rem;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #64748b;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 0.1rem;
         }
 
         .crm-quotation-gen .q-pricing-amount-cell::before {
@@ -8685,6 +9304,49 @@ $qWizardSteps = [
             color: var(--q-text) !important;
         }
 
+        [data-theme="dark"] .crm-quotation-gen .q-day-toolbar,
+        [data-theme="dark"] .crm-quotation-gen .q-day-image-panel,
+        [data-theme="dark"] .crm-quotation-gen .q-day-meta-card {
+            background: var(--q-card-bg) !important;
+            border-color: var(--q-border) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-day-head-sub,
+        [data-theme="dark"] .crm-quotation-gen .q-day-image-count,
+        [data-theme="dark"] .crm-quotation-gen .q-day-char-count,
+        [data-theme="dark"] .crm-quotation-gen .q-day-meta-label {
+            color: var(--q-text-muted) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-floating-label {
+            background: var(--q-card-bg) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-floating-field .q-day-title {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            color: var(--q-text) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-day-nav-btn,
+        [data-theme="dark"] .crm-quotation-gen .q-day-more-btn,
+        [data-theme="dark"] .crm-quotation-gen .q-day-img-btn {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--q-border) !important;
+            color: var(--q-text) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-day-nav-btn.q-day-nav-primary,
+        [data-theme="dark"] .crm-quotation-gen .q-day-ai-btn {
+            background: #c62828 !important;
+            border-color: #c62828 !important;
+            color: #fff !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-day-meta-icon {
+            background: rgba(198, 40, 40, 0.18) !important;
+            color: #f87171 !important;
+        }
+
         [data-theme="dark"] .crm-quotation-gen .q-img-preview-wrap {
             background: var(--mz-theme-bg-elevated, #2a2e38) !important;
             border-color: var(--q-border) !important;
@@ -8887,6 +9549,10 @@ $qWizardSteps = [
 
         [data-theme="dark"] .crm-quotation-gen .q-pricing-amount-cell::before,
         [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-custom-cost-amt::before {
+            color: var(--q-text-muted) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-supplier-name {
             color: var(--q-text-muted) !important;
         }
 
@@ -9586,52 +10252,100 @@ $qWizardSteps = [
                                 <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody4" style="display:none;">
-                                <div class="q-itin-package-grid">
-                                    <div class="q-itin-pkg-card q-itin-pkg-search-card">
-                                        <div class="q-itin-pkg-card-hd">
-                                            <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
-                                            <span class="q-itin-pkg-hd-label">Search Existing Package</span>
-                                        </div>
-                                        <div class="q-itin-pkg-search-wrap">
-                                            <input type="text" class="form-control js-q-package-search" placeholder="Search by destination or package name..." autocomplete="off">
-                                            <i class="fas fa-search q-itin-pkg-search-icon" aria-hidden="true"></i>
-                                            <div class="q-itin-pkg-menu js-q-package-menu" style="display:none;"></div>
-                                        </div>
-                                    </div>
-                                    <div class="q-itin-pkg-card q-itin-pkg-selected-card" id="qSelectedPackageCard">
-                                        <div class="q-itin-selected-empty" id="qSelectedPackageEmpty">
-                                            <span class="q-itin-selected-empty-icon" aria-hidden="true"><i class="fas fa-suitcase"></i></span>
-                                            <p>Select a package from search to preview and load its itinerary.</p>
-                                        </div>
-                                        <div class="q-itin-selected-filled" id="qSelectedPackageFilled" style="display:none;">
-                                            <div class="q-itin-selected-hd">
-                                                <span class="q-itin-selected-badge-icon" aria-hidden="true"><i class="fas fa-suitcase"></i></span>
-                                                <span class="q-itin-selected-eyebrow">SELECTED PACKAGE</span>
+                                <div class="q-itin-workspace">
+                                    <div class="q-itin-main-col">
+                                        <div class="q-itin-pkg-card q-itin-pkg-search-card">
+                                            <div class="q-itin-pkg-card-hd">
+                                                <div class="q-itin-pkg-hd-left">
+                                                    <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
+                                                    <div class="q-itin-pkg-hd-text">
+                                                        <span class="q-itin-pkg-hd-label">Search Existing Package</span>
+                                                        <span class="q-itin-pkg-hd-sub">Search by destination or package name and load to plan itinerary.</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <h4 class="q-itin-selected-title" id="qSelectedPackageTitle">—</h4>
-                                            <div class="q-itin-selected-meta" id="qSelectedPackageMeta"></div>
-                                            <p class="q-itin-selected-updated" id="qSelectedPackageUpdated"></p>
-                                            <button type="button" class="btn q-itin-load-btn" id="qApplyPackageItinerary" disabled>
-                                                <i class="fas fa-file-import mr-1"></i> Load Itinerary
-                                            </button>
+                                            <div class="q-itin-search-body">
+                                                <div class="q-itin-search-primary">
+                                                    <div class="q-itin-pkg-search-wrap">
+                                                        <i class="fas fa-search q-itin-pkg-search-icon-left" aria-hidden="true"></i>
+                                                        <input type="text" class="form-control js-q-package-search" placeholder="Search by destination or package name..." autocomplete="off">
+                                                        <button type="button" class="q-itin-pkg-search-clear" id="qItinPkgSearchClear" title="Clear" aria-label="Clear search" style="display:none;">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                        <div class="q-itin-pkg-menu js-q-package-menu" style="display:none;"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="q-itinerary-suppliers q-itin-suppliers-panel">
+                                            <div class="q-itinerary-suppliers-hd">
+                                                <div class="q-itin-suppliers-hd-left">
+                                                    <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-users"></i></span>
+                                                    <span class="q-itin-suppliers-title">Suppliers &amp; Rates</span>
+                                                </div>
+                                                <button type="button" class="btn q-itin-add-supplier-btn" id="qAddItinerarySupplier">
+                                                    <i class="fas fa-plus mr-1"></i>Add Supplier
+                                                </button>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="q-itin-suppliers-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col" style="width:48px;">#</th>
+                                                            <th scope="col">Supplier</th>
+                                                            <th scope="col" style="width:140px;">Rate (INR)</th>
+                                                            <th scope="col" style="width:72px;">Delete</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="qItinerarySupplierRows"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="q-itin-side-col">
+                                        <div class="q-itin-pkg-card q-itin-pkg-selected-card" id="qSelectedPackageCard">
+                                            <div class="q-itin-selected-card-hd">
+                                                <div class="q-itin-selected-hd">
+                                                    <span class="q-itin-selected-badge-icon" aria-hidden="true"><i class="fas fa-suitcase"></i></span>
+                                                    <span class="q-itin-selected-eyebrow">Selected Package</span>
+                                                </div>
+                                                <div class="dropdown">
+                                                    <button type="button" class="btn q-itin-selected-more" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="More">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <button type="button" class="dropdown-item" id="qClearSelectedPackage">Clear selection</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="q-itin-selected-empty" id="qSelectedPackageEmpty">
+                                                <span class="q-itin-selected-empty-icon" aria-hidden="true"><i class="fas fa-suitcase"></i></span>
+                                                <p>Select a package from search to preview and load its itinerary.</p>
+                                            </div>
+                                            <div class="q-itin-selected-filled" id="qSelectedPackageFilled" style="display:none;">
+                                                <div class="q-itin-selected-preview">
+                                                    <div class="q-itin-selected-image-wrap">
+                                                        <img class="q-itin-selected-image" id="qSelectedPackageImage" alt="Package image" style="display:none;">
+                                                        <div class="q-itin-selected-image-fallback" id="qSelectedPackageImageFallback" aria-hidden="true">
+                                                            <i class="fas fa-mountain"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="q-itin-selected-info">
+                                                        <h4 class="q-itin-selected-title" id="qSelectedPackageTitle">—</h4>
+                                                        <div class="q-itin-selected-meta" id="qSelectedPackageMeta"></div>
+                                                        <p class="q-itin-selected-updated" id="qSelectedPackageUpdated"></p>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn q-itin-load-btn" id="qApplyPackageItinerary" disabled>
+                                                    <i class="fas fa-sign-in-alt mr-1"></i> Load Itinerary
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="q-itin-info-banner" role="note">
-                                    <i class="fas fa-magic" aria-hidden="true"></i>
-                                    <span>Day-wise itinerary is generated from the Tentative Date and No of Nights. Use the AI button on each day to suggest that day.</span>
-                                </div>
-
-                                <div class="q-itinerary-suppliers q-itin-suppliers-panel mb-3">
-                                    <div class="q-itinerary-suppliers-hd">
-                                        <span class="q-itin-suppliers-title">Suppliers &amp; Rates</span>
-                                    </div>
-                                    <div id="qItinerarySupplierRows"></div>
-                                    <button type="button" class="btn q-itin-add-supplier-btn" id="qAddItinerarySupplier">
-                                        <i class="fas fa-plus mr-1"></i>Add Supplier
-                                    </button>
-                                </div>
                                 <div id="qItineraryDays" class="q-itin-days"></div>
                             <div class="q-section-next-bar">
                                 <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="4">
@@ -10084,8 +10798,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=142"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=14"></script>
+    <script src="crm/assets/quotation_generator.js?v=154"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>

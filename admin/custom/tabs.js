@@ -145,6 +145,14 @@
     return path.split('#')[0]
   }
 
+  function pathFileKey (path) {
+    return String(path || '').split('#')[0].split('?')[0].replace(/^\/+/, '').toLowerCase()
+  }
+
+  function sameTabPage (a, b) {
+    return pathFileKey(a) === pathFileKey(b)
+  }
+
   function titleFromLink ($link, path) {
     var text = ''
     var $p = $link.children('p').first()
@@ -271,8 +279,40 @@
     return btn
   }
 
+  function findPaneEl (tabId) {
+    if (!els.panes) return null
+    var panes = els.panes.querySelectorAll('.mz-tab-pane')
+    for (var i = 0; i < panes.length; i++) {
+      if (panes[i].getAttribute('data-tab-id') === tabId) return panes[i]
+    }
+    return null
+  }
+
+  function findTabButtonEl (tabId) {
+    if (!els.list) return null
+    var buttons = els.list.querySelectorAll('.mz-tab')
+    for (var i = 0; i < buttons.length; i++) {
+      if (buttons[i].getAttribute('data-tab-id') === tabId) return buttons[i]
+    }
+    return null
+  }
+
+  /** Relative admin path currently loaded in a tab iframe (or null). */
+  function readFramePath (iframe) {
+    try {
+      var win = iframe && iframe.contentWindow
+      if (!win) return null
+      var loc = win.location
+      if (!loc || !loc.pathname) return null
+      var abs = loc.pathname + (loc.search || '') + (loc.hash || '')
+      return normalizePath(abs) || normalizePath(toAbsoluteUrl(abs.replace(/^\//, '')))
+    } catch (e) {
+      return null
+    }
+  }
+
   function ensurePane (tab) {
-    var existing = document.querySelector('.mz-tab-pane[data-tab-id="' + cssEscape(tab.id) + '"]')
+    var existing = findPaneEl(tab.id)
     if (existing) return existing
 
     var pane = document.createElement('div')
@@ -285,7 +325,7 @@
     iframe.setAttribute('data-tab-id', tab.id)
     iframe.src = toFrameSrc(tab.path)
     iframe.addEventListener('load', function () {
-      syncTabTitleFromFrame(tab, iframe)
+      onTabFrameLoad(tab, iframe)
     })
 
     pane.appendChild(iframe)
@@ -293,9 +333,43 @@
     return pane
   }
 
+  /**
+   * If the iframe navigated to a different admin page (e.g. Leads → Edit Quotation
+   * via a plain <a>), open that page in its own tab and restore this tab's URL.
+   * Prevents "Edit Quotation" tab titles that still point at leads.php.
+   */
+  function onTabFrameLoad (tab, iframe) {
+    if (iframe.getAttribute('data-mz-restoring') === '1') {
+      iframe.removeAttribute('data-mz-restoring')
+      syncTabTitleFromFrame(tab, iframe)
+      return
+    }
+
+    var framePath = readFramePath(iframe)
+    if (framePath && !sameTabPage(framePath, tab.path)) {
+      var frameTitle = ''
+      try {
+        var doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document)
+        if (doc && doc.title) {
+          frameTitle = String(doc.title).split('|')[0].split('—')[0].split(' - ')[0].trim()
+        }
+      } catch (eTitle) {}
+      openTab(framePath, frameTitle || titleFromPath(framePath), { pushHistory: true })
+      iframe.setAttribute('data-mz-restoring', '1')
+      iframe.src = toFrameSrc(tab.path)
+      return
+    }
+
+    syncTabTitleFromFrame(tab, iframe)
+  }
+
   function syncTabTitleFromFrame (tab, iframe) {
     if (tab.pinned) return
     try {
+      // Only rename when the iframe is still on this tab's page (same PHP file)
+      var framePath = readFramePath(iframe)
+      if (framePath && !sameTabPage(framePath, tab.path)) return
+
       var doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document)
       if (!doc || !doc.title) return
       var pageTitle = String(doc.title).split('|')[0].split('—')[0].split(' - ')[0].trim()
@@ -303,13 +377,27 @@
       // Ignore overly long or generic titles
       if (pageTitle.length > 48) pageTitle = pageTitle.slice(0, 45) + '…'
       tab.title = pageTitle
-      var btn = els.list && els.list.querySelector('.mz-tab[data-tab-id="' + cssEscape(tab.id) + '"] .mz-tab-title')
-      if (btn) btn.textContent = pageTitle
+      var btn = findTabButtonEl(tab.id)
+      var titleEl = btn && btn.querySelector('.mz-tab-title')
+      if (titleEl) titleEl.textContent = pageTitle
       if (state.activeId === tab.id) {
         document.title = pageTitle + ' — Multizone Travels'
       }
       persist()
     } catch (e) {}
+  }
+
+  /** Keep iframe on the tab's registered page when activating. */
+  function ensureFrameMatchesTab (tab) {
+    var pane = findPaneEl(tab.id)
+    if (!pane) return
+    var iframe = pane.querySelector('iframe.mz-tab-frame')
+    if (!iframe) return
+    var framePath = readFramePath(iframe)
+    if (!framePath) return
+    if (sameTabPage(framePath, tab.path)) return
+    iframe.setAttribute('data-mz-restoring', '1')
+    iframe.src = toFrameSrc(tab.path)
   }
 
   function cssEscape (value) {
@@ -432,10 +520,11 @@
     state.activeId = id
     touchMru(id)
     ensurePane(tab)
+    ensureFrameMatchesTab(tab)
     renderAll()
 
     // Scroll active tab into view
-    var btn = els.list && els.list.querySelector('.mz-tab[data-tab-id="' + cssEscape(id) + '"]')
+    var btn = findTabButtonEl(id)
     if (btn && btn.scrollIntoView) {
       btn.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
     }
@@ -456,7 +545,7 @@
     state.tabs.splice(idx, 1)
     state.mru = state.mru.filter(function (x) { return x !== id })
 
-    var pane = els.panes && els.panes.querySelector('.mz-tab-pane[data-tab-id="' + cssEscape(id) + '"]')
+    var pane = findPaneEl(id)
     if (pane && pane.parentNode) pane.parentNode.removeChild(pane)
 
     if (state.activeId === id && !options.skipActivate) {
@@ -570,6 +659,13 @@
         var title = t.title
         if (title === 'City Master' || title === 'Cities') {
           title = titleFromPath(path)
+        }
+        // Repair tabs renamed by in-iframe navigation (e.g. Leads titled "Edit Quotation")
+        if (/leads\.php$/i.test(pathFileKey(path)) && /quotation/i.test(String(title || ''))) {
+          title = 'Leads'
+        }
+        if (/quotation_generator\.php$/i.test(pathFileKey(path)) && (!title || /leads/i.test(title))) {
+          title = titleFromPath(path) === 'Quotation Generator' ? 'Edit Quotation' : titleFromPath(path)
         }
         openTab(path, title || titleFromPath(path), { pushHistory: false })
       })
