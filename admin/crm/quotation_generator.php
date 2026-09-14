@@ -2253,6 +2253,227 @@ $qWizardSteps = [
             margin-top: 0.25rem;
         }
 
+        .crm-quotation-gen .q-itin-days-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin: 0.15rem 0 0.65rem;
+        }
+
+        .crm-quotation-gen .q-itin-view-all-btn {
+            border: 1.5px solid #f1a9ae;
+            background: #fff;
+            color: #c62828;
+            font-weight: 700;
+            font-size: 0.8rem;
+            border-radius: 10px;
+            padding: 0.45rem 0.85rem;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-itin-view-all-btn:hover {
+            background: #fff1f2;
+            color: #b71c1c;
+            border-color: #e57373;
+        }
+
+        .q-itin-loaded-modal .modal-content {
+            border: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+        }
+
+        .q-itin-loaded-body {
+            padding: 1.5rem 1.25rem 0.75rem;
+        }
+
+        .q-itin-loaded-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #ecfdf5;
+            color: #059669;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .q-itin-loaded-title {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #0f172a;
+            margin-bottom: 0.4rem;
+        }
+
+        .q-itin-loaded-msg {
+            font-size: 0.9rem;
+            color: #64748b;
+            line-height: 1.45;
+        }
+
+        .q-itin-loaded-ok {
+            min-width: 110px;
+            border: 0;
+            border-radius: 10px;
+            background: #c62828;
+            color: #fff;
+            font-weight: 700;
+            padding: 0.5rem 1.1rem;
+        }
+
+        .q-itin-loaded-ok:hover {
+            background: #b71c1c;
+            color: #fff;
+        }
+
+        .q-full-itin-modal .modal-content {
+            border: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
+        }
+
+        .q-full-itin-modal .modal-header {
+            border-bottom: 1px solid #eef2f7;
+            align-items: flex-start;
+            padding: 1rem 1.15rem;
+        }
+
+        .q-full-itin-modal-hd {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .q-full-itin-modal-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #c62828;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .q-full-itin-modal .modal-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .q-full-itin-modal-sub {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 0.15rem;
+        }
+
+        .q-full-itin-modal .modal-body {
+            padding: 0.85rem 1rem;
+            max-height: min(70vh, 560px);
+            overflow-y: auto;
+            background: #f8fafc;
+        }
+
+        .q-full-itin-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .q-full-itin-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            border: 1px solid #e8ecf1;
+            background: #fff;
+            border-radius: 12px;
+            padding: 0.85rem 0.95rem;
+            cursor: pointer;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .q-full-itin-item:hover {
+            border-color: #f1a9ae;
+            box-shadow: 0 6px 18px rgba(198, 40, 40, 0.08);
+        }
+
+        .q-full-itin-item.is-current {
+            border-color: #c62828;
+            box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.12);
+        }
+
+        .q-full-itin-item-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .q-full-itin-item-day {
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #c62828;
+        }
+
+        .q-full-itin-item-date {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .q-full-itin-item-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.3;
+            margin-bottom: 0.35rem;
+        }
+
+        .q-full-itin-item-desc {
+            font-size: 0.8rem;
+            color: #64748b;
+            line-height: 1.45;
+            margin: 0 0 0.45rem;
+        }
+
+        .q-full-itin-item-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .q-full-itin-item-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: #f1f5f9;
+            color: #475569;
+            border-radius: 999px;
+            padding: 0.18rem 0.55rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .q-full-itin-item-meta i {
+            color: #c62828;
+            font-size: 0.68rem;
+        }
+
+        .q-full-itin-empty {
+            text-align: center;
+            color: #94a3b8;
+            padding: 2rem 1rem;
+            font-size: 0.9rem;
+        }
+
         .crm-quotation-gen .q-day-title-row {
             display: flex;
             align-items: center;
@@ -7955,17 +8176,19 @@ $qWizardSteps = [
             --qp-red: #c4121a;
             --qp-red-bright: #e11d2e;
             --qp-red-dark: #9a0f15;
-            --qp-ink: #1f1f22;
-            --qp-muted: #6b6b73;
+            --qp-ink: #1a2332;
+            --qp-muted: #7a8494;
             --qp-line: #e4e4e8;
-            --qp-soft: #f6f6f8;
-            --qp-card: #fafafa;
+            --qp-soft: #f3f7fb;
+            --qp-card: #eef4fa;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             color: var(--qp-ink);
             font-size: 13px;
             line-height: 1.5;
             padding: 22px 24px 28px;
             background: #fff;
+            border: 1.5px solid var(--qp-red);
+            border-radius: 4px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -7975,35 +8198,40 @@ $qWizardSteps = [
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 14px;
-            padding-bottom: 16px;
-            margin-bottom: 18px;
-            border-bottom: 2px solid var(--qp-line);
+            gap: 16px;
+            padding-bottom: 18px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #edf0f4;
+        }
+
+        .qp-logo {
+            flex: 0 0 auto;
+            max-width: 168px;
         }
 
         .qp-logo img {
-            max-height: 56px;
+            max-height: 64px;
             width: auto;
+            max-width: 100%;
             display: block;
+            object-fit: contain;
         }
 
         .qp-title-block {
             flex: 1;
             text-align: center;
-            padding: 0 6px;
+            padding: 2px 8px 0;
+            min-width: 0;
         }
 
         .qp-mtn-svg {
-            width: 72px;
-            height: 36px;
-            margin: 0 auto 6px;
-            display: block;
+            display: none;
         }
 
         .qp-title-block h1 {
             margin: 0;
-            font-size: 1.12rem;
-            font-weight: 700;
+            font-size: 1.2rem;
+            font-weight: 800;
             letter-spacing: 0.01em;
             color: var(--qp-ink);
             line-height: 1.3;
@@ -8013,6 +8241,8 @@ $qWizardSteps = [
         .qp-dest-red {
             color: var(--qp-red);
             font-weight: 800;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-duration-wrap {
@@ -8024,7 +8254,7 @@ $qWizardSteps = [
         }
 
         .qp-duration-line {
-            width: 36px;
+            width: 42px;
             height: 2px;
             background: var(--qp-red);
             flex-shrink: 0;
@@ -8033,19 +8263,56 @@ $qWizardSteps = [
         }
 
         .qp-duration {
-            font-size: 0.92rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--qp-ink);
             white-space: nowrap;
         }
 
+        .qp-route-pills {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .qp-route-pill {
+            display: inline-flex;
+            align-items: center;
+            border: 1.5px solid var(--qp-red);
+            color: var(--qp-ink);
+            background: #fff;
+            border-radius: 999px;
+            padding: 0.28rem 0.7rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            line-height: 1.2;
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-route-arrow {
+            color: var(--qp-red);
+            font-size: 0.65rem;
+            line-height: 1;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         .qp-ref-card {
-            background: #f0f0f2;
+            background: var(--qp-card);
             border-radius: 8px;
-            padding: 10px 14px;
+            padding: 7px 10px;
             min-width: 168px;
-            font-size: 12px;
-            line-height: 1.55;
+            max-width: 210px;
+            font-size: 11px;
+            line-height: 1.2;
             text-align: left;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -8053,9 +8320,9 @@ $qWizardSteps = [
 
         .qp-ref-card .qp-ref-row {
             display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            margin-bottom: 4px;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 5px;
         }
 
         .qp-ref-card .qp-ref-row:last-child {
@@ -8066,14 +8333,28 @@ $qWizardSteps = [
             color: var(--qp-red);
             width: 14px;
             text-align: center;
-            margin-top: 2px;
+            margin-top: 0;
             flex-shrink: 0;
+            font-size: 0.78rem;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
+        .qp-ref-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--qp-muted);
+            margin-bottom: 0;
+            line-height: 1.15;
+        }
+
+        .qp-ref-value,
         .qp-ref-card .ref {
-            font-weight: 700;
+            font-weight: 800;
             color: var(--qp-ink);
-            word-break: break-all;
+            word-break: break-word;
+            font-size: 11px;
+            line-height: 1.2;
         }
 
         /* —— Section heads —— */
@@ -8115,9 +8396,9 @@ $qWizardSteps = [
 
         .qp-sec-title {
             font-weight: 800;
-            font-size: 13px;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: 0.01em;
+            text-transform: none;
             color: var(--qp-ink);
             white-space: nowrap;
         }
@@ -8135,9 +8416,677 @@ $qWizardSteps = [
             font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.12em;
-            color: var(--qp-muted);
+            color: #a0a8b4;
             text-transform: uppercase;
             white-space: nowrap;
+        }
+
+        /* —— Flight Details (preview cards) —— */
+        .qp-sec-flights {
+            margin-bottom: 22px;
+        }
+
+        .qp-flight-sec-head {
+            margin-bottom: 14px;
+        }
+
+        .qp-flight-sec-top {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .qp-flight-sec-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex-shrink: 0;
+        }
+
+        .qp-flight-sec-slogan-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .qp-flight-sec-slogan-wrap .qp-sec-slogan {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            color: #9aa3af;
+            line-height: 1;
+            text-align: right;
+        }
+
+        .qp-flight-sec-accent {
+            display: block;
+            width: 72px;
+            height: 3px;
+            background: var(--qp-red);
+            border-radius: 1px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-sec-underline {
+            height: 1px;
+            background: #d8dde5;
+        }
+
+        .qp-flight-sec-line {
+            display: none;
+        }
+
+        .qp-flight-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .qp-flight-card {
+            background: #fff;
+            border: 1px solid #e8ecf1;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(17, 24, 39, 0.06);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-card-hd {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px 10px;
+        }
+
+        .qp-flight-card-hd-main {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .qp-flight-dir {
+            display: inline-flex;
+            align-items: center;
+            background: var(--qp-red);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+            padding: 6px 12px;
+            border-radius: 999px;
+            white-space: nowrap;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-route {
+            font-size: 15px;
+            font-weight: 800;
+            color: #1a1d21;
+            letter-spacing: 0.01em;
+            line-height: 1.25;
+        }
+
+        .qp-flight-meta {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--qp-red);
+            white-space: nowrap;
+            padding-top: 4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-legs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 4px 14px 12px;
+        }
+
+        .qp-flight-seg {
+            display: grid;
+            grid-template-columns: 28px minmax(88px, 1fr) minmax(90px, 1.2fr) minmax(88px, 1fr) minmax(140px, 1.15fr);
+            gap: 10px;
+            align-items: center;
+            background: #fff;
+            border: 1px solid #e6eaef;
+            border-radius: 12px;
+            padding: 12px 12px;
+        }
+
+        .qp-flight-seg-num {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #fde8ea;
+            color: var(--qp-red);
+            font-size: 12px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-endpoint {
+            min-width: 0;
+        }
+
+        .qp-flight-code {
+            font-size: 18px;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.15;
+            letter-spacing: 0.02em;
+        }
+
+        .qp-flight-city {
+            font-size: 12px;
+            font-weight: 500;
+            color: #8b93a0;
+            margin-top: 1px;
+            line-height: 1.2;
+        }
+
+        .qp-flight-time {
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.2;
+        }
+
+        .qp-flight-time .q-preview-cell-edit,
+        .qp-flight-time .qp-flight-time-edit {
+            font-size: 13px;
+            font-weight: 800;
+            color: #111827;
+            border-bottom: none !important;
+        }
+
+        .qp-flight-date {
+            margin-top: 2px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #9aa3af;
+            line-height: 1.2;
+        }
+
+        .qp-flight-mid {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            min-width: 0;
+            padding: 0 4px;
+        }
+
+        .qp-flight-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid var(--qp-red);
+            background: #fff;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-dash {
+            flex: 1 1 auto;
+            height: 0;
+            border-top: 1.5px dashed #c5ccd6;
+            min-width: 12px;
+        }
+
+        .qp-flight-mid-plane {
+            color: #1f2937;
+            font-size: 12px;
+            margin: 0 6px;
+            flex-shrink: 0;
+        }
+
+        .qp-flight-airline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #eef4fb;
+            color: #1e3a5f;
+            border-radius: 10px;
+            padding: 8px 10px;
+            min-width: 0;
+            max-width: 100%;
+            justify-self: end;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-airline-ico {
+            color: #3b82f6;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .qp-flight-airline-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .qp-flight-airline-label .q-preview-cell-edit {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1e3a5f;
+            border-bottom: none !important;
+            text-transform: uppercase;
+        }
+
+        .qp-flight-airline-chev {
+            color: #94a3b8;
+            font-size: 10px;
+            flex-shrink: 0;
+        }
+
+        .qp-flight-layover {
+            display: inline-flex;
+            align-items: center;
+            align-self: center;
+            gap: 8px;
+            margin: 0 auto;
+            background: #fff5f5;
+            border: 1px solid #f5c2c7;
+            color: #6b7280;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: 999px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-layover .fa-clock,
+        .qp-flight-layover .far.fa-clock {
+            color: var(--qp-red);
+            font-size: 12px;
+        }
+
+        .qp-flight-layover-text {
+            color: #4b5563;
+        }
+
+        .qp-flight-layover-text .q-preview-cell-edit {
+            color: #4b5563;
+            font-weight: 600;
+            border-bottom: none !important;
+        }
+
+        .qp-flight-layover-sep {
+            width: 1px;
+            height: 12px;
+            background: #e5a4aa;
+            flex-shrink: 0;
+        }
+
+        .qp-flight-layover-dur {
+            color: var(--qp-red);
+            font-weight: 800;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-card-ft {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px 14px;
+            border-top: 1px solid #eef1f5;
+            color: #1a1d21;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .qp-flight-card-ft .fa-clock,
+        .qp-flight-card-ft .far.fa-clock {
+            color: var(--qp-red);
+            font-size: 13px;
+        }
+
+        .qp-flight-card-ft strong {
+            font-weight: 800;
+        }
+
+        @media (max-width: 900px) {
+            .qp-flight-legs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .qp-flight-seg {
+                min-width: 640px;
+            }
+
+            .qp-flight-sec-top {
+                flex-wrap: wrap;
+            }
+
+            .qp-flight-sec-slogan-wrap {
+                width: 100%;
+                align-items: flex-start;
+            }
+        }
+
+        /* —— Hotel Details (preview sheet) —— */
+        .qp-sec-hotels {
+            margin-bottom: 22px;
+        }
+
+        .qp-hotel-editor-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .qp-hotel-editor-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.2;
+        }
+
+        .qp-hotel-editor-bar {
+            width: 4px;
+            height: 22px;
+            border-radius: 2px;
+            background: var(--qp-red);
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-editor-sub {
+            margin-top: 4px;
+            margin-left: 14px;
+            font-size: 12px;
+            color: #9aa3af;
+            font-weight: 500;
+        }
+
+        .qp-hotel-option-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .qp-hotel-option-tab {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 14px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            background: #fff;
+            color: #111827;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .qp-hotel-option-tab.is-active {
+            background: var(--qp-red);
+            border-color: var(--qp-red);
+            color: #fff;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-sheet {
+            background: #fff;
+            border: 1px solid #e8ecf1;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(17, 24, 39, 0.05);
+            margin-bottom: 14px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-sheet-groups,
+        .qp-hotel-sheet-cols,
+        .qp-hotel-sheet-row {
+            display: grid;
+            grid-template-columns:
+                minmax(70px, 1fr)
+                minmax(90px, 1.15fr)
+                minmax(80px, 1.05fr)
+                minmax(52px, 0.65fr)
+                minmax(52px, 0.65fr)
+                minmax(52px, 0.65fr)
+                minmax(78px, 0.95fr)
+                minmax(78px, 0.95fr)
+                minmax(78px, 0.9fr)
+                minmax(100px, 1.1fr)
+                minmax(72px, 0.75fr);
+            gap: 0;
+            align-items: center;
+        }
+
+        .qp-hotel-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 14px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #111827;
+        }
+
+        .qp-hotel-group i {
+            color: var(--qp-red);
+            font-size: 13px;
+        }
+
+        .qp-hotel-group-acc {
+            grid-column: 1 / span 8;
+            background: #f3f4f6;
+        }
+
+        .qp-hotel-group-com {
+            grid-column: 9 / span 3;
+            background: #fde8ea;
+        }
+
+        .qp-hotel-sheet-cols {
+            background: #fafbfc;
+            border-top: 1px solid #edf0f4;
+            border-bottom: 1px solid #edf0f4;
+            padding: 8px 8px;
+        }
+
+        .qp-hotel-hcell {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 4px 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #6b7280;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .qp-hotel-hcell i {
+            color: #9aa3af;
+            font-size: 11px;
+        }
+
+        .qp-hotel-hcell.qp-h-city i,
+        .qp-hotel-hcell.qp-h-rate i {
+            color: var(--qp-red);
+        }
+
+        .qp-hotel-sheet-body {
+            background: #fff;
+        }
+
+        .qp-hotel-sheet-row {
+            padding: 12px 8px;
+            border-bottom: 1px solid #eef2f7;
+            background: #fff;
+        }
+
+        .qp-hotel-sheet-row:nth-child(even) {
+            background: #fafbfc;
+        }
+
+        .qp-hotel-sheet-row:last-child {
+            border-bottom: 0;
+        }
+
+        .qp-hotel-cell {
+            min-width: 0;
+            padding: 2px 6px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #111827;
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .qp-hotel-cell .q-preview-cell-edit {
+            font-size: 12px;
+            font-weight: 700;
+            color: #111827;
+            border-bottom: none !important;
+        }
+
+        .qp-hotel-cell.qp-h-city {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .qp-hotel-pin {
+            color: var(--qp-red);
+            font-size: 12px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-rate-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #fde8ea;
+            color: #111827;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-weight: 800;
+            white-space: nowrap;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-rate-pill .q-preview-cell-edit {
+            font-weight: 800;
+        }
+
+        .qp-hotel-supplier-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            background: #eef2f7;
+            border-radius: 999px;
+            padding: 6px 10px;
+            color: #334155;
+            font-weight: 700;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-supplier-pill > span {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .qp-hotel-supplier-pill > .fa-building {
+            color: #64748b;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .qp-hotel-supplier-caret {
+            color: #94a3b8;
+            font-size: 10px;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+
+        .qp-hotel-cell.qp-h-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .qp-hotel-act {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        .qp-hotel-act-del {
+            color: var(--qp-red);
+            border-color: #fecaca;
+        }
+
+        @media (max-width: 1100px) {
+            .qp-hotel-sheet {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .qp-hotel-sheet-groups,
+            .qp-hotel-sheet-cols,
+            .qp-hotel-sheet-body {
+                min-width: 980px;
+            }
         }
 
         .qp-itin-title {
@@ -8171,11 +9120,14 @@ $qWizardSteps = [
         .qp-info-card {
             display: grid;
             gap: 0;
-            border: 1px solid var(--qp-line);
-            border-radius: 8px;
+            border: 0;
+            border-radius: 12px;
             overflow: hidden;
-            background: #fff;
+            background: var(--qp-card);
             margin-bottom: 4px;
+            box-shadow: none;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-info-card.qp-cols-3 {
@@ -8187,8 +9139,8 @@ $qWizardSteps = [
         }
 
         .qp-info-cell {
-            padding: 10px 12px;
-            border-right: 1px solid var(--qp-line);
+            padding: 14px 14px;
+            border-right: 1px solid #d7e0ea;
             text-align: center;
             min-width: 0;
         }
@@ -8199,19 +9151,20 @@ $qWizardSteps = [
 
         .qp-info-label {
             display: block;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            text-transform: none;
             color: var(--qp-muted);
-            margin-bottom: 4px;
+            margin-bottom: 5px;
         }
 
         .qp-info-value {
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 800;
             color: var(--qp-ink);
             word-break: break-word;
+            line-height: 1.3;
         }
 
         /* —— Tables —— */
@@ -8928,7 +9881,21 @@ $qWizardSteps = [
 
             .qp-info-cell {
                 border-right: none;
-                border-bottom: 1px solid var(--qp-line);
+                border-bottom: 1px solid #d7e0ea;
+                text-align: center;
+            }
+
+            .qp-brand {
+                max-width: none;
+            }
+
+            .qp-logo {
+                max-width: none;
+            }
+
+            .qp-ref-card {
+                width: 100%;
+                max-width: none;
             }
 
             .qp-info-cell:last-child {
@@ -10346,6 +11313,11 @@ $qWizardSteps = [
                                     </div>
                                 </div>
 
+                                <div class="q-itin-days-actions">
+                                    <button type="button" class="btn q-itin-view-all-btn" id="qViewFullItineraryBtn">
+                                        <i class="fas fa-list-ul mr-1"></i> View full itinerary
+                                    </button>
+                                </div>
                                 <div id="qItineraryDays" class="q-itin-days"></div>
                             <div class="q-section-next-bar">
                                 <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="4">
@@ -10583,6 +11555,44 @@ $qWizardSteps = [
     <?php include __DIR__ . '/includes/quotation_itinerary_image_modal.php'; ?>
     <?php include __DIR__ . '/includes/quotation_supplier_mail_modal.php'; ?>
 
+    <div class="modal fade q-itin-loaded-modal" id="qItineraryLoadedModal" tabindex="-1" role="dialog" aria-labelledby="qItineraryLoadedModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px;">
+            <div class="modal-content">
+                <div class="modal-body text-center q-itin-loaded-body">
+                    <div class="q-itin-loaded-icon" aria-hidden="true"><i class="fas fa-check"></i></div>
+                    <h5 class="q-itin-loaded-title" id="qItineraryLoadedModalLabel">Itinerary loaded</h5>
+                    <p class="q-itin-loaded-msg mb-0" id="qItineraryLoadedMsg">Itinerary loaded from package.</p>
+                </div>
+                <div class="modal-footer justify-content-center border-0 pt-0 pb-3">
+                    <button type="button" class="btn q-itin-loaded-ok" data-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade q-full-itin-modal" id="qFullItineraryModal" tabindex="-1" role="dialog" aria-labelledby="qFullItineraryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="q-full-itin-modal-hd">
+                        <div class="q-full-itin-modal-icon"><i class="fas fa-route"></i></div>
+                        <div>
+                            <h5 class="modal-title mb-0" id="qFullItineraryModalLabel">Full Itinerary</h5>
+                            <p class="q-full-itin-modal-sub mb-0" id="qFullItineraryModalSub">All days at a glance — click a day to edit</p>
+                        </div>
+                    </div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="q-full-itin-list" id="qFullItineraryList"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade q-day-ai-modal" id="qDayAiModal" tabindex="-1" role="dialog" aria-labelledby="qDayAiModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -10798,7 +11808,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=154"></script>
+    <script src="crm/assets/quotation_generator.js?v=163"></script>
     <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

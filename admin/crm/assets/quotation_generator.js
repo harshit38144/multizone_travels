@@ -1340,6 +1340,8 @@
             nights: data.nights !== undefined && data.nights !== '' ? data.nights : '',
             checkin: normalizeLegacyDateInput(data.checkin || data.check_in || ''),
             checkout: normalizeLegacyDateInput(data.checkout || data.check_out || ''),
+            star_category: data.star_category || data.stars || '',
+            country: data.country || data.country_name || '',
             rate: (function () {
                 var raw = data.rate !== undefined && data.rate !== '' ? data.rate : (data.amount || '');
                 if (raw === '' || raw == null) return '';
@@ -1526,6 +1528,8 @@
             '<div class="q-hotel-row">' +
             '<input type="hidden" class="h-city-id" value="' + esc(d.city_id) + '">' +
             '<input type="hidden" class="h-hotel-id" value="' + esc(d.hotel_id) + '">' +
+            '<input type="hidden" class="h-star-category" value="' + esc(d.star_category) + '">' +
+            '<input type="hidden" class="h-country" value="' + esc(d.country) + '">' +
             '<div class="q-hotel-fields">' +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-city',
@@ -1686,6 +1690,8 @@
                 checkout: checkout,
                 check_in: checkin,
                 check_out: checkout,
+                star_category: $r.find('.h-star-category').val() || '',
+                country: $r.find('.h-country').val() || '',
                 rate: rate,
                 amount: rate,
                 supplier_id: supplierId > 0 ? supplierId : '',
@@ -2091,7 +2097,8 @@
                     var sub = [c.state_name, c.country_name].filter(Boolean).join(', ');
                     var $btn = $('<button type="button" class="q-hotel-menu-item q-hotel-city-pick"></button>')
                         .attr('data-id', c.id)
-                        .attr('data-name', c.name);
+                        .attr('data-name', c.name)
+                        .attr('data-country', c.country_name || '');
                     $btn.append($('<span></span>').text(label));
                     if (sub) {
                         $btn.append($('<span class="q-hotel-menu-sub"></span>').text(sub));
@@ -2205,6 +2212,12 @@
         }
         if (hotel.city_id) {
             $row.find('.h-city-id').val(hotel.city_id);
+        }
+        if (hotel.star_category != null) {
+            $row.find('.h-star-category').val(hotel.star_category || '');
+        }
+        if (hotel.country_name || hotel.country) {
+            $row.find('.h-country').val(hotel.country_name || hotel.country || '');
         }
 
         var room = firstHotelRoomType(hotel);
@@ -3118,7 +3131,7 @@
             var heading = fmtItineraryDayHeading(baseDate, i, i + 1);
             var imgVal = prev.image || '';
             var imgCountLabel = imgVal ? '1 Image' : '0 Image';
-            var dayMenuItems = '';
+            var dayMenuItems = '<a class="dropdown-item q-view-full-itinerary" href="#"><i class="fas fa-list-ul mr-2"></i>View full itinerary</a><div class="dropdown-divider"></div>';
             for (var m = 0; m < totalDays; m++) {
                 dayMenuItems += '<a class="dropdown-item q-day-jump" href="#" data-day-index="' + m + '">Day ' + (m + 1) + '</a>';
             }
@@ -3135,6 +3148,7 @@
                 '<div class="q-day-toolbar-right">' +
                 '<button type="button" class="btn q-day-nav-btn q-day-prev"><i class="fas fa-chevron-left"></i><span>Previous Day</span></button>' +
                 '<button type="button" class="btn q-day-nav-btn q-day-nav-primary q-day-next"><span>Next Day</span><i class="fas fa-chevron-right"></i></button>' +
+                '<button type="button" class="btn q-day-nav-btn q-view-full-itinerary" title="View full itinerary"><i class="fas fa-list-ul"></i><span>All Days</span></button>' +
                 '<div class="dropdown q-day-more-wrap">' +
                 '<button type="button" class="btn q-day-more-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="More">' +
                 '<i class="fas fa-ellipsis-v"></i>' +
@@ -3315,9 +3329,28 @@
         expandWizardSection(4);
         window.setTimeout(initItineraryEditors, 120);
 
-        $('#qAlert').html(
-            '<div class="alert alert-success">Itinerary loaded from package <strong>' + esc(pkg.title || 'Package') + '</strong>.</div>'
+        showItineraryLoadedPopup(pkg.title || pkg.label || 'Package');
+    }
+
+    function showItineraryLoadedPopup(packageTitle) {
+        var title = String(packageTitle || 'Package').trim() || 'Package';
+        $('#qItineraryLoadedMsg').html(
+            'Itinerary loaded from package <strong>' + esc(title) + '</strong>.'
         );
+        var $modal = $('#qItineraryLoadedModal');
+        if (!$modal.length) {
+            $('#qAlert').html(
+                '<div class="alert alert-success">Itinerary loaded from package <strong>' + esc(title) + '</strong>.</div>'
+            );
+            return;
+        }
+        $modal.modal('show');
+        window.clearTimeout(showItineraryLoadedPopup._timer);
+        showItineraryLoadedPopup._timer = window.setTimeout(function () {
+            if ($modal.hasClass('show')) {
+                $modal.modal('hide');
+            }
+        }, 3500);
     }
 
     /* ------------------------------------------------------------------ */
@@ -3935,6 +3968,68 @@
         });
     }
 
+    function openFullItineraryModal() {
+        var days = snapshotItinerary();
+        var baseDate = $('#q_tentative_date').val();
+        var dest = getItineraryDestinationLabel();
+        var $list = $('#qFullItineraryList').empty();
+        var currentIdx = activeItineraryDayIndex;
+
+        $('#qFullItineraryModalSub').text(
+            (dest ? dest + ' · ' : '') +
+            (days.length ? (days.length + (days.length === 1 ? ' day' : ' days')) : 'No days yet') +
+            ' — click a day to edit'
+        );
+
+        if (!days.length) {
+            $list.append('<div class="q-full-itin-empty">No itinerary days yet. Set nights or load a package first.</div>');
+            $('#qFullItineraryModal').modal('show');
+            return;
+        }
+
+        days.forEach(function (day, i) {
+            day = normalizeItineraryDay(day || {});
+            var heading = fmtItineraryDayHeading(baseDate, i, i + 1);
+            var dateOnly = heading.indexOf('–') >= 0 ? heading.split('–')[0].trim() : heading;
+            var title = (day.title || '').trim() || ('Day ' + (i + 1));
+            var desc = stripHtmlText(day.description || '');
+            if (desc.length > 180) {
+                desc = desc.slice(0, 180).replace(/\s+\S*$/, '') + '…';
+            }
+            var overnight = (day.overnight || '').trim() || inferDayOvernightValue(day, dest);
+            var meal = (day.meal || '').trim() || inferDayMealValue(day);
+            var metaHtml = '';
+            if (overnight) {
+                metaHtml += '<span><i class="fas fa-bed"></i> ' + esc(overnight) + '</span>';
+            }
+            if (meal) {
+                metaHtml += '<span><i class="fas fa-utensils"></i> ' + esc(meal) + '</span>';
+            }
+            if (day.image) {
+                metaHtml += '<span><i class="fas fa-image"></i> Image</span>';
+            }
+            var $item = $(
+                '<button type="button" class="q-full-itin-item' + (i === currentIdx ? ' is-current' : '') + '" data-day-index="' + i + '">' +
+                '<div class="q-full-itin-item-top">' +
+                '<span class="q-full-itin-item-day">Day ' + (i + 1) + '</span>' +
+                '<span class="q-full-itin-item-date"></span>' +
+                '</div>' +
+                '<div class="q-full-itin-item-title"></div>' +
+                (desc ? '<p class="q-full-itin-item-desc"></p>' : '') +
+                (metaHtml ? '<div class="q-full-itin-item-meta">' + metaHtml + '</div>' : '') +
+                '</button>'
+            );
+            $item.find('.q-full-itin-item-date').text(dateOnly);
+            $item.find('.q-full-itin-item-title').text(title);
+            if (desc) {
+                $item.find('.q-full-itin-item-desc').text(desc);
+            }
+            $list.append($item);
+        });
+
+        $('#qFullItineraryModal').modal('show');
+    }
+
     function initAISuggestDay() {
         $(document).on('click', '.q-day-ai-btn', function (e) {
             e.preventDefault();
@@ -3957,6 +4052,25 @@
             e.preventDefault();
             var idx = parseInt($(this).attr('data-day-index'), 10);
             showItineraryDay(idx);
+        });
+
+        $(document).on('click', '.q-view-full-itinerary, #qViewFullItineraryBtn', function (e) {
+            e.preventDefault();
+            openFullItineraryModal();
+        });
+
+        $(document).on('click', '.q-full-itin-item', function (e) {
+            e.preventDefault();
+            var idx = parseInt($(this).attr('data-day-index'), 10);
+            $('#qFullItineraryModal').modal('hide');
+            expandWizardSection(4);
+            showItineraryDay(idx);
+            window.setTimeout(function () {
+                var $card = $('#qItineraryDays .q-day-card.is-active');
+                if ($card.length && $card[0].scrollIntoView) {
+                    $card[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 180);
         });
 
         $(document).on('click', '.q-day-meta-edit', function (e) {
@@ -6036,6 +6150,381 @@
         return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     }
 
+    function qpHotelSectionHead() {
+        return '<div class="qp-hotel-editor-head">' +
+            '<div class="qp-hotel-editor-head-main">' +
+            '<div class="qp-hotel-editor-title"><span class="qp-hotel-editor-bar" aria-hidden="true"></span>Hotel Details</div>' +
+            '<div class="qp-hotel-editor-sub">Add, edit or remove hotel options for your customer.</div>' +
+            '</div>' +
+            '</div>';
+    }
+
+    function qpFormatHotelRate(rate) {
+        var n = parseFloat(rate);
+        if (isNaN(n)) {
+            return '—';
+        }
+        return '₹ ' + Math.round(n).toLocaleString('en-IN');
+    }
+
+    function qpHotelOptionsTabsHtml(categories, activeIdx) {
+        categories = categories || [];
+        if (categories.length <= 1) {
+            return '';
+        }
+        var html = '<div class="qp-hotel-option-tabs">';
+        categories.forEach(function (cat, i) {
+            var label = cat.label || defaultHotelCategoryLabel(i);
+            html += '<span class="qp-hotel-option-tab' + (i === activeIdx ? ' is-active' : '') + '">' +
+                esc(label) + '</span>';
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function buildPreviewHotelCardsHtml(hotels, catIdx) {
+        hotels = hotels || [];
+        if (!hotels.length) {
+            return '';
+        }
+
+        var html = '<div class="qp-hotel-sheet">';
+        html += '<div class="qp-hotel-sheet-groups">' +
+            '<div class="qp-hotel-group qp-hotel-group-acc">' +
+            '<i class="fas fa-bed" aria-hidden="true"></i><span>Accommodation Details</span>' +
+            '</div>' +
+            '<div class="qp-hotel-group qp-hotel-group-com">' +
+            '<i class="fas fa-coins" aria-hidden="true"></i><span>Commercial Details</span>' +
+            '</div>' +
+            '</div>';
+
+        html += '<div class="qp-hotel-sheet-cols">' +
+            '<div class="qp-hotel-hcell qp-h-city"><i class="fas fa-map-marker-alt"></i><span>City</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-hotel"><i class="fas fa-hotel"></i><span>Hotel</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-room"><i class="fas fa-bed"></i><span>Room Type</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-rooms"><i class="fas fa-user-friends"></i><span>Rooms</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-meal"><i class="fas fa-utensils"></i><span>Meal</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-nights"><i class="fas fa-moon"></i><span>Nights</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-date"><i class="far fa-calendar-alt"></i><span>Check-in</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-date"><i class="far fa-calendar-alt"></i><span>Check-out</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-rate"><i class="fas fa-rupee-sign"></i><span>Rate (₹)</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-supplier"><i class="fas fa-building"></i><span>Supplier</span></div>' +
+            '<div class="qp-hotel-hcell qp-h-actions"><span>Actions</span></div>' +
+            '</div>';
+
+        html += '<div class="qp-hotel-sheet-body">';
+        hotels.forEach(function (h, hi) {
+            var d = normalizeHotelData(h);
+            var base = 'hotel.' + catIdx + '.' + hi + '.';
+            var rateLabel = qpFormatHotelRate(d.rate);
+            var supplierLabel = previewVal(d.supplier, '—');
+
+            html += '<div class="qp-hotel-sheet-row">';
+            html += '<div class="qp-hotel-cell qp-h-city">' +
+                '<i class="fas fa-map-marker-alt qp-hotel-pin" aria-hidden="true"></i>' +
+                '<span>' + previewEditable(previewVal(d.city), base + 'city', { cls: 'q-preview-cell-edit' }) + '</span>' +
+                '</div>';
+            html += '<div class="qp-hotel-cell qp-h-hotel">' +
+                previewEditable(previewVal(d.name), base + 'name', { cls: 'q-preview-cell-edit' }) +
+                '</div>';
+            html += '<div class="qp-hotel-cell qp-h-room">' +
+                previewEditable(previewVal(d.room_type), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
+                '</div>';
+            html += '<div class="qp-hotel-cell qp-h-rooms">' +
+                previewEditable(previewVal(d.rooms, '0'), base + 'rooms', { type: 'int', cls: 'q-preview-cell-edit' }) +
+                '</div>';
+            html += '<div class="qp-hotel-cell qp-h-meal">' +
+                previewEditable(previewVal(d.meal_plan, 'CP'), base + 'meal_plan', { cls: 'q-preview-cell-edit' }) +
+                '</div>';
+            html += '<div class="qp-hotel-cell qp-h-nights">' +
+                previewEditable(previewVal(d.nights, '0'), base + 'nights', { type: 'int', cls: 'q-preview-cell-edit' }) +
+                '</div>';
+            html += '<div class="qp-hotel-cell qp-h-date">' +
+                previewEditable(formatPreviewSlashDate(d.checkin), base + 'checkin', { type: 'date', cls: 'q-preview-cell-edit' }) +
+                '</div>';
+            html += '<div class="qp-hotel-cell qp-h-date">' +
+                previewEditable(formatPreviewSlashDate(d.checkout), base + 'checkout', { type: 'date', cls: 'q-preview-cell-edit' }) +
+                '</div>';
+            html += '<div class="qp-hotel-cell qp-h-rate">' +
+                '<span class="qp-hotel-rate-pill">' +
+                previewEditable(rateLabel, base + 'rate', { type: 'money', cls: 'q-preview-cell-edit' }) +
+                '</span></div>';
+            html += '<div class="qp-hotel-cell qp-h-supplier">' +
+                '<span class="qp-hotel-supplier-pill">' +
+                '<i class="fas fa-building" aria-hidden="true"></i>' +
+                '<span>' + previewEditable(supplierLabel, base + 'supplier', { cls: 'q-preview-cell-edit' }) + '</span>' +
+                '<i class="fas fa-chevron-down qp-hotel-supplier-caret" aria-hidden="true"></i>' +
+                '</span></div>';
+            html += '<div class="qp-hotel-cell qp-h-actions">' +
+                '<span class="qp-hotel-act qp-hotel-act-more" title="More" aria-hidden="true"><i class="fas fa-ellipsis-v"></i></span>' +
+                '<span class="qp-hotel-act qp-hotel-act-del" title="Remove" aria-hidden="true"><i class="fas fa-trash-alt"></i></span>' +
+                '</div>';
+            html += '</div>';
+        });
+        html += '</div></div>';
+        return html;
+    }
+
+    function qpFlightSectionHead() {
+        return '<div class="qp-flight-sec-head">' +
+            '<div class="qp-flight-sec-top">' +
+            '<div class="qp-flight-sec-left">' +
+            '<span class="qp-sec-icon"><i class="fas fa-plane"></i></span>' +
+            '<span class="qp-sec-title">Flight Details</span>' +
+            '</div>' +
+            '<div class="qp-flight-sec-slogan-wrap">' +
+            '<div class="qp-sec-slogan">TAILORED FOR A HIGHER TOMORROW</div>' +
+            '<span class="qp-flight-sec-accent" aria-hidden="true"></span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="qp-flight-sec-underline" aria-hidden="true">' +
+            '<span class="qp-flight-sec-line"></span>' +
+            '</div>' +
+            '</div>';
+    }
+
+    function qpParseFlightPlace(place) {
+        place = String(place || '').trim();
+        if (!place) {
+            return { city: '—', code: '—' };
+        }
+        var m = place.match(/^(.+?)\s*\(([A-Za-z]{3})\)\s*$/);
+        if (m) {
+            return { city: m[1].trim(), code: m[2].toUpperCase() };
+        }
+        m = place.match(/^([A-Za-z]{3})$/);
+        if (m) {
+            return { city: m[1].toUpperCase(), code: m[1].toUpperCase() };
+        }
+        m = place.match(/\(([A-Za-z]{3})\)/);
+        if (m) {
+            return {
+                city: place.replace(/\s*\([A-Za-z]{3}\)\s*$/, '').trim() || m[1].toUpperCase(),
+                code: m[1].toUpperCase()
+            };
+        }
+        var codeGuess = place.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
+        return { city: place, code: codeGuess || place.slice(0, 3).toUpperCase() };
+    }
+
+    function qpFormatTime12(timeStr) {
+        var raw = String(timeStr || '').trim();
+        if (!raw) {
+            return '—';
+        }
+        var m = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+        if (!m) {
+            return raw;
+        }
+        var h = parseInt(m[1], 10);
+        var min = m[2];
+        var ampm = (m[3] || '').toUpperCase();
+        if (!ampm) {
+            ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            if (h === 0) {
+                h = 12;
+            }
+        }
+        return String(h).padStart(2, '0') + ':' + min + ' ' + ampm;
+    }
+
+    function qpFormatFlightDayDate(dateStr) {
+        var d = parsePreviewDate(dateStr);
+        if (!d) {
+            return '—';
+        }
+        var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()];
+    }
+
+    function qpFlightLabel(d) {
+        d = d || {};
+        var name = String(d.name || '').trim();
+        var no = String(d.fl_tr_no || '').trim();
+        if (name && no) {
+            return (name + ' ' + no).toUpperCase();
+        }
+        return (name || no || 'FLIGHT').toUpperCase();
+    }
+
+    function qpFormatDurationShort(totalMinutes) {
+        var mins = parseInt(totalMinutes, 10);
+        if (isNaN(mins) || mins <= 0) {
+            return '';
+        }
+        var h = Math.floor(mins / 60);
+        var m = mins % 60;
+        if (h > 0 && m > 0) {
+            return h + 'h ' + m + 'm';
+        }
+        if (h > 0) {
+            return h + 'h';
+        }
+        return m + 'm';
+    }
+
+    function qpCalcJourneyTravelTime(rows) {
+        if (!rows || !rows.length) {
+            return '';
+        }
+        var first = rows[0];
+        var last = rows[rows.length - 1];
+        var start = parseFlightDateTimeMoment(first.dep_date, first.dep_time);
+        var end = parseFlightDateTimeMoment(last.arr_date || last.dep_date, last.arr_time || last.dep_time);
+        if (!start || !end) {
+            return '';
+        }
+        var mins = end.diff(start, 'minutes');
+        if (mins < 0) {
+            mins += 24 * 60;
+        }
+        return qpFormatDurationShort(mins);
+    }
+
+    function qpFlightEndpointHtml(place, dateStr, timeStr, editPath) {
+        var p = qpParseFlightPlace(place);
+        return '<div class="qp-flight-endpoint">' +
+            '<div class="qp-flight-code">' + esc(p.code) + '</div>' +
+            '<div class="qp-flight-city">' + esc(p.city) + '</div>' +
+            '<div class="qp-flight-time">' +
+            previewEditable(qpFormatTime12(timeStr), editPath, {
+                type: 'datetime',
+                cls: 'q-preview-cell-edit qp-flight-time-edit'
+            }) +
+            '</div>' +
+            '<div class="qp-flight-date">' + esc(qpFormatFlightDayDate(dateStr)) + '</div>' +
+            '</div>';
+    }
+
+    function qpFlightLayoverHtml(prev, cur) {
+        var mins = calcLayoverMinutesBetweenData(prev, cur);
+        var duration = mins > 0 ? qpFormatDurationShort(mins) : '';
+        if (!duration && cur.layover_time) {
+            duration = String(cur.layover_time).trim();
+        }
+        if (!duration) {
+            return '';
+        }
+        var city = '';
+        if (cur.layover_at) {
+            city = qpParseFlightPlace(cur.layover_at).city;
+        }
+        if (!city || city === '—') {
+            city = qpParseFlightPlace(prev.to).city;
+        }
+        if (!city || city === '—') {
+            city = qpParseFlightPlace(cur.from).city;
+        }
+        return '<div class="qp-flight-layover">' +
+            '<i class="far fa-clock" aria-hidden="true"></i>' +
+            '<span class="qp-flight-layover-text">Layover in ' + esc(city || '—') + '</span>' +
+            '<span class="qp-flight-layover-sep" aria-hidden="true"></span>' +
+            '<strong class="qp-flight-layover-dur">' + esc(duration) + '</strong>' +
+            '</div>';
+    }
+
+    function buildPreviewFlightCardsHtml(flights) {
+        var groups = groupFlightsForDisplay(flights || []);
+        if (!groups.length) {
+            return '';
+        }
+        var flatIndex = 0;
+        var html = '<div class="qp-flight-cards">';
+        groups.forEach(function (group, gi) {
+            var rows = (group.rows || []).map(normalizeFlightData);
+            if (!rows.length) {
+                return;
+            }
+            var startIdx = flatIndex;
+            flatIndex += rows.length;
+            var label = group.label || (groups.length === 1 ? 'Outbound' : ('Flight ' + (gi + 1)));
+            if (groups.length === 2 && !group.label) {
+                label = gi === 0 ? 'Outbound' : 'Return';
+            }
+            if (label === 'Flight') {
+                label = 'Outbound';
+            }
+
+            var cities = [];
+            rows.forEach(function (seg, si) {
+                var from = qpParseFlightPlace(seg.from);
+                var to = qpParseFlightPlace(seg.to);
+                if (si === 0) {
+                    cities.push(from.city);
+                }
+                cities.push(to.city);
+            });
+            var uniqueCities = [];
+            cities.forEach(function (c) {
+                if (!c) return;
+                if (!uniqueCities.length || uniqueCities[uniqueCities.length - 1].toLowerCase() !== c.toLowerCase()) {
+                    uniqueCities.push(c);
+                }
+            });
+
+            var segs = rows.length;
+            var stops = Math.max(0, segs - 1);
+            var metaLabel = segs + ' Flight' + (segs > 1 ? 's' : '') + ' • ' +
+                (stops === 0 ? 'Non-stop' : (stops + ' Stop' + (stops > 1 ? 's' : '')));
+            var travelTime = qpCalcJourneyTravelTime(rows);
+
+            html += '<div class="qp-flight-card">';
+            html += '<div class="qp-flight-card-hd">' +
+                '<div class="qp-flight-card-hd-main">' +
+                '<span class="qp-flight-dir">' + esc(label) + '</span>' +
+                '<div class="qp-flight-route">' + esc(uniqueCities.join(' → ')) + '</div>' +
+                '</div>' +
+                '<span class="qp-flight-meta">' + esc(metaLabel) + '</span>' +
+                '</div>';
+
+            html += '<div class="qp-flight-legs">';
+            rows.forEach(function (seg, si) {
+                if (si > 0) {
+                    html += qpFlightLayoverHtml(rows[si - 1], seg);
+                }
+                var fLabel = qpFlightLabel(seg);
+                html += '<div class="qp-flight-seg">' +
+                    '<span class="qp-flight-seg-num">' + (si + 1) + '</span>' +
+                    qpFlightEndpointHtml(seg.from, seg.dep_date, seg.dep_time, 'flight.' + (startIdx + si) + '.dep_datetime') +
+                    '<div class="qp-flight-mid" aria-hidden="true">' +
+                    '<span class="qp-flight-dot"></span>' +
+                    '<span class="qp-flight-dash"></span>' +
+                    '<i class="fas fa-plane qp-flight-mid-plane"></i>' +
+                    '<span class="qp-flight-dash"></span>' +
+                    '<span class="qp-flight-dot"></span>' +
+                    '</div>' +
+                    qpFlightEndpointHtml(
+                        seg.to,
+                        seg.arr_date || seg.dep_date,
+                        seg.arr_time,
+                        'flight.' + (startIdx + si) + '.arr_datetime'
+                    ) +
+                    '<div class="qp-flight-airline">' +
+                    '<i class="fas fa-plane qp-flight-airline-ico" aria-hidden="true"></i>' +
+                    '<span class="qp-flight-airline-label">' +
+                    previewEditable(fLabel, 'flight.' + (startIdx + si) + '.flight_label', {
+                        type: 'flight_label',
+                        cls: 'q-preview-cell-edit'
+                    }) +
+                    '</span>' +
+                    '<i class="fas fa-chevron-right qp-flight-airline-chev" aria-hidden="true"></i>' +
+                    '</div>' +
+                    '</div>';
+            });
+            html += '</div>';
+
+            html += '<div class="qp-flight-card-ft">' +
+                '<i class="far fa-clock" aria-hidden="true"></i>' +
+                '<span>Total travel time: <strong>' + esc(travelTime || '—') + '</strong></span>' +
+                '</div>';
+            html += '</div>';
+        });
+        html += '</div>';
+        return html;
+    }
+
     function formatPreviewFlightDateTime(dateStr, timeStr) {
         var datePart = formatPreviewFlightDate(dateStr);
         var timePart = (timeStr || '').trim();
@@ -6237,15 +6726,39 @@
                 city: '.h-city',
                 name: '.h-name',
                 nights: '.h-nights',
+                rooms: '.h-rooms',
                 room_type: '.h-room',
                 checkin: '.h-checkin',
                 checkout: '.h-checkout',
-                meal_plan: '.h-meal'
+                meal_plan: '.h-meal',
+                rate: '.h-rate',
+                supplier: '.h-supplier'
             };
             var hSel = hMap[hField];
             if (!hSel) return;
             if (hField === 'checkin' || hField === 'checkout') {
                 value = toIsoDateFromPreview(value) || value;
+            }
+            if (hField === 'rate') {
+                value = String(value || '').replace(/[₹,\s]/g, '');
+            }
+            if (hField === 'supplier') {
+                var $sup = $hRow.find('.h-supplier');
+                if ($sup.length) {
+                    var matchedSup = false;
+                    $sup.find('option').each(function () {
+                        var t = String($(this).attr('data-name') || $(this).text() || '').trim();
+                        if (t.toLowerCase() === String(value || '').trim().toLowerCase()) {
+                            $sup.val($(this).attr('value')).trigger('change');
+                            matchedSup = true;
+                            return false;
+                        }
+                    });
+                    if (!matchedSup) {
+                        // Keep display text editable without forcing unknown option.
+                    }
+                }
+                return;
             }
             setInput($hRow.find(hSel), value);
             return;
@@ -6426,6 +6939,16 @@
         }
     }
 
+    function qpFormatDestTitle(dest) {
+        dest = String(dest || '').trim();
+        if (!dest) {
+            return 'Destination';
+        }
+        return dest.replace(/\w\S*/g, function (word) {
+            return word.charAt(0).toUpperCase() + word.slice(1);
+        });
+    }
+
     function qpMountainSvg() {
         return '<svg class="qp-mtn-svg" viewBox="0 0 80 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
             '<circle cx="62" cy="10" r="7" fill="#f5a623"/>' +
@@ -6502,6 +7025,7 @@
         var children = parseInt(p.no_of_children, 10);
         if (isNaN(children) || children < 0) children = 0;
         var destination = previewVal(p.destination, 'Destination');
+        var destTitle = qpFormatDestTitle(destination);
         var logoUrl = absUrl(Q_PREVIEW_META.logo || 'img/web-logo.png');
         var todayLong = formatPreviewLongDate(new Date().toISOString().slice(0, 10));
         var paxChildren = children > 0 ? String(children) : '0';
@@ -6513,9 +7037,8 @@
         html += '<div class="qp-doc-head q-preview-head">';
         html += '<div class="qp-logo q-preview-logo"><img src="' + esc(logoUrl) + '" alt="Multi Zone Travels"></div>';
         html += '<div class="qp-title-block q-preview-title-block">';
-        html += qpMountainSvg();
         html += '<h1>Tour Quotation – ' +
-            previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-dest-title qp-dest-red' }) +
+            previewEditable(destTitle, 'destination', { cls: 'q-preview-dest-title qp-dest-red' }) +
             '</h1>';
         html += '<div class="qp-duration-wrap">' +
             '<span class="qp-duration-line"></span>' +
@@ -6526,8 +7049,18 @@
             '</div>';
         html += '</div>';
         html += '<div class="qp-ref-card q-preview-ref-block">';
-        html += '<div class="qp-ref-row"><i class="fas fa-hashtag qp-ref-ico"></i><div class="ref">REF: ' + esc(previewRefNo(p)) + '</div></div>';
-        html += '<div class="qp-ref-row"><i class="far fa-calendar-alt qp-ref-ico"></i><div>Quotation Date: ' + esc(todayLong) + '</div></div>';
+        html += '<div class="qp-ref-row">' +
+            '<i class="fas fa-file-alt qp-ref-ico" aria-hidden="true"></i>' +
+            '<div class="qp-ref-text">' +
+            '<div class="qp-ref-label">Reference No.</div>' +
+            '<div class="qp-ref-value ref">REF: ' + esc(previewRefNo(p)) + '</div>' +
+            '</div></div>';
+        html += '<div class="qp-ref-row">' +
+            '<i class="far fa-calendar-alt qp-ref-ico" aria-hidden="true"></i>' +
+            '<div class="qp-ref-text">' +
+            '<div class="qp-ref-label">Quotation Date</div>' +
+            '<div class="qp-ref-value">' + esc(todayLong) + '</div>' +
+            '</div></div>';
         html += '</div></div>';
 
         /* —— 2. Guest Information —— */
@@ -6535,8 +7068,8 @@
         html += qpSectionHead('fas fa-user', 'Guest Information', 'TRAVEL MORE • EXPLORE BEYOND');
         html += '<div class="qp-info-card qp-cols-3">';
         html += qpInfoCell('Guest Name', previewEditable(previewVal(p.guest_name), 'guest_name', { cls: 'q-preview-cell-edit' }));
-        html += qpInfoCell('Mobile', previewEditable(previewVal(p.mobile_no), 'mobile_no', { cls: 'q-preview-cell-edit' }));
-        html += qpInfoCell('Email', previewEditable(previewVal(p.email), 'email', { cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('Mobile Number', previewEditable(previewVal(p.mobile_no), 'mobile_no', { cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('Email Address', previewEditable(previewVal(p.email), 'email', { cls: 'q-preview-cell-edit' }));
         html += '</div></div>';
 
         /* —— 3. Travel Details —— */
@@ -6546,45 +7079,16 @@
         html += qpInfoCell('Destination', previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-cell-edit' }));
         html += qpInfoCell('No Of Nights', previewEditable(nightsLabel, 'no_of_nights', { type: 'nights_label', cls: 'q-preview-cell-edit' }));
         html += qpInfoCell('Tentative Date', previewEditable(formatPreviewSlashDate(p.tentative_date), 'tentative_date', { type: 'date', cls: 'q-preview-cell-edit' }));
-        html += qpInfoCell('Adults', previewEditable(String(adults), 'no_of_adults', { type: 'int', cls: 'q-preview-cell-edit' }));
-        html += qpInfoCell('Children', previewEditable(paxChildren, 'no_of_children', { type: 'int', cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('No Of Adults', previewEditable(String(adults), 'no_of_adults', { type: 'int', cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('No Of Children', previewEditable(paxChildren, 'no_of_children', { type: 'int', cls: 'q-preview-cell-edit' }));
         html += '</div></div>';
 
         /* —— 4. Flight Details —— */
         if (flights.length) {
-            html += '<div class="qp-sec">';
-            html += qpSectionHead('fas fa-plane-departure', 'Flight Details', 'FLY HIGHER • EXPLORE FURTHER');
-            html += '<table class="q-preview-table qp-table"><thead><tr>' +
-                '<th>#</th><th>Departure</th><th>From</th><th>To</th><th>Arrival</th><th>Airline &amp; Flight</th>' +
-                '</tr></thead><tbody>';
-            flights.forEach(function (f, fi) {
-                var d = normalizeFlightData(f);
-                var layoverText = '';
-                if (d.layover_time || d.layover_at) {
-                    layoverText = 'Layover at ' + (d.layover_at || '—') + ': ' + (d.layover_time || '—');
-                    html += '<tr class="q-preview-layover qp-layover"><td colspan="6">' +
-                        previewEditable(layoverText, 'flight.' + fi + '.layover', {
-                            type: 'layover',
-                            cls: 'q-preview-cell-edit'
-                        }) +
-                        '</td></tr>';
-                }
-                var flightLabel = '';
-                if (d.name && d.fl_tr_no) {
-                    flightLabel = d.name + ' - ' + d.fl_tr_no;
-                } else {
-                    flightLabel = d.name || d.fl_tr_no || '';
-                }
-                html += '<tr>' +
-                    '<td>' + (fi + 1) + '</td>' +
-                    previewTd(formatPreviewFlightDateTime(d.dep_date, d.dep_time), 'flight.' + fi + '.dep_datetime', { type: 'datetime' }) +
-                    previewTd(previewVal(d.from), 'flight.' + fi + '.from', { tdCls: 'text-left' }) +
-                    previewTd(previewVal(d.to), 'flight.' + fi + '.to', { tdCls: 'text-left' }) +
-                    previewTd(formatPreviewFlightDateTime(d.arr_date || d.dep_date, d.arr_time), 'flight.' + fi + '.arr_datetime', { type: 'datetime' }) +
-                    previewTd(previewVal(flightLabel), 'flight.' + fi + '.flight_label', { type: 'flight_label', tdCls: 'text-left' }) +
-                    '</tr>';
-            });
-            html += '</tbody></table></div>';
+            html += '<div class="qp-sec qp-sec-flights">';
+            html += qpFlightSectionHead();
+            html += buildPreviewFlightCardsHtml(flights);
+            html += '</div>';
         }
 
         var pricingOptions = Array.isArray(p.pricing_options) ? p.pricing_options : [];
@@ -6696,43 +7200,23 @@
         }
 
         /* —— 5. Hotel Details —— */
-        var hasHotels = hotelsData.categories.some(function (cat) {
-            return (cat.hotels || []).length > 0;
+        var hotelCatsWithRows = [];
+        hotelsData.categories.forEach(function (cat, idx) {
+            if ((cat.hotels || []).length) {
+                hotelCatsWithRows.push({ cat: cat, idx: idx });
+            }
         });
-        if (hasHotels) {
-            hotelsData.categories.forEach(function (cat, idx) {
-                if (!(cat.hotels || []).length) {
-                    return;
-                }
-                var title = 'Hotel Details';
+        if (hotelCatsWithRows.length) {
+            html += '<div class="qp-sec qp-sec-hotels">';
+            html += qpHotelSectionHead();
+            hotelCatsWithRows.forEach(function (item, viewIdx) {
+                var cat = item.cat;
+                var idx = item.idx;
                 if (multiHotelOptions) {
-                    title += ' — ' + (cat.label || defaultHotelCategoryLabel(idx));
-                    if (String(cat.id) === activeOptionId || cat.id === hotelsData.active_category_id) {
-                        title += ' (Recommended)';
-                    }
+                    html += qpHotelOptionsTabsHtml(hotelCatsWithRows.map(function (x) { return x.cat; }), viewIdx);
                 }
-                html += '<div class="qp-sec">';
-                html += qpSectionHead('fas fa-bed', title, 'STAY COMFORTABLE • STAY INSPIRED');
-                html += '<table class="q-preview-table qp-table"><thead><tr>' +
-                    '<th>#</th><th>City</th><th>Hotel</th><th>Nights</th><th>Room Type</th><th>Check-In</th><th>Check-Out</th><th>Meals</th>' +
-                    '</tr></thead><tbody>';
-                (cat.hotels || []).forEach(function (h, hi) {
-                    var d = normalizeHotelData(h);
-                    var base = 'hotel.' + idx + '.' + hi + '.';
-                    html += '<tr>' +
-                        '<td>' + (hi + 1) + '</td>' +
-                        previewTd(previewVal(d.city), base + 'city', { tdCls: 'text-left' }) +
-                        previewTd(previewVal(d.name), base + 'name', { tdCls: 'text-left' }) +
-                        previewTd(previewVal(d.nights), base + 'nights', { type: 'int' }) +
-                        previewTd(previewVal(d.room_type), base + 'room_type', { tdCls: 'text-left' }) +
-                        previewTd(formatPreviewSlashDate(d.checkin), base + 'checkin', { type: 'date' }) +
-                        previewTd(formatPreviewSlashDate(d.checkout), base + 'checkout', { type: 'date' }) +
-                        previewTd(previewVal(d.meal_plan, 'CP'), base + 'meal_plan') +
-                        '</tr>';
-                });
-                html += '</tbody></table></div>';
+                html += buildPreviewHotelCardsHtml(cat.hotels || [], idx);
 
-                // Multiple hotel options: show that option's Tour Cost right under its hotels.
                 if (multiHotelOptions) {
                     var optForCat = findPricingOptionForCategory(cat, idx);
                     if (optionHasTourCost(optForCat)) {
@@ -6746,6 +7230,7 @@
                     }
                 }
             });
+            html += '</div>';
         }
 
         /* —— 6. Day Wise Itinerary —— */
@@ -8545,6 +9030,7 @@
             var $row = $input.closest('.q-hotel-row');
             $row.find('.h-city-id').val('');
             $row.find('.h-hotel-id').val('');
+            $row.find('.h-star-category').val('');
             clearTimeout(qHotelCityTimer);
             qHotelCityTimer = setTimeout(function () {
                 showHotelCitySuggestions($row);
@@ -8555,8 +9041,12 @@
             var $row = $(this).closest('.q-hotel-row');
             var cityId = $(this).data('id');
             var cityName = $(this).attr('data-name') || $(this).text();
+            var countryName = $(this).attr('data-country') || '';
             $row.find('.h-city-id').val(cityId);
             $row.find('.h-city').val(cityName);
+            if (countryName) {
+                $row.find('.h-country').val(countryName);
+            }
             hideHotelMenus($row);
             if ($.trim($row.find('.h-name').val())) {
                 showHotelNameSuggestions($row);
