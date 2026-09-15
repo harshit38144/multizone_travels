@@ -7288,22 +7288,22 @@
     function buildPreviewAccreditationsHtml() {
         var items = [
             {
-                img: 'uploads/acchivments/BNI_Logo.jpg',
+                img: 'crm/assets/accreditations/BNI_Logo.jpg',
                 title: 'BNI (Business Network International)',
                 desc: 'A global network of business professionals dedicated to mutual growth and referrals.'
             },
             {
-                img: 'uploads/acchivments/FJCCI-Logo.webp',
+                img: 'crm/assets/accreditations/FJCCI-Logo.webp',
                 title: 'FJCCI (Federation of Jharkhand Chamber of Commerce & Industries)',
                 desc: 'A leading chamber fostering trade, industry and economic growth in Jharkhand.'
             },
             {
-                img: 'uploads/acchivments/YI.png',
+                img: 'crm/assets/accreditations/YI.png',
                 title: 'Young Indians (Yi)',
                 desc: 'Proudly associated with the inspiring young leaders driving positive change for a better tomorrow.'
             },
             {
-                img: 'uploads/acchivments/Tia.png',
+                img: 'crm/assets/accreditations/Tia.png',
                 title: 'Tourism India Alliance (TIA)',
                 desc: 'Associated with the travel and tourism fraternity, committed to promoting responsible and sustainable travel in India.'
             }
