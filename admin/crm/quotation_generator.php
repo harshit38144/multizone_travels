@@ -224,11 +224,11 @@ $qPreviewMeta = [
     'expert_name' => 'Raju Gupta',
     'expert_title' => 'Holiday Expert',
     'expert_photo' => 'img/holiday-expert.png',
-    'phone' => '+91 7781000140',
-    'phone_alt' => '+91 651 2243140 | +91 651 2244140',
-    'email' => 'holidays@multizonetravels.com',
+    'phone' => '+91 9709400140',
+    'phone_alt' => '+91 9709100140',
+    'email' => 'info@multizonetravels.com',
     'website' => 'www.multizonetravels.com',
-    'address' => 'Bye Pass Road, Dibadih, Doranda, Ranchi - 834002, Jharkhand, India',
+    'address' => 'Bye Pass Road, Dibdih, Doranda, Ranchi - 834002, Jharkhand, India',
     'services' => 'FLIGHTS • HOTELS • HOLIDAYS • VISA • FOREX',
     'social' => [
         ['type' => 'facebook', 'url' => 'https://www.facebook.com/', 'icon' => 'fab fa-facebook-f'],
@@ -8058,7 +8058,8 @@ $qWizardSteps = [
 
         /* Quotation preview modal — branded */
         #qPreviewModal .modal-dialog {
-            max-width: 960px;
+            max-width: 1120px;
+            width: calc(100% - 24px);
         }
 
         #qPreviewModal .modal-body {
@@ -8179,9 +8180,9 @@ $qWizardSteps = [
             --qp-ink: #1a2332;
             --qp-muted: #7a8494;
             --qp-line: #e4e4e8;
-            --qp-soft: #f3f7fb;
-            --qp-card: #eef4fa;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            --qp-soft: #f8fafc;
+            --qp-card: #f7fafc;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
             color: var(--qp-ink);
             font-size: 13px;
             line-height: 1.5;
@@ -8274,8 +8275,9 @@ $qWizardSteps = [
             flex-wrap: wrap;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            margin-top: 12px;
+            gap: 8px;
+            margin-top: 10px;
+            max-width: 100%;
         }
 
         .qp-route-pill {
@@ -8285,11 +8287,11 @@ $qWizardSteps = [
             color: var(--qp-ink);
             background: #fff;
             border-radius: 999px;
-            padding: 0.28rem 0.7rem;
-            font-size: 0.72rem;
-            font-weight: 700;
+            padding: 0.32rem 0.85rem;
+            font-size: 0.78rem;
+            font-weight: 600;
             line-height: 1.2;
-            max-width: 220px;
+            max-width: 240px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -8299,8 +8301,10 @@ $qWizardSteps = [
 
         .qp-route-arrow {
             color: var(--qp-red);
-            font-size: 0.65rem;
+            font-size: 0.9rem;
+            font-weight: 700;
             line-height: 1;
+            flex-shrink: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -8423,77 +8427,114 @@ $qWizardSteps = [
 
         /* —— Flight Details (preview cards) —— */
         .qp-sec-flights {
-            margin-bottom: 22px;
+            --qp-flight-red: #d92027;
+            --qp-flight-ink: #1a1d23;
+            --qp-flight-muted: #8b93a0;
+            --qp-flight-line: #d7dbe3;
+            margin-bottom: 16px;
+            font-family: inherit;
         }
 
         .qp-flight-sec-head {
-            margin-bottom: 14px;
+            margin-bottom: 10px;
         }
 
         .qp-flight-sec-top {
             display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 8px;
+            align-items: center;
+            gap: 10px;
         }
 
         .qp-flight-sec-left {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             min-width: 0;
             flex-shrink: 0;
+        }
+
+        .qp-flight-sec-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--qp-flight-red);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-sec-icon svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .qp-flight-sec-icon-svg {
+            display: block;
+        }
+
+        .qp-flight-sec-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--qp-flight-ink);
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .qp-flight-sec-rule {
+            flex: 1 1 auto;
+            height: 1px;
+            min-width: 20px;
+            background: var(--qp-flight-line);
+            align-self: center;
         }
 
         .qp-flight-sec-slogan-wrap {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 4px;
+            gap: 3px;
             flex-shrink: 0;
+            padding-bottom: 0;
         }
 
-        .qp-flight-sec-slogan-wrap .qp-sec-slogan {
-            font-size: 9px;
+        .qp-flight-sec-slogan {
+            font-size: 8px;
             font-weight: 600;
-            letter-spacing: 0.14em;
-            color: #9aa3af;
+            letter-spacing: 0.12em;
+            color: #a0a8b4;
             line-height: 1;
             text-align: right;
+            text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .qp-flight-sec-accent {
             display: block;
-            width: 72px;
-            height: 3px;
-            background: var(--qp-red);
+            width: 56px;
+            height: 2px;
+            background: var(--qp-flight-red);
             border-radius: 1px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-flight-sec-underline {
-            height: 1px;
-            background: #d8dde5;
-        }
-
-        .qp-flight-sec-line {
-            display: none;
-        }
-
         .qp-flight-cards {
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 10px;
         }
 
         .qp-flight-card {
             background: #fff;
-            border: 1px solid #e8ecf1;
-            border-radius: 14px;
+            border: 1px solid #e9edf2;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 6px 20px rgba(17, 24, 39, 0.06);
+            box-shadow: 0 4px 14px rgba(17, 24, 39, 0.05);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -8502,27 +8543,27 @@ $qWizardSteps = [
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 12px;
-            padding: 14px 16px 10px;
+            gap: 10px;
+            padding: 10px 12px 6px;
         }
 
         .qp-flight-card-hd-main {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            gap: 8px;
+            gap: 5px;
             min-width: 0;
         }
 
         .qp-flight-dir {
             display: inline-flex;
             align-items: center;
-            background: var(--qp-red);
+            background: var(--qp-flight-red);
             color: #fff;
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 10px;
+            font-weight: 600;
             line-height: 1;
-            padding: 6px 12px;
+            padding: 4px 10px;
             border-radius: 999px;
             white-space: nowrap;
             -webkit-print-color-adjust: exact;
@@ -8530,19 +8571,19 @@ $qWizardSteps = [
         }
 
         .qp-flight-route {
-            font-size: 15px;
-            font-weight: 800;
-            color: #1a1d21;
-            letter-spacing: 0.01em;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--qp-flight-ink);
+            letter-spacing: -0.01em;
             line-height: 1.25;
         }
 
         .qp-flight-meta {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--qp-red);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--qp-flight-red);
             white-space: nowrap;
-            padding-top: 4px;
+            padding-top: 2px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -8550,29 +8591,30 @@ $qWizardSteps = [
         .qp-flight-legs {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            padding: 4px 14px 12px;
+            gap: 0;
+            padding: 2px 10px 4px;
         }
 
         .qp-flight-seg {
             display: grid;
-            grid-template-columns: 28px minmax(88px, 1fr) minmax(90px, 1.2fr) minmax(88px, 1fr) minmax(140px, 1.15fr);
-            gap: 10px;
+            grid-template-columns: 22px minmax(72px, 1fr) minmax(80px, 1.2fr) minmax(72px, 1fr) minmax(130px, 1.15fr);
+            gap: 8px;
             align-items: center;
             background: #fff;
-            border: 1px solid #e6eaef;
-            border-radius: 12px;
-            padding: 12px 12px;
+            border: 1px solid #e8ecf1;
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
         }
 
         .qp-flight-seg-num {
-            width: 26px;
-            height: 26px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
-            background: #fde8ea;
-            color: var(--qp-red);
-            font-size: 12px;
-            font-weight: 800;
+            background: #fde9eb;
+            color: var(--qp-flight-red);
+            font-size: 11px;
+            font-weight: 700;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -8586,42 +8628,43 @@ $qWizardSteps = [
         }
 
         .qp-flight-code {
-            font-size: 18px;
-            font-weight: 800;
-            color: #111827;
-            line-height: 1.15;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--qp-flight-ink);
+            line-height: 1.1;
             letter-spacing: 0.02em;
         }
 
         .qp-flight-city {
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 500;
-            color: #8b93a0;
+            color: var(--qp-flight-muted);
             margin-top: 1px;
             line-height: 1.2;
         }
 
         .qp-flight-time {
-            margin-top: 8px;
-            font-size: 13px;
-            font-weight: 800;
-            color: #111827;
-            line-height: 1.2;
+            margin-top: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--qp-flight-ink);
+            line-height: 1.15;
         }
 
         .qp-flight-time .q-preview-cell-edit,
         .qp-flight-time .qp-flight-time-edit {
-            font-size: 13px;
-            font-weight: 800;
-            color: #111827;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--qp-flight-ink);
             border-bottom: none !important;
         }
 
         .qp-flight-date {
-            margin-top: 2px;
-            font-size: 11px;
+            margin-top: 1px;
+            font-size: 10px;
             font-weight: 500;
-            color: #9aa3af;
+            color: var(--qp-flight-muted);
             line-height: 1.2;
         }
 
@@ -8631,14 +8674,14 @@ $qWizardSteps = [
             justify-content: center;
             gap: 0;
             min-width: 0;
-            padding: 0 4px;
+            padding: 0 2px;
         }
 
         .qp-flight-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            border: 2px solid var(--qp-red);
+            border: 1.5px solid var(--qp-flight-red);
             background: #fff;
             box-sizing: border-box;
             flex-shrink: 0;
@@ -8649,74 +8692,108 @@ $qWizardSteps = [
         .qp-flight-dash {
             flex: 1 1 auto;
             height: 0;
-            border-top: 1.5px dashed #c5ccd6;
-            min-width: 12px;
+            border-top: 1.5px dashed #c4cad4;
+            min-width: 8px;
         }
 
         .qp-flight-mid-plane {
             color: #1f2937;
-            font-size: 12px;
-            margin: 0 6px;
+            margin: 0 4px;
             flex-shrink: 0;
+            display: block;
+            width: 12px;
+            height: 12px;
+        }
+
+        .qp-flight-airline-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            justify-self: end;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .qp-flight-airline {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background: #eef4fb;
-            color: #1e3a5f;
-            border-radius: 10px;
-            padding: 8px 10px;
+            gap: 5px;
+            background: #eef3fa;
+            color: #2f3f6b;
+            border-radius: 999px;
+            padding: 5px 9px;
             min-width: 0;
             max-width: 100%;
-            justify-self: end;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-flight-airline-ico {
-            color: #3b82f6;
-            font-size: 12px;
+            color: #4c6fff;
             flex-shrink: 0;
+            display: block;
+            width: 10px;
+            height: 10px;
         }
 
         .qp-flight-airline-label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.02em;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             min-width: 0;
+            color: #2f3f6b;
         }
 
         .qp-flight-airline-label .q-preview-cell-edit {
-            font-size: 11px;
+            font-family: inherit;
+            font-size: 10px;
             font-weight: 700;
-            color: #1e3a5f;
+            color: #2f3f6b;
             border-bottom: none !important;
             text-transform: uppercase;
+            letter-spacing: 0.02em;
         }
 
         .qp-flight-airline-chev {
-            color: #94a3b8;
-            font-size: 10px;
+            color: #b0b7c3;
+            font-size: 9px;
             flex-shrink: 0;
         }
 
+        .qp-flight-layover-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 4px 6px;
+            min-height: 24px;
+        }
+
+        .qp-flight-layover-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 1px;
+            background: #f0d0d3;
+            z-index: 0;
+        }
+
         .qp-flight-layover {
+            position: relative;
+            z-index: 1;
             display: inline-flex;
             align-items: center;
-            align-self: center;
-            gap: 8px;
-            margin: 0 auto;
-            background: #fff5f5;
-            border: 1px solid #f5c2c7;
-            color: #6b7280;
-            font-size: 12px;
+            gap: 6px;
+            background: #fff5f6;
+            border: 1px solid #f3c4c8;
+            color: var(--qp-flight-red);
+            font-size: 10px;
             font-weight: 600;
-            padding: 7px 14px;
+            padding: 4px 10px;
             border-radius: 999px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -8724,30 +8801,25 @@ $qWizardSteps = [
 
         .qp-flight-layover .fa-clock,
         .qp-flight-layover .far.fa-clock {
-            color: var(--qp-red);
-            font-size: 12px;
+            color: var(--qp-flight-red);
+            font-size: 10px;
         }
 
         .qp-flight-layover-text {
-            color: #4b5563;
-        }
-
-        .qp-flight-layover-text .q-preview-cell-edit {
-            color: #4b5563;
+            color: var(--qp-flight-red);
             font-weight: 600;
-            border-bottom: none !important;
         }
 
         .qp-flight-layover-sep {
             width: 1px;
-            height: 12px;
-            background: #e5a4aa;
+            height: 10px;
+            background: #e8a8ae;
             flex-shrink: 0;
         }
 
         .qp-flight-layover-dur {
-            color: var(--qp-red);
-            font-weight: 800;
+            color: var(--qp-flight-red);
+            font-weight: 700;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -8755,22 +8827,22 @@ $qWizardSteps = [
         .qp-flight-card-ft {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 12px 16px 14px;
+            gap: 6px;
+            padding: 8px 12px 10px;
             border-top: 1px solid #eef1f5;
-            color: #1a1d21;
-            font-size: 13px;
-            font-weight: 600;
+            color: var(--qp-flight-ink);
+            font-size: 11px;
+            font-weight: 500;
         }
 
         .qp-flight-card-ft .fa-clock,
         .qp-flight-card-ft .far.fa-clock {
-            color: var(--qp-red);
-            font-size: 13px;
+            color: var(--qp-flight-red);
+            font-size: 11px;
         }
 
         .qp-flight-card-ft strong {
-            font-weight: 800;
+            font-weight: 700;
         }
 
         @media (max-width: 900px) {
@@ -8780,11 +8852,15 @@ $qWizardSteps = [
             }
 
             .qp-flight-seg {
-                min-width: 640px;
+                min-width: 560px;
             }
 
             .qp-flight-sec-top {
                 flex-wrap: wrap;
+            }
+
+            .qp-flight-sec-rule {
+                display: none;
             }
 
             .qp-flight-sec-slogan-wrap {
@@ -8793,327 +8869,389 @@ $qWizardSteps = [
             }
         }
 
-        /* —— Hotel Details (preview sheet) —— */
+        /* —— Hotel Details (preview cards) —— */
         .qp-sec-hotels {
-            margin-bottom: 22px;
+            --qp-hotel-red: #d92027;
+            --qp-hotel-ink: #1a1d23;
+            --qp-hotel-muted: #8b93a0;
+            margin-bottom: 16px;
+            font-family: inherit;
         }
 
-        .qp-hotel-editor-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 14px;
+        .qp-hotel-sec-head {
+            margin-bottom: 10px;
         }
 
-        .qp-hotel-editor-title {
+        .qp-hotel-sec-top {
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 20px;
-            font-weight: 800;
-            color: #111827;
-            line-height: 1.2;
         }
 
-        .qp-hotel-editor-bar {
-            width: 4px;
-            height: 22px;
-            border-radius: 2px;
-            background: var(--qp-red);
+        .qp-hotel-sec-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            flex-shrink: 0;
+        }
+
+        .qp-hotel-sec-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--qp-hotel-red);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
             flex-shrink: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-hotel-editor-sub {
-            margin-top: 4px;
-            margin-left: 14px;
-            font-size: 12px;
-            color: #9aa3af;
-            font-weight: 500;
+        .qp-hotel-sec-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--qp-hotel-ink);
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .qp-hotel-sec-rule {
+            flex: 1 1 auto;
+            height: 2px;
+            min-width: 20px;
+            background: var(--qp-hotel-red);
+            align-self: center;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-sec-slogan {
+            font-size: 8px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            color: #a0a8b4;
+            line-height: 1;
+            text-align: right;
+            text-transform: uppercase;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .qp-hotel-slogan-dot {
+            color: var(--qp-hotel-red);
+            padding: 0 1px;
         }
 
         .qp-hotel-option-tabs {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 6px;
+            margin-bottom: 8px;
         }
 
         .qp-hotel-option-tab {
             display: inline-flex;
             align-items: center;
-            padding: 7px 14px;
+            padding: 5px 11px;
             border-radius: 999px;
             border: 1px solid #d1d5db;
             background: #fff;
             color: #111827;
-            font-size: 12px;
-            font-weight: 700;
+            font-size: 11px;
+            font-weight: 600;
             line-height: 1;
         }
 
         .qp-hotel-option-tab.is-active {
-            background: var(--qp-red);
-            border-color: var(--qp-red);
+            background: var(--qp-hotel-red);
+            border-color: var(--qp-hotel-red);
             color: #fff;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-hotel-sheet {
-            background: #fff;
-            border: 1px solid #e8ecf1;
+        .qp-hotel-panel {
+            background: #f3f5f8;
+            border: 1px solid #e4e8ef;
             border-radius: 14px;
             overflow: hidden;
-            box-shadow: 0 6px 18px rgba(17, 24, 39, 0.05);
-            margin-bottom: 14px;
+            box-shadow: 0 2px 10px rgba(17, 24, 39, 0.04);
+            margin-bottom: 10px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-hotel-sheet-groups,
-        .qp-hotel-sheet-cols,
-        .qp-hotel-sheet-row {
+        .qp-hotel-colhead {
             display: grid;
             grid-template-columns:
-                minmax(70px, 1fr)
-                minmax(90px, 1.15fr)
-                minmax(80px, 1.05fr)
-                minmax(52px, 0.65fr)
-                minmax(52px, 0.65fr)
-                minmax(52px, 0.65fr)
-                minmax(78px, 0.95fr)
-                minmax(78px, 0.95fr)
-                minmax(78px, 0.9fr)
-                minmax(100px, 1.1fr)
-                minmax(72px, 0.75fr);
+                minmax(90px, 1.1fr)
+                minmax(120px, 1.4fr)
+                minmax(70px, 0.7fr)
+                minmax(110px, 1.2fr)
+                minmax(100px, 1.05fr)
+                minmax(100px, 1.05fr)
+                minmax(80px, 0.85fr);
             gap: 0;
             align-items: center;
+            background: #eef1f5;
+            padding: 10px 14px;
+            border-bottom: 1px solid #e4e8ef;
         }
 
-        .qp-hotel-group {
+        .qp-hotel-colhead .qp-hotel-col {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #8b93a0;
+            text-transform: uppercase;
+            padding: 0 8px;
+            line-height: 1.2;
+        }
+
+        .qp-hotel-colhead .qp-hotel-col:first-child {
+            padding-left: 2px;
+        }
+
+        .qp-hotel-colhead .qp-hotel-col:last-child {
+            padding-right: 2px;
+        }
+
+        .qp-hotel-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px 12px 12px;
+        }
+
+        .qp-hotel-row-card {
+            display: grid;
+            grid-template-columns:
+                minmax(90px, 1.1fr)
+                minmax(120px, 1.4fr)
+                minmax(70px, 0.7fr)
+                minmax(110px, 1.2fr)
+                minmax(100px, 1.05fr)
+                minmax(100px, 1.05fr)
+                minmax(80px, 0.85fr);
+            gap: 0;
+            align-items: center;
+            background: #fff;
+            border: 1px solid #e6eaef;
+            border-radius: 10px;
+            padding: 12px 10px;
+            box-shadow: 0 1px 2px rgba(17, 24, 39, 0.03);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-row-card > .qp-hotel-col {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 12px 14px;
-            font-size: 13px;
-            font-weight: 800;
-            color: #111827;
-        }
-
-        .qp-hotel-group i {
-            color: var(--qp-red);
-            font-size: 13px;
-        }
-
-        .qp-hotel-group-acc {
-            grid-column: 1 / span 8;
-            background: #f3f4f6;
-        }
-
-        .qp-hotel-group-com {
-            grid-column: 9 / span 3;
-            background: #fde8ea;
-        }
-
-        .qp-hotel-sheet-cols {
-            background: #fafbfc;
-            border-top: 1px solid #edf0f4;
-            border-bottom: 1px solid #edf0f4;
-            padding: 8px 8px;
-        }
-
-        .qp-hotel-hcell {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            padding: 4px 6px;
-            font-size: 11px;
-            font-weight: 700;
-            color: #6b7280;
-            text-align: center;
-            white-space: nowrap;
-        }
-
-        .qp-hotel-hcell i {
-            color: #9aa3af;
-            font-size: 11px;
-        }
-
-        .qp-hotel-hcell.qp-h-city i,
-        .qp-hotel-hcell.qp-h-rate i {
-            color: var(--qp-red);
-        }
-
-        .qp-hotel-sheet-body {
-            background: #fff;
-        }
-
-        .qp-hotel-sheet-row {
-            padding: 12px 8px;
-            border-bottom: 1px solid #eef2f7;
-            background: #fff;
-        }
-
-        .qp-hotel-sheet-row:nth-child(even) {
-            background: #fafbfc;
-        }
-
-        .qp-hotel-sheet-row:last-child {
-            border-bottom: 0;
-        }
-
-        .qp-hotel-cell {
+            gap: 7px;
             min-width: 0;
-            padding: 2px 6px;
+            padding: 2px 8px;
+            border-right: 1px solid #edf0f4;
+            align-self: stretch;
+        }
+
+        .qp-hotel-row-card > .qp-hotel-col:first-child {
+            padding-left: 2px;
+        }
+
+        .qp-hotel-row-card > .qp-hotel-col:last-child {
+            border-right: 0;
+            padding-right: 2px;
+        }
+
+        .qp-hotel-ico {
+            color: var(--qp-hotel-red);
             font-size: 12px;
-            font-weight: 700;
-            color: #111827;
+            width: 14px;
             text-align: center;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .qp-hotel-primary {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--qp-hotel-ink);
+            line-height: 1.25;
             word-break: break-word;
         }
 
-        .qp-hotel-cell .q-preview-cell-edit {
+        .qp-hotel-primary .q-preview-cell-edit {
             font-size: 12px;
-            font-weight: 700;
-            color: #111827;
+            font-weight: 600;
+            color: var(--qp-hotel-ink);
             border-bottom: none !important;
         }
 
-        .qp-hotel-cell.qp-h-city {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 6px;
-            text-align: left;
-        }
-
-        .qp-hotel-pin {
-            color: var(--qp-red);
-            font-size: 12px;
-            flex-shrink: 0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .qp-hotel-rate-pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #fde8ea;
-            color: #111827;
-            border-radius: 999px;
-            padding: 6px 12px;
-            font-weight: 800;
-            white-space: nowrap;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .qp-hotel-rate-pill .q-preview-cell-edit {
-            font-weight: 800;
-        }
-
-        .qp-hotel-supplier-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            max-width: 100%;
-            background: #eef2f7;
-            border-radius: 999px;
-            padding: 6px 10px;
-            color: #334155;
-            font-weight: 700;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .qp-hotel-supplier-pill > span {
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .qp-hotel-supplier-pill > .fa-building {
-            color: #64748b;
-            font-size: 11px;
-            flex-shrink: 0;
-        }
-
-        .qp-hotel-supplier-caret {
-            color: #94a3b8;
+        .qp-hotel-secondary {
             font-size: 10px;
-            flex-shrink: 0;
-            margin-left: auto;
+            font-weight: 500;
+            color: var(--qp-hotel-muted);
+            line-height: 1.2;
+            word-break: break-word;
         }
 
-        .qp-hotel-cell.qp-h-actions {
+        .qp-hotel-secondary .q-preview-cell-edit {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--qp-hotel-muted);
+            border-bottom: none !important;
+        }
+
+        .qp-hotel-stars {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
+            gap: 2px;
+            margin-top: 2px;
+            line-height: 1;
         }
 
-        .qp-hotel-act {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-            background: #fff;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: #6b7280;
-            font-size: 12px;
+        .qp-hotel-stars .fa-star {
+            color: var(--qp-hotel-red);
+            font-size: 9px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .qp-hotel-act-del {
-            color: var(--qp-red);
-            border-color: #fecaca;
+        .qp-hotel-col-hotel {
+            gap: 0;
         }
 
-        @media (max-width: 1100px) {
-            .qp-hotel-sheet {
+        @media (max-width: 900px) {
+            .qp-hotel-panel {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
             }
 
-            .qp-hotel-sheet-groups,
-            .qp-hotel-sheet-cols,
-            .qp-hotel-sheet-body {
-                min-width: 980px;
+            .qp-hotel-colhead,
+            .qp-hotel-body {
+                min-width: 720px;
             }
+
+            .qp-hotel-sec-top {
+                flex-wrap: wrap;
+            }
+
+            .qp-hotel-sec-rule {
+                display: none;
+            }
+
+            .qp-hotel-sec-slogan {
+                width: 100%;
+                text-align: left;
+                white-space: normal;
+            }
+        }
+
+        .qp-itin-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 2px 0 16px;
+        }
+
+        .qp-itin-head-left {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .qp-itin-vbar {
+            width: 4px;
+            border-radius: 999px;
+            background: #d92027;
+            flex-shrink: 0;
+            align-self: stretch;
+            min-height: 28px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-itin-head-copy {
+            min-width: 0;
+            flex: 1 1 auto;
+            padding-top: 1px;
         }
 
         .qp-itin-title {
             display: flex;
             align-items: baseline;
-            gap: 8px;
-            margin: 4px 0 14px;
+            gap: 7px;
             flex-wrap: wrap;
+            margin: 0;
+            line-height: 1.15;
         }
 
-        .qp-itin-title .qp-bar {
-            display: inline-block;
-            background: var(--qp-red);
-            color: #fff;
+        .qp-itin-title .qp-itin-black,
+        .qp-itin-black {
+            color: #1a1d23;
             font-weight: 800;
-            font-size: 12px;
-            letter-spacing: 0.06em;
-            padding: 5px 10px;
+            font-size: 15px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .qp-itin-title .qp-itin-red,
+        .qp-itin-red {
+            color: #d92027;
+            font-weight: 800;
+            font-size: 15px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-itin-title .qp-itin-red {
-            color: var(--qp-red);
-            font-weight: 800;
-            font-size: 15px;
-            letter-spacing: 0.04em;
+        .qp-itin-rule {
+            position: relative;
+            height: 1px;
+            background: #d7dbe3;
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        .qp-itin-rule-accent {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 72px;
+            height: 2px;
+            background: #d92027;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-itin-art {
+            flex-shrink: 0;
+            line-height: 0;
+            opacity: 0.95;
+            margin-top: -2px;
+        }
+
+        .qp-itin-mtn {
+            width: 108px;
+            height: 44px;
+            display: block;
         }
 
         /* —— Info / data cards —— */
@@ -9161,10 +9299,15 @@ $qWizardSteps = [
 
         .qp-info-value {
             font-size: 14px;
-            font-weight: 800;
+            font-weight: 500;
             color: var(--qp-ink);
             word-break: break-word;
             line-height: 1.3;
+        }
+
+        .qp-info-value .q-preview-cell-edit,
+        .qp-info-value .q-preview-editable {
+            font-weight: 500;
         }
 
         /* —— Tables —— */
@@ -9235,14 +9378,24 @@ $qWizardSteps = [
         }
 
         /* —— Day itinerary —— */
+        .qp-sec-itinerary {
+            --qp-itin-red: #d92027;
+            --qp-itin-ink: #1a1d23;
+            --qp-itin-muted: #6b7280;
+            --qp-itin-line: #e5e7eb;
+            font-family: inherit;
+        }
+
         .q-preview-day,
         .qp-day {
-            margin-bottom: 12px;
-            border: 1px solid var(--qp-line);
-            border-left: 4px solid var(--qp-red);
-            border-radius: 0 8px 8px 0;
+            margin-bottom: 14px;
+            border: 1px solid #e8ecf1;
+            border-left: 4px solid var(--qp-itin-red);
+            border-radius: 12px;
             background: #fff;
-            padding: 12px 14px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 4px 14px rgba(17, 24, 39, 0.06);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -9250,58 +9403,128 @@ $qWizardSteps = [
         .q-preview-day-head,
         .qp-day-head {
             background: transparent;
-            font-weight: 700;
+            font-weight: 600;
             text-transform: none;
-            padding: 0;
-            font-size: 13px;
-            margin-bottom: 8px;
+            padding: 12px 14px 10px;
+            font-size: 12px;
+            margin: 0;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 8px 12px;
+            gap: 10px 0;
+            border-bottom: 1px solid var(--qp-itin-line);
         }
 
         .qp-day-badge {
-            display: inline-block;
-            background: var(--qp-red);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--qp-itin-red);
             color: #fff;
             font-size: 11px;
-            font-weight: 800;
+            font-weight: 700;
             letter-spacing: 0.04em;
-            padding: 3px 9px;
-            border-radius: 4px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            line-height: 1;
+            white-space: nowrap;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
+        .qp-day-sep {
+            width: 1px;
+            height: 16px;
+            background: #d1d5db;
+            margin: 0 12px;
+            flex-shrink: 0;
+        }
+
         .qp-day-meta {
-            color: var(--qp-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--qp-itin-ink);
             font-size: 12px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .qp-day-meta i {
-            color: var(--qp-red);
-            margin-right: 4px;
+            color: var(--qp-itin-red);
+            font-size: 12px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-day-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             font-weight: 700;
-            color: var(--qp-ink);
-            width: 100%;
-            margin-top: 2px;
+            color: var(--qp-itin-ink);
+            font-size: 12px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            min-width: 0;
+            flex: 1 1 160px;
         }
 
         .qp-day-title i {
-            color: var(--qp-red);
-            margin-right: 6px;
+            color: var(--qp-itin-red);
+            font-size: 12px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-day-title-edit,
+        .qp-day-title .q-preview-editable {
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: var(--qp-itin-ink);
+            min-width: 0;
+            border-bottom: none !important;
         }
 
         .q-preview-day-body,
         .qp-day-body {
-            padding: 0;
-            color: #3a3a40;
+            padding: 12px 14px 14px;
+            color: #374151;
             font-size: 12.5px;
+        }
+
+        .qp-day-main {
+            display: block;
+        }
+
+        .qp-day-main.has-photo {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(140px, 32%);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .qp-day-content {
+            min-width: 0;
+        }
+
+        .qp-day-desc,
+        .q-preview-day-body .q-preview-rich {
+            color: #374151;
+            font-size: 12.5px;
+            font-weight: 400;
+            line-height: 1.55;
+        }
+
+        .qp-day-desc strong,
+        .qp-day-desc b,
+        .q-preview-day-body .q-preview-rich strong,
+        .q-preview-day-body .q-preview-rich b {
+            color: var(--qp-itin-ink);
+            font-weight: 700;
         }
 
         .q-preview-day-body p,
@@ -9315,43 +9538,106 @@ $qWizardSteps = [
             padding: 0;
         }
 
-        .q-preview-day-body img,
-        .qp-day-body img {
-            max-width: 280px;
+        .qp-day-photo {
+            min-width: 0;
+        }
+
+        .qp-day-photo img {
+            width: 100%;
             height: auto;
-            border-radius: 4px;
+            max-height: 180px;
+            object-fit: cover;
+            border-radius: 14px;
+            display: block;
+            box-shadow: 0 6px 16px rgba(17, 24, 39, 0.12);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .q-preview-day-body img,
+        .qp-day-body .qp-day-desc img,
+        .qp-day-body .q-preview-rich img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
             margin-top: 6px;
+        }
+
+        .qp-day-main.has-photo .qp-day-desc img,
+        .qp-day-main.has-photo .q-preview-rich img {
+            display: none;
         }
 
         .qp-day-pills {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 8px;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .qp-day-pill-sep {
+            width: 1px;
+            height: 16px;
+            background: #d1d5db;
+            flex-shrink: 0;
         }
 
         .qp-pill {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-            padding: 3px 9px;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0;
+            text-transform: none;
+            padding: 6px 11px;
             border-radius: 999px;
+            background: #fdecee;
+            color: #374151;
+            line-height: 1.2;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-pill-overnight {
-            background: #fde8ea;
-            color: var(--qp-red);
+        .qp-pill i {
+            color: var(--qp-itin-red);
+            font-size: 11px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
+        .qp-pill-text strong {
+            color: var(--qp-itin-ink);
+            font-weight: 700;
+        }
+
+        .qp-pill-overnight,
         .qp-pill-meal {
-            background: #eef6ff;
-            color: #1d4ed8;
+            background: #fdecee;
+            color: #374151;
+        }
+
+        @media (max-width: 720px) {
+            .qp-itin-art {
+                display: none;
+            }
+
+            .qp-day-main.has-photo {
+                grid-template-columns: 1fr;
+            }
+
+            .qp-day-photo img {
+                max-height: 200px;
+            }
+
+            .qp-day-sep {
+                display: none;
+            }
+
+            .qp-day-head {
+                gap: 8px;
+            }
         }
 
         .q-preview-itinerary-meta {
@@ -9449,76 +9735,294 @@ $qWizardSteps = [
         }
 
         /* —— Terms —— */
+        .qp-sec-terms {
+            --qp-terms-red: #d92027;
+            --qp-terms-ink: #1a1d23;
+            --qp-terms-muted: #8b93a0;
+            font-family: inherit;
+        }
+
         .qp-terms-card {
-            border: 1px solid var(--qp-line);
-            border-radius: 8px;
+            border: 1px solid #e8ecf1;
+            border-radius: 14px;
             overflow: hidden;
             background: #fff;
+            box-shadow: 0 4px 16px rgba(17, 24, 39, 0.06);
+            padding: 18px 20px 16px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-terms-head {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--qp-line);
-            background: #fafafa;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 0;
+            margin: 0 0 16px;
+            border: 0;
+            background: transparent;
         }
 
-        .qp-terms-head .qp-bar {
+        .qp-terms-vbar {
             width: 4px;
-            height: 22px;
-            background: var(--qp-red);
-            border-radius: 2px;
+            min-height: 36px;
+            align-self: stretch;
+            background: var(--qp-terms-red);
+            border-radius: 999px;
             flex-shrink: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-terms-head h3 {
+        .qp-terms-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 1.5px solid var(--qp-terms-red);
+            color: var(--qp-terms-red);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-terms-head-copy {
+            min-width: 0;
+            padding-top: 1px;
+        }
+
+        .qp-terms-title {
             margin: 0;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 800;
             letter-spacing: 0.04em;
             text-transform: uppercase;
+            color: var(--qp-terms-ink);
+            line-height: 1.25;
+        }
+
+        .qp-terms-sub {
+            margin-top: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--qp-terms-muted);
+            line-height: 1.3;
+        }
+
+        .qp-terms-body {
+            padding: 0;
         }
 
         .q-preview-policy-block,
         .qp-policy-block {
-            padding: 12px 14px;
-            margin-bottom: 0;
-            border-bottom: 1px solid var(--qp-line);
+            padding: 0;
+            margin: 0 0 12px;
+            border: 0;
         }
 
         .q-preview-policy-block:last-child,
         .qp-policy-block:last-child {
-            border-bottom: none;
+            margin-bottom: 0;
         }
 
         .q-preview-policy-title,
         .qp-policy-title {
             font-weight: 700;
             font-size: 12px;
-            margin-bottom: 6px;
-            color: var(--qp-red);
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            margin: 0 0 8px;
+            color: var(--qp-terms-ink);
+            display: block;
+            letter-spacing: 0.02em;
         }
 
         .q-preview-policy-title::before,
         .qp-policy-title::before {
-            content: "\f00c";
-            font-family: "Font Awesome 5 Free";
-            font-weight: 900;
-            font-size: 11px;
-            color: var(--qp-red);
+            content: none;
         }
 
-        .qp-policy-block .q-preview-rich ul li {
+        .qp-terms-rich,
+        .qp-policy-block .q-preview-rich {
+            margin: 0;
+            color: #374151;
+            font-size: 12.5px;
+            font-weight: 400;
+            line-height: 1.55;
+        }
+
+        .qp-terms-rich > *:last-child,
+        .qp-policy-block .q-preview-rich > *:last-child {
+            margin-bottom: 0;
+        }
+
+        .qp-terms-check-list,
+        .qp-terms-rich ul,
+        .qp-terms-rich ol,
+        .qp-policy-block .q-preview-rich ul,
+        .qp-policy-block .q-preview-rich ol {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .qp-terms-item,
+        .qp-terms-check-list > li,
+        .qp-terms-rich ul li,
+        .qp-terms-rich ol li,
+        .qp-policy-block .q-preview-rich ul li,
+        .qp-policy-block .q-preview-rich ol li {
             position: relative;
-            padding-left: 4px;
-            margin-bottom: 4px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding-left: 0;
+            margin: 0 0 12px;
+            color: #374151;
+            font-size: 12.5px;
+            line-height: 1.55;
+        }
+
+        .qp-terms-item:last-child,
+        .qp-terms-check-list > li:last-child,
+        .qp-terms-rich ul li:last-child,
+        .qp-terms-rich ol li:last-child,
+        .qp-policy-block .q-preview-rich ul li:last-child,
+        .qp-policy-block .q-preview-rich ol li:last-child {
+            margin-bottom: 0;
+        }
+
+        .qp-terms-check {
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            border-radius: 50%;
+            background: var(--qp-terms-red);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-terms-check i {
+            font-size: 9px;
+            line-height: 1;
+            color: #fff;
+        }
+
+        .qp-terms-item-body {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .qp-terms-item-body p {
+            margin: 0;
+        }
+
+        .qp-terms-rich > p,
+        .qp-policy-block .q-preview-rich > p {
+            position: relative;
+            padding-left: 28px;
+            margin: 0 0 12px;
+        }
+
+        .qp-terms-rich > p::before,
+        .qp-policy-block .q-preview-rich > p::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: var(--qp-terms-red);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23fff' d='M6.5 11.2L3.3 8l1.1-1.1 2.1 2.1 5-5L12.6 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 11px 11px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-terms-rich ul li::before,
+        .qp-terms-rich ol li::before,
+        .qp-policy-block .q-preview-rich ul li::before,
+        .qp-policy-block .q-preview-rich ol li::before {
+            content: none;
+        }
+
+        .qp-terms-rich ul li:not(.qp-terms-item)::before,
+        .qp-terms-rich ol li:not(.qp-terms-item)::before,
+        .qp-policy-block .q-preview-rich ul li:not(.qp-terms-item)::before,
+        .qp-policy-block .q-preview-rich ol li:not(.qp-terms-item)::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: var(--qp-terms-red);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23fff' d='M6.5 11.2L3.3 8l1.1-1.1 2.1 2.1 5-5L12.6 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 11px 11px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-terms-rich ul li:not(.qp-terms-item),
+        .qp-terms-rich ol li:not(.qp-terms-item),
+        .qp-policy-block .q-preview-rich ul li:not(.qp-terms-item),
+        .qp-policy-block .q-preview-rich ol li:not(.qp-terms-item) {
+            display: block;
+            padding-left: 28px;
+        }
+
+        .qp-terms-foot {
+            margin-top: 16px;
+            padding-top: 2px;
+        }
+
+        .qp-terms-more {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border: 1.5px solid var(--qp-terms-red);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--qp-terms-ink);
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.2;
+            text-decoration: none !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-terms-more:hover,
+        .qp-terms-more:focus {
+            color: var(--qp-terms-ink);
+            background: #fff8f8;
+            text-decoration: none !important;
+        }
+
+        .qp-terms-more-here {
+            color: var(--qp-terms-red);
+            font-weight: 700;
+        }
+
+        .qp-terms-more i {
+            color: var(--qp-terms-red);
+            font-size: 11px;
         }
 
         /* —— Exclusions —— */
@@ -9663,171 +10167,587 @@ $qWizardSteps = [
             padding: 0 2px;
         }
 
-        /* —— Footer contact —— */
-        .q-preview-footer,
-        .qp-footer {
-            margin-top: 32px;
-            text-align: center;
-            padding-top: 18px;
-            border-top: 2px solid var(--qp-line);
+        /* —— Global Accreditations —— */
+        .qp-sec-acc {
+            margin: 18px 0 8px;
+            font-family: inherit;
         }
 
-        .q-preview-expert,
-        .qp-expert {
-            margin-bottom: 0;
-        }
-
-        .q-preview-expert-avatar,
-        .qp-expert-avatar {
-            width: 88px;
-            height: 88px;
-            border-radius: 50%;
+        .qp-acc-wrap {
+            position: relative;
             overflow: hidden;
-            background: #e8e8e8;
-            color: #666;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin: 0 auto 12px;
-            border: 3px solid #f0f0f2;
+            border-radius: 14px;
+            border: 1px solid #e8ecf1;
+            background-color: #fafbfc;
+            background-image:
+                radial-gradient(circle at 18% 30%, rgba(209, 213, 219, 0.35) 0 1px, transparent 1.5px),
+                radial-gradient(circle at 42% 62%, rgba(209, 213, 219, 0.28) 0 1px, transparent 1.5px),
+                radial-gradient(circle at 68% 28%, rgba(209, 213, 219, 0.3) 0 1px, transparent 1.5px),
+                radial-gradient(circle at 82% 70%, rgba(209, 213, 219, 0.25) 0 1px, transparent 1.5px),
+                linear-gradient(180deg, #ffffff 0%, #f7f8fa 100%);
+            background-size: 48px 48px, 56px 56px, 44px 44px, 52px 52px, auto;
+            padding: 22px 16px 18px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .q-preview-expert-avatar img,
-        .qp-expert-avatar img {
+        .qp-acc-deco {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            width: 120px;
+            height: 48px;
+            pointer-events: none;
+            opacity: 0.9;
+        }
+
+        .qp-acc-plane {
             width: 100%;
             height: 100%;
-            object-fit: cover;
             display: block;
         }
 
-        .qp-expert-name-block {
-            margin-bottom: 10px;
+        .qp-acc-head {
+            text-align: center;
+            margin: 0 auto 18px;
+            max-width: 560px;
+            position: relative;
+            z-index: 1;
         }
 
-        .qp-expert-fullname {
-            display: block;
-            color: var(--qp-red);
+        .qp-acc-title {
+            font-size: 18px;
             font-weight: 800;
-            font-size: 16px;
-            margin-bottom: 6px;
+            color: #111827;
+            letter-spacing: 0.01em;
+            line-height: 1.2;
         }
 
-        .qp-expert-role-wrap {
+        .qp-acc-rule {
+            width: 64px;
+            height: 3px;
+            border-radius: 999px;
+            background: #d92027;
+            margin: 8px auto 10px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-acc-sub {
+            font-size: 12px;
+            font-weight: 500;
+            color: #8b93a0;
+            line-height: 1.4;
+        }
+
+        .qp-acc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .qp-acc-card {
+            position: relative;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid #f0b4b8;
+            border-radius: 14px;
+            padding: 16px 12px 14px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(17, 24, 39, 0.04);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-acc-card::after {
+            content: '';
+            position: absolute;
+            left: -18px;
+            bottom: -28px;
+            width: 90px;
+            height: 70px;
+            background: radial-gradient(ellipse at center, rgba(233, 100, 110, 0.16) 0%, rgba(233, 100, 110, 0.08) 45%, transparent 70%);
+            border-radius: 60% 40% 55% 45%;
+            pointer-events: none;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-acc-logo {
+            width: 78px;
+            height: 78px;
+            margin: 0 auto 12px;
+            border-radius: 50%;
+            border: 1.5px solid #e11d2e;
+            background: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-acc-logo img {
+            width: 78%;
+            height: 78%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .qp-acc-card-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.35;
+            margin: 0 0 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .qp-acc-card-rule {
+            width: 36px;
+            height: 2px;
+            background: #d92027;
+            margin: 0 auto 8px;
+            border-radius: 999px;
+            position: relative;
+            z-index: 1;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-acc-card-desc {
+            font-size: 11px;
+            font-weight: 400;
+            color: #6b7280;
+            line-height: 1.45;
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (max-width: 900px) {
+            .qp-acc-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 520px) {
+            .qp-acc-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .qp-acc-deco {
+                display: none;
+            }
+        }
+
+        /* —— Trusted Reviews —— */
+        .qp-sec-reviews {
+            margin: 16px 0 8px;
+            font-family: inherit;
+        }
+
+        .qp-rev-wrap {
+            background: #fff;
+            border: 1px solid #e8ecf1;
+            border-radius: 14px;
+            padding: 22px 18px 18px;
+            box-shadow: 0 2px 10px rgba(17, 24, 39, 0.04);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-head {
+            text-align: center;
+            margin: 0 auto 14px;
+        }
+
+        .qp-rev-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #1a1d23;
+            letter-spacing: -0.01em;
+            line-height: 1.25;
             margin-bottom: 12px;
         }
 
-        .qp-expert-role-wrap .qp-duration-line {
-            width: 40px;
+        .qp-rev-count {
+            color: #d92027;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .qp-expert-role {
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--qp-muted);
-        }
-
-        .q-preview-expert-lines,
-        .qp-expert-lines {
-            font-size: 13px;
-            line-height: 1.7;
-            color: var(--qp-ink);
-            margin-bottom: 14px;
-            display: inline-block;
-            text-align: left;
-        }
-
-        .qp-contact-row {
-            display: flex;
-            align-items: flex-start;
+        .qp-rev-badge {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 8px;
-            margin-bottom: 2px;
+            padding: 8px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            background: #fff;
+            max-width: 100%;
         }
 
-        .qp-contact-row i {
-            color: var(--qp-red);
-            width: 16px;
-            text-align: center;
-            margin-top: 3px;
+        .qp-rev-google-logo {
+            display: block;
             flex-shrink: 0;
         }
 
-        .q-preview-expert-lines .q-preview-phone-primary,
-        .qp-phone-primary {
+        .qp-rev-badge-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .qp-rev-badge-score {
+            font-size: 15px;
+            font-weight: 800;
+            color: #d92027;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-badge-score i {
+            font-size: 11px;
+            color: #d92027;
+        }
+
+        .qp-rev-badge-sep {
+            width: 1px;
+            height: 14px;
+            background: #d1d5db;
+            flex-shrink: 0;
+        }
+
+        .qp-rev-badge-meta {
+            font-size: 11px;
+            font-weight: 500;
+            color: #9ca3af;
+        }
+
+        .qp-rev-rule {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 0 0 16px;
+        }
+
+        .qp-rev-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0;
+        }
+
+        .qp-rev-card {
+            padding: 4px 16px 2px;
+            min-width: 0;
+        }
+
+        .qp-rev-card.has-sep {
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .qp-rev-stars {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin-bottom: 10px;
+        }
+
+        .qp-rev-stars .fa-star {
+            color: #d92027;
+            font-size: 12px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-text {
+            font-size: 12.5px;
+            font-weight: 400;
+            color: #374151;
+            line-height: 1.55;
+            margin-bottom: 12px;
+        }
+
+        .qp-rev-name {
+            font-size: 13px;
             font-weight: 700;
-            color: var(--qp-ink);
+            color: #1a1d23;
+            line-height: 1.3;
+        }
+
+        .qp-rev-place {
+            font-size: 11px;
+            font-weight: 500;
+            color: #9ca3af;
+            margin-top: 2px;
+            margin-bottom: 10px;
+        }
+
+        .qp-rev-verified {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #9ca3af;
+        }
+
+        .qp-rev-shield {
+            width: 13px;
+            height: 15px;
+            background: #d92027;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            clip-path: polygon(50% 0%, 100% 18%, 100% 62%, 50% 100%, 0% 62%, 0% 18%);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-shield i {
+            font-size: 8px;
+            line-height: 1;
+            color: #fff;
+        }
+
+        @media (max-width: 800px) {
+            .qp-rev-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .qp-rev-card {
+                padding: 0 0 12px;
+            }
+
+            .qp-rev-card.has-sep {
+                border-right: 0;
+                border-bottom: 1px solid #e5e7eb;
+            }
+        }
+
+        /* —— Trust Stats —— */
+        .qp-sec-trust-stats {
+            margin: 4px 0 10px;
+            font-family: inherit;
+        }
+
+        .qp-trust-stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            align-items: center;
+            border-top: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            background: #fff;
+            padding: 14px 4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-trust-stat {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 4px 12px;
+            min-width: 0;
+        }
+
+        .qp-trust-stat.has-sep {
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .qp-trust-stat-icon {
+            color: #d92027;
+            font-size: 20px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-trust-stat-icon svg {
+            display: block;
+        }
+
+        .qp-trust-stat-copy {
+            min-width: 0;
+            text-align: left;
+        }
+
+        .qp-trust-stat-value {
+            font-size: 15px;
+            font-weight: 800;
+            color: #1a1d23;
+            line-height: 1.2;
+        }
+
+        .qp-trust-stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: #8b93a0;
+            line-height: 1.3;
+            margin-top: 1px;
+        }
+
+        @media (max-width: 800px) {
+            .qp-trust-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                row-gap: 12px;
+            }
+
+            .qp-trust-stat.has-sep {
+                border-right: 0;
+            }
+
+            .qp-trust-stat:nth-child(odd) {
+                border-right: 1px solid #e5e7eb;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .qp-trust-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .qp-trust-stat:nth-child(odd),
+            .qp-trust-stat.has-sep {
+                border-right: 0;
+            }
+
+            .qp-trust-stat {
+                justify-content: flex-start;
+                padding-left: 8px;
+            }
+        }
+
+        /* —— Footer contact —— */
+        .q-preview-footer,
+        .qp-footer {
+            margin-top: 22px;
+            text-align: left;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+            font-family: inherit;
+        }
+
+        .qp-foot-contacts {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            align-items: center;
+            gap: 0;
+            margin-bottom: 14px;
+        }
+
+        .qp-foot-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px;
+            min-width: 0;
+        }
+
+        .qp-foot-cell + .qp-foot-cell {
+            border-left: 1px solid #e5e7eb;
+        }
+
+        .qp-foot-ico {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            border-radius: 50%;
+            background: #d92027;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-foot-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a1d23;
+            line-height: 1.35;
+            min-width: 0;
+            word-break: break-word;
+        }
+
+        .qp-foot-phone-sep {
+            color: #d92027;
+            font-weight: 700;
+            padding: 0 2px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-foot-cell-address .qp-foot-text {
+            font-size: 11px;
+            font-weight: 500;
         }
 
         .q-preview-services-bar,
         .qp-services-bar {
             display: inline-block;
-            background: var(--qp-red);
+            background: #d92027;
             color: #fff;
             font-weight: 700;
             font-size: 11px;
-            letter-spacing: 0.1em;
-            padding: 10px 28px;
+            letter-spacing: 0.08em;
+            padding: 9px 22px;
             border-radius: 999px;
-            margin: 6px auto 14px;
+            margin: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .q-preview-social,
-        .qp-social {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-top: 4px;
-            margin-bottom: 12px;
+        @media (max-width: 900px) {
+            .qp-foot-contacts {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                row-gap: 12px;
+            }
+
+            .qp-foot-cell + .qp-foot-cell {
+                border-left: 0;
+            }
+
+            .qp-foot-cell:nth-child(odd) {
+                border-right: 1px solid #e5e7eb;
+            }
         }
 
-        .q-preview-social a,
-        .qp-social a {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff !important;
-            text-decoration: none;
-            font-size: 13px;
-            background: var(--qp-red);
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
+        @media (max-width: 560px) {
+            .qp-foot-contacts {
+                grid-template-columns: 1fr;
+            }
 
-        .q-preview-social a.fb,
-        .qp-social a.fb { background: #3b5998; }
-        .q-preview-social a.tw,
-        .qp-social a.tw { background: #1da1f2; }
-        .q-preview-social a.li,
-        .qp-social a.li { background: #0077b5; }
-        .q-preview-social a.ig,
-        .qp-social a.ig { background: #e1306c; }
-        .q-preview-social a.yt,
-        .qp-social a.yt { background: #ff0000; }
-        .q-preview-social a.gp,
-        .qp-social a.gp { background: #dd4b39; }
-        .q-preview-social a.web,
-        .qp-social a.web { background: #6b7280; }
+            .qp-foot-cell:nth-child(odd) {
+                border-right: 0;
+            }
 
-        .qp-tagline {
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.16em;
-            color: var(--qp-red);
-            text-transform: uppercase;
-            margin-top: 4px;
+            .qp-foot-cell {
+                padding-left: 0;
+            }
         }
 
         /* —— Editable —— */
@@ -11808,7 +12728,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=163"></script>
+    <script src="crm/assets/quotation_generator.js?v=180"></script>
     <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=1"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

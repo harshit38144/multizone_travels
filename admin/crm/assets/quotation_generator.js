@@ -5990,6 +5990,7 @@
     /* ------------------------------------------------------------------ */
     var Q_PREVIEW_META = (typeof QUOTATION_PREVIEW_META === 'object' && QUOTATION_PREVIEW_META) ? QUOTATION_PREVIEW_META : {};
     var previewEditOrig = '';
+    var previewHotelPillTimer = null;
     var previewDirty = false;
 
     function isPreviewOnlyMode() {
@@ -6034,6 +6035,94 @@
     function previewHasHtmlContent(html) {
         if (!html) return false;
         return String(html).replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim() !== '';
+    }
+
+    function qpTermsItemHtml(innerHtml) {
+        return '<li class="qp-terms-item">' +
+            '<span class="qp-terms-check" contenteditable="false" aria-hidden="true"><i class="fas fa-check"></i></span>' +
+            '<div class="qp-terms-item-body">' + innerHtml + '</div>' +
+            '</li>';
+    }
+
+    function qpFormatTermsChecklistHtml(html) {
+        var raw = String(html || '').trim();
+        if (!raw) {
+            return '<ul class="qp-terms-check-list">' + qpTermsItemHtml('<br>') + '</ul>';
+        }
+        var $wrap = $('<div>').html(raw);
+        var items = [];
+
+        $wrap.find('li').each(function () {
+            var $li = $(this);
+            if ($li.parents('li').length) {
+                return;
+            }
+            var $clone = $li.clone();
+            $clone.find('.qp-terms-check').remove();
+            var $body = $clone.children('.qp-terms-item-body').first();
+            var inner = $body.length ? $body.html() : $clone.html();
+            if (String($clone.text() || '').replace(/\u00a0/g, ' ').trim() === '' && !$clone.find('img').length) {
+                return;
+            }
+            items.push(inner);
+        });
+
+        if (!items.length) {
+            $wrap.children('p, div').each(function () {
+                var $el = $(this);
+                if ($el.is('ul, ol, .qp-terms-check-list')) {
+                    return;
+                }
+                var inner = $el.html();
+                if (String($el.text() || '').replace(/\u00a0/g, ' ').trim() === '' && !$el.find('img').length) {
+                    return;
+                }
+                items.push(inner);
+            });
+        }
+
+        if (!items.length) {
+            var chunks = String($wrap.html() || '').split(/<br\s*\/?>/i);
+            chunks.forEach(function (chunk) {
+                var text = $('<div>').html(chunk).text().replace(/\u00a0/g, ' ').trim();
+                if (text) {
+                    items.push($('<div>').text(text).html());
+                }
+            });
+        }
+
+        if (!items.length) {
+            items.push(raw);
+        }
+
+        var out = '<ul class="qp-terms-check-list">';
+        items.forEach(function (item) {
+            out += qpTermsItemHtml(item);
+        });
+        out += '</ul>';
+        return out;
+    }
+
+    function qpCleanTermsChecklistHtml(html) {
+        var $wrap = $('<div>').html(String(html || ''));
+        $wrap.find('.qp-terms-check').remove();
+        if ($wrap.find('.qp-terms-check-list, .qp-terms-item').length) {
+            var items = [];
+            $wrap.find('.qp-terms-item').each(function () {
+                var $li = $(this);
+                var $body = $li.children('.qp-terms-item-body').first();
+                var inner = $body.length ? $body.html() : $li.html();
+                if (String($('<div>').html(inner).text() || '').replace(/\u00a0/g, ' ').trim() === '' &&
+                    !$('<div>').html(inner).find('img').length) {
+                    return;
+                }
+                items.push('<li>' + inner + '</li>');
+            });
+            if (items.length) {
+                return '<ul>' + items.join('') + '</ul>';
+            }
+        }
+        return $wrap.html();
     }
 
     function previewEditable(text, path, opts) {
@@ -6150,21 +6239,86 @@
         return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     }
 
-    function qpHotelSectionHead() {
-        return '<div class="qp-hotel-editor-head">' +
-            '<div class="qp-hotel-editor-head-main">' +
-            '<div class="qp-hotel-editor-title"><span class="qp-hotel-editor-bar" aria-hidden="true"></span>Hotel Details</div>' +
-            '<div class="qp-hotel-editor-sub">Add, edit or remove hotel options for your customer.</div>' +
+    function qpHotelSectionHead(title) {
+        title = title || 'Hotel Details';
+        return '<div class="qp-hotel-sec-head">' +
+            '<div class="qp-hotel-sec-top">' +
+            '<div class="qp-hotel-sec-left">' +
+            '<span class="qp-hotel-sec-icon" aria-hidden="true"><i class="fas fa-bed"></i></span>' +
+            '<span class="qp-hotel-sec-title">' + esc(title) + '</span>' +
+            '</div>' +
+            '<div class="qp-hotel-sec-rule" aria-hidden="true"></div>' +
+            '<div class="qp-hotel-sec-slogan">' +
+            'YOUR JOURNEY <span class="qp-hotel-slogan-dot">•</span> ' +
+            'OUR CARE <span class="qp-hotel-slogan-dot">•</span> ' +
+            'MEMORABLE STAYS' +
+            '</div>' +
             '</div>' +
             '</div>';
     }
 
-    function qpFormatHotelRate(rate) {
-        var n = parseFloat(rate);
-        if (isNaN(n)) {
-            return '—';
+    function qpParseHotelStarCount(starCategory) {
+        var raw = String(starCategory || '').trim();
+        if (!raw) {
+            return 0;
         }
-        return '₹ ' + Math.round(n).toLocaleString('en-IN');
+        var m = raw.match(/(\d+(?:\.\d+)?)/);
+        if (!m) {
+            return 0;
+        }
+        var n = Math.round(parseFloat(m[1]));
+        if (isNaN(n) || n <= 0) {
+            return 0;
+        }
+        return Math.min(5, n);
+    }
+
+    function qpHotelStarsHtml(starCategory) {
+        var count = qpParseHotelStarCount(starCategory);
+        if (count <= 0) {
+            return '';
+        }
+        var html = '<div class="qp-hotel-stars" aria-label="' + count + ' star">';
+        for (var i = 0; i < count; i++) {
+            html += '<i class="fas fa-star" aria-hidden="true"></i>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function qpHotelMealLabels(mealPlan, roomType) {
+        var meal = String(mealPlan || '').trim();
+        var room = String(roomType || '').trim();
+        var key = meal.toLowerCase().replace(/\s+/g, ' ');
+        var roomOnly = !meal || /^(ep|e\.p\.?|ro|room only|european|none|-|nil|n\/a)$/i.test(key);
+        if (roomOnly) {
+            return {
+                roomPrimary: 'Room Only',
+                roomSecondary: room,
+                meals: 'None'
+            };
+        }
+        var mealMap = {
+            cp: 'Breakfast',
+            'c.p': 'Breakfast',
+            'c.p.': 'Breakfast',
+            breakfast: 'Breakfast',
+            map: 'Breakfast & Dinner',
+            'm.a.p': 'Breakfast & Dinner',
+            'm.a.p.': 'Breakfast & Dinner',
+            'half board': 'Breakfast & Dinner',
+            ap: 'All Meals',
+            'a.p': 'All Meals',
+            'a.p.': 'All Meals',
+            'full board': 'All Meals',
+            ai: 'All Inclusive',
+            'all inclusive': 'All Inclusive'
+        };
+        return {
+            roomPrimary: room || '—',
+            roomSecondary: '',
+            meals: mealMap[key] || meal
+        };
     }
 
     function qpHotelOptionsTabsHtml(categories, activeIdx) {
@@ -6188,97 +6342,114 @@
             return '';
         }
 
-        var html = '<div class="qp-hotel-sheet">';
-        html += '<div class="qp-hotel-sheet-groups">' +
-            '<div class="qp-hotel-group qp-hotel-group-acc">' +
-            '<i class="fas fa-bed" aria-hidden="true"></i><span>Accommodation Details</span>' +
-            '</div>' +
-            '<div class="qp-hotel-group qp-hotel-group-com">' +
-            '<i class="fas fa-coins" aria-hidden="true"></i><span>Commercial Details</span>' +
-            '</div>' +
+        var html = '<div class="qp-hotel-panel">';
+        html += '<div class="qp-hotel-colhead">' +
+            '<div class="qp-hotel-col">CITY</div>' +
+            '<div class="qp-hotel-col">HOTEL</div>' +
+            '<div class="qp-hotel-col">NIGHTS</div>' +
+            '<div class="qp-hotel-col">ROOM TYPE</div>' +
+            '<div class="qp-hotel-col">CHECK-IN</div>' +
+            '<div class="qp-hotel-col">CHECK-OUT</div>' +
+            '<div class="qp-hotel-col">MEALS</div>' +
             '</div>';
+        html += '<div class="qp-hotel-body">';
 
-        html += '<div class="qp-hotel-sheet-cols">' +
-            '<div class="qp-hotel-hcell qp-h-city"><i class="fas fa-map-marker-alt"></i><span>City</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-hotel"><i class="fas fa-hotel"></i><span>Hotel</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-room"><i class="fas fa-bed"></i><span>Room Type</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-rooms"><i class="fas fa-user-friends"></i><span>Rooms</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-meal"><i class="fas fa-utensils"></i><span>Meal</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-nights"><i class="fas fa-moon"></i><span>Nights</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-date"><i class="far fa-calendar-alt"></i><span>Check-in</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-date"><i class="far fa-calendar-alt"></i><span>Check-out</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-rate"><i class="fas fa-rupee-sign"></i><span>Rate (₹)</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-supplier"><i class="fas fa-building"></i><span>Supplier</span></div>' +
-            '<div class="qp-hotel-hcell qp-h-actions"><span>Actions</span></div>' +
-            '</div>';
-
-        html += '<div class="qp-hotel-sheet-body">';
         hotels.forEach(function (h, hi) {
             var d = normalizeHotelData(h);
             var base = 'hotel.' + catIdx + '.' + hi + '.';
-            var rateLabel = qpFormatHotelRate(d.rate);
-            var supplierLabel = previewVal(d.supplier, '—');
+            var mealInfo = qpHotelMealLabels(d.meal_plan, d.room_type);
+            var country = String(d.country || '').trim() || 'India';
+            var starsHtml = qpHotelStarsHtml(d.star_category);
+            var roomPrimaryHtml;
+            var roomSecondaryHtml = '';
 
-            html += '<div class="qp-hotel-sheet-row">';
-            html += '<div class="qp-hotel-cell qp-h-city">' +
-                '<i class="fas fa-map-marker-alt qp-hotel-pin" aria-hidden="true"></i>' +
-                '<span>' + previewEditable(previewVal(d.city), base + 'city', { cls: 'q-preview-cell-edit' }) + '</span>' +
-                '</div>';
-            html += '<div class="qp-hotel-cell qp-h-hotel">' +
+            if (mealInfo.roomPrimary === 'Room Only') {
+                roomPrimaryHtml = '<div class="qp-hotel-primary">Room Only</div>';
+                if (d.room_type) {
+                    roomSecondaryHtml = '<div class="qp-hotel-secondary">' +
+                        previewEditable(previewVal(d.room_type), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
+                        '</div>';
+                }
+            } else {
+                roomPrimaryHtml = '<div class="qp-hotel-primary">' +
+                    previewEditable(previewVal(d.room_type || mealInfo.roomPrimary), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
+                    '</div>';
+            }
+
+            html += '<div class="qp-hotel-row-card">';
+            html += '<div class="qp-hotel-col qp-hotel-col-city">' +
+                '<i class="fas fa-map-marker-alt qp-hotel-ico" aria-hidden="true"></i>' +
+                '<div class="qp-hotel-stack">' +
+                '<div class="qp-hotel-primary">' +
+                previewEditable(previewVal(d.city), base + 'city', { cls: 'q-preview-cell-edit' }) +
+                '</div>' +
+                '<div class="qp-hotel-secondary">' + esc(country) + '</div>' +
+                '</div></div>';
+
+            html += '<div class="qp-hotel-col qp-hotel-col-hotel">' +
+                '<div class="qp-hotel-stack">' +
+                '<div class="qp-hotel-primary">' +
                 previewEditable(previewVal(d.name), base + 'name', { cls: 'q-preview-cell-edit' }) +
-                '</div>';
-            html += '<div class="qp-hotel-cell qp-h-room">' +
-                previewEditable(previewVal(d.room_type), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
-                '</div>';
-            html += '<div class="qp-hotel-cell qp-h-rooms">' +
-                previewEditable(previewVal(d.rooms, '0'), base + 'rooms', { type: 'int', cls: 'q-preview-cell-edit' }) +
-                '</div>';
-            html += '<div class="qp-hotel-cell qp-h-meal">' +
-                previewEditable(previewVal(d.meal_plan, 'CP'), base + 'meal_plan', { cls: 'q-preview-cell-edit' }) +
-                '</div>';
-            html += '<div class="qp-hotel-cell qp-h-nights">' +
+                '</div>' +
+                starsHtml +
+                '</div></div>';
+
+            html += '<div class="qp-hotel-col qp-hotel-col-nights">' +
+                '<i class="fas fa-moon qp-hotel-ico" aria-hidden="true"></i>' +
+                '<div class="qp-hotel-primary">' +
                 previewEditable(previewVal(d.nights, '0'), base + 'nights', { type: 'int', cls: 'q-preview-cell-edit' }) +
-                '</div>';
-            html += '<div class="qp-hotel-cell qp-h-date">' +
-                previewEditable(formatPreviewSlashDate(d.checkin), base + 'checkin', { type: 'date', cls: 'q-preview-cell-edit' }) +
-                '</div>';
-            html += '<div class="qp-hotel-cell qp-h-date">' +
-                previewEditable(formatPreviewSlashDate(d.checkout), base + 'checkout', { type: 'date', cls: 'q-preview-cell-edit' }) +
-                '</div>';
-            html += '<div class="qp-hotel-cell qp-h-rate">' +
-                '<span class="qp-hotel-rate-pill">' +
-                previewEditable(rateLabel, base + 'rate', { type: 'money', cls: 'q-preview-cell-edit' }) +
-                '</span></div>';
-            html += '<div class="qp-hotel-cell qp-h-supplier">' +
-                '<span class="qp-hotel-supplier-pill">' +
-                '<i class="fas fa-building" aria-hidden="true"></i>' +
-                '<span>' + previewEditable(supplierLabel, base + 'supplier', { cls: 'q-preview-cell-edit' }) + '</span>' +
-                '<i class="fas fa-chevron-down qp-hotel-supplier-caret" aria-hidden="true"></i>' +
-                '</span></div>';
-            html += '<div class="qp-hotel-cell qp-h-actions">' +
-                '<span class="qp-hotel-act qp-hotel-act-more" title="More" aria-hidden="true"><i class="fas fa-ellipsis-v"></i></span>' +
-                '<span class="qp-hotel-act qp-hotel-act-del" title="Remove" aria-hidden="true"><i class="fas fa-trash-alt"></i></span>' +
-                '</div>';
+                '</div></div>';
+
+            html += '<div class="qp-hotel-col qp-hotel-col-room">' +
+                '<i class="fas fa-bed qp-hotel-ico" aria-hidden="true"></i>' +
+                '<div class="qp-hotel-stack">' + roomPrimaryHtml + roomSecondaryHtml + '</div></div>';
+
+            html += '<div class="qp-hotel-col qp-hotel-col-date">' +
+                '<i class="far fa-calendar-alt qp-hotel-ico" aria-hidden="true"></i>' +
+                '<div class="qp-hotel-primary">' +
+                previewEditable(formatPreviewFlightDate(d.checkin), base + 'checkin', { type: 'date', cls: 'q-preview-cell-edit' }) +
+                '</div></div>';
+
+            html += '<div class="qp-hotel-col qp-hotel-col-date">' +
+                '<i class="far fa-calendar-alt qp-hotel-ico" aria-hidden="true"></i>' +
+                '<div class="qp-hotel-primary">' +
+                previewEditable(formatPreviewFlightDate(d.checkout), base + 'checkout', { type: 'date', cls: 'q-preview-cell-edit' }) +
+                '</div></div>';
+
+            html += '<div class="qp-hotel-col qp-hotel-col-meals">' +
+                '<i class="fas fa-utensils qp-hotel-ico" aria-hidden="true"></i>' +
+                '<div class="qp-hotel-primary">' +
+                previewEditable(mealInfo.meals || previewVal(d.meal_plan, 'None'), base + 'meal_plan', { cls: 'q-preview-cell-edit' }) +
+                '</div></div>';
+
             html += '</div>';
         });
+
         html += '</div></div>';
         return html;
+    }
+
+    function qpFlightPlaneSvg(cls, size, orient) {
+        size = size || 14;
+        orient = orient || 'right';
+        var transform = orient === 'right' ? ' transform="rotate(90 12 12)"' : '';
+        return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" width="' + size + '" height="' + size + '" aria-hidden="true" focusable="false">' +
+            '<path fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"' + transform + '/>' +
+            '</svg>';
     }
 
     function qpFlightSectionHead() {
         return '<div class="qp-flight-sec-head">' +
             '<div class="qp-flight-sec-top">' +
             '<div class="qp-flight-sec-left">' +
-            '<span class="qp-sec-icon"><i class="fas fa-plane"></i></span>' +
-            '<span class="qp-sec-title">Flight Details</span>' +
+            '<span class="qp-flight-sec-icon" aria-hidden="true">' + qpFlightPlaneSvg('qp-flight-sec-icon-svg', 15, 'up') + '</span>' +
+            '<span class="qp-flight-sec-title">Flight Details</span>' +
             '</div>' +
+            '<div class="qp-flight-sec-rule" aria-hidden="true"></div>' +
             '<div class="qp-flight-sec-slogan-wrap">' +
-            '<div class="qp-sec-slogan">TAILORED FOR A HIGHER TOMORROW</div>' +
-            '<span class="qp-flight-sec-accent" aria-hidden="true"></span>' +
+            '<div class="qp-flight-sec-slogan">TAILORED FOR A HIGHER TOMORROW</div>' +
+            '<span class="qp-flight-sec-accent"></span>' +
             '</div>' +
-            '</div>' +
-            '<div class="qp-flight-sec-underline" aria-hidden="true">' +
-            '<span class="qp-flight-sec-line"></span>' +
             '</div>' +
             '</div>';
     }
@@ -6417,11 +6588,14 @@
         if (!city || city === '—') {
             city = qpParseFlightPlace(cur.from).city;
         }
-        return '<div class="qp-flight-layover">' +
+        return '<div class="qp-flight-layover-wrap">' +
+            '<div class="qp-flight-layover-line" aria-hidden="true"></div>' +
+            '<div class="qp-flight-layover">' +
             '<i class="far fa-clock" aria-hidden="true"></i>' +
             '<span class="qp-flight-layover-text">Layover in ' + esc(city || '—') + '</span>' +
             '<span class="qp-flight-layover-sep" aria-hidden="true"></span>' +
             '<strong class="qp-flight-layover-dur">' + esc(duration) + '</strong>' +
+            '</div>' +
             '</div>';
     }
 
@@ -6491,7 +6665,7 @@
                     '<div class="qp-flight-mid" aria-hidden="true">' +
                     '<span class="qp-flight-dot"></span>' +
                     '<span class="qp-flight-dash"></span>' +
-                    '<i class="fas fa-plane qp-flight-mid-plane"></i>' +
+                    qpFlightPlaneSvg('qp-flight-mid-plane', 15, 'right') +
                     '<span class="qp-flight-dash"></span>' +
                     '<span class="qp-flight-dot"></span>' +
                     '</div>' +
@@ -6501,14 +6675,16 @@
                         seg.arr_time,
                         'flight.' + (startIdx + si) + '.arr_datetime'
                     ) +
+                    '<div class="qp-flight-airline-wrap">' +
                     '<div class="qp-flight-airline">' +
-                    '<i class="fas fa-plane qp-flight-airline-ico" aria-hidden="true"></i>' +
+                    qpFlightPlaneSvg('qp-flight-airline-ico', 12, 'up') +
                     '<span class="qp-flight-airline-label">' +
                     previewEditable(fLabel, 'flight.' + (startIdx + si) + '.flight_label', {
                         type: 'flight_label',
                         cls: 'q-preview-cell-edit'
                     }) +
                     '</span>' +
+                    '</div>' +
                     '<i class="fas fa-chevron-right qp-flight-airline-chev" aria-hidden="true"></i>' +
                     '</div>' +
                     '</div>';
@@ -6584,6 +6760,9 @@
         var raw;
         if (type === 'html') {
             raw = ($el.html() || '').trim();
+            if ($el.hasClass('qp-terms-rich') || $el.find('.qp-terms-check-list, .qp-terms-check').length) {
+                raw = qpCleanTermsChecklistHtml(raw);
+            }
         } else {
             raw = ($el.text() || '').trim();
         }
@@ -6761,6 +6940,16 @@
                 return;
             }
             setInput($hRow.find(hSel), value);
+            if (hField === 'nights') {
+                $hRow.find('.h-nights').trigger('change');
+            }
+            if (hField === 'city' || hField === 'nights') {
+                window.setTimeout(function () {
+                    if ($('#qPreviewModal').hasClass('show')) {
+                        refreshPreviewHotelRoutePills();
+                    }
+                }, 0);
+            }
             return;
         }
 
@@ -6912,6 +7101,36 @@
         }
     }
 
+    function refreshPreviewHotelRoutePills() {
+        var $area = $('#qPreviewPrintArea');
+        if (!$area.length) {
+            return;
+        }
+        var p;
+        try {
+            p = collectPayload();
+        } catch (err) {
+            return;
+        }
+        var hotelsData = normalizeHotelsPrefill(JSON.parse(p.hotels_json || '[]'));
+        var pillsHtml = buildPreviewHotelRoutePillsHtml(
+            hotelsData,
+            String(p.active_option_id || hotelsData.active_category_id || '')
+        );
+        var $existing = $area.find('.qp-route-pills');
+        if ($existing.length) {
+            if (pillsHtml) {
+                $existing.replaceWith(pillsHtml);
+            } else {
+                $existing.remove();
+            }
+            return;
+        }
+        if (pillsHtml) {
+            $area.find('.qp-duration-wrap').first().after(pillsHtml);
+        }
+    }
+
     function refreshQuotationPreviewPreserveFocus() {
         var activePath = '';
         var $active = $('#qPreviewPrintArea .q-preview-editable:focus');
@@ -6955,6 +7174,257 @@
             '<path d="M2 38 L22 12 L32 24 L46 6 L78 38 Z" fill="#c4121a"/>' +
             '<path d="M2 38 L18 18 L28 28 L40 14 L58 38 Z" fill="#e11d2e" opacity="0.85"/>' +
             '</svg>';
+    }
+
+    function qpItinMountainSvg() {
+        return '<svg class="qp-itin-mtn" viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
+            '<circle cx="98" cy="12" r="8" fill="none" stroke="#f3b4b8" stroke-width="1.6"/>' +
+            '<path d="M4 44 L32 14 L46 28 L68 6 L116 44" fill="none" stroke="#f0a6ab" stroke-width="1.7" stroke-linejoin="round"/>' +
+            '<path d="M14 44 L40 22 L54 34 L76 12 L108 44" fill="none" stroke="#e88990" stroke-width="1.4" stroke-linejoin="round"/>' +
+            '</svg>';
+    }
+
+    function qpItinSectionHead() {
+        return '<div class="qp-itin-head">' +
+            '<div class="qp-itin-head-left">' +
+            '<span class="qp-itin-vbar" aria-hidden="true"></span>' +
+            '<div class="qp-itin-head-copy">' +
+            '<div class="qp-itin-title">' +
+            '<span class="qp-itin-black">DAY WISE</span> ' +
+            '<span class="qp-itin-red">ITINERARY</span>' +
+            '</div>' +
+            '<div class="qp-itin-rule" aria-hidden="true"><span class="qp-itin-rule-accent"></span></div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="qp-itin-art" aria-hidden="true">' + qpItinMountainSvg() + '</div>' +
+            '</div>';
+    }
+
+    function qpItinDateLabel(baseStr, offset) {
+        var d = parsePreviewDate(baseStr);
+        if (!d) {
+            return '';
+        }
+        d.setDate(d.getDate() + offset);
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        return dd + '-' + mm + '-' + d.getFullYear() + ' ' + DAY_NAMES[d.getDay()];
+    }
+
+    function qpExtractDayImage(day) {
+        var img = String((day && (day.image || day.img || day.image_url)) || '').trim();
+        if (img) {
+            return absUrl(img);
+        }
+        var desc = String((day && day.description) || '');
+        var m = desc.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (m && m[1]) {
+            return absUrl(m[1]);
+        }
+        return '';
+    }
+
+    function qpItinMealLabel(day) {
+        var mealVal = String((day && (day.meal || day.meals || day.meal_plan)) || '').trim();
+        if (mealVal) {
+            return mealVal.replace(/\s*[·|,/]\s*/g, ' + ');
+        }
+        var text = ((day && day.title) || '') + ' ' + String((day && day.description) || '').replace(/<[^>]*>/g, ' ');
+        text = text.toLowerCase();
+        var meals = [];
+        if (/breakfast|\bbb\b|\bcp\b/.test(text)) meals.push('Breakfast');
+        if (/lunch/.test(text)) meals.push('Lunch');
+        if (/dinner/.test(text)) meals.push('Dinner');
+        return meals.join(' + ');
+    }
+
+    function qpItinOvernightLabel(day) {
+        var overnight = String((day && (day.overnight || day.overnight_stay || day.stay)) || '').trim();
+        if (overnight) {
+            return overnight;
+        }
+        var text = ((day && day.title) || '') + ' ' + String((day && day.description) || '').replace(/<[^>]*>/g, ' ');
+        if (/overnight|night stay|stay overnight|hotel stay|check[- ]?in/i.test(text)) {
+            return 'Included';
+        }
+        return '';
+    }
+
+    function qpItinPillsHtml(day) {
+        var overnight = qpItinOvernightLabel(day);
+        var meal = qpItinMealLabel(day);
+        if (!overnight && !meal) {
+            return '';
+        }
+        var html = '<div class="qp-day-pills">';
+        if (overnight) {
+            html += '<span class="qp-pill qp-pill-overnight">' +
+                '<i class="fas fa-bed" aria-hidden="true"></i>' +
+                '<span class="qp-pill-text">Overnight Stay: <strong>' + esc(overnight) + '</strong></span>' +
+                '</span>';
+        }
+        if (overnight && meal) {
+            html += '<span class="qp-day-pill-sep" aria-hidden="true"></span>';
+        }
+        if (meal) {
+            html += '<span class="qp-pill qp-pill-meal">' +
+                '<i class="fas fa-utensils" aria-hidden="true"></i>' +
+                '<span class="qp-pill-text">Meal: <strong>' + esc(meal) + '</strong></span>' +
+                '</span>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function qpAccreditationsPlaneSvg() {
+        return '<svg class="qp-acc-plane" viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
+            '<path d="M8 36 C28 28, 48 18, 72 14 S108 10, 114 8" fill="none" stroke="#e11d2e" stroke-width="1.4" stroke-dasharray="2.2 3.2" stroke-linecap="round"/>' +
+            '<g transform="translate(102 2) rotate(28)">' +
+            '<path fill="#9ca3af" d="M2 10 L14 6 L16 8 L8 12 L14 14 L6 16 L4 12 L2 14 Z"/>' +
+            '</g>' +
+            '</svg>';
+    }
+
+    function buildPreviewAccreditationsHtml() {
+        var items = [
+            {
+                img: 'uploads/acchivments/BNI_Logo.jpg',
+                title: 'BNI (Business Network International)',
+                desc: 'A global network of business professionals dedicated to mutual growth and referrals.'
+            },
+            {
+                img: 'uploads/acchivments/FJCCI-Logo.webp',
+                title: 'FJCCI (Federation of Jharkhand Chamber of Commerce & Industries)',
+                desc: 'A leading chamber fostering trade, industry and economic growth in Jharkhand.'
+            },
+            {
+                img: 'uploads/acchivments/YI.png',
+                title: 'Young Indians (Yi)',
+                desc: 'Proudly associated with the inspiring young leaders driving positive change for a better tomorrow.'
+            },
+            {
+                img: 'uploads/acchivments/Tia.png',
+                title: 'Tourism India Alliance (TIA)',
+                desc: 'Associated with the travel and tourism fraternity, committed to promoting responsible and sustainable travel in India.'
+            }
+        ];
+
+        var html = '<div class="qp-sec qp-sec-acc">';
+        html += '<div class="qp-acc-wrap">';
+        html += '<div class="qp-acc-deco" aria-hidden="true">' + qpAccreditationsPlaneSvg() + '</div>';
+        html += '<div class="qp-acc-head">' +
+            '<div class="qp-acc-title">Global Accreditations</div>' +
+            '<div class="qp-acc-rule" aria-hidden="true"></div>' +
+            '<div class="qp-acc-sub">Recognised &amp; accredited with reputed international and national organizations</div>' +
+            '</div>';
+        html += '<div class="qp-acc-grid">';
+        items.forEach(function (item) {
+            html += '<div class="qp-acc-card">' +
+                '<div class="qp-acc-logo"><img src="' + esc(absUrl(item.img)) + '" alt="' + esc(item.title) + '"></div>' +
+                '<div class="qp-acc-card-title">' + esc(item.title) + '</div>' +
+                '<div class="qp-acc-card-rule" aria-hidden="true"></div>' +
+                '<div class="qp-acc-card-desc">' + esc(item.desc) + '</div>' +
+                '</div>';
+        });
+        html += '</div></div></div>';
+        return html;
+    }
+
+    function qpGoogleLogoSvg() {
+        return '<svg class="qp-rev-google-logo" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">' +
+            '<path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>' +
+            '<path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>' +
+            '<path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>' +
+            '<path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>' +
+            '</svg>';
+    }
+
+    function qpReviewStarsHtml(count) {
+        count = count || 5;
+        var html = '<div class="qp-rev-stars" aria-hidden="true">';
+        for (var i = 0; i < count; i++) {
+            html += '<i class="fas fa-star"></i>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function buildPreviewReviewsHtml() {
+        var reviews = [
+            {
+                text: 'Everything was perfectly planned from hotels to transfers. A truly hassle-free and memorable trip!',
+                name: 'Riya Sharma',
+                place: 'Bali, Indonesia'
+            },
+            {
+                text: 'Excellent service and attention to detail. The team made our Europe trip smooth and special.',
+                name: 'Arjun Mehta',
+                place: 'Paris, France'
+            },
+            {
+                text: 'Well-organized itinerary, great hotels and 24/7 support. Highly recommend for a premium experience!',
+                name: 'Sneha Kapoor',
+                place: 'Switzerland'
+            }
+        ];
+
+        var html = '<div class="qp-sec qp-sec-reviews">';
+        html += '<div class="qp-rev-wrap">';
+        html += '<div class="qp-rev-head">' +
+            '<div class="qp-rev-title">Trusted by <span class="qp-rev-count">2,000+</span> Happy Travellers</div>' +
+            '<div class="qp-rev-badge">' +
+            qpGoogleLogoSvg() +
+            '<span class="qp-rev-badge-label">Google Reviews</span>' +
+            '<span class="qp-rev-badge-score">4.6 <i class="fas fa-star" aria-hidden="true"></i></span>' +
+            '<span class="qp-rev-badge-sep" aria-hidden="true"></span>' +
+            '<span class="qp-rev-badge-meta">Based on 500+ verified reviews</span>' +
+            '</div>' +
+            '</div>';
+        html += '<div class="qp-rev-rule" aria-hidden="true"></div>';
+        html += '<div class="qp-rev-grid">';
+        reviews.forEach(function (r, idx) {
+            html += '<div class="qp-rev-card' + (idx < reviews.length - 1 ? ' has-sep' : '') + '">' +
+                qpReviewStarsHtml(5) +
+                '<div class="qp-rev-text">' + esc(r.text) + '</div>' +
+                '<div class="qp-rev-name">' + esc(r.name) + '</div>' +
+                '<div class="qp-rev-place">' + esc(r.place) + '</div>' +
+                '<div class="qp-rev-verified">' +
+                '<span class="qp-rev-shield" aria-hidden="true"><i class="fas fa-check"></i></span>' +
+                '<span>Verified Google Review</span>' +
+                '</div>' +
+                '</div>';
+        });
+        html += '</div></div></div>';
+        return html;
+    }
+
+    function buildPreviewTrustStatsHtml() {
+        var shieldCheck = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">' +
+            '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 3l7 3v5.5c0 4.4-2.9 7.6-7 9.5-4.1-1.9-7-5.1-7-9.5V6l7-3z"/>' +
+            '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8.8 12.1l2.1 2.1 4.3-4.3"/>' +
+            '</svg>';
+        var items = [
+            { svg: shieldCheck, value: '500+', label: 'Happy Travelers' },
+            { icon: 'fas fa-map-marker-alt', value: '50+', label: 'Destinations' },
+            { icon: 'fas fa-users', value: 'Trusted', label: 'By Families & Couples' },
+            { icon: 'fas fa-headset', value: '24x7', label: 'Travel Support' }
+        ];
+        var html = '<div class="qp-sec qp-sec-trust-stats">';
+        html += '<div class="qp-trust-stats">';
+        items.forEach(function (item, idx) {
+            var iconHtml = item.svg
+                ? item.svg
+                : '<i class="' + item.icon + '"></i>';
+            html += '<div class="qp-trust-stat' + (idx < items.length - 1 ? ' has-sep' : '') + '">' +
+                '<span class="qp-trust-stat-icon" aria-hidden="true">' + iconHtml + '</span>' +
+                '<div class="qp-trust-stat-copy">' +
+                '<div class="qp-trust-stat-value">' + esc(item.value) + '</div>' +
+                '<div class="qp-trust-stat-label">' + esc(item.label) + '</div>' +
+                '</div>' +
+                '</div>';
+        });
+        html += '</div></div>';
+        return html;
     }
 
     function qpSectionHead(iconFa, title, slogan) {
@@ -7012,6 +7482,63 @@
         return 'web';
     }
 
+    function qpFormatHotelStayPill(nights, city) {
+        var n = parseInt(nights, 10);
+        if (isNaN(n) || n < 0) {
+            n = 0;
+        }
+        var cityName = String(city || '').trim();
+        if (!cityName) {
+            return '';
+        }
+        var unit = n === 1 ? 'Nt' : 'Nts';
+        var num = String(n).padStart(2, '0');
+        return num + ' ' + unit + ' ' + cityName;
+    }
+
+    function buildPreviewHotelRoutePillsHtml(hotelsData, activeOptionId) {
+        hotelsData = hotelsData || { categories: [] };
+        var cats = hotelsData.categories || [];
+        var hotels = [];
+        var activeId = String(activeOptionId || hotelsData.active_category_id || '');
+        var activeCat = null;
+        cats.forEach(function (cat) {
+            if (!activeCat && String(cat.id) === activeId && (cat.hotels || []).length) {
+                activeCat = cat;
+            }
+        });
+        if (!activeCat) {
+            cats.forEach(function (cat) {
+                if (!activeCat && (cat.hotels || []).length) {
+                    activeCat = cat;
+                }
+            });
+        }
+        if (activeCat) {
+            hotels = activeCat.hotels || [];
+        }
+        var pills = [];
+        hotels.forEach(function (h) {
+            var d = normalizeHotelData(h);
+            var label = qpFormatHotelStayPill(d.nights, d.city);
+            if (label) {
+                pills.push(label);
+            }
+        });
+        if (!pills.length) {
+            return '';
+        }
+        var html = '<div class="qp-route-pills">';
+        pills.forEach(function (label, i) {
+            if (i > 0) {
+                html += '<span class="qp-route-arrow" aria-hidden="true">→</span>';
+            }
+            html += '<span class="qp-route-pill">' + esc(label) + '</span>';
+        });
+        html += '</div>';
+        return html;
+    }
+
     function buildPreviewHtml(p) {
         var flights = JSON.parse(p.flights_json || '[]');
         var hotelsRaw = JSON.parse(p.hotels_json || '[]');
@@ -7047,6 +7574,7 @@
             '</div>' +
             '<span class="qp-duration-line"></span>' +
             '</div>';
+        html += buildPreviewHotelRoutePillsHtml(hotelsData, String(p.active_option_id || hotelsData.active_category_id || ''));
         html += '</div>';
         html += '<div class="qp-ref-card q-preview-ref-block">';
         html += '<div class="qp-ref-row">' +
@@ -7213,7 +7741,10 @@
                 var cat = item.cat;
                 var idx = item.idx;
                 if (multiHotelOptions) {
-                    html += qpHotelOptionsTabsHtml(hotelCatsWithRows.map(function (x) { return x.cat; }), viewIdx);
+                    var optLabel = cat.label || defaultHotelCategoryLabel(idx);
+                    html += '<div class="qp-hotel-option-tabs">' +
+                        '<span class="qp-hotel-option-tab is-active">' + esc(optLabel) + '</span>' +
+                        '</div>';
                 }
                 html += buildPreviewHotelCardsHtml(cat.hotels || [], idx);
 
@@ -7242,41 +7773,46 @@
                 if (!dayTitle && !dayDesc) {
                     return;
                 }
-                var meta = previewDayMeta(p.tentative_date, di);
-                var pills = inferItineraryPills(day);
+                var dateLabel = qpItinDateLabel(p.tentative_date, di);
+                var dayImage = qpExtractDayImage(day);
+                var descHtml = day.description || '';
+
                 itineraryHtml += '<div class="q-preview-day qp-day">';
                 itineraryHtml += '<div class="q-preview-day-head qp-day-head">';
                 itineraryHtml += '<span class="qp-day-badge">DAY ' + (di + 1) + '</span>';
-                if (meta.dateDash) {
-                    itineraryHtml += '<span class="qp-day-meta"><i class="far fa-calendar-alt"></i>' +
-                        esc((meta.dayName ? meta.dayName + ' · ' : '') + meta.dateDash) + '</span>';
-                } else if (meta.dayName) {
-                    itineraryHtml += '<span class="qp-day-meta"><i class="far fa-calendar-alt"></i>' + esc(meta.dayName) + '</span>';
+                if (dateLabel) {
+                    itineraryHtml += '<span class="qp-day-sep" aria-hidden="true"></span>';
+                    itineraryHtml += '<span class="qp-day-meta"><i class="far fa-calendar-alt" aria-hidden="true"></i>' +
+                        '<span>' + esc(dateLabel) + '</span></span>';
                 }
-                itineraryHtml += '<div class="qp-day-title"><i class="fas fa-map-marker-alt"></i>' +
+                itineraryHtml += '<span class="qp-day-sep" aria-hidden="true"></span>';
+                itineraryHtml += '<div class="qp-day-title"><i class="fas fa-map-marker-alt" aria-hidden="true"></i>' +
                     previewEditable(previewVal(day.title, ''), 'itinerary.' + di + '.title', {
-                        placeholder: 'Day title'
+                        placeholder: 'Day title',
+                        cls: 'q-preview-cell-edit qp-day-title-edit'
                     }) + '</div>';
                 itineraryHtml += '</div>';
+
                 itineraryHtml += '<div class="q-preview-day-body qp-day-body">';
-                itineraryHtml += previewEditable(day.description || '', 'itinerary.' + di + '.description', {
+                itineraryHtml += '<div class="qp-day-main' + (dayImage ? ' has-photo' : '') + '">';
+                itineraryHtml += '<div class="qp-day-content">';
+                itineraryHtml += previewEditable(descHtml, 'itinerary.' + di + '.description', {
                     type: 'html',
                     multiline: true,
-                    cls: 'q-preview-rich'
+                    cls: 'q-preview-rich qp-day-desc'
                 });
-                if (pills.length) {
-                    itineraryHtml += '<div class="qp-day-pills">';
-                    pills.forEach(function (pill) {
-                        itineraryHtml += '<span class="qp-pill ' + pill.cls + '"><i class="' + pill.icon + '"></i>' +
-                            esc(pill.label) + '</span>';
-                    });
-                    itineraryHtml += '</div>';
+                itineraryHtml += qpItinPillsHtml(day);
+                itineraryHtml += '</div>';
+                if (dayImage) {
+                    itineraryHtml += '<div class="qp-day-photo">' +
+                        '<img src="' + esc(dayImage) + '" alt="' + esc(dayTitle || ('Day ' + (di + 1))) + '">' +
+                        '</div>';
                 }
-                itineraryHtml += '</div></div>';
+                itineraryHtml += '</div></div></div>';
             });
             if (itineraryHtml) {
-                html += '<div class="qp-sec">';
-                html += '<div class="qp-itin-title"><span class="qp-bar">DAY WISE</span><span class="qp-itin-red">ITINERARY</span></div>';
+                html += '<div class="qp-sec qp-sec-itinerary">';
+                html += qpItinSectionHead();
                 html += itineraryHtml;
                 html += '</div>';
             }
@@ -7305,19 +7841,53 @@
             { key: 'terms_conditions', title: 'Terms & Conditions', html: p.terms_conditions },
             { key: 'other_details', title: 'Other Details', html: p.other_details }
         ];
-        var policyHtml = '';
+        var visiblePolicies = [];
         policyBlocks.forEach(function (b) {
-            if (!previewHasHtmlContent(b.html)) return;
-            policyHtml += '<div class="q-preview-policy-block qp-policy-block">';
-            policyHtml += '<div class="q-preview-policy-title qp-policy-title">' + esc(b.title) + '</div>';
-            policyHtml += previewEditable(b.html || '', b.key, { type: 'html', multiline: true, cls: 'q-preview-rich' });
-            policyHtml += '</div>';
+            if (previewHasHtmlContent(b.html)) {
+                visiblePolicies.push(b);
+            }
         });
-        if (policyHtml) {
-            html += '<div class="qp-sec">';
+        if (visiblePolicies.length) {
+            var multiPolicies = visiblePolicies.length > 1;
+            var termsMoreHref = '';
+            var site = String(Q_PREVIEW_META.website || 'www.multizonetravels.com').trim();
+            if (site) {
+                termsMoreHref = /^(https?:)?\/\//i.test(site) ? site : ('https://' + site.replace(/^\/+/, ''));
+            }
+            var policyHtml = '';
+            visiblePolicies.forEach(function (b) {
+                policyHtml += '<div class="q-preview-policy-block qp-policy-block">';
+                if (multiPolicies) {
+                    policyHtml += '<div class="q-preview-policy-title qp-policy-title">' + esc(b.title) + '</div>';
+                }
+                policyHtml += previewEditable(qpFormatTermsChecklistHtml(b.html || ''), b.key, {
+                    type: 'html',
+                    multiline: true,
+                    cls: 'q-preview-rich qp-terms-rich'
+                });
+                policyHtml += '</div>';
+            });
+
+            html += '<div class="qp-sec qp-sec-terms">';
             html += '<div class="qp-terms-card">';
-            html += '<div class="qp-terms-head"><span class="qp-bar"></span><h3>Quotation Terms &amp; Conditions</h3></div>';
-            html += policyHtml;
+            html += '<div class="qp-terms-head">' +
+                '<span class="qp-terms-vbar" aria-hidden="true"></span>' +
+                '<span class="qp-terms-icon" aria-hidden="true"><i class="fas fa-file-alt"></i></span>' +
+                '<div class="qp-terms-head-copy">' +
+                '<div class="qp-terms-title">QUOTATION TERMS &amp; CONDITIONS</div>' +
+                '<div class="qp-terms-sub">PLEASE READ CAREFULLY BEFORE CONFIRMING YOUR BOOKING</div>' +
+                '</div>' +
+                '</div>';
+            html += '<div class="qp-terms-body">' + policyHtml + '</div>';
+            if (termsMoreHref) {
+                html += '<div class="qp-terms-foot">' +
+                    '<a class="qp-terms-more" href="' + esc(termsMoreHref) + '" target="_blank" rel="noopener noreferrer">' +
+                    '<span class="qp-terms-more-label">For more details click </span>' +
+                    '<strong class="qp-terms-more-here">here</strong>' +
+                    '<i class="fas fa-external-link-alt" aria-hidden="true"></i>' +
+                    '</a>' +
+                    '</div>';
+            }
             html += '</div></div>';
         }
 
@@ -7366,63 +7936,89 @@
             }
         }
 
-        /* —— 11. Footer contact —— */
-        html += '<div class="q-preview-footer qp-footer">';
-        html += '<div class="q-preview-expert qp-expert">';
-        var expertPhoto = Q_PREVIEW_META.expert_photo ? absUrl(Q_PREVIEW_META.expert_photo) : '';
-        var expertName = Q_PREVIEW_META.expert_name || 'Raju Gupta';
-        var expertTitle = Q_PREVIEW_META.expert_title || 'Holiday Expert';
-        if (expertPhoto) {
-            html += '<div class="q-preview-expert-avatar qp-expert-avatar"><img src="' + esc(expertPhoto) + '" alt="' + esc(expertName) + '"></div>';
-        } else {
-            html += '<div class="q-preview-expert-avatar qp-expert-avatar">' + esc(previewExpertInitial(expertName)) + '</div>';
+        /* —— 11. Global Accreditations —— */
+        html += buildPreviewAccreditationsHtml();
+
+        /* —— 12. Trusted Reviews —— */
+        html += buildPreviewReviewsHtml();
+
+        /* —— 13. Trust Stats —— */
+        html += buildPreviewTrustStatsHtml();
+
+        /* —— 14. Footer contact —— */
+        html += buildPreviewFooterHtml();
+
+        return html;
+    }
+
+
+    function buildPreviewFooterHtml() {
+        var phoneMain = String(Q_PREVIEW_META.phone || '').trim();
+        var phoneAlt = String(Q_PREVIEW_META.phone_alt || '').trim();
+        var phoneHtml = '';
+        if (phoneMain && phoneAlt) {
+            if (phoneAlt.indexOf('|') >= 0 && !phoneMain) {
+                phoneHtml = esc(phoneAlt).replace(/\|/g, '<span class="qp-foot-phone-sep">|</span>');
+            } else if (phoneAlt.indexOf('|') >= 0) {
+                phoneHtml = esc(phoneMain) + ' <span class="qp-foot-phone-sep">|</span> ' +
+                    esc(phoneAlt.split('|')[0].trim());
+            } else {
+                phoneHtml = esc(phoneMain) + ' <span class="qp-foot-phone-sep">|</span> ' + esc(phoneAlt);
+            }
+        } else if (phoneMain) {
+            phoneHtml = esc(phoneMain).replace(/\s*\|\s*/g, ' <span class="qp-foot-phone-sep">|</span> ');
+        } else if (phoneAlt) {
+            phoneHtml = esc(phoneAlt).replace(/\s*\|\s*/g, ' <span class="qp-foot-phone-sep">|</span> ');
         }
-        html += '<div class="qp-expert-name-block">';
-        html += '<span class="qp-expert-fullname q-preview-expert-fullname">' + esc(expertName) + '</span>';
-        html += '<div class="qp-expert-role-wrap">' +
-            '<span class="qp-duration-line"></span>' +
-            '<span class="qp-expert-role q-preview-expert-role">' + esc(String(expertTitle).toUpperCase()) + '</span>' +
-            '<span class="qp-duration-line"></span>' +
-            '</div>';
+
+        var email = String(Q_PREVIEW_META.email || '').trim();
+        var website = String(Q_PREVIEW_META.website || '').trim();
+        var address = String(Q_PREVIEW_META.address || '').trim();
+        var addressHtml = '';
+        if (address) {
+            var parts = address.split(',');
+            if (parts.length >= 3) {
+                addressHtml = esc(parts.slice(0, 2).join(',').trim() + ',') + '<br>' +
+                    esc(parts.slice(2).join(',').trim());
+            } else {
+                addressHtml = esc(address);
+            }
+        }
+
+        var html = '<div class="q-preview-footer qp-footer">';
+        html += '<div class="qp-foot-contacts">';
+
+        if (phoneHtml) {
+            html += '<div class="qp-foot-cell">' +
+                '<span class="qp-foot-ico" aria-hidden="true"><i class="fas fa-phone-alt"></i></span>' +
+                '<div class="qp-foot-text">' + phoneHtml + '</div>' +
+                '</div>';
+        }
+        if (email) {
+            html += '<div class="qp-foot-cell">' +
+                '<span class="qp-foot-ico" aria-hidden="true"><i class="fas fa-envelope"></i></span>' +
+                '<div class="qp-foot-text">' + esc(email) + '</div>' +
+                '</div>';
+        }
+        if (website) {
+            html += '<div class="qp-foot-cell">' +
+                '<span class="qp-foot-ico" aria-hidden="true"><i class="fas fa-globe"></i></span>' +
+                '<div class="qp-foot-text">' + esc(website) + '</div>' +
+                '</div>';
+        }
+        if (addressHtml) {
+            html += '<div class="qp-foot-cell qp-foot-cell-address">' +
+                '<span class="qp-foot-ico" aria-hidden="true"><i class="fas fa-map-marker-alt"></i></span>' +
+                '<div class="qp-foot-text">' + addressHtml + '</div>' +
+                '</div>';
+        }
+
         html += '</div>';
-        html += '<div class="q-preview-expert-lines qp-expert-lines">';
-        if (Q_PREVIEW_META.phone) {
-            html += '<div class="qp-contact-row"><i class="fas fa-phone-alt"></i><span class="q-preview-phone-primary qp-phone-primary">' + esc(Q_PREVIEW_META.phone) + '</span></div>';
-        }
-        if (Q_PREVIEW_META.phone_alt) {
-            html += '<div class="qp-contact-row"><i class="fas fa-phone"></i><span>' + esc(Q_PREVIEW_META.phone_alt) + '</span></div>';
-        }
-        if (Q_PREVIEW_META.email) {
-            html += '<div class="qp-contact-row"><i class="fas fa-envelope"></i><span>' + esc(Q_PREVIEW_META.email) + '</span></div>';
-        }
-        if (Q_PREVIEW_META.website) {
-            html += '<div class="qp-contact-row"><i class="fas fa-globe"></i><span>' + esc(Q_PREVIEW_META.website) + '</span></div>';
-        }
-        if (Q_PREVIEW_META.address) {
-            html += '<div class="qp-contact-row"><i class="fas fa-map-marker-alt"></i><span>' + esc(Q_PREVIEW_META.address) + '</span></div>';
-        }
-        html += '</div></div>';
+
         var servicesText = Q_PREVIEW_META.services || 'FLIGHTS • HOTELS • HOLIDAYS • VISA • FOREX';
         servicesText = String(servicesText).replace(/\s*\|\s*/g, ' • ');
         html += '<div class="q-preview-services-bar qp-services-bar">' + esc(servicesText) + '</div>';
-        var social = Array.isArray(Q_PREVIEW_META.social) ? Q_PREVIEW_META.social : [];
-        if (social.length) {
-            html += '<div class="q-preview-social qp-social">';
-            social.forEach(function (s) {
-                var cls = qpSocialClass(s.type);
-                var icon = s.icon || 'fas fa-globe';
-                if (s.type === 'google' && (!s.icon || String(s.icon).indexOf('google') >= 0)) {
-                    // Map legacy Google+ meta to YouTube-style when no dedicated youtube entry.
-                    icon = s.icon || 'fab fa-youtube';
-                }
-                html += '<a class="' + cls + '" href="' + esc(s.url || '#') + '" target="_blank" rel="noopener">' +
-                    '<i class="' + esc(icon) + '"></i></a>';
-            });
-            html += '</div>';
-        }
-        html += '<div class="qp-tagline">JOURNEYS BEYOND BORDERS</div>';
         html += '</div>';
-
         return html;
     }
 
@@ -7471,9 +8067,18 @@
         });
 
         $(document).on('input', '#qPreviewPrintArea .q-preview-editable', function () {
-            var current = readPreviewEditableValue($(this));
+            var $el = $(this);
+            var current = readPreviewEditableValue($el);
             if (current !== previewEditOrig) {
                 setPreviewDirty(true);
+            }
+            var path = String($el.attr('data-q-edit') || '');
+            if (/^hotel\.\d+\.\d+\.(city|nights)$/.test(path)) {
+                clearTimeout(previewHotelPillTimer);
+                previewHotelPillTimer = window.setTimeout(function () {
+                    applyPreviewEdit($el);
+                    refreshPreviewHotelRoutePills();
+                }, 120);
             }
         });
 
