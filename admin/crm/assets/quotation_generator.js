@@ -6342,85 +6342,130 @@
             return '';
         }
 
+        function qpHotelField(label, valueHtml, extraClass) {
+            return '<div class="qp-hotel-field' + (extraClass ? ' ' + extraClass : '') + '">' +
+                '<div class="qp-hotel-field-label">' + esc(label) + '</div>' +
+                '<div class="qp-hotel-field-value">' + valueHtml + '</div>' +
+                '</div>';
+        }
+
         var html = '<div class="qp-hotel-panel">';
-        html += '<div class="qp-hotel-colhead">' +
-            '<div class="qp-hotel-col">CITY</div>' +
-            '<div class="qp-hotel-col">HOTEL</div>' +
-            '<div class="qp-hotel-col">NIGHTS</div>' +
-            '<div class="qp-hotel-col">ROOM TYPE</div>' +
-            '<div class="qp-hotel-col">CHECK-IN</div>' +
-            '<div class="qp-hotel-col">CHECK-OUT</div>' +
-            '<div class="qp-hotel-col">MEALS</div>' +
-            '</div>';
         html += '<div class="qp-hotel-body">';
 
         hotels.forEach(function (h, hi) {
             var d = normalizeHotelData(h);
             var base = 'hotel.' + catIdx + '.' + hi + '.';
             var mealInfo = qpHotelMealLabels(d.meal_plan, d.room_type);
-            var country = String(d.country || '').trim() || 'India';
+            var country = String(d.country || '').trim();
+            var cityText = String(d.city || '').trim();
             var starsHtml = qpHotelStarsHtml(d.star_category);
-            var roomPrimaryHtml;
-            var roomSecondaryHtml = '';
+            var roomValueHtml;
+            var cityValueHtml;
+            var rateNum = parseFloat(d.rate);
+            var rateLabel = (!isNaN(rateNum) && rateNum > 0) ? ('INR ' + money(rateNum)) : previewVal(d.rate, '—');
+            var roomsLabel = (d.rooms !== '' && d.rooms != null) ? String(d.rooms) : '—';
+            var supplierLabel = previewVal(d.supplier, '—');
 
             if (mealInfo.roomPrimary === 'Room Only') {
-                roomPrimaryHtml = '<div class="qp-hotel-primary">Room Only</div>';
+                roomValueHtml = '<div class="qp-hotel-primary">Room Only</div>';
                 if (d.room_type) {
-                    roomSecondaryHtml = '<div class="qp-hotel-secondary">' +
+                    roomValueHtml += '<div class="qp-hotel-secondary">' +
                         previewEditable(previewVal(d.room_type), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
                         '</div>';
                 }
             } else {
-                roomPrimaryHtml = '<div class="qp-hotel-primary">' +
+                roomValueHtml = '<div class="qp-hotel-primary">' +
                     previewEditable(previewVal(d.room_type || mealInfo.roomPrimary), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
                     '</div>';
             }
 
-            html += '<div class="qp-hotel-row-card">';
-            html += '<div class="qp-hotel-col qp-hotel-col-city">' +
+            cityValueHtml = '<div class="qp-hotel-primary">' +
                 '<i class="fas fa-map-marker-alt qp-hotel-ico" aria-hidden="true"></i>' +
-                '<div class="qp-hotel-stack">' +
-                '<div class="qp-hotel-primary">' +
-                previewEditable(previewVal(d.city), base + 'city', { cls: 'q-preview-cell-edit' }) +
-                '</div>' +
-                '<div class="qp-hotel-secondary">' + esc(country) + '</div>' +
-                '</div></div>';
+                previewEditable(previewVal(cityText), base + 'city', { cls: 'q-preview-cell-edit' }) +
+                '</div>';
+            if (country && cityText.toLowerCase().indexOf(country.toLowerCase()) === -1) {
+                cityValueHtml += '<div class="qp-hotel-secondary">' + esc(country) + '</div>';
+            }
 
-            html += '<div class="qp-hotel-col qp-hotel-col-hotel">' +
-                '<div class="qp-hotel-stack">' +
+            html += '<div class="qp-hotel-row-card">';
+            html += '<div class="qp-hotel-row-main">';
+            html += qpHotelField('City', cityValueHtml, 'qp-hotel-field-city');
+            html += qpHotelField(
+                'Hotel',
                 '<div class="qp-hotel-primary">' +
                 previewEditable(previewVal(d.name), base + 'name', { cls: 'q-preview-cell-edit' }) +
-                '</div>' +
-                starsHtml +
-                '</div></div>';
-
-            html += '<div class="qp-hotel-col qp-hotel-col-nights">' +
+                '</div>' + starsHtml,
+                'qp-hotel-field-hotel'
+            );
+            html += qpHotelField(
+                'Nights',
+                '<div class="qp-hotel-primary">' +
                 '<i class="fas fa-moon qp-hotel-ico" aria-hidden="true"></i>' +
-                '<div class="qp-hotel-primary">' +
                 previewEditable(previewVal(d.nights, '0'), base + 'nights', { type: 'int', cls: 'q-preview-cell-edit' }) +
-                '</div></div>';
+                '</div>',
+                'qp-hotel-field-nights'
+            );
+            html += qpHotelField(
+                'Rooms',
+                '<div class="qp-hotel-primary">' +
+                previewEditable(roomsLabel, base + 'rooms', { type: 'int', cls: 'q-preview-cell-edit' }) +
+                '</div>',
+                'qp-hotel-field-rooms'
+            );
+            html += '</div>';
 
-            html += '<div class="qp-hotel-col qp-hotel-col-room">' +
+            html += '<div class="qp-hotel-row-meta">';
+            html += qpHotelField(
+                'Room Type',
+                '<div class="qp-hotel-with-ico">' +
                 '<i class="fas fa-bed qp-hotel-ico" aria-hidden="true"></i>' +
-                '<div class="qp-hotel-stack">' + roomPrimaryHtml + roomSecondaryHtml + '</div></div>';
-
-            html += '<div class="qp-hotel-col qp-hotel-col-date">' +
-                '<i class="far fa-calendar-alt qp-hotel-ico" aria-hidden="true"></i>' +
+                '<div class="qp-hotel-stack">' + roomValueHtml + '</div>' +
+                '</div>',
+                'qp-hotel-field-room'
+            );
+            html += qpHotelField(
+                'Meals',
                 '<div class="qp-hotel-primary">' +
-                previewEditable(formatPreviewFlightDate(d.checkin), base + 'checkin', { type: 'date', cls: 'q-preview-cell-edit' }) +
-                '</div></div>';
-
-            html += '<div class="qp-hotel-col qp-hotel-col-date">' +
-                '<i class="far fa-calendar-alt qp-hotel-ico" aria-hidden="true"></i>' +
-                '<div class="qp-hotel-primary">' +
-                previewEditable(formatPreviewFlightDate(d.checkout), base + 'checkout', { type: 'date', cls: 'q-preview-cell-edit' }) +
-                '</div></div>';
-
-            html += '<div class="qp-hotel-col qp-hotel-col-meals">' +
                 '<i class="fas fa-utensils qp-hotel-ico" aria-hidden="true"></i>' +
-                '<div class="qp-hotel-primary">' +
                 previewEditable(mealInfo.meals || previewVal(d.meal_plan, 'None'), base + 'meal_plan', { cls: 'q-preview-cell-edit' }) +
-                '</div></div>';
+                '</div>',
+                'qp-hotel-field-meals'
+            );
+            html += qpHotelField(
+                'Check-In',
+                '<div class="qp-hotel-primary">' +
+                '<i class="far fa-calendar-alt qp-hotel-ico" aria-hidden="true"></i>' +
+                previewEditable(formatPreviewFlightDate(d.checkin), base + 'checkin', { type: 'date', cls: 'q-preview-cell-edit' }) +
+                '</div>',
+                'qp-hotel-field-date'
+            );
+            html += qpHotelField(
+                'Check-Out',
+                '<div class="qp-hotel-primary">' +
+                '<i class="far fa-calendar-alt qp-hotel-ico" aria-hidden="true"></i>' +
+                previewEditable(formatPreviewFlightDate(d.checkout), base + 'checkout', { type: 'date', cls: 'q-preview-cell-edit' }) +
+                '</div>',
+                'qp-hotel-field-date'
+            );
+            html += '</div>';
+
+            html += '<div class="qp-hotel-row-foot">';
+            html += qpHotelField(
+                'Rate',
+                '<div class="qp-hotel-primary">' +
+                '<i class="fas fa-rupee-sign qp-hotel-ico" aria-hidden="true"></i>' +
+                previewEditable(rateLabel, base + 'rate', { type: 'money', cls: 'q-preview-cell-edit' }) +
+                '</div>',
+                'qp-hotel-field-rate'
+            );
+            html += qpHotelField(
+                'Supplier',
+                '<div class="qp-hotel-primary">' +
+                previewEditable(supplierLabel, base + 'supplier', { cls: 'q-preview-cell-edit' }) +
+                '</div>',
+                'qp-hotel-field-supplier'
+            );
+            html += '</div>';
 
             html += '</div>';
         });
@@ -6919,7 +6964,7 @@
                 value = toIsoDateFromPreview(value) || value;
             }
             if (hField === 'rate') {
-                value = String(value || '').replace(/[₹,\s]/g, '');
+                value = String(value || '').replace(/INR/gi, '').replace(/[₹,\s]/g, '');
             }
             if (hField === 'supplier') {
                 var $sup = $hRow.find('.h-supplier');

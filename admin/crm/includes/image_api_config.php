@@ -101,7 +101,7 @@ function crmImageSearchWikimedia(string $query, int $limit): array
         'gsrnamespace' => 6,
         'prop' => 'imageinfo',
         'iiprop' => 'url|mime|extmetadata',
-        'iiurlwidth' => 640,
+        'iiurlwidth' => 1280,
         'format' => 'json',
     ]);
 
@@ -135,10 +135,12 @@ function crmImageSearchWikimedia(string $query, int $limit): array
         if ($mime !== '' && strpos($mime, 'image/') !== 0) {
             continue;
         }
+        // Prefer resized thumb: originals are often >5MB and fail import.
+        $downloadUrl = (string) ($info['thumburl'] ?? $info['url']);
         $title = str_replace(['File:', '_'], ['', ' '], (string) ($page['title'] ?? $query));
         $out[] = [
-            'url' => (string) $info['url'],
-            'thumb' => (string) ($info['thumburl'] ?? $info['url']),
+            'url' => $downloadUrl,
+            'thumb' => $downloadUrl,
             'title' => $title,
             'author' => 'Wikimedia Commons',
             'source' => 'wikimedia',
@@ -177,6 +179,7 @@ function crmImageAllowedImportHost(string $host): bool
         'images.pexels.com',
         'images.unsplash.com',
         'upload.wikimedia.org',
+        'thumb.wikimedia.org',
         'commons.wikimedia.org',
     ];
     foreach ($allowed as $pattern) {
@@ -200,42 +203,66 @@ function crmImageImportFromUrl(string $url): array
         return ['ok' => false, 'error' => 'Image host is not allowed.'];
     }
 
+    $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+    if ($scheme !== 'http' && $scheme !== 'https') {
+        return ['ok' => false, 'error' => 'Invalid image URL.'];
+    }
+
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 5,
         CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_USERAGENT => 'MultizoneTravels-Quotation/1.0',
+        CURLOPT_TIMEOUT => 45,
+        CURLOPT_USERAGENT => 'MultizoneTravels-Quotation/1.0 (CRM itinerary images)',
+        CURLOPT_HTTPHEADER => ['Accept: image/*,*/*;q=0.8'],
     ]);
     $binary = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+    $curlErr = curl_error($ch);
     curl_close($ch);
 
     if ($binary === false || $code !== 200) {
-        return ['ok' => false, 'error' => 'Could not download image.'];
+        $detail = $curlErr !== '' ? $curlErr : ('HTTP ' . $code);
+        return ['ok' => false, 'error' => 'Could not download image (' . $detail . ').'];
     }
 
-    if (strlen($binary) > 5 * 1024 * 1024) {
-        return ['ok' => false, 'error' => 'Image is too large (max 5MB).'];
+    if (strlen($binary) > 8 * 1024 * 1024) {
+        return ['ok' => false, 'error' => 'Image is too large (max 8MB).'];
     }
 
     $allowed = [
         'image/jpeg' => 'jpg',
+        'image/jpg' => 'jpg',
         'image/png' => 'png',
         'image/gif' => 'gif',
         'image/webp' => 'webp',
     ];
     $mime = strtolower(trim(explode(';', $contentType)[0]));
     if (!isset($allowed[$mime])) {
-        $mime = 'image/jpeg';
+        // Detect from magic bytes when CDN omits/misreports Content-Type.
+        if (strncmp($binary, "\x89PNG\r\n\x1a\n", 8) === 0) {
+            $mime = 'image/png';
+        } elseif (strncmp($binary, "\xff\xd8\xff", 3) === 0) {
+            $mime = 'image/jpeg';
+        } elseif (strncmp($binary, 'GIF87a', 6) === 0 || strncmp($binary, 'GIF89a', 6) === 0) {
+            $mime = 'image/gif';
+        } elseif (strncmp($binary, 'RIFF', 4) === 0 && substr($binary, 8, 4) === 'WEBP') {
+            $mime = 'image/webp';
+        } else {
+            $mime = 'image/jpeg';
+        }
     }
     $ext = $allowed[$mime] ?? 'jpg';
 
     $uploadDir = __DIR__ . '/../../uploads/quotations/';
-    if (!is_dir($uploadDir)) {
-        @mkdir($uploadDir, 0775, true);
+    if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+        return ['ok' => false, 'error' => 'Upload folder is missing or not writable.'];
+    }
+    if (!is_writable($uploadDir)) {
+        return ['ok' => false, 'error' => 'Upload folder is not writable.'];
     }
 
     $filename = 'qt_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;

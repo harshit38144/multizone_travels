@@ -86,7 +86,7 @@
         $('#qiiResultsGrid').html('<div class="qii-loading"><i class="fas fa-circle-notch fa-spin mr-1"></i> Searching...</div>');
         $('#qiiSourceNote').hide();
 
-        $.getJSON('crm/ajax/search_itinerary_images.php', { q: query, limit: 12 })
+        $.getJSON(qiiAbsUrl('crm/ajax/search_itinerary_images.php'), { q: query, limit: 12 })
             .done(function (res) {
                 if (!res || !res.success) {
                     qiiRenderResults([], {});
@@ -113,6 +113,21 @@
         }
     }
 
+    function qiiAjaxErrorMessage(xhr, fallback) {
+        if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+            return xhr.responseJSON.message;
+        }
+        if (xhr && typeof xhr.responseText === 'string' && xhr.responseText) {
+            try {
+                var parsed = JSON.parse(xhr.responseText);
+                if (parsed && parsed.message) {
+                    return parsed.message;
+                }
+            } catch (e) { /* ignore */ }
+        }
+        return fallback || 'Could not save image.';
+    }
+
     function qiiSelectImage(img) {
         if (!qiiTargetCard || !img || !img.url) {
             return;
@@ -123,7 +138,7 @@
         $grid.html('<div class="qii-loading"><i class="fas fa-circle-notch fa-spin mr-1"></i> Saving image...</div>');
 
         $.ajax({
-            url: 'crm/ajax/import_itinerary_image.php',
+            url: qiiAbsUrl('crm/ajax/import_itinerary_image.php'),
             type: 'POST',
             dataType: 'json',
             data: { url: img.url }
@@ -136,8 +151,8 @@
                 alert((res && res.message) ? res.message : 'Could not save image.');
                 qiiRunSearch($('#qiiSearchInput').val());
             }
-        }).fail(function () {
-            alert('Could not save image.');
+        }).fail(function (xhr) {
+            alert(qiiAjaxErrorMessage(xhr, 'Could not save image.'));
             qiiRunSearch($('#qiiSearchInput').val());
         });
     }

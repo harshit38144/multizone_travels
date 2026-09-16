@@ -10,10 +10,11 @@ $url = trim((string) ($_POST['url'] ?? ''));
 $result = crmImageImportFromUrl($url);
 
 if (!$result['ok']) {
+    // Keep HTTP 200 so front-end can read message via .done(); success:false signals failure.
     crmImageApiJson([
         'success' => false,
         'message' => $result['error'] ?? 'Import failed.',
-    ], 400);
+    ]);
 }
 
 crmImageApiJson([
