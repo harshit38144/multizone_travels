@@ -8217,8 +8217,8 @@ $qWizardSteps = [
             align-items: flex-start;
             justify-content: space-between;
             gap: 16px;
-            padding-bottom: 18px;
-            margin-bottom: 20px;
+            padding-bottom: 14px;
+            margin-bottom: 8px;
             border-bottom: 1px solid #edf0f4;
         }
 
@@ -8259,6 +8259,7 @@ $qWizardSteps = [
         .qp-dest-red {
             color: var(--qp-red);
             font-weight: 800;
+            text-transform: uppercase;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -8327,14 +8328,17 @@ $qWizardSteps = [
         }
 
         .qp-ref-card {
-            background: var(--qp-card);
-            border-radius: 8px;
-            padding: 7px 10px;
-            min-width: 168px;
-            max-width: 210px;
-            font-size: 11px;
-            line-height: 1.2;
+            background: #ffffff;
+            border: 0;
+            border-radius: 16px;
+            padding: 6px 12px;
+            min-width: 200px;
+            max-width: 240px;
+            font-family: inherit;
+            font-size: 12px;
+            line-height: 1.3;
             text-align: left;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -8342,8 +8346,15 @@ $qWizardSteps = [
         .qp-ref-card .qp-ref-row {
             display: flex;
             align-items: center;
-            gap: 7px;
-            margin-bottom: 5px;
+            gap: 12px;
+            margin: 0;
+            padding: 0 0 3px;
+        }
+
+        .qp-ref-card .qp-ref-row + .qp-ref-row {
+            padding-top: 5px;
+            padding-bottom: 0;
+            border-top: 1px solid #e8ecf1;
         }
 
         .qp-ref-card .qp-ref-row:last-child {
@@ -8351,31 +8362,40 @@ $qWizardSteps = [
         }
 
         .qp-ref-card .qp-ref-ico {
-            color: var(--qp-red);
-            width: 14px;
+            color: #d92027;
+            width: 22px;
             text-align: center;
             margin-top: 0;
             flex-shrink: 0;
-            font-size: 0.78rem;
+            font-size: 1.15rem;
+            line-height: 1;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
+        .qp-ref-text {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
         .qp-ref-label {
-            font-size: 9px;
-            font-weight: 600;
-            color: var(--qp-muted);
+            font-size: 11px;
+            font-weight: 500;
+            color: #707a8a;
             margin-bottom: 0;
-            line-height: 1.15;
+            line-height: 1.2;
         }
 
         .qp-ref-value,
         .qp-ref-card .ref {
-            font-weight: 800;
-            color: var(--qp-ink);
+            font-weight: 700;
+            color: #0a1329;
             word-break: break-word;
-            font-size: 11px;
-            line-height: 1.2;
+            font-size: 13px;
+            line-height: 1.25;
+            letter-spacing: -0.01em;
         }
 
         /* —— Section heads —— */
@@ -8395,51 +8415,57 @@ $qWizardSteps = [
         .qp-sec-head-left {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             min-width: 0;
             flex: 1;
         }
 
         .qp-sec-icon {
-            width: 28px;
-            height: 28px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             background: var(--qp-red);
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 11px;
             flex-shrink: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-sec-title {
-            font-weight: 800;
             font-size: 14px;
-            letter-spacing: 0.01em;
+            font-weight: 700;
+            font-family: inherit;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
             text-transform: none;
             color: var(--qp-ink);
             white-space: nowrap;
         }
 
         .qp-sec-line {
-            flex: 1;
+            flex: 1 1 auto;
             height: 2px;
+            min-width: 20px;
             background: var(--qp-red);
-            min-width: 24px;
+            align-self: center;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-sec-slogan {
-            font-size: 10px;
-            font-weight: 700;
+            font-size: 8px;
+            font-weight: 600;
+            font-family: inherit;
             letter-spacing: 0.12em;
             color: #a0a8b4;
+            line-height: 1.35;
             text-transform: uppercase;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         /* —— Flight Details (preview cards) —— */
@@ -8448,12 +8474,18 @@ $qWizardSteps = [
             --qp-flight-ink: #1a1d23;
             --qp-flight-muted: #8b93a0;
             --qp-flight-line: #d7dbe3;
-            margin-bottom: 16px;
+            --qp-flight-blue: #2563eb;
+            --qp-flight-blue-bg: #eff6ff;
+            margin-bottom: 18px;
             font-family: inherit;
         }
 
         .qp-flight-sec-head {
             margin-bottom: 10px;
+            padding: 0;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
         }
 
         .qp-flight-sec-top {
@@ -8496,6 +8528,7 @@ $qWizardSteps = [
         .qp-flight-sec-title {
             font-size: 14px;
             font-weight: 700;
+            font-family: inherit;
             color: var(--qp-flight-ink);
             letter-spacing: -0.01em;
             line-height: 1.2;
@@ -8504,40 +8537,37 @@ $qWizardSteps = [
 
         .qp-flight-sec-rule {
             flex: 1 1 auto;
-            height: 1px;
+            height: 2px;
             min-width: 20px;
-            background: var(--qp-flight-line);
+            background: var(--qp-flight-red);
             align-self: center;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-flight-sec-slogan-wrap {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 3px;
             flex-shrink: 0;
-            padding-bottom: 0;
         }
 
         .qp-flight-sec-slogan {
             font-size: 8px;
             font-weight: 600;
+            font-family: inherit;
             letter-spacing: 0.12em;
             color: #a0a8b4;
-            line-height: 1;
+            line-height: 1.35;
             text-align: right;
             text-transform: uppercase;
             white-space: nowrap;
         }
 
-        .qp-flight-sec-accent {
-            display: block;
-            width: 56px;
-            height: 2px;
-            background: var(--qp-flight-red);
-            border-radius: 1px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        .qp-flight-sec-tomorrow {
+            display: inline;
+            padding-bottom: 0;
+            border-bottom: 0;
         }
 
         .qp-flight-cards {
@@ -8548,28 +8578,24 @@ $qWizardSteps = [
 
         .qp-flight-card {
             background: #fff;
-            border: 1px solid #e9edf2;
+            border: 1px solid #e8ecf1;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 14px rgba(17, 24, 39, 0.05);
+            box-shadow: 0 2px 10px rgba(17, 24, 39, 0.04);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-flight-card-hd {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 10px;
             padding: 10px 12px 6px;
         }
 
-        .qp-flight-card-hd-main {
+        .qp-flight-card-hd-top {
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 5px;
-            min-width: 0;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 6px;
         }
 
         .qp-flight-dir {
@@ -8579,6 +8605,7 @@ $qWizardSteps = [
             color: #fff;
             font-size: 10px;
             font-weight: 600;
+            font-family: inherit;
             line-height: 1;
             padding: 4px 10px;
             border-radius: 999px;
@@ -8590,6 +8617,7 @@ $qWizardSteps = [
         .qp-flight-route {
             font-size: 13px;
             font-weight: 700;
+            font-family: inherit;
             color: var(--qp-flight-ink);
             letter-spacing: -0.01em;
             line-height: 1.25;
@@ -8598,9 +8626,9 @@ $qWizardSteps = [
         .qp-flight-meta {
             font-size: 11px;
             font-weight: 600;
+            font-family: inherit;
             color: var(--qp-flight-red);
             white-space: nowrap;
-            padding-top: 2px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -8614,24 +8642,25 @@ $qWizardSteps = [
 
         .qp-flight-seg {
             display: grid;
-            grid-template-columns: 22px minmax(72px, 1fr) minmax(80px, 1.2fr) minmax(72px, 1fr) minmax(130px, 1.15fr);
+            grid-template-columns: 22px minmax(100px, 1.15fr) minmax(70px, 0.9fr) minmax(100px, 1.15fr) minmax(130px, 1.2fr);
             gap: 8px;
             align-items: center;
-            background: #fff;
-            border: 1px solid #e8ecf1;
-            border-radius: 10px;
-            padding: 8px 10px;
-            margin-bottom: 6px;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 8px 2px;
+            margin-bottom: 0;
         }
 
         .qp-flight-seg-num {
             width: 22px;
             height: 22px;
             border-radius: 50%;
-            background: #fde9eb;
+            background: #fde8ea;
             color: var(--qp-flight-red);
             font-size: 11px;
             font-weight: 700;
+            font-family: inherit;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -8644,26 +8673,59 @@ $qWizardSteps = [
             min-width: 0;
         }
 
-        .qp-flight-code {
-            font-size: 14px;
-            font-weight: 700;
+        .qp-flight-endpoint.is-end {
+            text-align: left;
+        }
+
+        .qp-flight-place {
+            font-size: 12px;
+            line-height: 1.25;
             color: var(--qp-flight-ink);
-            line-height: 1.1;
-            letter-spacing: 0.02em;
+            font-family: inherit;
         }
 
         .qp-flight-city {
+            font-size: 12px;
+            font-weight: 600;
+            font-family: inherit;
+            color: var(--qp-flight-ink);
+        }
+
+        .qp-flight-code {
+            font-size: 11px;
+            font-weight: 500;
+            font-family: inherit;
+            color: var(--qp-flight-muted);
+        }
+
+        .qp-flight-when {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 2px;
+            font-size: 10px;
+            line-height: 1.3;
+            color: var(--qp-flight-muted);
+            font-family: inherit;
+        }
+
+        .qp-flight-date {
             font-size: 10px;
             font-weight: 500;
+            font-family: inherit;
             color: var(--qp-flight-muted);
-            margin-top: 1px;
-            line-height: 1.2;
+        }
+
+        .qp-flight-when-sep {
+            color: #c4cad4;
+            font-weight: 500;
         }
 
         .qp-flight-time {
-            margin-top: 4px;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
+            font-family: inherit;
             color: var(--qp-flight-ink);
             line-height: 1.15;
         }
@@ -8672,17 +8734,9 @@ $qWizardSteps = [
         .qp-flight-time .qp-flight-time-edit {
             font-family: inherit;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
             color: var(--qp-flight-ink);
             border-bottom: none !important;
-        }
-
-        .qp-flight-date {
-            margin-top: 1px;
-            font-size: 10px;
-            font-weight: 500;
-            color: var(--qp-flight-muted);
-            line-height: 1.2;
         }
 
         .qp-flight-mid {
@@ -8725,7 +8779,6 @@ $qWizardSteps = [
         .qp-flight-airline-wrap {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
             justify-self: end;
             max-width: 100%;
             min-width: 0;
@@ -8735,8 +8788,8 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: #eef3fa;
-            color: #2f3f6b;
+            background: var(--qp-flight-blue-bg);
+            color: var(--qp-flight-blue);
             border-radius: 999px;
             padding: 5px 9px;
             min-width: 0;
@@ -8746,7 +8799,7 @@ $qWizardSteps = [
         }
 
         .qp-flight-airline-ico {
-            color: #4c6fff;
+            color: var(--qp-flight-blue);
             flex-shrink: 0;
             display: block;
             width: 10px;
@@ -8755,27 +8808,29 @@ $qWizardSteps = [
 
         .qp-flight-airline-label {
             font-size: 10px;
-            font-weight: 700;
+            font-weight: 600;
+            font-family: inherit;
             letter-spacing: 0.02em;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             min-width: 0;
-            color: #2f3f6b;
+            color: var(--qp-flight-blue);
+            text-transform: uppercase;
         }
 
         .qp-flight-airline-label .q-preview-cell-edit {
             font-family: inherit;
             font-size: 10px;
-            font-weight: 700;
-            color: #2f3f6b;
+            font-weight: 600;
+            color: var(--qp-flight-blue);
             border-bottom: none !important;
             text-transform: uppercase;
             letter-spacing: 0.02em;
         }
 
         .qp-flight-airline-chev {
-            color: #b0b7c3;
+            color: #93c5fd;
             font-size: 9px;
             flex-shrink: 0;
         }
@@ -8785,7 +8840,7 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 4px 6px;
+            margin: 2px 4px 4px;
             min-height: 24px;
         }
 
@@ -8795,8 +8850,10 @@ $qWizardSteps = [
             right: 0;
             top: 50%;
             height: 1px;
-            background: #f0d0d3;
+            background: #f0a8ae;
             z-index: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-flight-layover {
@@ -8806,10 +8863,11 @@ $qWizardSteps = [
             align-items: center;
             gap: 6px;
             background: #fff5f6;
-            border: 1px solid #f3c4c8;
+            border: 1px solid #f3b4b8;
             color: var(--qp-flight-red);
             font-size: 10px;
             font-weight: 600;
+            font-family: inherit;
             padding: 4px 10px;
             border-radius: 999px;
             -webkit-print-color-adjust: exact;
@@ -8825,18 +8883,19 @@ $qWizardSteps = [
         .qp-flight-layover-text {
             color: var(--qp-flight-red);
             font-weight: 600;
+            font-family: inherit;
         }
 
-        .qp-flight-layover-sep {
-            width: 1px;
-            height: 10px;
-            background: #e8a8ae;
-            flex-shrink: 0;
+        .qp-flight-layover-pipe {
+            color: var(--qp-flight-red);
+            font-weight: 600;
+            padding: 0 2px;
         }
 
         .qp-flight-layover-dur {
             color: var(--qp-flight-red);
             font-weight: 700;
+            font-family: inherit;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -8850,6 +8909,7 @@ $qWizardSteps = [
             color: var(--qp-flight-ink);
             font-size: 11px;
             font-weight: 500;
+            font-family: inherit;
         }
 
         .qp-flight-card-ft .fa-clock,
@@ -8860,6 +8920,7 @@ $qWizardSteps = [
 
         .qp-flight-card-ft strong {
             font-weight: 700;
+            font-family: inherit;
         }
 
         @media (max-width: 900px) {
@@ -9020,30 +9081,11 @@ $qWizardSteps = [
             print-color-adjust: exact;
         }
 
-        .qp-hotel-row-main,
-        .qp-hotel-row-meta,
-        .qp-hotel-row-foot {
+        .qp-hotel-row-fields {
             display: grid;
-            gap: 8px 10px;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            gap: 8px 8px;
             align-items: start;
-        }
-
-        .qp-hotel-row-main {
-            grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.6fr) minmax(52px, 0.55fr) minmax(52px, 0.55fr);
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-            border-bottom: 1px solid #eef1f5;
-        }
-
-        .qp-hotel-row-meta {
-            grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-            border-bottom: 1px solid #eef1f5;
-        }
-
-        .qp-hotel-row-foot {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
         }
 
         .qp-hotel-field {
@@ -9051,6 +9093,9 @@ $qWizardSteps = [
         }
 
         .qp-hotel-field-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             font-size: 9px;
             font-weight: 700;
             letter-spacing: 0.08em;
@@ -9060,36 +9105,25 @@ $qWizardSteps = [
             line-height: 1.2;
         }
 
-        .qp-hotel-field-value {
-            min-width: 0;
-        }
-
-        .qp-hotel-field-value .qp-hotel-primary {
-            display: flex;
-            align-items: flex-start;
-            gap: 6px;
-        }
-
-        .qp-hotel-ico {
+        .qp-hotel-field-label .qp-hotel-ico {
             color: var(--qp-hotel-red);
-            font-size: 11px;
-            width: 12px;
+            font-size: 9px;
+            width: auto;
             text-align: center;
             flex-shrink: 0;
-            margin-top: 2px;
+            margin-top: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-hotel-with-ico {
-            display: flex;
-            align-items: flex-start;
-            gap: 6px;
+        .qp-hotel-field-value {
             min-width: 0;
         }
 
-        .qp-hotel-with-ico .qp-hotel-stack {
-            flex: 1 1 auto;
+        .qp-hotel-field-city .qp-hotel-primary,
+        .qp-hotel-field-city .qp-hotel-primary .q-preview-cell-edit,
+        .qp-hotel-field-city .qp-hotel-secondary {
+            text-transform: uppercase;
         }
 
         .qp-hotel-stack {
@@ -9114,7 +9148,6 @@ $qWizardSteps = [
             font-weight: 600;
             color: var(--qp-hotel-ink);
             border-bottom: none !important;
-            flex: 1 1 auto;
             min-width: 0;
         }
 
@@ -9124,7 +9157,6 @@ $qWizardSteps = [
             color: var(--qp-hotel-muted);
             line-height: 1.25;
             word-break: break-word;
-            padding-left: 18px;
         }
 
         .qp-hotel-secondary .q-preview-cell-edit {
@@ -9132,15 +9164,6 @@ $qWizardSteps = [
             font-weight: 500;
             color: var(--qp-hotel-muted);
             border-bottom: none !important;
-        }
-
-        .qp-hotel-field-room .qp-hotel-secondary {
-            padding-left: 0;
-        }
-
-        .qp-hotel-field-room .qp-hotel-stack .qp-hotel-primary,
-        .qp-hotel-field-room .qp-hotel-stack .qp-hotel-secondary {
-            display: block;
         }
 
         .qp-hotel-stars {
@@ -9158,17 +9181,20 @@ $qWizardSteps = [
             print-color-adjust: exact;
         }
 
+        @media (max-width: 900px) {
+            .qp-hotel-row-fields {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
         @media (max-width: 640px) {
-            .qp-hotel-row-main,
-            .qp-hotel-row-meta,
-            .qp-hotel-row-foot {
+            .qp-hotel-row-fields {
                 grid-template-columns: 1fr 1fr;
             }
 
             .qp-hotel-field-hotel,
             .qp-hotel-field-city,
-            .qp-hotel-field-room,
-            .qp-hotel-field-supplier {
+            .qp-hotel-field-room {
                 grid-column: 1 / -1;
             }
 
@@ -9303,8 +9329,23 @@ $qWizardSteps = [
             grid-template-columns: repeat(5, 1fr);
         }
 
+        .qp-info-card.qp-cols-5.qp-travel-details {
+            grid-template-columns:
+                minmax(0, 1.7fr)
+                minmax(0, 1.15fr)
+                minmax(0, 1fr)
+                minmax(0, 0.55fr)
+                minmax(0, 0.55fr);
+        }
+
+        .qp-travel-details .qp-info-cell:first-child .qp-info-value {
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.25;
+        }
+
         .qp-info-cell {
-            padding: 14px 14px;
+            padding: 6px 7px;
             border-right: 1px solid #d7e0ea;
             text-align: center;
             min-width: 0;
@@ -9529,7 +9570,7 @@ $qWizardSteps = [
 
         .qp-day-main.has-photo {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(140px, 32%);
+            grid-template-columns: minmax(0, 1fr) 180px;
             gap: 16px;
             align-items: start;
         }
@@ -9566,17 +9607,17 @@ $qWizardSteps = [
         }
 
         .qp-day-photo {
-            min-width: 0;
+            width: 180px;
+            flex-shrink: 0;
         }
 
         .qp-day-photo img {
-            width: 100%;
-            height: auto;
-            max-height: 180px;
+            width: 180px;
+            height: 140px;
             object-fit: cover;
             border-radius: 14px;
             display: block;
-            box-shadow: 0 6px 16px rgba(17, 24, 39, 0.12);
+            box-shadow:0 6px 10px rgb(187 187 187 / 90%);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -9641,7 +9682,7 @@ $qWizardSteps = [
 
         .qp-pill-overnight,
         .qp-pill-meal {
-            background: #fdecee;
+            background: #ebebeb;
             color: #374151;
         }
 
@@ -9654,8 +9695,14 @@ $qWizardSteps = [
                 grid-template-columns: 1fr;
             }
 
+            .qp-day-photo {
+                width: 180px;
+                margin: 0 auto;
+            }
+
             .qp-day-photo img {
-                max-height: 200px;
+                width: 180px;
+                height: 140px;
             }
 
             .qp-day-sep {
@@ -9689,36 +9736,117 @@ $qWizardSteps = [
 
         /* —— Inclusions —— */
         .qp-incl-banner {
-            background: linear-gradient(90deg, var(--qp-red-dark), var(--qp-red-bright));
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(100deg, #8b1218 0%, #6e0e14 28%, #3a090c 62%, #1a0507 100%);
             color: #fff;
-            border-radius: 8px;
-            padding: 14px 18px;
+            border-radius: 6px;
+            padding: 10px 18px;
             margin-bottom: 12px;
-            text-align: center;
+            min-height: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-incl-banner .qp-incl-kicker {
-            font-size: 10px;
-            letter-spacing: 0.18em;
-            font-weight: 700;
-            opacity: 0.9;
-            margin-bottom: 2px;
+        .qp-incl-banner-inner {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            min-height: 0;
         }
 
-        .qp-incl-banner .qp-incl-main {
-            font-size: 18px;
+        .qp-incl-left {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .qp-incl-main {
+            font-size: 22px;
             font-weight: 800;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.04em;
+            line-height: 1.05;
+            text-transform: uppercase;
+            color: #fff;
             margin: 0;
         }
 
-        .qp-incl-banner .qp-incl-sub {
-            font-size: 11px;
-            letter-spacing: 0.06em;
+        .qp-incl-sub {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 3px;
+            line-height: 1.25;
+        }
+
+        .qp-incl-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .qp-incl-right-bar {
+            width: 2px;
+            align-self: stretch;
+            min-height: 40px;
+            background: #c4121a;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-right-copy {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0;
+            font-size: 8px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            line-height: 1.3;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.95);
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .qp-incl-right-dash {
+            display: block;
+            width: 18px;
+            height: 2px;
             margin-top: 4px;
-            opacity: 0.92;
+            background: #e11d2e;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        @media (max-width: 640px) {
+            .qp-incl-banner {
+                padding: 10px 12px;
+            }
+
+            .qp-incl-banner-inner {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .qp-incl-main {
+                font-size: 18px;
+            }
+
+            .qp-incl-right {
+                width: 100%;
+            }
+
+            .qp-incl-right-copy {
+                align-items: flex-start;
+                text-align: left;
+            }
         }
 
         .qp-incl-edit.q-preview-rich ul {
@@ -10303,25 +10431,23 @@ $qWizardSteps = [
         }
 
         .qp-acc-logo {
-            width: 78px;
-            height: 78px;
+            width: 72px;
+            height: 56px;
             margin: 0 auto 12px;
-            border-radius: 50%;
-            border: 1.5px solid #e11d2e;
-            background: #fff;
+            border-radius: 0;
+            border: 0;
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            overflow: visible;
             position: relative;
             z-index: 1;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
         }
 
         .qp-acc-logo img {
-            width: 78%;
-            height: 78%;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
             display: block;
         }
@@ -10340,21 +10466,12 @@ $qWizardSteps = [
             width: 36px;
             height: 2px;
             background: #d92027;
-            margin: 0 auto 8px;
+            margin: 0 auto 0;
             border-radius: 999px;
             position: relative;
             z-index: 1;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-        }
-
-        .qp-acc-card-desc {
-            font-size: 11px;
-            font-weight: 400;
-            color: #6b7280;
-            line-height: 1.45;
-            position: relative;
-            z-index: 1;
         }
 
         @media (max-width: 900px) {
@@ -10381,32 +10498,53 @@ $qWizardSteps = [
 
         .qp-rev-wrap {
             background: #fff;
-            border: 1px solid #e8ecf1;
-            border-radius: 14px;
-            padding: 22px 18px 18px;
-            box-shadow: 0 2px 10px rgba(17, 24, 39, 0.04);
+            border: 0;
+            border-radius: 0;
+            padding: 8px 4px 6px;
+            box-shadow: none;
+            text-align: center;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-rev-head {
             text-align: center;
-            margin: 0 auto 14px;
+            margin: 0 auto 18px;
+            max-width: 720px;
+        }
+
+        .qp-rev-brand {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .qp-rev-brand .qp-rev-google-logo {
+            width: 28px;
+            height: 28px;
         }
 
         .qp-rev-title {
-            font-size: 18px;
+            font-size: 22px;
             font-weight: 800;
-            color: #1a1d23;
-            letter-spacing: -0.01em;
+            color: #1f2937;
+            letter-spacing: -0.02em;
             line-height: 1.25;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
         }
 
         .qp-rev-count {
-            color: #d92027;
+            color: #1a73e8;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+        }
+
+        .qp-rev-sub {
+            font-size: 13px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 14px;
+            line-height: 1.4;
         }
 
         .qp-rev-badge {
@@ -10415,11 +10553,12 @@ $qWizardSteps = [
             flex-wrap: wrap;
             justify-content: center;
             gap: 8px;
-            padding: 8px 14px;
+            padding: 8px 16px;
             border: 1px solid #e5e7eb;
             border-radius: 999px;
             background: #fff;
             max-width: 100%;
+            box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
         }
 
         .qp-rev-google-logo {
@@ -10429,69 +10568,157 @@ $qWizardSteps = [
 
         .qp-rev-badge-label {
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 600;
             color: #374151;
+        }
+
+        .qp-rev-badge-sep {
+            width: 1px;
+            height: 16px;
+            background: #d1d5db;
+            flex-shrink: 0;
         }
 
         .qp-rev-badge-score {
             font-size: 15px;
             font-weight: 800;
-            color: #d92027;
+            color: #111827;
+            line-height: 1;
+        }
+
+        .qp-rev-rating-stars {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
+            color: #fbbc04;
+            font-size: 12px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-rev-badge-score i {
-            font-size: 11px;
-            color: #d92027;
-        }
-
-        .qp-rev-badge-sep {
-            width: 1px;
-            height: 14px;
-            background: #d1d5db;
-            flex-shrink: 0;
-        }
-
         .qp-rev-badge-meta {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 500;
             color: #9ca3af;
         }
 
-        .qp-rev-rule {
-            height: 1px;
-            background: #e5e7eb;
-            margin: 0 0 16px;
+        .qp-rev-carousel {
+            position: relative;
+            display: block;
+            margin: 0 auto 16px;
+            max-width: 100%;
         }
 
         .qp-rev-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0;
+            gap: 12px;
+            min-width: 0;
+            text-align: left;
         }
 
         .qp-rev-card {
-            padding: 4px 16px 2px;
+            background: #fff;
+            border: 1px solid #eef1f5;
+            border-radius: 14px;
+            padding: 14px 14px 12px;
+            min-width: 0;
+            box-shadow: 0 4px 14px rgba(17, 24, 39, 0.05);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .qp-rev-person {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             min-width: 0;
         }
 
-        .qp-rev-card.has-sep {
-            border-right: 1px solid #e5e7eb;
+        .qp-rev-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-avatar.tone-a { background: linear-gradient(135deg, #f59e0b, #ea580c); }
+        .qp-rev-avatar.tone-b { background: linear-gradient(135deg, #38bdf8, #2563eb); }
+        .qp-rev-avatar.tone-c { background: linear-gradient(135deg, #fb7185, #db2777); }
+
+        .qp-rev-person-meta {
+            min-width: 0;
+        }
+
+        .qp-rev-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.25;
+        }
+
+        .qp-rev-place {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-top: 3px;
+            line-height: 1.3;
+        }
+
+        .qp-rev-flag {
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .qp-rev-card-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .qp-rev-more {
+            color: #9ca3af;
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .qp-rev-ago {
+            font-size: 10px;
+            font-weight: 500;
+            color: #9ca3af;
+            white-space: nowrap;
         }
 
         .qp-rev-stars {
             display: flex;
             align-items: center;
-            gap: 3px;
-            margin-bottom: 10px;
+            gap: 2px;
+            margin-bottom: 8px;
         }
 
         .qp-rev-stars .fa-star {
-            color: #d92027;
+            color: #fbbc04;
             font-size: 12px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -10500,45 +10727,32 @@ $qWizardSteps = [
         .qp-rev-text {
             font-size: 12.5px;
             font-weight: 400;
-            color: #374151;
+            color: #4b5563;
             line-height: 1.55;
             margin-bottom: 12px;
-        }
-
-        .qp-rev-name {
-            font-size: 13px;
-            font-weight: 700;
-            color: #1a1d23;
-            line-height: 1.3;
-        }
-
-        .qp-rev-place {
-            font-size: 11px;
-            font-weight: 500;
-            color: #9ca3af;
-            margin-top: 2px;
-            margin-bottom: 10px;
+            min-height: 3.1em;
         }
 
         .qp-rev-verified {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 7px;
             font-size: 11px;
             font-weight: 500;
-            color: #9ca3af;
+            color: #6b7280;
         }
 
         .qp-rev-shield {
-            width: 13px;
-            height: 15px;
-            background: #d92027;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1a73e8;
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            clip-path: polygon(50% 0%, 100% 18%, 100% 62%, 50% 100%, 0% 62%, 0% 18%);
+            clip-path: none;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -10549,19 +10763,42 @@ $qWizardSteps = [
             color: #fff;
         }
 
-        @media (max-width: 800px) {
+        .qp-rev-more-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            background: #fff;
+            color: #1a73e8;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none !important;
+            box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-more-btn:hover,
+        .qp-rev-more-btn:focus {
+            color: #1557b0;
+            text-decoration: none !important;
+            border-color: #d1d5db;
+        }
+
+        .qp-rev-more-btn i {
+            font-size: 11px;
+        }
+
+        @media (max-width: 900px) {
             .qp-rev-grid {
                 grid-template-columns: 1fr;
-                gap: 14px;
             }
 
-            .qp-rev-card {
-                padding: 0 0 12px;
-            }
-
-            .qp-rev-card.has-sep {
-                border-right: 0;
-                border-bottom: 1px solid #e5e7eb;
+            .qp-rev-title {
+                font-size: 18px;
             }
         }
 
@@ -12767,7 +13004,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=182"></script>
+    <script src="crm/assets/quotation_generator.js?v=197"></script>
     <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
