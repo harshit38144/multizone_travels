@@ -1560,7 +1560,7 @@
                 extraClass: 'q-hotel-field-meal',
                 ico: 'fa-utensils',
                 menuClass: 'q-hotel-meal-menu',
-                control: '<input type="text" class="form-control h-meal" value="' + esc(d.meal_plan) + '" autocomplete="off" placeholder="Meal">'
+                control: '<input type="text" class="form-control h-meal" value="' + esc(d.meal_plan) + '" autocomplete="off" placeholder="EP / CP / MAP / AP">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-nts',
@@ -2289,45 +2289,63 @@
         });
     }
 
+    var HOTEL_MEAL_PLAN_OPTIONS = [
+        { name: 'EP', description: 'European Plan - No Meals' },
+        { name: 'CP', description: 'Continental Plan - BF' },
+        { name: 'MAP', description: 'Modified American Plan - BF+D' },
+        { name: 'AP', description: 'American Plan - all meals - BF+L+D' }
+    ];
+
+    function getHotelMealPlanOptions(typed) {
+        var q = String(typed || '').trim().toLowerCase();
+        var all = HOTEL_MEAL_PLAN_OPTIONS.slice();
+        if (!q) {
+            return all;
+        }
+        var matched = [];
+        var rest = [];
+        all.forEach(function (m) {
+            var name = String(m.name || '').toLowerCase();
+            var desc = String(m.description || '').toLowerCase();
+            if (name.indexOf(q) !== -1 || desc.indexOf(q) !== -1 || q.indexOf(name) !== -1) {
+                matched.push(m);
+            } else {
+                rest.push(m);
+            }
+        });
+        // Always keep all standard plans visible; matched ones first.
+        return matched.concat(rest);
+    }
+
     function showHotelMealSuggestions($row) {
         var $menu = $row.find('.q-hotel-meal-menu');
         var typed = $.trim($row.find('.h-meal').val());
-        var hotelId = parseInt($row.find('.h-hotel-id').val(), 10) || 0;
-
-        ensureHotelMasterDetails($row, function (hotel) {
-            $menu.empty();
-            if (!hotelId && !(hotel && hotel.id)) {
-                $menu.append('<div class="q-hotel-menu-empty">Select a hotel from Hotel Master first</div>').show();
-                return;
-            }
-            var meals = filterHotelListByQuery(hotel && hotel.meal_plans ? hotel.meal_plans : [], typed, function (m) {
-                return m.name || '';
-            });
-            if (!meals.length) {
-                if (typed) {
-                    $menu.append('<div class="q-hotel-menu-empty">No matching meal plan — keep "' + esc(typed) + '"</div>');
-                } else {
-                    $menu.append('<div class="q-hotel-menu-empty">No meal plans in Hotel Master for this hotel</div>');
-                }
-            } else {
-                meals.forEach(function (m, idx) {
-                    var label = m.name || ('Meal ' + (idx + 1));
-                    var sub = m.description || '';
-                    if (m.price !== undefined && m.price !== null && m.price !== '') {
-                        sub += (sub ? ' · ' : '') + '$' + (parseFloat(m.price) || 0);
-                    }
-                    var $btn = $('<button type="button" class="q-hotel-menu-item q-hotel-meal-pick"></button>')
-                        .attr('data-index', idx)
-                        .data('meal', m);
-                    $btn.append($('<span></span>').text(label));
-                    if (sub) {
-                        $btn.append($('<span class="q-hotel-menu-sub"></span>').text(sub));
-                    }
-                    $menu.append($btn);
-                });
-            }
-            $menu.show();
+        var meals = getHotelMealPlanOptions(typed);
+        var typedUpper = typed.toUpperCase();
+        var exactMatch = HOTEL_MEAL_PLAN_OPTIONS.some(function (m) {
+            return String(m.name || '').toUpperCase() === typedUpper;
         });
+
+        $menu.empty();
+        meals.forEach(function (m, idx) {
+            var $btn = $('<button type="button" class="q-hotel-menu-item q-hotel-meal-pick"></button>')
+                .attr('data-index', idx)
+                .data('meal', m);
+            $btn.append($('<span></span>').text(m.name || ('Meal ' + (idx + 1))));
+            if (m.description) {
+                $btn.append($('<span class="q-hotel-menu-sub"></span>').text(m.description));
+            }
+            $menu.append($btn);
+        });
+        if (typed && !exactMatch) {
+            $menu.append(
+                $('<button type="button" class="q-hotel-menu-item q-hotel-meal-pick"></button>')
+                    .data('meal', { name: typed, description: 'Custom meal plan' })
+                    .append($('<span></span>').text(typed))
+                    .append($('<span class="q-hotel-menu-sub"></span>').text('Use custom value'))
+            );
+        }
+        $menu.show();
     }
 
     function appendHotelCreateAction($menu, typed) {
@@ -6067,6 +6085,10 @@
         syncAllEditors();
         syncLegacyPricingFieldsFromActiveSheet();
         var costSheetObj = collectPricingOptionsPayload();
+        var headerText = String($('#q_header_text').val() || '').trim();
+        if (costSheetObj && typeof costSheetObj === 'object') {
+            costSheetObj.header_text = headerText;
+        }
 
         return {
             id: $('#q_id').val() || '',
@@ -6077,6 +6099,7 @@
             mobile_no: $('[name=mobile_no]').val(),
             email: $('[name=email]').val(),
             destination: $('[name=destination]').val(),
+            header_text: headerText,
             tentative_date: normalizeLegacyDateInput($('#q_tentative_date').val()),
             no_of_nights: $('#q_nights').val(),
             no_of_adults: $('#q_adults').val(),
@@ -6407,39 +6430,125 @@
         return html;
     }
 
+    function qpHotelMealCode(mealPlan) {
+        var meal = String(mealPlan || '').trim();
+        if (!meal) {
+            return '';
+        }
+        var codeMatch = meal.match(/^\s*(EP|CP|MAP|AP|AI)\b/i);
+        if (codeMatch) {
+            return codeMatch[1].toUpperCase();
+        }
+        var key = meal.toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ');
+        if (/^(ep|european|ro|room only|none|-|nil|n\/a)(\b|$)/i.test(key)) {
+            return 'EP';
+        }
+        if (/^(cp|continental)(\b|$)/i.test(key) || /^breakfast$/i.test(key)) {
+            return 'CP';
+        }
+        if (/^(map|modified american|half board)(\b|$)/i.test(key) || /breakfast\s*&\s*dinner|bf\s*\+\s*d/i.test(key)) {
+            return 'MAP';
+        }
+        if (/^(ap|american plan|full board)(\b|$)/i.test(key) || /all meals|bf\s*\+\s*l\s*\+\s*d/i.test(key)) {
+            return 'AP';
+        }
+        if (/^(ai|all inclusive)(\b|$)/i.test(key)) {
+            return 'AI';
+        }
+        if (/^(breakfast\s*&\s*dinner)$/i.test(key)) {
+            return 'MAP';
+        }
+        if (/^(all meals)$/i.test(key)) {
+            return 'AP';
+        }
+        if (/^[a-z]{1,4}$/i.test(meal)) {
+            return meal.toUpperCase();
+        }
+        return meal;
+    }
+
     function qpHotelMealLabels(mealPlan, roomType) {
         var meal = String(mealPlan || '').trim();
         var room = String(roomType || '').trim();
-        var key = meal.toLowerCase().replace(/\s+/g, ' ');
-        var roomOnly = !meal || /^(ep|e\.p\.?|ro|room only|european|none|-|nil|n\/a)$/i.test(key);
+        var code = qpHotelMealCode(meal);
+        var key = code.toLowerCase();
+        var roomOnly = !meal || key === 'ep';
         if (roomOnly) {
             return {
                 roomPrimary: 'Room Only',
                 roomSecondary: room,
-                meals: 'None'
+                meals: 'None',
+                code: code || 'EP'
             };
         }
         var mealMap = {
             cp: 'Breakfast',
-            'c.p': 'Breakfast',
-            'c.p.': 'Breakfast',
-            breakfast: 'Breakfast',
             map: 'Breakfast & Dinner',
-            'm.a.p': 'Breakfast & Dinner',
-            'm.a.p.': 'Breakfast & Dinner',
-            'half board': 'Breakfast & Dinner',
             ap: 'All Meals',
-            'a.p': 'All Meals',
-            'a.p.': 'All Meals',
-            'full board': 'All Meals',
-            ai: 'All Inclusive',
-            'all inclusive': 'All Inclusive'
+            ai: 'All Inclusive'
         };
         return {
             roomPrimary: room || '—',
             roomSecondary: '',
-            meals: mealMap[key] || meal
+            meals: mealMap[key] || meal,
+            code: code || meal
         };
+    }
+
+    function qpHotelMealLegendForm(mealPlan) {
+        var code = qpHotelMealCode(mealPlan);
+        if (!code) {
+            return '';
+        }
+        var legendMap = {
+            EP: 'No Meals',
+            CP: 'BF',
+            MAP: 'BF+D',
+            AP: 'BF+L+D',
+            AI: 'All Inclusive'
+        };
+        var upper = String(code).toUpperCase();
+        return legendMap[upper] || '';
+    }
+
+    function buildPreviewMealPlanLegendHtml(hotelsData) {
+        var seen = {};
+        var items = [];
+        var cats = (hotelsData && hotelsData.categories) ? hotelsData.categories : [];
+        cats.forEach(function (cat) {
+            (cat.hotels || []).forEach(function (h) {
+                var d = normalizeHotelData(h);
+                var code = qpHotelMealCode(d.meal_plan);
+                if (!code) {
+                    return;
+                }
+                var key = String(code).toUpperCase();
+                if (seen[key]) {
+                    return;
+                }
+                seen[key] = true;
+                var shortForm = qpHotelMealLegendForm(code);
+                items.push({
+                    code: key,
+                    full: shortForm
+                });
+            });
+        });
+        if (!items.length) {
+            return '';
+        }
+        var parts = items.map(function (it) {
+            if (it.full) {
+                return '<span class="qp-meal-legend-item"><strong>' + esc(it.code) + '</strong>' +
+                    ' <span class="qp-meal-legend-sep">–</span> ' +
+                    '<span class="qp-meal-legend-full">' + esc(it.full) + '</span></span>';
+            }
+            return '<span class="qp-meal-legend-item"><strong>' + esc(it.code) + '</strong></span>';
+        });
+        return '<div class="qp-meal-legend">' +
+            '<span class="qp-meal-legend-label">Meal Plan:</span> ' +
+            parts.join('<span class="qp-meal-legend-dot"> • </span>') +
+            '</div>';
     }
 
     function qpHotelOptionsTabsHtml(categories, activeIdx) {
@@ -6463,23 +6572,39 @@
             return '';
         }
 
-        function qpHotelField(label, valueHtml, extraClass, iconFa) {
-            var labelHtml = iconFa
-                ? ('<i class="' + esc(iconFa) + ' qp-hotel-ico" aria-hidden="true"></i><span>' + esc(label) + '</span>')
-                : esc(label);
+        function qpHotelValueCell(valueHtml, extraClass) {
             return '<div class="qp-hotel-field' + (extraClass ? ' ' + extraClass : '') + '">' +
-                '<div class="qp-hotel-field-label">' + labelHtml + '</div>' +
                 '<div class="qp-hotel-field-value">' + valueHtml + '</div>' +
                 '</div>';
         }
 
+        function qpHotelHeadCell(label, extraClass, iconFa) {
+            var iconHtml = iconFa
+                ? ('<i class="' + esc(iconFa) + ' qp-hotel-ico" aria-hidden="true"></i>')
+                : '';
+            return '<div class="qp-hotel-field' + (extraClass ? ' ' + extraClass : '') + '">' +
+                iconHtml + '<span>' + esc(label) + '</span>' +
+                '</div>';
+        }
+
         var html = '<div class="qp-hotel-panel">';
+        html += '<div class="qp-hotel-col-head" aria-hidden="true">' +
+            qpHotelHeadCell('City', 'qp-hotel-field-city', 'fas fa-map-marker-alt') +
+            qpHotelHeadCell('Hotel', 'qp-hotel-field-hotel') +
+            qpHotelHeadCell('Nights', 'qp-hotel-field-nights', 'fas fa-moon') +
+            qpHotelHeadCell('Rooms', 'qp-hotel-field-rooms', 'fas fa-bed') +
+            qpHotelHeadCell('Room Type', 'qp-hotel-field-room') +
+            qpHotelHeadCell('Meals', 'qp-hotel-field-meals', 'fas fa-utensils') +
+            qpHotelHeadCell('Check-In', 'qp-hotel-field-date', 'far fa-calendar-alt') +
+            qpHotelHeadCell('Check-Out', 'qp-hotel-field-date', 'far fa-calendar-alt') +
+            '</div>';
         html += '<div class="qp-hotel-body">';
 
         hotels.forEach(function (h, hi) {
             var d = normalizeHotelData(h);
             var base = 'hotel.' + catIdx + '.' + hi + '.';
             var mealInfo = qpHotelMealLabels(d.meal_plan, d.room_type);
+            var mealCode = qpHotelMealCode(d.meal_plan) || mealInfo.code || '';
             var country = String(d.country || '').trim();
             var cityText = String(d.city || '').trim();
             var starsHtml = qpHotelStarsHtml(d.star_category);
@@ -6509,58 +6634,46 @@
 
             html += '<div class="qp-hotel-row-card">';
             html += '<div class="qp-hotel-row-fields">';
-            html += qpHotelField('City', cityValueHtml, 'qp-hotel-field-city', 'fas fa-map-marker-alt');
-            html += qpHotelField(
-                'Hotel',
+            html += qpHotelValueCell(cityValueHtml, 'qp-hotel-field-city');
+            html += qpHotelValueCell(
                 '<div class="qp-hotel-primary">' +
                 previewEditable(previewVal(d.name), base + 'name', { cls: 'q-preview-cell-edit' }) +
                 '</div>' + starsHtml,
                 'qp-hotel-field-hotel'
             );
-            html += qpHotelField(
-                'Nights',
+            html += qpHotelValueCell(
                 '<div class="qp-hotel-primary">' +
                 previewEditable(previewVal(d.nights, '0'), base + 'nights', { type: 'int', cls: 'q-preview-cell-edit' }) +
                 '</div>',
-                'qp-hotel-field-nights',
-                'fas fa-moon'
+                'qp-hotel-field-nights'
             );
-            html += qpHotelField(
-                'Rooms',
+            html += qpHotelValueCell(
                 '<div class="qp-hotel-primary">' +
                 previewEditable(roomsLabel, base + 'rooms', { type: 'int', cls: 'q-preview-cell-edit' }) +
                 '</div>',
                 'qp-hotel-field-rooms'
             );
-            html += qpHotelField(
-                'Room Type',
+            html += qpHotelValueCell(
                 '<div class="qp-hotel-stack">' + roomValueHtml + '</div>',
-                'qp-hotel-field-room',
-                'fas fa-bed'
+                'qp-hotel-field-room'
             );
-            html += qpHotelField(
-                'Meals',
+            html += qpHotelValueCell(
                 '<div class="qp-hotel-primary">' +
-                previewEditable(mealInfo.meals || previewVal(d.meal_plan, 'None'), base + 'meal_plan', { cls: 'q-preview-cell-edit' }) +
+                previewEditable(previewVal(mealCode, '—'), base + 'meal_plan', { cls: 'q-preview-cell-edit' }) +
                 '</div>',
-                'qp-hotel-field-meals',
-                'fas fa-utensils'
+                'qp-hotel-field-meals'
             );
-            html += qpHotelField(
-                'Check-In',
+            html += qpHotelValueCell(
                 '<div class="qp-hotel-primary">' +
                 previewEditable(formatPreviewFlightDate(d.checkin), base + 'checkin', { type: 'date', cls: 'q-preview-cell-edit' }) +
                 '</div>',
-                'qp-hotel-field-date',
-                'far fa-calendar-alt'
+                'qp-hotel-field-date'
             );
-            html += qpHotelField(
-                'Check-Out',
+            html += qpHotelValueCell(
                 '<div class="qp-hotel-primary">' +
                 previewEditable(formatPreviewFlightDate(d.checkout), base + 'checkout', { type: 'date', cls: 'q-preview-cell-edit' }) +
                 '</div>',
-                'qp-hotel-field-date',
-                'far fa-calendar-alt'
+                'qp-hotel-field-date'
             );
             html += '</div>';
             html += '</div>';
@@ -7176,6 +7289,9 @@
                 setInput($('[name=destination]'), value);
                 $('#qPreviewPrintArea .q-preview-dest-title').text(value ? value.toUpperCase() : 'DESTINATION');
                 break;
+            case 'header_text':
+                setInput($('#q_header_text'), value === '—' || value === 'Add heading text' ? '' : value);
+                break;
             case 'tentative_date':
                 value = toIsoDateFromPreview(value) || value;
                 setInput($('#q_tentative_date'), value);
@@ -7274,7 +7390,12 @@
             return;
         }
         if (pillsHtml) {
-            $area.find('.qp-duration-wrap').first().after(pillsHtml);
+            var $headTop = $area.find('.qp-doc-head-top').first();
+            if ($headTop.length) {
+                $headTop.after(pillsHtml);
+            } else {
+                $area.find('.qp-duration-wrap').first().after(pillsHtml);
+            }
         }
     }
 
@@ -7452,7 +7573,6 @@
 
         var html = '<div class="qp-sec qp-sec-acc">';
         html += '<div class="qp-acc-wrap">';
-        html += '<div class="qp-acc-deco" aria-hidden="true">' + qpAccreditationsPlaneSvg() + '</div>';
         html += '<div class="qp-acc-head">' +
             '<div class="qp-acc-title">Global Accreditations</div>' +
             '<div class="qp-acc-rule" aria-hidden="true"></div>' +
@@ -7519,7 +7639,6 @@
                 text: 'Everything was perfectly planned from hotels to transfers. A truly hassle-free and memorable trip!',
                 name: 'Riya Sharma',
                 place: 'Bali, Indonesia',
-                flag: '🇮🇩',
                 ago: '2 weeks ago',
                 tone: 'a'
             },
@@ -7527,7 +7646,6 @@
                 text: 'Excellent service and attention to detail. The team made our Europe trip smooth and special.',
                 name: 'Arjun Mehta',
                 place: 'Paris, France',
-                flag: '🇫🇷',
                 ago: '1 month ago',
                 tone: 'b'
             },
@@ -7535,7 +7653,6 @@
                 text: 'Well-organized itinerary, great hotels and 24/7 support. Highly recommend for a premium experience!',
                 name: 'Sneha Kapoor',
                 place: 'Switzerland',
-                flag: '🇨🇭',
                 ago: '3 weeks ago',
                 tone: 'c'
             }
@@ -7545,20 +7662,20 @@
         var html = '<div class="qp-sec qp-sec-reviews">';
         html += '<div class="qp-rev-wrap">';
         html += '<div class="qp-rev-head">' +
-            '<div class="qp-rev-brand">' + qpGoogleLogoSvg(28) + '</div>' +
+            '<div class="qp-rev-brand">' + qpGoogleLogoSvg(26) + '</div>' +
             '<div class="qp-rev-title">Trusted by <span class="qp-rev-count">2,000+</span> Happy Travellers</div>' +
             '<div class="qp-rev-sub">Real reviews from real travellers on Google</div>' +
             '<div class="qp-rev-badge">' +
-            qpGoogleLogoSvg(16) +
+            qpGoogleLogoSvg(15) +
             '<span class="qp-rev-badge-label">Google Reviews</span>' +
             '<span class="qp-rev-badge-sep" aria-hidden="true"></span>' +
             '<span class="qp-rev-badge-score">4.6</span>' +
             qpRatingStarsHtml(4.6) +
+            '<span class="qp-rev-badge-sep" aria-hidden="true"></span>' +
             '<span class="qp-rev-badge-meta">Based on 500+ verified reviews</span>' +
             '</div>' +
             '</div>';
 
-        html += '<div class="qp-rev-carousel">';
         html += '<div class="qp-rev-grid">';
         reviews.forEach(function (r) {
             html += '<div class="qp-rev-card">' +
@@ -7567,12 +7684,12 @@
                 qpReviewAvatarHtml(r.name, r.tone) +
                 '<div class="qp-rev-person-meta">' +
                 '<div class="qp-rev-name">' + esc(r.name) + '</div>' +
-                '<div class="qp-rev-place"><span class="qp-rev-flag" aria-hidden="true">' + r.flag + '</span>' + esc(r.place) + '</div>' +
+                '<div class="qp-rev-place">' + esc(r.place) + '</div>' +
                 '</div>' +
                 '</div>' +
                 '<div class="qp-rev-card-meta">' +
-                '<span class="qp-rev-more" aria-hidden="true"><i class="fas fa-ellipsis-v"></i></span>' +
                 '<span class="qp-rev-ago">' + esc(r.ago) + '</span>' +
+                '<span class="qp-rev-more" aria-hidden="true"><i class="fas fa-ellipsis-v"></i></span>' +
                 '</div>' +
                 '</div>' +
                 qpReviewStarsHtml(5) +
@@ -7583,7 +7700,6 @@
                 '</div>' +
                 '</div>';
         });
-        html += '</div>';
         html += '</div>';
 
         html += '<a class="qp-rev-more-btn" href="' + esc(googleHref) + '" target="_blank" rel="noopener noreferrer">' +
@@ -7597,32 +7713,20 @@
     }
 
     function buildPreviewTrustStatsHtml() {
-        var shieldCheck = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">' +
-            '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 3l7 3v5.5c0 4.4-2.9 7.6-7 9.5-4.1-1.9-7-5.1-7-9.5V6l7-3z"/>' +
-            '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8.8 12.1l2.1 2.1 4.3-4.3"/>' +
-            '</svg>';
-        var items = [
-            { svg: shieldCheck, value: '500+', label: 'Happy Travelers' },
-            { icon: 'fas fa-map-marker-alt', value: '50+', label: 'Destinations' },
-            { icon: 'fas fa-users', value: 'Trusted', label: 'By Families & Couples' },
-            { icon: 'fas fa-headset', value: '24x7', label: 'Travel Support' }
-        ];
-        var html = '<div class="qp-sec qp-sec-trust-stats">';
-        html += '<div class="qp-trust-stats">';
-        items.forEach(function (item, idx) {
-            var iconHtml = item.svg
-                ? item.svg
-                : '<i class="' + item.icon + '"></i>';
-            html += '<div class="qp-trust-stat' + (idx < items.length - 1 ? ' has-sep' : '') + '">' +
-                '<span class="qp-trust-stat-icon" aria-hidden="true">' + iconHtml + '</span>' +
-                '<div class="qp-trust-stat-copy">' +
-                '<div class="qp-trust-stat-value">' + esc(item.value) + '</div>' +
-                '<div class="qp-trust-stat-label">' + esc(item.label) + '</div>' +
-                '</div>' +
-                '</div>';
-        });
-        html += '</div></div>';
-        return html;
+        return '';
+    }
+
+    function buildPreviewSupportHtml() {
+        var imgSrc = absUrl('crm/assets/quote_preview.png');
+        return '<div class="qp-sec qp-sec-support">' +
+            '<div class="qp-support-banner">' +
+            '<img src="' + esc(imgSrc) + '" alt="Multizone Travels support and contact" class="qp-support-banner-img">' +
+            '</div>' +
+            '</div>';
+    }
+
+    function buildPreviewFooterHtml() {
+        return '';
     }
 
     function qpSectionHead(iconFa, title, slogan) {
@@ -7636,8 +7740,8 @@
             '</div>';
     }
 
-    function qpInfoCell(label, valueHtml) {
-        return '<div class="qp-info-cell">' +
+    function qpInfoCell(label, valueHtml, extraClass) {
+        return '<div class="qp-info-cell' + (extraClass ? (' ' + extraClass) : '') + '">' +
             '<span class="qp-info-label">' + esc(label) + '</span>' +
             '<div class="qp-info-value">' + valueHtml + '</div>' +
             '</div>';
@@ -7751,7 +7855,7 @@
         if (isNaN(children) || children < 0) children = 0;
         var destination = previewVal(p.destination, 'Destination');
         var destTitle = qpFormatDestTitle(destination);
-        var logoUrl = absUrl(Q_PREVIEW_META.logo || 'img/web-logo.png');
+        var logoUrl = absUrl(Q_PREVIEW_META.logo || 'img/MZ_LOGO_1.jpeg');
         var todayLong = formatPreviewLongDate(new Date().toISOString().slice(0, 10));
         var paxChildren = children > 0 ? String(children) : '0';
         var nightsLabel = nights + ' Nights / ' + days + ' Days';
@@ -7760,8 +7864,16 @@
 
         /* —— 1. Header —— */
         html += '<div class="qp-doc-head q-preview-head">';
+        html += '<div class="qp-doc-head-top">';
         html += '<div class="qp-logo q-preview-logo"><img src="' + esc(logoUrl) + '" alt="Multi Zone Travels"></div>';
         html += '<div class="qp-title-block q-preview-title-block">';
+        html += '<div class="qp-header-text">' +
+            previewEditable(
+                String(p.header_text || '').trim(),
+                'header_text',
+                { cls: 'q-preview-header-text', placeholder: 'Add heading text' }
+            ) +
+            '</div>';
         html += '<h1>' +
             previewEditable(destTitle, 'destination', { cls: 'q-preview-dest-title qp-dest-red' }) +
             '</h1>';
@@ -7772,7 +7884,6 @@
             '</div>' +
             '<span class="qp-duration-line"></span>' +
             '</div>';
-        html += buildPreviewHotelRoutePillsHtml(hotelsData, String(p.active_option_id || hotelsData.active_category_id || ''));
         html += '</div>';
         html += '<div class="qp-ref-card q-preview-ref-block">';
         html += '<div class="qp-ref-row">' +
@@ -7787,7 +7898,10 @@
             '<div class="qp-ref-label">Quotation Date</div>' +
             '<div class="qp-ref-value">' + esc(todayLong) + '</div>' +
             '</div></div>';
-        html += '</div></div>';
+        html += '</div>';
+        html += '</div>';
+        html += buildPreviewHotelRoutePillsHtml(hotelsData, String(p.active_option_id || hotelsData.active_category_id || ''));
+        html += '</div>';
 
         /* —— 2. Guest Information —— */
         html += '<div class="qp-sec">';
@@ -7802,11 +7916,11 @@
         html += '<div class="qp-sec">';
         html += qpSectionHead('fas fa-plane', 'Travel Details', 'DISCOVER • EXPERIENCE • BELONG');
         html += '<div class="qp-info-card qp-cols-5 qp-travel-details">';
-        html += qpInfoCell('Destination', previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-cell-edit' }));
-        html += qpInfoCell('No Of Nights', previewEditable(nightsLabel, 'no_of_nights', { type: 'nights_label', cls: 'q-preview-cell-edit' }));
-        html += qpInfoCell('Tentative Date', previewEditable(formatPreviewSlashDate(p.tentative_date), 'tentative_date', { type: 'date', cls: 'q-preview-cell-edit' }));
-        html += qpInfoCell('No Of Adults', previewEditable(String(adults), 'no_of_adults', { type: 'int', cls: 'q-preview-cell-edit' }));
-        html += qpInfoCell('No Of Children', previewEditable(paxChildren, 'no_of_children', { type: 'int', cls: 'q-preview-cell-edit' }));
+        html += qpInfoCell('Destination', previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-cell-edit' }), 'qp-cell-wide');
+        html += qpInfoCell('No Of Nights', previewEditable(nightsLabel, 'no_of_nights', { type: 'nights_label', cls: 'q-preview-cell-edit' }), 'qp-cell-grow');
+        html += qpInfoCell('Tentative Date', previewEditable(formatPreviewSlashDate(p.tentative_date), 'tentative_date', { type: 'date', cls: 'q-preview-cell-edit' }), 'qp-cell-date');
+        html += qpInfoCell('Adults', previewEditable(String(adults), 'no_of_adults', { type: 'int', cls: 'q-preview-cell-edit' }), 'qp-cell-narrow');
+        html += qpInfoCell('Children', previewEditable(paxChildren, 'no_of_children', { type: 'int', cls: 'q-preview-cell-edit' }), 'qp-cell-narrow');
         html += '</div></div>';
 
         /* —— 4. Flight Details —— */
@@ -7847,13 +7961,70 @@
             return (ppa > 0) || (qt > 0) || (pkg > 0);
         }
 
-        function wrapTourCostBlock(innerTableHtml, gstNoteHtml) {
-            var out = '<div class="qp-tour-cost">';
-            out += '<div class="qp-tour-cost-head">Tour Cost</div>';
-            out += innerTableHtml;
+        function qpTourCostRowHtml(iconHtml, particularHtml, amountHtml, rowClass) {
+            return '<div class="qp-tc-row' + (rowClass ? (' ' + rowClass) : '') + '">' +
+                '<div class="qp-tc-row-left">' +
+                '<span class="qp-tc-row-ico" aria-hidden="true">' + iconHtml + '</span>' +
+                '<span class="qp-tc-row-label">' + particularHtml + '</span>' +
+                '</div>' +
+                '<div class="qp-tc-row-amt">' + amountHtml + '</div>' +
+                '</div>';
+        }
+
+        function qpTourCostNotesCardHtml() {
+            var notes = [
+                'Prices are dynamic & subject to availability.',
+                'Rates are valid at the time of quotation only.',
+                'Final price & availability will be re-checked upon confirmation.',
+                'Kindly confirm at the earliest to secure the booking.'
+            ];
+            var list = notes.map(function (text, i) {
+                return '<li class="qp-notes-item">' +
+                    '<span class="qp-notes-num" aria-hidden="true">' + (i + 1) + '</span>' +
+                    '<span class="qp-notes-text">' + esc(text) + '</span>' +
+                    '</li>';
+            }).join('');
+            return '<div class="qp-notes-card">' +
+                '<div class="qp-notes-hd">' +
+                '<span class="qp-notes-hd-ico" aria-hidden="true"><i class="fas fa-clipboard-list"></i></span>' +
+                '<div class="qp-notes-hd-text">' +
+                '<h3 class="qp-notes-title">Notes</h3>' +
+                '<div class="qp-notes-sub">IMPORTANT INFORMATION</div>' +
+                '</div></div>' +
+                '<ul class="qp-notes-list">' + list + '</ul>' +
+                '</div>';
+        }
+
+        function wrapTourCostBlock(rowsHtml, grandHtml) {
+            var out = '<div class="qp-cost-notes-row">';
+            out += '<div class="qp-tour-card">';
+            out += '<div class="qp-tour-hd">' +
+                '<div class="qp-tour-hd-left">' +
+                '<span class="qp-tour-hd-ico" aria-hidden="true">₹</span>' +
+                '<div class="qp-tour-hd-text">' +
+                '<h3 class="qp-tour-title">Tour Cost</h3>' +
+                '<div class="qp-tour-sub">QUOTATION SUMMARY</div>' +
+                '</div></div>' +
+                '<div class="qp-tour-tagline">TRAVEL <span></span> EXPLORE <span></span> CREATE MEMORIES</div>' +
+                '</div>';
+            out += '<div class="qp-tc-thead"><span>PARTICULARS</span><span>AMOUNT (INR)</span></div>';
+            out += '<div class="qp-tc-body">' + rowsHtml + '</div>';
+            out += grandHtml;
             out += '</div>';
-            if (gstNoteHtml) out += gstNoteHtml;
+            out += qpTourCostNotesCardHtml();
+            out += '</div>';
             return out;
+        }
+
+        function qpTourGrandHtml(amountHtml, inclusiveGst) {
+            return '<div class="qp-tc-grand">' +
+                '<div class="qp-tc-grand-left">' +
+                '<div class="qp-tc-grand-label">Grand Total</div>' +
+                (inclusiveGst ? '<div class="qp-tc-grand-sub">INCLUSIVE OF GST</div>' : '<div class="qp-tc-grand-sub">TOTAL AMOUNT</div>') +
+                '</div>' +
+                '<span class="qp-tc-grand-divider" aria-hidden="true"></span>' +
+                '<strong class="qp-tc-grand-amt">' + amountHtml + '</strong>' +
+                '</div>';
         }
 
         function buildPreviewTourCostTable(opt, opts) {
@@ -7864,34 +8035,57 @@
                 var csFull = typeof p.cost_sheet_json === 'string' ? JSON.parse(p.cost_sheet_json || '{}') : (p.cost_sheet || {});
                 if (csFull && csFull.tour_cost) tourCost = csFull.tour_cost;
             } catch (e) { /* ignore */ }
-            var gstNote = '';
-            if (opts.showGst && !parseInt(p.hide_gst_note, 10)) {
-                gstNote = '<div class="q-preview-gst-note">* GST as applicable will be charged extra.</div>';
-            }
+
             if (tourCost && parseFloat(tourCost.grand_total) > 0) {
-                var blockTc = '<table class="q-preview-table qp-table q-preview-cost"><tbody>';
+                var rowsTc = '';
                 var adultRate = parseFloat(tourCost.adult_rate) || 0;
                 var adultQty = parseInt(tourCost.adults, 10) || adults;
                 if (adultRate > 0) {
-                    blockTc += '<tr><td>INR ' + esc(money(adultRate)) + ' X ' + esc(adultQty) + ' Adults</td><td>' + esc(money(adultRate * adultQty)) + '</td></tr>';
+                    rowsTc += qpTourCostRowHtml(
+                        '<i class="fas fa-users"></i>',
+                        'INR ' + esc(money(adultRate)) + ' × ' + esc(adultQty) + ' Adults',
+                        esc(money(adultRate * adultQty))
+                    );
                 }
-                (tourCost.child_rates || []).forEach(function (cr, ci) {
-                    var rate = parseFloat(cr) || 0;
-                    if (rate > 0) {
-                        blockTc += '<tr><td>INR ' + esc(money(rate)) + ' X Child ' + pad2(ci + 1) + '</td><td>' + esc(money(rate)) + '</td></tr>';
-                    }
-                });
+                var childRates = tourCost.child_rates || [];
+                var childWithRate = childRates.filter(function (cr) { return parseFloat(cr) > 0; });
+                if (childWithRate.length === 1) {
+                    var oneChild = parseFloat(childWithRate[0]) || 0;
+                    rowsTc += qpTourCostRowHtml(
+                        '<i class="fas fa-child"></i>',
+                        'INR ' + esc(money(oneChild)) + ' × 01 Child',
+                        esc(money(oneChild))
+                    );
+                } else {
+                    childWithRate.forEach(function (cr, ci) {
+                        var rate = parseFloat(cr) || 0;
+                        rowsTc += qpTourCostRowHtml(
+                            '<i class="fas fa-child"></i>',
+                            'INR ' + esc(money(rate)) + ' × Child ' + pad2(ci + 1),
+                            esc(money(rate))
+                        );
+                    });
+                }
                 var infantRate = parseFloat(tourCost.infant_rate) || 0;
                 if (infantRate > 0) {
-                    blockTc += '<tr><td>INR ' + esc(money(infantRate)) + ' X Infant</td><td>' + esc(money(infantRate)) + '</td></tr>';
+                    rowsTc += qpTourCostRowHtml(
+                        '<i class="fas fa-baby"></i>',
+                        'INR ' + esc(money(infantRate)) + ' × Infant',
+                        esc(money(infantRate))
+                    );
                 }
-                if (!parseInt(tourCost.hide_gst, 10) && parseFloat(tourCost.gst_amount) > 0) {
-                    blockTc += '<tr><td>GST (' + esc(String(tourCost.gst_percent || 5)) + '%)</td><td>' + esc(money(tourCost.gst_amount)) + '</td></tr>';
+                var showGst = !parseInt(tourCost.hide_gst, 10) && parseFloat(tourCost.gst_amount) > 0;
+                if (showGst) {
+                    rowsTc += qpTourCostRowHtml(
+                        '<i class="fas fa-file-invoice-dollar"></i>',
+                        'GST @ ' + esc(String(tourCost.gst_percent || 5)) + '%',
+                        esc(money(tourCost.gst_amount)),
+                        'is-gst'
+                    );
                 }
-                blockTc += '<tr class="qp-cost-total"><td><strong>Grand Total</strong></td><td><strong>' + esc(money(tourCost.grand_total)) + '</strong></td></tr>';
-                blockTc += '</tbody></table>';
-                return wrapTourCostBlock(blockTc, gstNote);
+                return wrapTourCostBlock(rowsTc, qpTourGrandHtml(esc(money(tourCost.grand_total)), showGst));
             }
+
             var ppa = parseFloat(opt && opt.price_per_adult);
             var qt = parseFloat(String((opt && opt.quotation_total) || '').replace(/,/g, ''));
             var pkg = parseFloat(String((opt && opt.package_total) || '').replace(/,/g, ''));
@@ -7903,26 +8097,21 @@
             }
             var adultTotal = ppa > 0 ? ppa * adults : (pkg > 0 ? pkg : qt);
             var totalVal = qt > 0 ? qt : (pkg > 0 ? pkg : adultTotal);
-            var block = '<table class="q-preview-table qp-table q-preview-cost"><tbody>';
+            var rows = '';
             if (ppa > 0) {
-                block += '<tr><td>INR ';
-                if (editable) {
-                    block += previewEditable(money(ppa), 'price_per_adult', { type: 'money' });
-                } else {
-                    block += esc(money(ppa));
-                }
-                block += ' X ' + esc(adults) + ' Adults</td>' +
-                    '<td>' + esc(money(ppa * adults)) + '</td></tr>';
+                var ratePart = editable
+                    ? previewEditable(money(ppa), 'price_per_adult', { type: 'money' })
+                    : esc(money(ppa));
+                rows += qpTourCostRowHtml(
+                    '<i class="fas fa-users"></i>',
+                    'INR ' + ratePart + ' × ' + esc(adults) + ' Adults',
+                    esc(money(ppa * adults))
+                );
             }
-            block += '<tr class="qp-cost-total"><td><strong>Total</strong></td><td><strong>';
-            if (editable) {
-                block += previewEditable(money(totalVal), 'quotation_total', { type: 'money' });
-            } else {
-                block += esc(money(totalVal));
-            }
-            block += '</strong></td></tr>';
-            block += '</tbody></table>';
-            return wrapTourCostBlock(block, gstNote);
+            var totalPart = editable
+                ? previewEditable(money(totalVal), 'quotation_total', { type: 'money' })
+                : esc(money(totalVal));
+            return wrapTourCostBlock(rows, qpTourGrandHtml(totalPart, false));
         }
 
         /* —— 5. Hotel Details —— */
@@ -7960,6 +8149,40 @@
                 }
             });
             html += '</div>';
+            html += buildPreviewMealPlanLegendHtml(hotelsData);
+        }
+
+        /* —— 5b. Tour Cost (directly after Hotel Details) —— */
+        if (!multiHotelOptions) {
+            var pricePerAdult = parseFloat(p.price_per_adult);
+            var quotationTotal = parseFloat(String(p.quotation_total || '').replace(/,/g, ''));
+            var packageTotal = parseFloat(String(p.package_total || '').replace(/,/g, ''));
+            if (isNaN(pricePerAdult)) pricePerAdult = 0;
+            if (isNaN(quotationTotal)) quotationTotal = 0;
+            if (isNaN(packageTotal)) packageTotal = 0;
+
+            var singleOpt = pricingOptions[0] || {
+                price_per_adult: pricePerAdult,
+                quotation_total: quotationTotal,
+                package_total: packageTotal
+            };
+            if (!optionHasTourCost(singleOpt) && (pricePerAdult > 0 || quotationTotal > 0 || packageTotal > 0)) {
+                singleOpt = {
+                    price_per_adult: pricePerAdult,
+                    quotation_total: quotationTotal,
+                    package_total: packageTotal
+                };
+            }
+            if (optionHasTourCost(singleOpt) || pricePerAdult > 0 || quotationTotal > 0 || packageTotal > 0) {
+                html += buildPreviewTourCostTable({
+                    price_per_adult: parseFloat(singleOpt.price_per_adult) > 0 ? singleOpt.price_per_adult : pricePerAdult,
+                    quotation_total: singleOpt.quotation_total || quotationTotal,
+                    package_total: singleOpt.package_total || packageTotal
+                }, {
+                    editable: true,
+                    showGst: true
+                });
+            }
         }
 
         /* —— 6. Day Wise Itinerary —— */
@@ -8114,124 +8337,18 @@
             html += '</div>';
         }
 
-        /* —— 10. Tour Cost (single hotel option) —— */
-        if (!multiHotelOptions) {
-            var pricePerAdult = parseFloat(p.price_per_adult);
-            var quotationTotal = parseFloat(String(p.quotation_total || '').replace(/,/g, ''));
-            var packageTotal = parseFloat(String(p.package_total || '').replace(/,/g, ''));
-            if (isNaN(pricePerAdult)) pricePerAdult = 0;
-            if (isNaN(quotationTotal)) quotationTotal = 0;
-            if (isNaN(packageTotal)) packageTotal = 0;
-
-            var singleOpt = pricingOptions[0] || {
-                price_per_adult: pricePerAdult,
-                quotation_total: quotationTotal,
-                package_total: packageTotal
-            };
-            if (!optionHasTourCost(singleOpt) && (pricePerAdult > 0 || quotationTotal > 0 || packageTotal > 0)) {
-                singleOpt = {
-                    price_per_adult: pricePerAdult,
-                    quotation_total: quotationTotal,
-                    package_total: packageTotal
-                };
-            }
-            if (optionHasTourCost(singleOpt) || pricePerAdult > 0 || quotationTotal > 0 || packageTotal > 0) {
-                html += buildPreviewTourCostTable({
-                    price_per_adult: parseFloat(singleOpt.price_per_adult) > 0 ? singleOpt.price_per_adult : pricePerAdult,
-                    quotation_total: singleOpt.quotation_total || quotationTotal,
-                    package_total: singleOpt.package_total || packageTotal
-                }, {
-                    editable: true,
-                    showGst: true
-                });
-            }
-        }
-
-        /* —— 11. Global Accreditations —— */
+        /* —— 10. Global Accreditations —— */
         html += buildPreviewAccreditationsHtml();
 
-        /* —— 12. Trusted Reviews —— */
+        /* —— 11. Trusted Reviews —— */
         html += buildPreviewReviewsHtml();
 
-        /* —— 13. Trust Stats —— */
-        html += buildPreviewTrustStatsHtml();
-
-        /* —— 14. Footer contact —— */
-        html += buildPreviewFooterHtml();
+        /* —— 12. Support (stats + contact) —— */
+        html += buildPreviewSupportHtml();
 
         return html;
     }
 
-
-    function buildPreviewFooterHtml() {
-        var phoneMain = String(Q_PREVIEW_META.phone || '').trim();
-        var phoneAlt = String(Q_PREVIEW_META.phone_alt || '').trim();
-        var phoneHtml = '';
-        if (phoneMain && phoneAlt) {
-            if (phoneAlt.indexOf('|') >= 0 && !phoneMain) {
-                phoneHtml = esc(phoneAlt).replace(/\|/g, '<span class="qp-foot-phone-sep">|</span>');
-            } else if (phoneAlt.indexOf('|') >= 0) {
-                phoneHtml = esc(phoneMain) + ' <span class="qp-foot-phone-sep">|</span> ' +
-                    esc(phoneAlt.split('|')[0].trim());
-            } else {
-                phoneHtml = esc(phoneMain) + ' <span class="qp-foot-phone-sep">|</span> ' + esc(phoneAlt);
-            }
-        } else if (phoneMain) {
-            phoneHtml = esc(phoneMain).replace(/\s*\|\s*/g, ' <span class="qp-foot-phone-sep">|</span> ');
-        } else if (phoneAlt) {
-            phoneHtml = esc(phoneAlt).replace(/\s*\|\s*/g, ' <span class="qp-foot-phone-sep">|</span> ');
-        }
-
-        var email = String(Q_PREVIEW_META.email || '').trim();
-        var website = String(Q_PREVIEW_META.website || '').trim();
-        var address = String(Q_PREVIEW_META.address || '').trim();
-        var addressHtml = '';
-        if (address) {
-            var parts = address.split(',');
-            if (parts.length >= 3) {
-                addressHtml = esc(parts.slice(0, 2).join(',').trim() + ',') + '<br>' +
-                    esc(parts.slice(2).join(',').trim());
-            } else {
-                addressHtml = esc(address);
-            }
-        }
-
-        var html = '<div class="q-preview-footer qp-footer">';
-        html += '<div class="qp-foot-contacts">';
-
-        if (phoneHtml) {
-            html += '<div class="qp-foot-cell">' +
-                '<span class="qp-foot-ico" aria-hidden="true"><i class="fas fa-phone-alt"></i></span>' +
-                '<div class="qp-foot-text">' + phoneHtml + '</div>' +
-                '</div>';
-        }
-        if (email) {
-            html += '<div class="qp-foot-cell">' +
-                '<span class="qp-foot-ico" aria-hidden="true"><i class="fas fa-envelope"></i></span>' +
-                '<div class="qp-foot-text">' + esc(email) + '</div>' +
-                '</div>';
-        }
-        if (website) {
-            html += '<div class="qp-foot-cell">' +
-                '<span class="qp-foot-ico" aria-hidden="true"><i class="fas fa-globe"></i></span>' +
-                '<div class="qp-foot-text">' + esc(website) + '</div>' +
-                '</div>';
-        }
-        if (addressHtml) {
-            html += '<div class="qp-foot-cell qp-foot-cell-address">' +
-                '<span class="qp-foot-ico" aria-hidden="true"><i class="fas fa-map-marker-alt"></i></span>' +
-                '<div class="qp-foot-text">' + addressHtml + '</div>' +
-                '</div>';
-        }
-
-        html += '</div>';
-
-        var servicesText = Q_PREVIEW_META.services || 'FLIGHTS • HOTELS • HOLIDAYS • VISA • FOREX';
-        servicesText = String(servicesText).replace(/\s*\|\s*/g, ' • ');
-        html += '<div class="q-preview-services-bar qp-services-bar">' + esc(servicesText) + '</div>';
-        html += '</div>';
-        return html;
-    }
 
     window.qGetQuotationPreviewHtml = function () {
         try {
@@ -8480,6 +8597,13 @@
         $('[name=mobile_no]').val(p.mobile_no || '');
         $('[name=email]').val(p.email || '');
         $('[name=destination]').val(p.destination || '');
+        var headerTextPrefill = '';
+        if (p.header_text) {
+            headerTextPrefill = String(p.header_text);
+        } else if (p.cost_sheet && p.cost_sheet.header_text) {
+            headerTextPrefill = String(p.cost_sheet.header_text);
+        }
+        $('#q_header_text').val(headerTextPrefill);
         setDateInputValue(
             $('#q_tentative_date'),
             p.tentative_date && p.tentative_date !== '0000-00-00' ? p.tentative_date : ''

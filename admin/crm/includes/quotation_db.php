@@ -597,6 +597,13 @@ function crmQuotationRowToPrefill(array $quotation): array
         'mobile_no' => (string) ($quotation['mobile_no'] ?? ''),
         'email' => (string) ($quotation['email'] ?? ''),
         'destination' => (string) ($quotation['destination'] ?? ''),
+        'header_text' => (static function ($raw) {
+            $cs = json_decode((string) $raw, true);
+            if (!is_array($cs)) {
+                return '';
+            }
+            return trim((string) ($cs['header_text'] ?? ''));
+        })($quotation['cost_sheet_json'] ?? ''),
         'tentative_date' => (string) ($quotation['tentative_date'] ?? ''),
         'no_of_nights' => (int) ($quotation['no_of_nights'] ?? 0),
         'no_of_adults' => (int) ($quotation['no_of_adults'] ?? 1),

@@ -1917,25 +1917,27 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         #leadQuotationPreviewModal .modal-dialog {
-            max-width: min(1200px, 98vw);
-            width: 98vw;
-            height: calc(100vh - 1.25rem);
-            margin: 0.6rem auto;
+            width: 210mm;
+            max-width: min(210mm, calc(100vw - 24px));
+            height: calc(100vh - 2rem);
+            max-height: calc(100vh - 2rem);
+            margin: 1rem auto;
             display: flex;
             align-items: stretch;
         }
         #leadQuotationPreviewModal .modal-content {
             border: 0;
-            border-radius: 0.75rem;
+            border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
             display: flex;
             flex-direction: column;
             width: 100%;
+            height: 100%;
             max-height: 100%;
         }
         #leadQuotationPreviewModal .modal-header {
-            background: #c41e20;
+            background: #c4121a;
             color: #fff;
             border-bottom: 0;
             padding: 0.75rem 1rem;
@@ -1951,11 +1953,10 @@ foreach ($destinationLookup as $destId => $destName) {
             opacity: 0.9;
         }
         #leadQuotationPreviewModal .modal-body {
-            padding: 0;
-            background: #fff;
+            padding: 6px 6px 8px;
+            background: #dfe3e8;
             flex: 1 1 auto;
             min-height: 0;
-            height: auto;
             overflow: hidden;
             position: relative;
         }
