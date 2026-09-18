@@ -4442,6 +4442,7 @@
                 visa: '',
                 travel_insurance: ''
             },
+            fixed_parts: {},
             custom: [],
             user_edited: { flight_train: 0, hotel: 0, land: 0 },
             profit_percent: '',
@@ -4453,10 +4454,45 @@
 
     function collectSheetStateFromDom($sheet) {
         var fixed = {};
+        var fixedParts = {};
+        var editedFlags = {};
         $sheet.find('.q-cost').each(function () {
             var $c = $(this);
             if ($c.hasClass('cc-amount')) return;
-            fixed[String($c.data('key') || '')] = $c.val();
+            var key = String($c.data('key') || '');
+            if (!key) return;
+            if ($c.attr('type') === 'hidden') {
+                if (fixed[key] == null || fixed[key] === '') {
+                    fixed[key] = $c.val();
+                }
+                if ($c.attr('data-user-edited') === '1') {
+                    editedFlags[key] = 1;
+                }
+                return;
+            }
+            if (!fixedParts[key]) {
+                fixedParts[key] = [];
+            }
+            var partIdx = parseInt($c.attr('data-part-index'), 10);
+            if (isNaN(partIdx) || partIdx < 0) {
+                partIdx = fixedParts[key].length;
+            }
+            fixedParts[key][partIdx] = $c.val();
+            if ($c.attr('data-user-edited') === '1') {
+                editedFlags[key] = 1;
+            }
+        });
+        Object.keys(fixedParts).forEach(function (key) {
+            var sum = 0;
+            var hasAny = false;
+            (fixedParts[key] || []).forEach(function (val) {
+                var n = parseFloat(val);
+                if (!isNaN(n)) {
+                    sum += n;
+                    hasAny = true;
+                }
+            });
+            fixed[key] = hasAny ? String(Math.round(sum * 100) / 100) : '';
         });
         var custom = [];
         $sheet.find('.q-custom-cost').each(function () {
@@ -4467,11 +4503,12 @@
         });
         return {
             fixed: fixed,
+            fixed_parts: fixedParts,
             custom: custom,
             user_edited: {
-                flight_train: $sheet.find('.q-cost[data-key="flight_train"]').attr('data-user-edited') === '1' ? 1 : 0,
-                hotel: $sheet.find('.q-cost[data-key="hotel"]').attr('data-user-edited') === '1' ? 1 : 0,
-                land: $sheet.find('.q-cost[data-key="land"]').attr('data-user-edited') === '1' ? 1 : 0
+                flight_train: editedFlags.flight_train ? 1 : 0,
+                hotel: editedFlags.hotel ? 1 : 0,
+                land: editedFlags.land ? 1 : 0
             },
             profit_percent: $sheet.find('.q-sheet-profit-percent').val() || '',
             profit_amount: $sheet.find('.q-sheet-profit-amount').val() || '',
@@ -4643,7 +4680,162 @@
         return label;
     }
 
-    function pricingOptionColumnHtml(cat, state, idx, maxCustom, visibleKeys) {
+    function uniquePricingSupplierNames(names) {
+        var seen = {};
+        var out = [];
+        (names || []).forEach(function (name) {
+            name = String(name || '').trim();
+            if (!name) {
+                return;
+            }
+            var key = name.toLowerCase();
+            if (seen[key]) {
+                return;
+            }
+            seen[key] = 1;
+            out.push(name);
+        });
+        return out;
+    }
+
+    function readPricingSupplierNameFromSelect($sel) {
+        if (!$sel || !$sel.length) {
+            return '';
+        }
+        var supplierVal = String($sel.val() || '').trim();
+        if (!supplierVal || supplierVal === '__create__') {
+            return '';
+        }
+        var supplierName = String($sel.find('option:selected').attr('data-name') || $sel.find('option:selected').text() || '').trim();
+        if (!supplierName || supplierName === 'Select' || supplierName === 'Select supplier' || supplierName.indexOf('Create new') === 0) {
+            return '';
+        }
+        return supplierName;
+    }
+
+    function pricingSupplierRateEntriesForKey(key, cat) {
+        var entries = [];
+        if (key === 'flight_train') {
+            collectFlights().forEach(function (f) {
+                var name = String((f && f.supplier) || '').trim();
+                var rateRaw = f && f.fare;
+                var rateNum = parseFloat(rateRaw);
+                var hasRate = !isNaN(rateNum) && rateNum > 0;
+                if (!hasRate && !name) {
+                    return;
+                }
+                entries.push({
+                    name: name,
+                    rate: hasRate ? rateNum.toFixed(2) : ''
+                });
+            });
+            return entries;
+        }
+        if (key === 'hotel') {
+            var hotels = (cat && Array.isArray(cat.hotels)) ? cat.hotels : [];
+            hotels.forEach(function (h) {
+                var name = String((h && (h.supplier || h.supplier_name)) || '').trim();
+                var rateNum = parseFloat(h && h.rate);
+                var hasRate = !isNaN(rateNum) && rateNum > 0;
+                if (!hasRate && !name) {
+                    return;
+                }
+                entries.push({
+                    name: name,
+                    rate: hasRate ? rateNum.toFixed(2) : ''
+                });
+            });
+            return entries;
+        }
+        if (key === 'land') {
+            $('#qItinerarySupplierRows .q-itin-supplier-row').each(function () {
+                var $row = $(this);
+                var name = readPricingSupplierNameFromSelect($row.find('.q-itin-supplier'));
+                var rateRaw = $.trim($row.find('.q-itin-rate').val() || '');
+                var rateNum = parseFloat(rateRaw);
+                var hasRate = !isNaN(rateNum) && rateNum > 0;
+                if (!hasRate && !name) {
+                    return;
+                }
+                entries.push({
+                    name: name,
+                    rate: hasRate ? String(Math.round(rateNum)) : ''
+                });
+            });
+            if (!entries.length && $('#q_itinerary_supplier').length) {
+                var legacyName = readPricingSupplierNameFromSelect($('#q_itinerary_supplier'));
+                if (legacyName) {
+                    entries.push({ name: legacyName, rate: '' });
+                }
+            }
+            return entries;
+        }
+        return entries;
+    }
+
+    function pricingSupplierNamesForKey(key, cat) {
+        return uniquePricingSupplierNames(pricingSupplierRateEntriesForKey(key, cat).map(function (e) {
+            return e.name;
+        }));
+    }
+
+    function getPricingKeySlotCounts(cats, visibleKeys) {
+        var counts = {};
+        (visibleKeys || []).forEach(function (row) {
+            var max = 1;
+            (cats || []).forEach(function (cat) {
+                var n = pricingSupplierRateEntriesForKey(row.key, cat).length;
+                if (n > max) {
+                    max = n;
+                }
+            });
+            counts[row.key] = max;
+        });
+        return counts;
+    }
+
+    function pricingAmountCellHtml(opts) {
+        opts = opts || {};
+        var key = opts.key || '';
+        var value = opts.value != null ? opts.value : '';
+        var edited = opts.edited ? '1' : '0';
+        var synced = opts.synced ? ' q-cost-synced' : '';
+        var supplierName = String(opts.supplierName || '').trim();
+        var partIndex = opts.partIndex != null ? String(opts.partIndex) : '0';
+        var hasSupplier = !!supplierName;
+        var html = '<div class="q-pricing-amount-cell' + (hasSupplier ? ' has-supplier' : '') + '" data-cost-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '">';
+        if (hasSupplier) {
+            html += '<span class="q-pricing-supplier-name" title="' + esc(supplierName) + '">' + esc(supplierName) + '</span>';
+        }
+        html += '<div class="q-pricing-amount-input-wrap">';
+        html += '<span class="q-pricing-inr" aria-hidden="true">₹</span>';
+        html += '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '" value="' + esc(value) + '" data-user-edited="' + edited + '" placeholder="0">';
+        html += '</div></div>';
+        return html;
+    }
+
+    function pricingPartValueForRender(state, key, partIndex, entryRate, slots) {
+        var edited = state.user_edited && parseInt(state.user_edited[key], 10) === 1;
+        var parts = (state.fixed_parts && state.fixed_parts[key]) || null;
+        if (edited && parts && parts[partIndex] != null && parts[partIndex] !== '') {
+            return parts[partIndex];
+        }
+        if (edited && (!parts || !parts.length) && partIndex === 0) {
+            return state.fixed && state.fixed[key] != null ? state.fixed[key] : '';
+        }
+        if (!edited && entryRate != null && entryRate !== '') {
+            return entryRate;
+        }
+        if (edited && parts && parts.length) {
+            return parts[partIndex] != null ? parts[partIndex] : '';
+        }
+        if (!edited && partIndex === 0 && (!slots || slots <= 1) && state.fixed && state.fixed[key] != null) {
+            return state.fixed[key];
+        }
+        return entryRate != null ? entryRate : '';
+    }
+
+    function pricingOptionColumnHtml(cat, state, idx, maxCustom, visibleKeys, slotCounts) {
         cat = cat || {};
         state = state || defaultPricingSheetState();
         var fixed = state.fixed || {};
@@ -4652,6 +4844,7 @@
         var isActive = String(id) === String(qActiveHotelCategoryId);
         maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
         visibleKeys = visibleKeys || pricingFixedCostKeys();
+        slotCounts = slotCounts || {};
         var html = '<div class="q-pricing-option-sheet' + (isActive ? ' is-active' : '') + '" data-cat-id="' + esc(id) + '">';
         html += '<div class="q-pricing-option-hd">';
         html += '<div class="q-pricing-option-hd-top">';
@@ -4666,17 +4859,22 @@
         html += '</div></div></div>';
         html += '</div><div class="q-pricing-option-body">';
         visibleKeys.forEach(function (row) {
-            var synced = (row.key === 'flight_train' || row.key === 'hotel' || row.key === 'land') ? ' q-cost-synced' : '';
-            var edited = state.user_edited && parseInt(state.user_edited[row.key], 10) === 1 ? '1' : '0';
-            var supplierNames = pricingSupplierNamesForKey(row.key, cat);
-            var hasSupplier = supplierNames.length > 0;
-            html += '<div class="q-pricing-amount-cell' + (hasSupplier ? ' has-supplier' : '') + '" data-cost-key="' + esc(row.key) + '">' +
-                '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + row.key + '" value="' + esc(fixed[row.key] != null ? fixed[row.key] : '') + '" data-user-edited="' + edited + '" placeholder="0">';
-            if (hasSupplier) {
-                html += '<span class="q-pricing-supplier-name" title="' + esc(supplierNames.join(', ')) + '">' +
-                    esc(supplierNames.join(', ')) + '</span>';
+            var synced = (row.key === 'flight_train' || row.key === 'hotel' || row.key === 'land');
+            var edited = state.user_edited && parseInt(state.user_edited[row.key], 10) === 1;
+            var entries = pricingSupplierRateEntriesForKey(row.key, cat);
+            var slots = Math.max(1, parseInt(slotCounts[row.key], 10) || Math.max(1, entries.length || 1));
+            var i;
+            for (i = 0; i < slots; i++) {
+                var entry = entries[i] || { name: '', rate: '' };
+                html += pricingAmountCellHtml({
+                    key: row.key,
+                    value: pricingPartValueForRender(state, row.key, i, entry.rate, slots),
+                    edited: edited,
+                    synced: synced,
+                    supplierName: entry.name || '',
+                    partIndex: i
+                });
             }
-            html += '</div>';
         });
         // Keep hidden inputs for non-visible fixed keys so saved values are not lost on re-render.
         pricingFixedCostKeys().forEach(function (row) {
@@ -4731,103 +4929,54 @@
         return html;
     }
 
-    function uniquePricingSupplierNames(names) {
-        var seen = {};
-        var out = [];
-        (names || []).forEach(function (name) {
-            name = String(name || '').trim();
-            if (!name) {
-                return;
-            }
-            var key = name.toLowerCase();
-            if (seen[key]) {
-                return;
-            }
-            seen[key] = 1;
-            out.push(name);
-        });
-        return out;
-    }
-
-    function readPricingSupplierNameFromSelect($sel) {
-        if (!$sel || !$sel.length) {
-            return '';
+    function getPricingSlotSignature(cats) {
+        cats = cats || (collectHotelCategories().categories || []);
+        if (!cats.length) {
+            cats = [{ id: 'opt_1', hotels: [] }];
         }
-        var val = String($sel.val() || '').trim();
-        if (!val || val === '__create__') {
-            return '';
-        }
-        var name = String($sel.find('option:selected').attr('data-name') || $sel.find('option:selected').text() || '').trim();
-        if (!name || name === 'Select' || name === 'Select supplier' || name.indexOf('Create new') === 0) {
-            return /^\d+$/.test(val) ? '' : val;
-        }
-        return name;
-    }
-
-    function pricingSupplierNamesForKey(key, cat) {
-        if (key === 'flight_train') {
-            return uniquePricingSupplierNames(collectFlights().map(function (f) {
-                return f && f.supplier;
-            }));
-        }
-        if (key === 'hotel') {
-            var hotels = (cat && Array.isArray(cat.hotels)) ? cat.hotels : [];
-            return uniquePricingSupplierNames(hotels.map(function (h) {
-                return h && (h.supplier || h.supplier_name);
-            }));
-        }
-        if (key === 'land') {
-            var landNames = [];
-            $('#qItinerarySupplierRows .q-itin-supplier').each(function () {
-                landNames.push(readPricingSupplierNameFromSelect($(this)));
+        var visibleKeys = getVisiblePricingFixedKeys(cats, qPricingOptionsState);
+        var slotCounts = getPricingKeySlotCounts(cats, visibleKeys);
+        var parts = visibleKeys.map(function (row) {
+            var names = [];
+            (cats || []).forEach(function (cat) {
+                pricingSupplierRateEntriesForKey(row.key, cat).forEach(function (e) {
+                    names.push(String((e && e.name) || ''));
+                });
             });
-            if (!landNames.length && $('#q_itinerary_supplier').length) {
-                landNames.push(readPricingSupplierNameFromSelect($('#q_itinerary_supplier')));
-            }
-            return uniquePricingSupplierNames(landNames);
-        }
-        return [];
+            return row.key + ':' + (slotCounts[row.key] || 1) + '[' + names.join(',') + ']';
+        });
+        return getPricingVisibilitySignature(cats) + '|' + parts.join('|');
     }
 
     function refreshPricingSupplierNames() {
+        if (qPricingRenderLock) {
+            return;
+        }
         var data = collectHotelCategories();
         var cats = data.categories || [];
-        $('#qPricingSheetsHost .q-pricing-option-sheet').each(function () {
-            var $sheet = $(this);
-            var catId = String($sheet.attr('data-cat-id') || '');
-            var cat = cats.find(function (c) {
-                return String(c.id) === catId;
-            }) || { id: catId, hotels: [] };
-            ['flight_train', 'hotel', 'land'].forEach(function (key) {
-                var $cell = $sheet.find('.q-pricing-amount-cell[data-cost-key="' + key + '"]');
-                if (!$cell.length) {
-                    return;
-                }
-                var names = pricingSupplierNamesForKey(key, cat);
-                var $lbl = $cell.find('.q-pricing-supplier-name');
-                if (!names.length) {
-                    $lbl.remove();
-                    $cell.removeClass('has-supplier');
-                    return;
-                }
-                var text = names.join(', ');
-                if (!$lbl.length) {
-                    $lbl = $('<span class="q-pricing-supplier-name"></span>').appendTo($cell);
-                }
-                $lbl.text(text).attr('title', text);
-                $cell.addClass('has-supplier');
-            });
-        });
+        var sig = getPricingSlotSignature(cats);
+        if (sig !== qPricingSlotSig) {
+            renderPricingSheets();
+        }
     }
 
-    function pricingLabelsColumnHtml(maxCustom, visibleKeys, customLabels) {
+    function pricingLabelsColumnHtml(maxCustom, visibleKeys, customLabels, slotCounts) {
         maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
         visibleKeys = visibleKeys || pricingFixedCostKeys();
+        slotCounts = slotCounts || {};
         var html = '<div class="q-pricing-labels-col">';
         html += '<div class="q-pricing-labels-hd"></div>';
         html += '<div class="q-pricing-option-body">';
         visibleKeys.forEach(function (row) {
-            html += '<div class="q-pricing-row-label" data-cost-key="' + esc(row.key) + '"><i class="' + row.icon + '" aria-hidden="true"></i><span>' + esc(row.label) + '</span></div>';
+            var slots = Math.max(1, parseInt(slotCounts[row.key], 10) || 1);
+            var i;
+            for (i = 0; i < slots; i++) {
+                if (i === 0) {
+                    html += '<div class="q-pricing-row-label" data-cost-key="' + esc(row.key) + '"><i class="' + row.icon + '" aria-hidden="true"></i><span>' + esc(row.label) + '</span></div>';
+                } else {
+                    html += '<div class="q-pricing-row-label is-continuation" data-cost-key="' + esc(row.key) + '" aria-hidden="true"></div>';
+                }
+            }
         });
         for (var i = 0; i < maxCustom; i++) {
             html += '<div class="q-pricing-row-label q-pricing-custom-label">' +
@@ -4844,6 +4993,8 @@
         html += '</div></div>';
         return html;
     }
+
+    var qPricingSlotSig = '';
 
     function renderPricingSheets(opts) {
         opts = opts || {};
@@ -4896,12 +5047,14 @@
                 maxCustom = Math.max(maxCustom, getRenderableCustomCosts(st).length);
             });
             var visibleKeys = getVisiblePricingFixedKeys(cats, qPricingOptionsState);
+            var slotCounts = getPricingKeySlotCounts(cats, visibleKeys);
             var customLabels = getMatrixCustomLabels(cats, maxCustom);
             qPricingVisSig = getPricingVisibilitySignature(cats);
-            $host.append(pricingLabelsColumnHtml(maxCustom, visibleKeys, customLabels));
+            qPricingSlotSig = getPricingSlotSignature(cats);
+            $host.append(pricingLabelsColumnHtml(maxCustom, visibleKeys, customLabels, slotCounts));
             cats.forEach(function (cat, idx) {
                 var state = qPricingOptionsState[cat.id] || defaultPricingSheetState();
-                $host.append(pricingOptionColumnHtml(cat, state, idx, maxCustom, visibleKeys));
+                $host.append(pricingOptionColumnHtml(cat, state, idx, maxCustom, visibleKeys, slotCounts));
             });
             renderTourCostRows();
             recalcCosts();
@@ -4934,8 +5087,8 @@
         }
         var data = collectHotelCategories();
         var cats = data.categories || [];
-        var sig = getPricingVisibilitySignature(cats);
-        if (sig !== qPricingVisSig) {
+        var sig = getPricingSlotSignature(cats);
+        if (sig !== qPricingSlotSig) {
             renderPricingSheets();
         }
     }
@@ -4952,39 +5105,68 @@
     }
 
     function isSheetCostUserEdited($sheet, key) {
-        return $sheet.find('.q-cost[data-key="' + key + '"]').attr('data-user-edited') === '1';
+        var edited = false;
+        $sheet.find('.q-cost[data-key="' + key + '"]').each(function () {
+            if ($(this).attr('data-user-edited') === '1') {
+                edited = true;
+            }
+        });
+        return edited;
+    }
+
+    function syncSheetCostPartsFromEntries($sheet, key, cat) {
+        if (isSheetCostUserEdited($sheet, key)) {
+            return;
+        }
+        var entries = pricingSupplierRateEntriesForKey(key, cat);
+        var $inputs = $sheet.find('.q-cost[data-key="' + key + '"]').filter(function () {
+            return $(this).attr('type') !== 'hidden';
+        });
+        if (!$inputs.length) {
+            return;
+        }
+        if (entries.length) {
+            $inputs.each(function (i) {
+                var entry = entries[i];
+                $(this).val(entry && entry.rate ? entry.rate : '');
+            });
+            return;
+        }
+        if ($inputs.length === 1) {
+            var fallback = 0;
+            if (key === 'hotel') {
+                fallback = hotelTotalForCategory(cat || {});
+            } else if (key === 'flight_train') {
+                fallback = sumNumericFields('#qFlightRows .f-fare');
+            } else if (key === 'land') {
+                fallback = getItineraryLandTotal();
+            }
+            $inputs.first().val(fallback > 0 ? (key === 'land' ? String(Math.round(fallback)) : fallback.toFixed(2)) : '');
+        } else {
+            $inputs.val('');
+        }
     }
 
     function syncSheetHotelFromCategory($sheet) {
         var catId = String($sheet.attr('data-cat-id') || '');
         var data = collectHotelCategories();
-        var cat = data.categories.find(function (c) { return String(c.id) === catId; });
+        var cat = (data.categories || []).find(function (c) { return String(c.id) === catId; });
         if (!cat) return;
-        if (!isSheetCostUserEdited($sheet, 'hotel')) {
-            var hotelTotal = hotelTotalForCategory(cat);
-            $sheet.find('.q-cost[data-key="hotel"]').val(
-                hotelTotal > 0 ? hotelTotal.toFixed(2) : ''
-            );
-        }
+        syncSheetCostPartsFromEntries($sheet, 'hotel', cat);
     }
 
     function syncSheetFlightFromServices($sheet) {
-        if (!isSheetCostUserEdited($sheet, 'flight_train')) {
-            var flightTotal = sumNumericFields('#qFlightRows .f-fare');
-            $sheet.find('.q-cost[data-key="flight_train"]').val(
-                flightTotal > 0 ? flightTotal.toFixed(2) : ''
-            );
-        }
+        var catId = String($sheet.attr('data-cat-id') || '');
+        var data = collectHotelCategories();
+        var cat = (data.categories || []).find(function (c) { return String(c.id) === catId; }) || { id: catId, hotels: [] };
+        syncSheetCostPartsFromEntries($sheet, 'flight_train', cat);
     }
 
     function syncSheetLandFromItinerary($sheet) {
-        if (isSheetCostUserEdited($sheet, 'land')) {
-            return;
-        }
-        var landTotal = getItineraryLandTotal();
-        $sheet.find('.q-cost[data-key="land"]').val(
-            landTotal > 0 ? landTotal.toFixed(2) : ''
-        );
+        var catId = String($sheet.attr('data-cat-id') || '');
+        var data = collectHotelCategories();
+        var cat = (data.categories || []).find(function (c) { return String(c.id) === catId; }) || { id: catId, hotels: [] };
+        syncSheetCostPartsFromEntries($sheet, 'land', cat);
     }
 
     function formatInrDisplay(n) {
@@ -6592,11 +6774,10 @@
             qpHotelHeadCell('City', 'qp-hotel-field-city', 'fas fa-map-marker-alt') +
             qpHotelHeadCell('Hotel', 'qp-hotel-field-hotel') +
             qpHotelHeadCell('Nights', 'qp-hotel-field-nights', 'fas fa-moon') +
-            qpHotelHeadCell('Rooms', 'qp-hotel-field-rooms', 'fas fa-bed') +
-            qpHotelHeadCell('Room Type', 'qp-hotel-field-room') +
-            qpHotelHeadCell('Meals', 'qp-hotel-field-meals', 'fas fa-utensils') +
+            qpHotelHeadCell('Room Type', 'qp-hotel-field-room', 'fas fa-bed') +
             qpHotelHeadCell('Check-In', 'qp-hotel-field-date', 'far fa-calendar-alt') +
             qpHotelHeadCell('Check-Out', 'qp-hotel-field-date', 'far fa-calendar-alt') +
+            qpHotelHeadCell('Meals', 'qp-hotel-field-meals', 'fas fa-utensils') +
             '</div>';
         html += '<div class="qp-hotel-body">';
 
@@ -6608,29 +6789,31 @@
             var country = String(d.country || '').trim();
             var cityText = String(d.city || '').trim();
             var starsHtml = qpHotelStarsHtml(d.star_category);
-            var roomValueHtml;
-            var cityValueHtml;
-            var roomsLabel = (d.rooms !== '' && d.rooms != null) ? String(d.rooms) : '—';
-
+            var roomsNum = parseInt(d.rooms, 10);
+            var roomsPad = (!isNaN(roomsNum) && roomsNum >= 0) ? pad2(roomsNum) : (d.rooms !== '' && d.rooms != null ? String(d.rooms) : '00');
+            var roomTypeText = '';
             if (mealInfo.roomPrimary === 'Room Only') {
-                roomValueHtml = '<div class="qp-hotel-primary">Room Only</div>';
-                if (d.room_type) {
-                    roomValueHtml += '<div class="qp-hotel-secondary">' +
-                        previewEditable(previewVal(d.room_type), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
-                        '</div>';
-                }
+                roomTypeText = d.room_type ? String(d.room_type) : 'Room Only';
             } else {
-                roomValueHtml = '<div class="qp-hotel-primary">' +
-                    previewEditable(previewVal(d.room_type || mealInfo.roomPrimary), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
-                    '</div>';
+                roomTypeText = String(d.room_type || mealInfo.roomPrimary || '—');
             }
 
-            cityValueHtml = '<div class="qp-hotel-primary">' +
+            var cityValueHtml = '<div class="qp-hotel-primary qp-hotel-city-name">' +
                 previewEditable(previewVal(cityText).toUpperCase(), base + 'city', { cls: 'q-preview-cell-edit' }) +
                 '</div>';
             if (country && cityText.toLowerCase().indexOf(country.toLowerCase()) === -1) {
                 cityValueHtml += '<div class="qp-hotel-secondary">' + esc(country.toUpperCase()) + '</div>';
             }
+
+            var roomCombinedHtml =
+                '<div class="qp-hotel-room-combined">' +
+                '<span class="qp-hotel-rooms-count">' +
+                previewEditable(roomsPad, base + 'rooms', { type: 'int', cls: 'q-preview-cell-edit' }) +
+                '</span>' +
+                '<span class="qp-hotel-room-type-text">' +
+                previewEditable(previewVal(roomTypeText), base + 'room_type', { cls: 'q-preview-cell-edit' }) +
+                '</span>' +
+                '</div>';
 
             html += '<div class="qp-hotel-row-card">';
             html += '<div class="qp-hotel-row-fields">';
@@ -6647,22 +6830,7 @@
                 '</div>',
                 'qp-hotel-field-nights'
             );
-            html += qpHotelValueCell(
-                '<div class="qp-hotel-primary">' +
-                previewEditable(roomsLabel, base + 'rooms', { type: 'int', cls: 'q-preview-cell-edit' }) +
-                '</div>',
-                'qp-hotel-field-rooms'
-            );
-            html += qpHotelValueCell(
-                '<div class="qp-hotel-stack">' + roomValueHtml + '</div>',
-                'qp-hotel-field-room'
-            );
-            html += qpHotelValueCell(
-                '<div class="qp-hotel-primary">' +
-                previewEditable(previewVal(mealCode, '—'), base + 'meal_plan', { cls: 'q-preview-cell-edit' }) +
-                '</div>',
-                'qp-hotel-field-meals'
-            );
+            html += qpHotelValueCell(roomCombinedHtml, 'qp-hotel-field-room');
             html += qpHotelValueCell(
                 '<div class="qp-hotel-primary">' +
                 previewEditable(formatPreviewFlightDate(d.checkin), base + 'checkin', { type: 'date', cls: 'q-preview-cell-edit' }) +
@@ -6674,6 +6842,12 @@
                 previewEditable(formatPreviewFlightDate(d.checkout), base + 'checkout', { type: 'date', cls: 'q-preview-cell-edit' }) +
                 '</div>',
                 'qp-hotel-field-date'
+            );
+            html += qpHotelValueCell(
+                '<div class="qp-hotel-primary">' +
+                previewEditable(previewVal(mealCode, '—'), base + 'meal_plan', { cls: 'q-preview-cell-edit' }) +
+                '</div>',
+                'qp-hotel-field-meals'
             );
             html += '</div>';
             html += '</div>';
@@ -6749,8 +6923,13 @@
             if (h === 0) {
                 h = 12;
             }
+        } else {
+            h = h % 12;
+            if (h === 0) {
+                h = 12;
+            }
         }
-        return String(h).padStart(2, '0') + ':' + min + ' ' + ampm;
+        return h + ':' + min + ' ' + ampm;
     }
 
     function qpFormatFlightDayDate(dateStr) {
@@ -6760,17 +6939,26 @@
         }
         var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()];
+        return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     }
 
-    function qpFlightLabel(d) {
-        d = d || {};
-        var name = String(d.name || '').trim();
-        var no = String(d.fl_tr_no || '').trim();
-        if (name && no) {
-            return (name + ' ' + no).toUpperCase();
+    function qpFlightAirlineName(d) {
+        return String((d && d.name) || '').trim();
+    }
+
+    function qpFlightNumber(d) {
+        return String((d && (d.fl_tr_no || d.pnr || d.fno)) || '').trim();
+    }
+
+    function qpFlightOperatedBy(name) {
+        name = String(name || '').trim();
+        if (!name) {
+            return '';
         }
-        return (name || no || 'FLIGHT').toUpperCase();
+        if (/airline/i.test(name)) {
+            return 'Operated by ' + name;
+        }
+        return 'Operated by ' + name + ' Airlines';
     }
 
     function qpFormatDurationShort(totalMinutes) {
@@ -6787,6 +6975,37 @@
             return h + 'h';
         }
         return m + 'm';
+    }
+
+    function qpFormatLayoverBadge(totalMinutes, fallback) {
+        var mins = parseInt(totalMinutes, 10);
+        if (!isNaN(mins) && mins > 0) {
+            var h = Math.floor(mins / 60);
+            var m = mins % 60;
+            var parts = [];
+            if (h > 0) {
+                parts.push(String(h).padStart(2, '0') + ' Hr');
+            }
+            if (m > 0 || h === 0) {
+                parts.push(String(m).padStart(2, '0') + ' Min');
+            }
+            return parts.join(' ');
+        }
+        return String(fallback || '').trim();
+    }
+
+    function qpCalcSegmentTravelMinutes(seg) {
+        seg = seg || {};
+        var start = parseFlightDateTimeMoment(seg.dep_date, seg.dep_time);
+        var end = parseFlightDateTimeMoment(seg.arr_date || seg.dep_date, seg.arr_time || seg.dep_time);
+        if (!start || !end) {
+            return 0;
+        }
+        var mins = end.diff(start, 'minutes');
+        if (mins < 0) {
+            mins += 24 * 60;
+        }
+        return mins > 0 ? mins : 0;
     }
 
     function qpCalcJourneyTravelTime(rows) {
@@ -6807,55 +7026,115 @@
         return qpFormatDurationShort(mins);
     }
 
-    function qpFlightEndpointHtml(place, dateStr, timeStr, editPath, align) {
+    function qpFlightPlaceLine(place) {
         var p = qpParseFlightPlace(place);
-        var alignCls = align === 'end' ? ' is-end' : '';
-        return '<div class="qp-flight-endpoint' + alignCls + '">' +
-            '<div class="qp-flight-place">' +
-            '<span class="qp-flight-city">' + esc(p.city) + '</span>' +
-            ' <span class="qp-flight-code">(' + esc(p.code) + ')</span>' +
-            '</div>' +
-            '<div class="qp-flight-when">' +
-            '<span class="qp-flight-date">' + esc(qpFormatFlightDayDate(dateStr)) + '</span>' +
-            '<span class="qp-flight-when-sep" aria-hidden="true">|</span>' +
-            '<span class="qp-flight-time">' +
+        if (p.city === '—' && p.code === '—') {
+            return '—';
+        }
+        if (p.code && p.code !== '—' && p.city && p.city !== '—') {
+            return p.city + ' (' + p.code + ')';
+        }
+        return p.city || p.code || '—';
+    }
+
+    function qpFlightEndpointBlockHtml(label, place, dateStr, timeStr, editPath) {
+        return '<div class="qp-flight-endpoint">' +
+            '<div class="qp-flight-loc-lbl">' + esc(label) + '</div>' +
+            '<div class="qp-flight-loc-city">' + esc(qpFlightPlaceLine(place)) + '</div>' +
+            '<div class="qp-flight-sched-date">' + esc(qpFormatFlightDayDate(dateStr)) + '</div>' +
+            '<div class="qp-flight-sched-time">' +
             previewEditable(qpFormatTime12(timeStr), editPath, {
                 type: 'datetime',
                 cls: 'q-preview-cell-edit qp-flight-time-edit'
             }) +
-            '</span>' +
             '</div>' +
             '</div>';
     }
 
     function qpFlightLayoverHtml(prev, cur) {
         var mins = calcLayoverMinutesBetweenData(prev, cur);
-        var duration = mins > 0 ? qpFormatDurationShort(mins) : '';
-        if (!duration && cur.layover_time) {
-            duration = String(cur.layover_time).trim();
-        }
+        var duration = qpFormatLayoverBadge(mins, cur && cur.layover_time);
         if (!duration) {
             return '';
-        }
-        var city = '';
-        if (cur.layover_at) {
-            city = qpParseFlightPlace(cur.layover_at).city;
-        }
-        if (!city || city === '—') {
-            city = qpParseFlightPlace(prev.to).city;
-        }
-        if (!city || city === '—') {
-            city = qpParseFlightPlace(cur.from).city;
         }
         return '<div class="qp-flight-layover-wrap">' +
             '<div class="qp-flight-layover-line" aria-hidden="true"></div>' +
             '<div class="qp-flight-layover">' +
             '<i class="far fa-clock" aria-hidden="true"></i>' +
-            '<span class="qp-flight-layover-text">Layover in ' + esc(city || '—') +
-            ' <span class="qp-flight-layover-pipe">|</span> <strong class="qp-flight-layover-dur">' +
-            esc(duration) + '</strong></span>' +
+            '<span class="qp-flight-layover-text">Layover <span class="qp-flight-layover-dot">•</span> ' +
+            esc(duration) + '</span>' +
             '</div>' +
             '</div>';
+    }
+
+    function qpFlightSegmentCardHtml(seg, _segIndex, flatIndex) {
+        seg = normalizeFlightData(seg);
+        var airline = qpFlightAirlineName(seg);
+        var flightNo = qpFlightNumber(seg);
+        var operated = qpFlightOperatedBy(airline);
+        var durMins = qpCalcSegmentTravelMinutes(seg);
+        var duration = qpFormatDurationShort(durMins);
+        var labelPath = 'flight.' + flatIndex + '.flight_label';
+        var displayAirline = airline || 'Flight';
+        var displayNo = flightNo || '—';
+
+        var html = '<div class="qp-flight-seg-card">';
+        html += '<div class="qp-flight-seg-accent" aria-hidden="true"></div>';
+        html += '<div class="qp-flight-seg-inner">';
+        html += '<div class="qp-flight-seg-row">';
+
+        html += '<div class="qp-flight-airline-col">';
+        html += '<div class="qp-flight-airline-name">' +
+            '<span class="qp-flight-airline-text">' +
+            previewEditable(displayAirline, labelPath, {
+                type: 'flight_label',
+                cls: 'q-preview-cell-edit qp-flight-airline-edit'
+            }) +
+            '</span>' +
+            qpFlightPlaneSvg('qp-flight-airline-plane', 12, 'right') +
+            '</div>';
+        html += '<div class="qp-flight-no">' +
+            previewEditable(displayNo, 'flight.' + flatIndex + '.fl_tr_no', {
+                type: 'text',
+                cls: 'q-preview-cell-edit qp-flight-no-edit'
+            }) +
+            '</div>';
+        if (operated) {
+            html += '<div class="qp-flight-operated">' + esc(operated) + '</div>';
+        }
+        html += '</div>';
+
+        html += qpFlightEndpointBlockHtml(
+            'From',
+            seg.from,
+            seg.dep_date,
+            seg.dep_time,
+            'flight.' + flatIndex + '.dep_datetime'
+        );
+
+        html += '<div class="qp-flight-mid-col" aria-hidden="true">';
+        html += '<div class="qp-flight-dur">' +
+            '<i class="far fa-clock" aria-hidden="true"></i>' +
+            '<span>' + esc(duration || '—') + '</span>' +
+            '</div>';
+        html += '<div class="qp-flight-path">' +
+            '<span class="qp-flight-path-line"></span>' +
+            qpFlightPlaneSvg('qp-flight-path-plane', 12, 'right') +
+            '<span class="qp-flight-path-line"></span>' +
+            '</div>';
+        html += '<div class="qp-flight-stop-pill">Non-stop</div>';
+        html += '</div>';
+
+        html += qpFlightEndpointBlockHtml(
+            'To',
+            seg.to,
+            seg.arr_date || seg.dep_date,
+            seg.arr_time,
+            'flight.' + flatIndex + '.arr_datetime'
+        );
+
+        html += '</div></div></div>';
+        return html;
     }
 
     function buildPreviewFlightCardsHtml(flights) {
@@ -6865,96 +7144,19 @@
         }
         var flatIndex = 0;
         var html = '<div class="qp-flight-cards">';
-        groups.forEach(function (group, gi) {
+        groups.forEach(function (group) {
             var rows = (group.rows || []).map(normalizeFlightData);
             if (!rows.length) {
                 return;
             }
-            var startIdx = flatIndex;
-            flatIndex += rows.length;
-            var label = group.label || (groups.length === 1 ? 'Outbound' : ('Flight ' + (gi + 1)));
-            if (groups.length === 2 && !group.label) {
-                label = gi === 0 ? 'Outbound' : 'Return';
-            }
-            if (label === 'Flight') {
-                label = 'Outbound';
-            }
-
-            var cities = [];
-            rows.forEach(function (seg, si) {
-                var from = qpParseFlightPlace(seg.from);
-                var to = qpParseFlightPlace(seg.to);
-                if (si === 0) {
-                    cities.push(from.city);
-                }
-                cities.push(to.city);
-            });
-            var uniqueCities = [];
-            cities.forEach(function (c) {
-                if (!c) return;
-                if (!uniqueCities.length || uniqueCities[uniqueCities.length - 1].toLowerCase() !== c.toLowerCase()) {
-                    uniqueCities.push(c);
-                }
-            });
-
-            var segs = rows.length;
-            var stops = Math.max(0, segs - 1);
-            var metaLabel = segs + ' Flight' + (segs > 1 ? 's' : '') + ' • ' +
-                (stops === 0 ? 'Non-stop' : (stops + ' Stop' + (stops > 1 ? 's' : '')));
-            var travelTime = qpCalcJourneyTravelTime(rows);
-
-            html += '<div class="qp-flight-card">';
-            html += '<div class="qp-flight-card-hd">' +
-                '<div class="qp-flight-card-hd-top">' +
-                '<span class="qp-flight-dir">' + esc(label) + '</span>' +
-                '<span class="qp-flight-meta">' + esc(metaLabel) + '</span>' +
-                '</div>' +
-                '<div class="qp-flight-route">' + esc(uniqueCities.join(' → ')) + '</div>' +
-                '</div>';
-
-            html += '<div class="qp-flight-legs">';
+            html += '<div class="qp-flight-journey">';
             rows.forEach(function (seg, si) {
                 if (si > 0) {
                     html += qpFlightLayoverHtml(rows[si - 1], seg);
                 }
-                var fLabel = qpFlightLabel(seg);
-                html += '<div class="qp-flight-seg">' +
-                    '<span class="qp-flight-seg-num">' + (si + 1) + '</span>' +
-                    qpFlightEndpointHtml(seg.from, seg.dep_date, seg.dep_time, 'flight.' + (startIdx + si) + '.dep_datetime') +
-                    '<div class="qp-flight-mid" aria-hidden="true">' +
-                    '<span class="qp-flight-dot"></span>' +
-                    '<span class="qp-flight-dash"></span>' +
-                    qpFlightPlaneSvg('qp-flight-mid-plane', 15, 'right') +
-                    '<span class="qp-flight-dash"></span>' +
-                    '<span class="qp-flight-dot"></span>' +
-                    '</div>' +
-                    qpFlightEndpointHtml(
-                        seg.to,
-                        seg.arr_date || seg.dep_date,
-                        seg.arr_time,
-                        'flight.' + (startIdx + si) + '.arr_datetime',
-                        'end'
-                    ) +
-                    '<div class="qp-flight-airline-wrap">' +
-                    '<div class="qp-flight-airline">' +
-                    qpFlightPlaneSvg('qp-flight-airline-ico', 12, 'up') +
-                    '<span class="qp-flight-airline-label">' +
-                    previewEditable(fLabel, 'flight.' + (startIdx + si) + '.flight_label', {
-                        type: 'flight_label',
-                        cls: 'q-preview-cell-edit'
-                    }) +
-                    '</span>' +
-                    '<i class="fas fa-chevron-right qp-flight-airline-chev" aria-hidden="true"></i>' +
-                    '</div>' +
-                    '</div>' +
-                    '</div>';
+                html += qpFlightSegmentCardHtml(seg, si, flatIndex);
+                flatIndex += 1;
             });
-            html += '</div>';
-
-            html += '<div class="qp-flight-card-ft">' +
-                '<i class="far fa-clock" aria-hidden="true"></i>' +
-                '<span>Total travel time: <strong>' + esc(travelTime || '—') + '</strong></span>' +
-                '</div>';
             html += '</div>';
         });
         html += '</div>';
@@ -7123,7 +7325,9 @@
             } else if (fField === 'flight_label') {
                 var labelParsed = parseFlightLabel(value);
                 setInput($fRow.find('.f-name'), labelParsed.name);
-                setInput($fRow.find('.f-fl-no'), labelParsed.fl_tr_no);
+                if (labelParsed.fl_tr_no) {
+                    setInput($fRow.find('.f-fl-no'), labelParsed.fl_tr_no);
+                }
             } else if (fField === 'layover') {
                 var layParsed = parseLayoverLabel(value);
                 setInput($fRow.find('.f-layover-at'), layParsed.layover_at);
@@ -7552,37 +7756,28 @@
     }
 
     function buildPreviewAccreditationsHtml() {
-        var items = [
-            {
-                img: 'crm/assets/accreditations/BNI_Logo.jpg',
-                title: 'BNI (Business Network International)'
-            },
-            {
-                img: 'crm/assets/accreditations/FJCCI-Logo.webp',
-                title: 'FJCCI (Federation of Jharkhand Chamber of Commerce & Industries)'
-            },
-            {
-                img: 'crm/assets/accreditations/YI.png',
-                title: 'Young Indians (Yi)'
-            },
-            {
-                img: 'crm/assets/accreditations/Tia.png',
-                title: 'Tourism India Alliance (TIA)'
-            }
+        var stats = [
+            { tone: 'red', icon: 'fas fa-suitcase-rolling', value: '1800+', label: 'Trips Sold' },
+            { tone: 'gold', icon: 'fas fa-users', value: '6400+', label: 'Happy Travellers' },
+            { tone: 'blue', icon: 'fas fa-map-marker-alt', value: '50+', label: 'Destinations Covered' },
+            { tone: 'green', icon: 'fas fa-flag', value: '24', label: 'Group Tours' }
         ];
 
         var html = '<div class="qp-sec qp-sec-acc">';
         html += '<div class="qp-acc-wrap">';
         html += '<div class="qp-acc-head">' +
-            '<div class="qp-acc-title">Global Accreditations</div>' +
-            '<div class="qp-acc-rule" aria-hidden="true"></div>' +
-            '<div class="qp-acc-sub">Recognised &amp; accredited with reputed international and national organizations</div>' +
+            '<div class="qp-acc-eyebrow"><span class="qp-acc-eyebrow-line" aria-hidden="true"></span>' +
+            '<span class="qp-acc-eyebrow-text">OUR JOURNEY SO FAR</span>' +
+            '<span class="qp-acc-eyebrow-line" aria-hidden="true"></span></div>' +
+            '<div class="qp-acc-title">Adrenaliverse Live: <span class="qp-acc-title-accent">Journeys In Motion</span></div>' +
+            '<div class="qp-acc-sub">See where the world is travelling right now.</div>' +
             '</div>';
         html += '<div class="qp-acc-grid">';
-        items.forEach(function (item) {
-            html += '<div class="qp-acc-card">' +
-                '<div class="qp-acc-logo"><img src="' + esc(absUrl(item.img)) + '" alt="' + esc(item.title) + '"></div>' +
-                '<div class="qp-acc-card-title">' + esc(item.title) + '</div>' +
+        stats.forEach(function (item) {
+            html += '<div class="qp-acc-card tone-' + esc(item.tone) + '">' +
+                '<div class="qp-acc-ico" aria-hidden="true"><i class="' + esc(item.icon) + '"></i></div>' +
+                '<div class="qp-acc-value">' + esc(item.value) + '</div>' +
+                '<div class="qp-acc-label">' + esc(item.label) + '</div>' +
                 '<div class="qp-acc-card-rule" aria-hidden="true"></div>' +
                 '</div>';
         });
@@ -7973,10 +8168,10 @@
 
         function qpTourCostNotesCardHtml() {
             var notes = [
-                'Prices are dynamic & subject to availability.',
-                'Rates are valid at the time of quotation only.',
-                'Final price & availability will be re-checked upon confirmation.',
-                'Kindly confirm at the earliest to secure the booking.'
+                'Rates subject to availability.',
+                'Valid at quotation time only.',
+                'Final rates to be re-checked on confirmation.',
+                'Confirm early to secure booking.'
             ];
             var list = notes.map(function (text, i) {
                 return '<li class="qp-notes-item">' +
@@ -7987,6 +8182,7 @@
             return '<div class="qp-notes-card">' +
                 '<div class="qp-notes-hd">' +
                 '<span class="qp-notes-hd-ico" aria-hidden="true"><i class="fas fa-clipboard-list"></i></span>' +
+                '<span class="qp-notes-hd-divider" aria-hidden="true"></span>' +
                 '<div class="qp-notes-hd-text">' +
                 '<h3 class="qp-notes-title">Notes</h3>' +
                 '<div class="qp-notes-sub">IMPORTANT INFORMATION</div>' +
@@ -8001,9 +8197,10 @@
             out += '<div class="qp-tour-hd">' +
                 '<div class="qp-tour-hd-left">' +
                 '<span class="qp-tour-hd-ico" aria-hidden="true">₹</span>' +
+                '<span class="qp-tour-hd-divider" aria-hidden="true"></span>' +
                 '<div class="qp-tour-hd-text">' +
                 '<h3 class="qp-tour-title">Tour Cost</h3>' +
-                '<div class="qp-tour-sub">QUOTATION SUMMARY</div>' +
+                '<div class="qp-tour-sub"></div>' +
                 '</div></div>' +
                 '<div class="qp-tour-tagline">TRAVEL <span></span> EXPLORE <span></span> CREATE MEMORIES</div>' +
                 '</div>';
@@ -8052,7 +8249,7 @@
                 if (childWithRate.length === 1) {
                     var oneChild = parseFloat(childWithRate[0]) || 0;
                     rowsTc += qpTourCostRowHtml(
-                        '<i class="fas fa-child"></i>',
+                        '<i class="far fa-user"></i>',
                         'INR ' + esc(money(oneChild)) + ' × 01 Child',
                         esc(money(oneChild))
                     );
@@ -8060,7 +8257,7 @@
                     childWithRate.forEach(function (cr, ci) {
                         var rate = parseFloat(cr) || 0;
                         rowsTc += qpTourCostRowHtml(
-                            '<i class="fas fa-child"></i>',
+                            '<i class="far fa-user"></i>',
                             'INR ' + esc(money(rate)) + ' × Child ' + pad2(ci + 1),
                             esc(money(rate))
                         );
