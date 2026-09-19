@@ -10818,18 +10818,85 @@
             printWin.document.open();
             printWin.document.write(
                 '<!DOCTYPE html><html><head><title>Quotation Preview</title><meta charset="utf-8">' +
+                '<meta name="viewport" content="width=1200">' +
                 '<link rel="stylesheet" href="' + esc(absUrl('plugins/fontawesome-free/css/all.min.css')) + '">' +
                 '<style>' +
                 styles +
                 'html,body{margin:0;padding:0;background:#fff;}' +
-                '.q-preview-doc{padding:18px 22px;max-width:900px;margin:0 auto;}' +
-                '@media print{' +
-                'body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-                '.q-preview-doc{padding:12px 16px;}' +
-                '.q-preview-editable,.q-preview-cell-edit{background:transparent!important;outline:none!important;box-shadow:none!important;}' +
-                '.q-preview-services-bar,.q-preview-social a{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                'body.q-preview-print{min-width:210mm;}' +
+                '.q-preview-doc{' +
+                'width:210mm;max-width:210mm;min-height:297mm;margin:0 auto;' +
+                'padding:8mm 10mm 10mm;box-sizing:border-box;' +
+                'border:1.5px solid #c4121a;background:#fff;' +
                 '}' +
-                '</style></head><body>' +
+                /* Force desktop A4 grids even if a screen media query still matches */
+                '.q-preview-doc .qp-hotel-col-head,' +
+                '.q-preview-doc .qp-hotel-row-fields{' +
+                'display:grid!important;' +
+                'grid-template-columns:minmax(0,1fr) minmax(0,2.2fr) minmax(0,.42fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,.5fr)!important;' +
+                '}' +
+                '.q-preview-doc .qp-hotel-field-hotel,' +
+                '.q-preview-doc .qp-hotel-field-city,' +
+                '.q-preview-doc .qp-hotel-field-room{grid-column:auto!important;}' +
+                '.q-preview-doc .qp-hotel-col-head{display:grid!important;}' +
+                '.q-preview-doc .qp-hotel-sec-rule{display:block!important;}' +
+                '.q-preview-doc .qp-hotel-sec-slogan{width:auto!important;text-align:right!important;white-space:nowrap!important;}' +
+                '.q-preview-doc .qp-acc-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
+                '.q-preview-doc .qp-rev-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}' +
+                '.q-preview-doc .qp-info-card.qp-cols-3{grid-template-columns:repeat(3,1fr)!important;}' +
+                '.q-preview-doc .qp-info-card.qp-cols-5{grid-template-columns:repeat(5,1fr)!important;}' +
+                '.q-preview-doc .qp-info-card.qp-cols-5.qp-travel-details{' +
+                'display:flex!important;flex-wrap:nowrap!important;align-items:stretch!important;' +
+                'grid-template-columns:none!important;' +
+                '}' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell,' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell.qp-cell-wide,' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell.qp-cell-grow,' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell.qp-cell-date,' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell.qp-cell-narrow{' +
+                'flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;' +
+                'border-right:1px solid #d7e0ea!important;border-bottom:none!important;' +
+                '}' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell.qp-cell-wide{flex:2.2 1 0!important;min-width:9em!important;}' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell.qp-cell-grow{flex:2 1 0!important;min-width:9em!important;}' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell.qp-cell-date{flex:0 0 auto!important;width:max-content!important;min-width:6.5em!important;}' +
+                '.q-preview-doc .qp-travel-details .qp-info-cell.qp-cell-narrow{flex:0 0 auto!important;width:max-content!important;}' +
+                '.q-preview-doc .qp-info-cell{border-right:1px solid #d7e0ea!important;border-bottom:none!important;}' +
+                '.q-preview-doc .qp-info-cell:last-child{border-right:none!important;}' +
+                '.q-preview-doc .qp-doc-head-top{flex-direction:row!important;align-items:flex-start!important;text-align:left!important;}' +
+                '.q-preview-doc .qp-cost-notes-row{flex-direction:row!important;}' +
+                '.q-preview-doc .qp-flight-sec-rule{display:block!important;}' +
+                '.q-preview-doc .qp-flight-seg-card{min-width:0!important;}' +
+                '.q-preview-doc .qp-day-main.has-photo{grid-template-columns:minmax(0,1fr) 180px!important;}' +
+                '.q-preview-doc .qp-trust-stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
+                '.q-preview-doc .qp-foot-contacts{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
+                '@media print{' +
+                '@page{size:A4;margin:12mm 0 10mm 0;}' +
+                'body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                '.q-preview-doc{width:210mm;max-width:210mm;min-height:auto;margin:0;padding:0 10mm 8mm;' +
+                'border:none!important;border-radius:0!important;box-shadow:none!important;}' +
+                '.q-preview-editable,.q-preview-cell-edit{background:transparent!important;outline:none!important;box-shadow:none!important;}' +
+                '.q-preview-doc,.q-preview-doc *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
+                '.q-preview-services-bar,.q-preview-social a{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                /* Keep cards whole — push to next page instead of cutting */
+                '.q-preview-day,.qp-day,.qp-rev-card,.qp-rev-grid,.qp-rev-wrap,.qp-sec-reviews,' +
+                '.qp-hotel-row-card,.qp-hotel-panel,.qp-flight-seg-card,.qp-flight-journey,' +
+                '.qp-info-card,.qp-acc-card,.qp-acc-grid,.qp-acc-wrap,' +
+                '.qp-tour-card,.qp-notes-card,.qp-cost-notes-row,.qp-terms-card,' +
+                '.qp-incl-banner,.qp-meal-legend{' +
+                'break-inside:avoid!important;page-break-inside:avoid!important;-webkit-column-break-inside:avoid!important;' +
+                '}' +
+                '.q-preview-day,.qp-day,.qp-rev-card,.qp-hotel-row-card,.qp-flight-seg-card{' +
+                'display:block!important;overflow:visible!important;' +
+                '}' +
+                '.qp-rev-grid,.qp-acc-grid{display:grid!important;}' +
+                '}' +
+                /* Also apply while print dialog is open / popup preview */
+                '.q-preview-day,.qp-day,.qp-rev-card,.qp-rev-grid,.qp-hotel-row-card,' +
+                '.qp-flight-seg-card,.qp-info-card,.qp-acc-card,.qp-acc-grid{' +
+                'break-inside:avoid;page-break-inside:avoid;' +
+                '}' +
+                '</style></head><body class="q-preview-print q-preview-only">' +
                 '<div id="qPreviewPrintArea" class="q-preview-doc">' + $clone.html() + '</div>' +
                 '</body></html>'
             );

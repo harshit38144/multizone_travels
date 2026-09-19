@@ -9261,10 +9261,10 @@ $qWizardSteps = [
             font-weight: 600;
         }
 
-        /* Responsive qp-* rules are scoped with body:not(.q-preview-only) so the
-           leads iframe (viewport ~794px / A4) keeps the same desktop layout as the
-           generator preview modal (which uses the full browser viewport). */
-        @media (max-width: 720px) {
+        /* Responsive qp-* rules: screen-only + body:not(.q-preview-only).
+           Keeps desktop A4 layout in leads iframe and in print (print popup is
+           ~794px and would otherwise collapse Guest/Travel/Hotel grids). */
+        @media screen and (max-width: 720px) {
             body:not(.q-preview-only) .qp-flight-journey {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
@@ -9715,14 +9715,14 @@ $qWizardSteps = [
             print-color-adjust: exact;
         }
 
-        @media (max-width: 900px) {
+        @media screen and (max-width: 900px) {
             body:not(.q-preview-only) .qp-hotel-col-head,
             body:not(.q-preview-only) .qp-hotel-row-fields {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
         }
 
-        @media (max-width: 640px) {
+        @media screen and (max-width: 640px) {
             body:not(.q-preview-only) .qp-hotel-col-head {
                 display: none;
             }
@@ -10279,7 +10279,7 @@ $qWizardSteps = [
             color: #374151;
         }
 
-        @media (max-width: 720px) {
+        @media screen and (max-width: 720px) {
             body:not(.q-preview-only) .qp-itin-art {
                 display: none;
             }
@@ -10418,7 +10418,7 @@ $qWizardSteps = [
             print-color-adjust: exact;
         }
 
-        @media (max-width: 640px) {
+        @media screen and (max-width: 640px) {
             body:not(.q-preview-only) .qp-incl-banner {
                 padding: 10px 12px;
             }
@@ -11452,13 +11452,13 @@ $qWizardSteps = [
             background: #15803d;
         }
 
-        @media (max-width: 900px) {
+        @media screen and (max-width: 900px) {
             body:not(.q-preview-only) .qp-acc-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
-        @media (max-width: 520px) {
+        @media screen and (max-width: 520px) {
             body:not(.q-preview-only) .qp-acc-grid {
                 grid-template-columns: 1fr;
             }
@@ -11755,7 +11755,7 @@ $qWizardSteps = [
             color: #d92027;
         }
 
-        @media (max-width: 900px) {
+        @media screen and (max-width: 900px) {
             body:not(.q-preview-only) .qp-rev-grid {
                 grid-template-columns: 1fr;
             }
@@ -12013,7 +12013,7 @@ $qWizardSteps = [
             box-shadow: none;
         }
 
-        @media (max-width: 720px) {
+        @media screen and (max-width: 720px) {
             body:not(.q-preview-only) .qp-doc-head-top {
                 flex-direction: column;
                 align-items: center;
@@ -12094,7 +12094,7 @@ $qWizardSteps = [
         @media print {
             @page {
                 size: A4;
-                margin: 0;
+                margin: 12mm 0 10mm 0;
             }
 
             body * {
@@ -12111,10 +12111,10 @@ $qWizardSteps = [
                 left: 0;
                 top: 0;
                 width: 210mm;
-                min-height: 297mm;
+                min-height: auto;
                 max-width: 210mm;
                 margin: 0;
-                padding: 8mm 10mm 10mm;
+                padding: 0 10mm 8mm;
                 border: none !important;
                 border-radius: 0 !important;
                 box-shadow: none !important;
@@ -12133,6 +12133,46 @@ $qWizardSteps = [
             #qPreviewPrintArea * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+            }
+
+            /* Keep cards intact across page breaks — move whole card to next page */
+            .q-preview-day,
+            .qp-day,
+            .qp-rev-card,
+            .qp-rev-grid,
+            .qp-rev-wrap,
+            .qp-sec-reviews,
+            .qp-hotel-row-card,
+            .qp-hotel-panel,
+            .qp-flight-seg-card,
+            .qp-flight-journey,
+            .qp-info-card,
+            .qp-acc-card,
+            .qp-acc-grid,
+            .qp-acc-wrap,
+            .qp-tour-card,
+            .qp-notes-card,
+            .qp-cost-notes-row,
+            .qp-terms-card,
+            .qp-incl-banner,
+            .qp-meal-legend {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                -webkit-column-break-inside: avoid !important;
+            }
+
+            .q-preview-day,
+            .qp-day,
+            .qp-rev-card,
+            .qp-hotel-row-card,
+            .qp-flight-seg-card {
+                display: block !important;
+                overflow: visible !important;
+            }
+
+            .qp-rev-grid,
+            .qp-acc-grid {
+                display: grid !important;
             }
         }
 
@@ -14037,7 +14077,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=234"></script>
+    <script src="crm/assets/quotation_generator.js?v=239"></script>
     <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
