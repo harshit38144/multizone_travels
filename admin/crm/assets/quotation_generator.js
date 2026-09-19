@@ -4625,9 +4625,9 @@
     function pricingFixedCostKeys() {
         return [
             { key: 'flight_train', label: 'Flight / Train', icon: 'fas fa-plane' },
-            { key: 'land', label: 'Land', icon: 'fas fa-map-marker-alt' },
+            { key: 'land', label: 'Land', icon: 'fas fa-bus' },
             { key: 'hotel', label: 'Hotel', icon: 'fas fa-bed' },
-            { key: 'transport', label: 'Transport', icon: 'fas fa-car' },
+            { key: 'transport', label: 'Transport', icon: 'fas fa-mountain' },
             { key: 'visa', label: 'Visa', icon: 'fas fa-passport' },
             { key: 'travel_insurance', label: 'Insurance', icon: 'fas fa-shield-alt' }
         ];
@@ -4822,7 +4822,7 @@
         if (key === 'hotel') {
             var hotels = (cat && Array.isArray(cat.hotels)) ? cat.hotels : [];
             hotels.forEach(function (h) {
-                var name = String((h && (h.supplier || h.supplier_name)) || '').trim();
+                var name = String((h && (h.hotel_name || h.name || h.supplier || h.supplier_name)) || '').trim();
                 var rateNum = parseFloat(h && h.rate);
                 var hasRate = !isNaN(rateNum) && rateNum > 0;
                 if (!hasRate && !name) {
@@ -4889,9 +4889,13 @@
         var edited = opts.edited ? '1' : '0';
         var synced = opts.synced ? ' q-cost-synced' : '';
         var supplierName = String(opts.supplierName || '').trim();
+        var icon = String(opts.icon || '').trim();
         var partIndex = opts.partIndex != null ? String(opts.partIndex) : '0';
         var hasSupplier = !!supplierName;
-        var html = '<div class="q-pricing-amount-cell' + (hasSupplier ? ' has-supplier' : '') + '" data-cost-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '">';
+        var html = '<div class="q-pricing-amount-cell' + (hasSupplier ? ' has-supplier' : '') + (icon ? ' has-ico' : '') + '" data-cost-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '">';
+        if (icon) {
+            html += '<span class="q-pricing-row-ico" aria-hidden="true"><i class="' + esc(icon) + '"></i></span>';
+        }
         if (hasSupplier) {
             html += '<span class="q-pricing-supplier-name" title="' + esc(supplierName) + '">' + esc(supplierName) + '</span>';
         }
@@ -4960,6 +4964,7 @@
                     edited: edited,
                     synced: synced,
                     supplierName: entry.name || '',
+                    icon: row.icon || '',
                     partIndex: i
                 });
             }
@@ -4984,7 +4989,7 @@
             '</div>';
 
         html += '<div class="q-sheet-profit-block">';
-        html += '<div class="q-profit-line">' +
+        html += '<div class="q-profit-line q-profit-total-line">' +
             '<span class="q-profit-line-label">Total Cost</span>' +
             '<div class="q-profit-readonly q-sum-total" data-display="total">0</div>' +
             '</div>';
@@ -4992,16 +4997,16 @@
             '<span class="q-profit-line-label">Add Profit</span>' +
             '<div class="q-profit-inputs">' +
             '<div class="q-profit-row">' +
-            '<div class="input-group input-group-sm q-profit-pct-group">' +
+            '<div class="q-profit-pct-group">' +
             '<input type="number" step="0.01" min="0" class="form-control q-sheet-profit-percent q-sum-pct" placeholder="0" value="' + esc(state.profit_percent || '') + '" title="Profit %">' +
-            '<div class="input-group-append"><span class="input-group-text">%</span></div>' +
+            '<span class="q-profit-pct-suffix" aria-hidden="true">%</span>' +
             '</div>' +
             '<span class="q-profit-or">OR</span>' +
             '<input type="number" step="0.01" min="0" class="form-control form-control-sm q-sheet-profit-amount" placeholder="Amount" value="' + esc(state.profit_amount || '') + '" title="Profit amount">' +
             '</div>' +
             '<div class="q-profit-calc-hint q-sum-profit" data-display="profit"></div>' +
             '</div></div>';
-        html += '<div class="q-profit-line">' +
+        html += '<div class="q-profit-line q-profit-package-line">' +
             '<span class="q-profit-line-label">Package Total</span>' +
             '<div class="q-profit-readonly q-sum-selling" data-display="selling">0</div>' +
             '</div>';
@@ -5325,8 +5330,10 @@
             '<div class="q-tour-cost-hd">' +
             '<div class="q-tour-cost-hd-left">' +
             '<span class="q-tour-cost-hd-ico" aria-hidden="true"><i class="fas fa-suitcase-rolling"></i></span>' +
+            '<div class="q-tour-cost-hd-copy">' +
             '<h4 class="q-tour-cost-title">Tour Cost Summary</h4>' +
-            '</div>' +
+            '<p class="q-tour-cost-sub">Total cost breakdown of your selected tour</p>' +
+            '</div></div>' +
             '<span class="q-tour-cost-autosave q-sheet-tour-autosave" title="Draft status">' +
             '<i class="fas fa-check"></i> Auto Saved' +
             '</span></div>' +
@@ -5334,7 +5341,7 @@
             '<div class="q-tour-cost-grand-wrap">' +
             '<div class="q-tour-cost-grand">' +
             '<div class="q-tour-cost-grand-left">' +
-            '<span class="q-tour-cost-grand-ico" aria-hidden="true"><i class="fas fa-award"></i></span>' +
+            '<span class="q-tour-cost-grand-ico" aria-hidden="true">₹</span>' +
             '<div class="q-tour-cost-grand-text">' +
             '<span class="q-tour-cost-grand-label">Grand Total</span>' +
             '<span class="q-tour-cost-grand-sub">Total amount to be paid</span>' +
@@ -5342,6 +5349,22 @@
             '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
             '<strong class="q-tour-cost-grand-amount q-sheet-tour-grand">INR 0.00</strong>' +
             '</div></div></div>';
+    }
+
+    function tourCostRowSubtitle(key, name) {
+        var map = {
+            adult: 'Number of adults traveling',
+            subtotal: 'Base fare for all travelers',
+            gst: 'Goods & Services Tax',
+            infant: 'Infant fare'
+        };
+        if (map[key]) {
+            return map[key];
+        }
+        if (String(key || '').indexOf('child_') === 0) {
+            return 'Child fare';
+        }
+        return name ? (String(name) + ' fare') : '';
     }
 
     function tourCostRowHtml(opts) {
@@ -5358,30 +5381,28 @@
         var hideMeta = !!opts.hideMeta;
         var gstEditable = !!opts.gstEditable;
         var gstPct = opts.gstPct != null ? opts.gstPct : 5;
+        var subtitle = opts.subtitle != null ? opts.subtitle : tourCostRowSubtitle(key, name);
 
-        var metaHtml = '';
+        var controlsHtml = '';
         if (!hideMeta && editable) {
-            metaHtml =
-                '<span class="q-tour-cost-traveller-meta">' +
+            controlsHtml =
+                '<div class="q-tour-cost-controls">' +
+                '<span class="q-tour-cost-rate-group">' +
                 '<span class="q-tour-cost-meta-prefix">INR</span>' +
                 '<input type="number" step="0.01" min="0" class="form-control q-tour-rate-input q-tour-cost-rate-inline" data-tour-key="' + esc(key) + '" value="' + esc(rate) + '" placeholder="0">' +
+                '</span>' +
                 '<span class="q-tour-cost-meta-mul">×</span>' +
                 (qtyEditable
                     ? '<input type="number" step="1" min="1" class="form-control q-tour-qty-input q-tour-cost-qty-inline" data-tour-qty="' + esc(key) + '" value="' + esc(qty) + '">'
                     : '<span class="q-tour-cost-meta-qty">' + esc(String(qty)) + '</span>') +
-                '</span>';
-        }
-
-        var nameHtml;
-        if (gstEditable) {
-            nameHtml =
-                '<span class="q-tour-cost-traveller-name">' +
-                'GST @' +
+                '</div>';
+        } else if (gstEditable) {
+            controlsHtml =
+                '<div class="q-tour-cost-controls q-tour-cost-controls-gst">' +
+                '<span class="q-tour-cost-gst-group">' +
                 '<input type="number" step="0.01" min="0" max="100" class="form-control q-tour-gst-input q-tour-cost-gst-inline" value="' + esc(gstPct) + '" aria-label="GST percent">' +
-                '%' +
-                '</span>';
-        } else {
-            nameHtml = '<span class="q-tour-cost-traveller-name">' + esc(name) + '</span>';
+                '<span class="q-tour-cost-gst-suffix" aria-hidden="true">%</span>' +
+                '</span></div>';
         }
 
         var rowClass = 'q-tour-cost-row' + (summary ? ' is-summary' : '') + (gstEditable ? ' q-tour-gst-row' : '');
@@ -5391,9 +5412,10 @@
             '<div class="q-tour-cost-traveller">' +
             '<span class="q-tour-cost-avatar" aria-hidden="true"><i class="' + icon + '"></i></span>' +
             '<div class="q-tour-cost-traveller-text">' +
-            nameHtml +
-            metaHtml +
+            '<span class="q-tour-cost-traveller-name">' + esc(name) + '</span>' +
+            (subtitle ? '<span class="q-tour-cost-traveller-sub">' + esc(subtitle) + '</span>' : '') +
             '</div></div>' +
+            controlsHtml +
             '<div class="q-tour-cost-amount" data-tour-amount="' + esc(key) + '">' + esc(amountText) + '</div>' +
             '</div>';
     }
