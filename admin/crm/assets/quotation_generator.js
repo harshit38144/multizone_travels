@@ -297,6 +297,8 @@
             fare: data.fare !== undefined && data.fare !== '' ? data.fare : (data.amount || ''),
             supplier_id: data.supplier_id || '',
             supplier: data.supplier || '',
+            hand_baggage: data.hand_baggage || data.handBaggage || data.cabin_baggage || data.cabinBaggage || '',
+            checkin_baggage: data.checkin_baggage || data.checkinBaggage || data.check_in_baggage || data.checkInBaggage || '',
             layover_time: data.layover_time || '',
             layover_at: data.layover_at || '',
             journey_start: data.journey_start ? true : false,
@@ -1003,6 +1005,8 @@
             '<button type="button" class="btn q-flight-remove q-remove" data-remove=".q-flight-row" title="Remove segment"><i class="fas fa-trash-alt"></i></button>' +
             '</div>' +
             '</div>' +
+            '<input type="hidden" class="f-hand-bag" value="' + esc(d.hand_baggage) + '">' +
+            '<input type="hidden" class="f-checkin-bag" value="' + esc(d.checkin_baggage) + '">' +
             '</div>' +
             '</div>';
     }
@@ -1043,6 +1047,8 @@
                 fare: fare,
                 supplier_id: supplierId,
                 supplier: supplierName || supplierVal,
+                hand_baggage: $r.find('.f-hand-bag').val(),
+                checkin_baggage: $r.find('.f-checkin-bag').val(),
                 layover_time: $r.find('.f-layover-time').val(),
                 layover_at: $r.find('.f-layover-at').val(),
                 journey_start: $r.find('.f-journey-start').val() === '1',
@@ -2851,7 +2857,32 @@
 
     function hotelOvernightLabel(hotel) {
         hotel = hotel || {};
-        return String(hotel.name || hotel.hotel_name || hotel.city || '').trim();
+        var city = String(hotel.city || '').trim();
+        if (city) {
+            return city.split(',')[0].trim();
+        }
+        return '';
+    }
+
+    function mealLabelForHotelStayDay(mealPlan, roomType, dayOffset, nights) {
+        var code = String(qpHotelMealCode(mealPlan) || '').toUpperCase();
+        var full = formatItineraryMealFromHotel(mealPlan, roomType);
+        nights = parseInt(nights, 10) || 0;
+        dayOffset = parseInt(dayOffset, 10) || 0;
+
+        // Checkout morning: breakfast only when the plan includes it (no overnight).
+        if (nights > 0 && dayOffset === nights) {
+            if (code === 'EP' || !code) {
+                return '';
+            }
+            if (code === 'CP' || code === 'MAP' || code === 'AP' || code === 'AI') {
+                return 'Breakfast';
+            }
+            return full;
+        }
+
+        // Overnight days covered by check-in → night before checkout.
+        return full;
     }
 
     function buildItineraryHotelMetaByDay(totalDays) {
@@ -2877,28 +2908,52 @@
             if (isNaN(nights) || nights < 0) {
                 nights = 0;
             }
+            if (d.checkin && d.checkout) {
+                var fromDates = hotelNightsBetween(d.checkin, d.checkout);
+                if (fromDates > 0) {
+                    nights = fromDates;
+                }
+            }
+            if (!nights && !d.checkin) {
+                return;
+            }
             if (!nights && d.checkin && d.checkout) {
                 nights = hotelNightsBetween(d.checkin, d.checkout) || 0;
-                if (nights < 0) {
-                    nights = 0;
-                }
             }
             if (!nights) {
                 return;
             }
+
             var overnight = hotelOvernightLabel(d);
-            var meal = formatItineraryMealFromHotel(d.meal_plan, d.room_type);
-            var meta = { overnight: overnight, meal: meal };
             var n;
             for (n = 0; n < nights; n++) {
-                sequential.push(meta);
+                sequential.push({
+                    overnight: overnight,
+                    meal: mealLabelForHotelStayDay(d.meal_plan, d.room_type, n, nights)
+                });
             }
+
             if (d.checkin) {
                 hasDatedCoverage = true;
                 for (n = 0; n < nights; n++) {
-                    var iso = addHotelDays(d.checkin, n);
-                    if (iso) {
-                        dateMap[iso] = meta;
+                    var overnightIso = addHotelDays(d.checkin, n);
+                    if (overnightIso) {
+                        dateMap[overnightIso] = {
+                            overnight: overnight,
+                            meal: mealLabelForHotelStayDay(d.meal_plan, d.room_type, n, nights)
+                        };
+                    }
+                }
+                // Checkout morning meal (no overnight).
+                var checkoutIso = d.checkout || addHotelDays(d.checkin, nights);
+                if (checkoutIso) {
+                    var checkoutMeal = mealLabelForHotelStayDay(d.meal_plan, d.room_type, nights, nights);
+                    if (checkoutMeal) {
+                        if (!dateMap[checkoutIso]) {
+                            dateMap[checkoutIso] = { overnight: '', meal: checkoutMeal };
+                        } else if (!dateMap[checkoutIso].meal) {
+                            dateMap[checkoutIso].meal = checkoutMeal;
+                        }
                     }
                 }
             }
@@ -2922,6 +2977,30 @@
                 overnight: sequential[i].overnight || '',
                 meal: sequential[i].meal || ''
             };
+        }
+        // Sequential fallback: add checkout-morning breakfast after last overnight.
+        if (sequential.length && sequential.length < totalDays) {
+            var lastHotel = null;
+            hotels.forEach(function (raw) {
+                var d = normalizeHotelData(raw);
+                if (d.meal_plan) {
+                    lastHotel = d;
+                }
+            });
+            if (lastHotel) {
+                var checkoutMealOnly = mealLabelForHotelStayDay(
+                    lastHotel.meal_plan,
+                    lastHotel.room_type,
+                    sequential.length,
+                    sequential.length
+                );
+                if (checkoutMealOnly && !byDay[sequential.length].meal) {
+                    byDay[sequential.length] = {
+                        overnight: '',
+                        meal: checkoutMealOnly
+                    };
+                }
+            }
         }
         return byDay;
     }
@@ -3284,9 +3363,10 @@
                 '</div>' +
                 '</div>' +
                 '<div class="q-day-toolbar-right">' +
+                '<button type="button" class="btn q-day-ai-btn" title="AI Suggest this day"><i class="fas fa-magic mr-1"></i>AI Suggest</button>' +
                 '<button type="button" class="btn q-day-nav-btn q-day-prev"><i class="fas fa-chevron-left"></i><span>Previous Day</span></button>' +
                 '<button type="button" class="btn q-day-nav-btn q-day-nav-primary q-day-next"><span>Next Day</span><i class="fas fa-chevron-right"></i></button>' +
-                '<button type="button" class="btn q-day-nav-btn q-view-full-itinerary" title="View full itinerary"><i class="fas fa-list-ul"></i><span>All Days</span></button>' +
+                '<button type="button" class="btn q-day-nav-btn q-view-full-itinerary" title="View full itinerary" aria-label="View full itinerary"><i class="fas fa-eye"></i></button>' +
                 '<div class="dropdown q-day-more-wrap">' +
                 '<button type="button" class="btn q-day-more-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="More">' +
                 '<i class="fas fa-ellipsis-v"></i>' +
@@ -3317,7 +3397,6 @@
                 '<div class="q-img-preview-empty text-muted small">No image selected</div>' +
                 '</div>' +
                 '<div class="q-day-image-actions">' +
-                '<button type="button" class="btn q-day-ai-btn" title="AI Suggest this day"><i class="fas fa-magic mr-1"></i>AI Suggest</button>' +
                 '<button type="button" class="btn q-day-img-btn q-choose-image"><i class="fas fa-upload mr-1"></i>Upload</button>' +
                 '<button type="button" class="btn q-day-img-btn q-search-day-image"><i class="fas fa-search mr-1"></i>Search Online</button>' +
                 '<button type="button" class="btn q-day-img-btn q-day-img-remove q-clear-day-image"><i class="fas fa-trash-alt mr-1"></i>Remove</button>' +
@@ -4137,6 +4216,7 @@
             }
             var overnight = (day.overnight || '').trim() || inferDayOvernightValue(day, dest);
             var meal = (day.meal || '').trim() || inferDayMealValue(day);
+            var dayImage = (day.image || '').trim();
             var metaHtml = '';
             if (overnight) {
                 metaHtml += '<span><i class="fas fa-bed"></i> ' + esc(overnight) + '</span>';
@@ -4144,11 +4224,9 @@
             if (meal) {
                 metaHtml += '<span><i class="fas fa-utensils"></i> ' + esc(meal) + '</span>';
             }
-            if (day.image) {
-                metaHtml += '<span><i class="fas fa-image"></i> Image</span>';
-            }
             var $item = $(
-                '<button type="button" class="q-full-itin-item' + (i === currentIdx ? ' is-current' : '') + '" data-day-index="' + i + '">' +
+                '<button type="button" class="q-full-itin-item' + (i === currentIdx ? ' is-current' : '') + (dayImage ? ' has-photo' : '') + '" data-day-index="' + i + '">' +
+                '<div class="q-full-itin-item-body">' +
                 '<div class="q-full-itin-item-top">' +
                 '<span class="q-full-itin-item-day">Day ' + (i + 1) + '</span>' +
                 '<span class="q-full-itin-item-date"></span>' +
@@ -4156,12 +4234,22 @@
                 '<div class="q-full-itin-item-title"></div>' +
                 (desc ? '<p class="q-full-itin-item-desc"></p>' : '') +
                 (metaHtml ? '<div class="q-full-itin-item-meta">' + metaHtml + '</div>' : '') +
+                '</div>' +
+                (dayImage
+                    ? '<div class="q-full-itin-item-photo"><img alt=""></div>'
+                    : '') +
                 '</button>'
             );
             $item.find('.q-full-itin-item-date').text(dateOnly);
             $item.find('.q-full-itin-item-title').text(title);
             if (desc) {
                 $item.find('.q-full-itin-item-desc').text(desc);
+            }
+            if (dayImage) {
+                $item.find('.q-full-itin-item-photo img').attr({
+                    src: absUrl(dayImage),
+                    alt: title
+                });
             }
             $list.append($item);
         });
@@ -5515,7 +5603,7 @@
         var hideGst = $('#q_hide_gst_note').is(':checked');
         var gstPct = hideGst ? 0 : (parseFloat(qTourCostState.gst_percent) || 5);
         var gst = subtotal * gstPct / 100;
-        var grand = subtotal + gst;
+        var grand = Math.round(subtotal + gst);
         var $sheet = $scopeEl && $scopeEl.length ? $scopeEl.closest('.q-pricing-option-sheet') : getActivePricingSheet();
         var adultEdited = $sheet.length && $sheet.find('.q-sheet-price-per-adult').attr('data-user-edited') === '1' ? 1 : 0;
         return {
@@ -6684,9 +6772,9 @@
         }
         var legendMap = {
             EP: 'No Meals',
-            CP: 'BF',
-            MAP: 'BF+D',
-            AP: 'BF+L+D',
+            CP: 'Breakfast',
+            MAP: 'Breakfast & Dinner',
+            AP: 'Breakfast, Lunch & Dinner',
             AI: 'All Inclusive'
         };
         var upper = String(code).toUpperCase();
@@ -6709,10 +6797,10 @@
                     return;
                 }
                 seen[key] = true;
-                var shortForm = qpHotelMealLegendForm(code);
+                var mealName = qpHotelMealLegendForm(code);
                 items.push({
                     code: key,
-                    full: shortForm
+                    name: mealName || key
                 });
             });
         });
@@ -6720,12 +6808,7 @@
             return '';
         }
         var parts = items.map(function (it) {
-            if (it.full) {
-                return '<span class="qp-meal-legend-item"><strong>' + esc(it.code) + '</strong>' +
-                    ' <span class="qp-meal-legend-sep">–</span> ' +
-                    '<span class="qp-meal-legend-full">' + esc(it.full) + '</span></span>';
-            }
-            return '<span class="qp-meal-legend-item"><strong>' + esc(it.code) + '</strong></span>';
+            return '<span class="qp-meal-legend-item"><strong>' + esc(it.name) + '</strong></span>';
         });
         return '<div class="qp-meal-legend">' +
             '<span class="qp-meal-legend-label">Meal Plan:</span> ' +
@@ -6773,7 +6856,7 @@
         html += '<div class="qp-hotel-col-head" aria-hidden="true">' +
             qpHotelHeadCell('City', 'qp-hotel-field-city', 'fas fa-map-marker-alt') +
             qpHotelHeadCell('Hotel', 'qp-hotel-field-hotel') +
-            qpHotelHeadCell('Nights', 'qp-hotel-field-nights', 'fas fa-moon') +
+            qpHotelHeadCell('Nts', 'qp-hotel-field-nights', 'fas fa-moon') +
             qpHotelHeadCell('Room Type', 'qp-hotel-field-room', 'fas fa-bed') +
             qpHotelHeadCell('Check-In', 'qp-hotel-field-date', 'far fa-calendar-alt') +
             qpHotelHeadCell('Check-Out', 'qp-hotel-field-date', 'far fa-calendar-alt') +
@@ -7102,6 +7185,24 @@
         if (operated) {
             html += '<div class="qp-flight-operated">' + esc(operated) + '</div>';
         }
+        if (seg.hand_baggage || seg.checkin_baggage) {
+            html += '<div class="qp-flight-baggage">';
+            if (seg.hand_baggage) {
+                html += '<span><i class="fas fa-briefcase" aria-hidden="true"></i> Hand ' +
+                    previewEditable(seg.hand_baggage, 'flight.' + flatIndex + '.hand_baggage', {
+                        type: 'text',
+                        cls: 'q-preview-cell-edit'
+                    }) + '</span>';
+            }
+            if (seg.checkin_baggage) {
+                html += '<span><i class="fas fa-suitcase" aria-hidden="true"></i> Check-in ' +
+                    previewEditable(seg.checkin_baggage, 'flight.' + flatIndex + '.checkin_baggage', {
+                        type: 'text',
+                        cls: 'q-preview-cell-edit'
+                    }) + '</span>';
+            }
+            html += '</div>';
+        }
         html += '</div>';
 
         html += qpFlightEndpointBlockHtml(
@@ -7342,6 +7443,8 @@
                     dep_time: '.f-dep-time',
                     arr_date: '.f-arr-date',
                     arr_time: '.f-arr-time',
+                    hand_baggage: '.f-hand-bag',
+                    checkin_baggage: '.f-checkin-bag',
                     layover_time: '.f-layover-time',
                     layover_at: '.f-layover-at'
                 };
@@ -10627,6 +10730,12 @@
         });
 
         $('#qPreviewPrintBtn').on('click', function () {
+            if (typeof window.qPrintPreviewOnly === 'function') {
+                window.qPrintPreviewOnly();
+            }
+        });
+
+        window.qPrintPreviewOnly = function () {
             var $area = $('#qPreviewPrintArea');
             if (!$area.length || !$area.html()) {
                 return;
@@ -10711,7 +10820,7 @@
                 } catch (err) { /* ignore */ }
             };
             window.setTimeout(triggerPrint, 700);
-        });
+        };
 
         function postQuotationSave(p, saveMode, $btn, btnDefaultHtml, onSuccess) {
             p.save_mode = saveMode;
@@ -10910,7 +11019,16 @@
 
         window.addEventListener('message', function (ev) {
             var data = ev && ev.data;
-            if (!data || data.type !== 'mz-quotation-preview-save') {
+            if (!data || typeof data !== 'object') {
+                return;
+            }
+            if (data.type === 'mz-quotation-preview-print') {
+                if (typeof window.qPrintPreviewOnly === 'function') {
+                    window.qPrintPreviewOnly();
+                }
+                return;
+            }
+            if (data.type !== 'mz-quotation-preview-save') {
                 return;
             }
             if (typeof window.qSavePreviewOnly === 'function') {

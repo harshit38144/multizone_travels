@@ -189,6 +189,180 @@
         return parts.join(' ') || '0 min';
     }
 
+    function qfsNormalizeBaggageValue(val) {
+        if (val == null || val === false) {
+            return '';
+        }
+        if (typeof val === 'number' && !isNaN(val) && val > 0) {
+            return val + ' kg';
+        }
+        if (typeof val === 'object') {
+            var weight = val.weight || val.wt || val.amount || val.value || val.qty || val.quantity || '';
+            var unit = String(val.unit || val.weightUnit || val.wu || 'kg').trim();
+            if (weight !== '' && weight != null) {
+                var wStr = String(weight).trim();
+                if (/^\d+(\.\d+)?$/.test(wStr) && unit) {
+                    return wStr + ' ' + unit.toLowerCase().replace(/kgs?/i, 'kg');
+                }
+                return wStr;
+            }
+            if (val.text || val.label || val.desc || val.description) {
+                return String(val.text || val.label || val.desc || val.description).trim();
+            }
+            return '';
+        }
+        var str = String(val).trim();
+        if (!str || /^(n\/?a|nil|none|-|null|undefined)$/i.test(str)) {
+            return '';
+        }
+        return str;
+    }
+
+    function qfsPickFirstBaggage(obj, keys) {
+        if (!obj || typeof obj !== 'object') {
+            return '';
+        }
+        for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] != null && obj[key] !== '') {
+                var normalized = qfsNormalizeBaggageValue(obj[key]);
+                if (normalized) {
+                    return normalized;
+                }
+            }
+        }
+        return '';
+    }
+
+    function qfsParseCombinedBaggage(text) {
+        var out = { hand: '', checkin: '' };
+        var str = String(text || '').trim();
+        if (!str) {
+            return out;
+        }
+        var cabinMatch = str.match(/(?:cabin|hand|carry[\s-]?on)\s*(?:bag(?:gage)?|baggage)?\s*[:\-]?\s*([^|/·•]+)/i);
+        var checkMatch = str.match(/(?:check[\s-]?in|checked|hold)\s*(?:bag(?:gage)?|baggage)?\s*[:\-]?\s*([^|/·•]+)/i);
+        if (cabinMatch) {
+            out.hand = qfsNormalizeBaggageValue(cabinMatch[1]);
+        }
+        if (checkMatch) {
+            out.checkin = qfsNormalizeBaggageValue(checkMatch[1]);
+        }
+        if (!out.hand && !out.checkin && /\d/.test(str)) {
+            // Single allowance string — treat as check-in unless clearly cabin-only.
+            if (/cabin|hand|carry/i.test(str) && !/check/i.test(str)) {
+                out.hand = qfsNormalizeBaggageValue(str);
+            } else {
+                out.checkin = qfsNormalizeBaggageValue(str);
+            }
+        }
+        return out;
+    }
+
+    function qfsExtractBaggage(sources) {
+        var handKeys = [
+            'hand_baggage', 'handBaggage', 'handBag', 'cabinBaggage', 'cabin_baggage',
+            'cBag', 'cabinBag', 'carryOnBaggage', 'carry_on_baggage', 'handLuggage',
+            'cbag', 'CabinBaggage'
+        ];
+        var checkinKeys = [
+            'checkin_baggage', 'checkinBaggage', 'checkInBaggage', 'check_in_baggage',
+            'iBag', 'checkInBag', 'checkedBaggage', 'checked_baggage', 'holdBaggage',
+            'frBag', 'freeBaggage', 'includedBaggage', 'IncludedBaggage', 'baggageAllowance',
+            'ibag', 'CheckInBaggage'
+        ];
+        var hand = '';
+        var checkin = '';
+        var list = Array.isArray(sources) ? sources : [sources];
+        var i;
+
+        function walk(node, depth) {
+            if (!node || depth > 6) {
+                return;
+            }
+            if (Array.isArray(node)) {
+                for (var ai = 0; ai < Math.min(node.length, 12); ai++) {
+                    walk(node[ai], depth + 1);
+                    if (hand && checkin) {
+                        return;
+                    }
+                }
+                return;
+            }
+            if (typeof node !== 'object') {
+                return;
+            }
+            if (!hand) {
+                hand = qfsPickFirstBaggage(node, handKeys);
+            }
+            if (!checkin) {
+                checkin = qfsPickFirstBaggage(node, checkinKeys);
+            }
+            if ((!hand || !checkin) && typeof node.baggage === 'string') {
+                var parsed = qfsParseCombinedBaggage(node.baggage);
+                if (!hand && parsed.hand) {
+                    hand = parsed.hand;
+                }
+                if (!checkin && parsed.checkin) {
+                    checkin = parsed.checkin;
+                }
+            }
+            if (hand && checkin) {
+                return;
+            }
+            var keys = Object.keys(node);
+            for (var ki = 0; ki < keys.length; ki++) {
+                var key = keys[ki];
+                var val = node[key];
+                if (val && typeof val === 'object') {
+                    walk(val, depth + 1);
+                    if (hand && checkin) {
+                        return;
+                    }
+                }
+            }
+        }
+
+        for (i = 0; i < list.length; i++) {
+            walk(list[i], 0);
+            if (hand && checkin) {
+                break;
+            }
+        }
+        return {
+            hand_baggage: hand,
+            checkin_baggage: checkin,
+            baggage: (hand || checkin)
+                ? ('Cabin: ' + (hand || '—') + ' | Check-in: ' + (checkin || '—'))
+                : ''
+        };
+    }
+
+    function qfsBaggageFromFlightItem(item, seg) {
+        var journey = (item && (item.journey || item)) || {};
+        var fares = journey.fares || {};
+        var paxFares = (fares.paxFares && fares.paxFares.adt) ? fares.paxFares.adt : {};
+        var primary = seg || item.primaryFlight || (journey.flights && journey.flights[0]) || item || {};
+        var bag = qfsExtractBaggage([
+            primary,
+            journey,
+            fares,
+            paxFares,
+            fares.totalFare,
+            fares.fare,
+            item
+        ]);
+        // Via search often omits baggage; keep domestic defaults so UI always shows details.
+        if (!bag.hand_baggage) {
+            bag.hand_baggage = '7 kg';
+        }
+        if (!bag.checkin_baggage) {
+            bag.checkin_baggage = '15 kg';
+        }
+        bag.baggage = 'Cabin: ' + bag.hand_baggage + ' | Check-in: ' + bag.checkin_baggage;
+        return bag;
+    }
+
     function segmentLocation(detail, fallbackCity, fallbackCode) {
         if (detail && (detail.name || detail.code)) {
             return (detail.name || fallbackCity || '') + (detail.code ? ' (' + detail.code + ')' : '');
@@ -199,7 +373,7 @@
         return fallbackCity || fallbackCode || '';
     }
 
-    function mapSegmentToQuotationRow(seg, fare) {
+    function mapSegmentToQuotationRow(seg, fare, bagInfo) {
         var airlineObj = seg.carrier || seg.airline || {};
         var fname = airlineObj.name || seg.airlineName || seg.carrierName || '';
         var fno = (airlineObj.code || 'FL') + '-' + (seg.flightNo || seg.flightNumber || '');
@@ -209,6 +383,7 @@
         var depTime = '';
         var arrDate = '';
         var arrTime = '';
+        var bag = bagInfo || qfsExtractBaggage([seg]);
 
         if (dRaw && moment(dRaw).isValid()) {
             depDate = moment(dRaw).format('YYYY-MM-DD');
@@ -228,19 +403,27 @@
             dep_time: depTime,
             arr_date: arrDate,
             arr_time: arrTime,
-            fare: fare || ''
+            fare: fare || '',
+            hand_baggage: bag.hand_baggage || '',
+            checkin_baggage: bag.checkin_baggage || ''
         };
     }
 
     function mapJourneyToQuotationRows(f, legDate) {
         var segments = (f.segments && f.segments.length) ? f.segments : null;
+        var journeyBag = qfsExtractBaggage([f, {
+            hand_baggage: f.hand_baggage,
+            checkin_baggage: f.checkin_baggage,
+            baggage: f.baggage
+        }]);
         if (!segments || segments.length <= 1) {
             return [mapFlightToQuotationRow(f, legDate)];
         }
 
         var rows = [];
         segments.forEach(function (seg, idx) {
-            var row = mapSegmentToQuotationRow(seg, idx === 0 ? (f.tot || '') : '');
+            var segBag = qfsExtractBaggage([seg, journeyBag, f]);
+            var row = mapSegmentToQuotationRow(seg, idx === 0 ? (f.tot || '') : '', segBag);
             if (idx === 0 && !row.dep_date && legDate) {
                 row.dep_date = legDate;
             }
@@ -292,12 +475,15 @@
         var dTime = moment(dTimeRaw).isValid() ? moment(dTimeRaw).format('DD MMM YYYY | hh:mm A') : dTimeRaw;
         var aTime = moment(aTimeRaw).isValid() ? moment(aTimeRaw).format('DD MMM YYYY | hh:mm A') : aTimeRaw;
 
+        var bagInfo = qfsBaggageFromFlightItem(item, primaryF);
         var fData = {
             fname: pFname, fno: pFno, dTime: dTime, aTime: aTime,
             base: base, tax: tax, tot: tot,
             terminal: (primaryF.depDetail && primaryF.depDetail.terminal) ? primaryF.depDetail.terminal : 'T1',
             stops: stopsStr, duration: pDuration,
-            baggage: primaryF.baggage || 'Cabin: 7kg | Check-in: 15kg',
+            baggage: bagInfo.baggage || primaryF.baggage || '',
+            hand_baggage: bagInfo.hand_baggage || '',
+            checkin_baggage: bagInfo.checkin_baggage || '',
             carrierCode: pCarrierCode,
             segments: flightsArray,
             depCity: overallDepCityName,
@@ -340,6 +526,13 @@
             var depTerminal = (f.depDetail && f.depDetail.terminal) ? 'Terminal ' + f.depDetail.terminal : 'Terminal 1';
             var arrTerminal = (f.arrDetail && f.arrDetail.terminal) ? 'Terminal ' + f.arrDetail.terminal : 'Terminal 1';
             var legStopsStr = flightsArray.length > 1 ? stopsStr : 'Non Stop';
+            var legBag = index === 0 ? bagInfo : qfsExtractBaggage([f, bagInfo]);
+            if (!legBag.hand_baggage) {
+                legBag.hand_baggage = bagInfo.hand_baggage;
+            }
+            if (!legBag.checkin_baggage) {
+                legBag.checkin_baggage = bagInfo.checkin_baggage;
+            }
 
             cardHtml += '<div class="row align-items-center">' +
                 '<div class="col-md-3 d-flex align-items-center" style="padding-right:0;">' +
@@ -357,6 +550,10 @@
                 '<div class="col-md-3 text-left" style="padding-left:5px;">' +
                 '<div style="font-weight:700; font-size:12px; color:#333;">' + duration + '</div>' +
                 '<div class="text-muted" style="font-size:11px;">' + legStopsStr + '</div>' +
+                '<div class="qfs-card-baggage">' +
+                '<span title="Hand baggage"><i class="fas fa-briefcase"></i> ' + $('<div>').text(legBag.hand_baggage || '7 kg').html() + '</span>' +
+                '<span title="Check-in baggage"><i class="fas fa-suitcase"></i> ' + $('<div>').text(legBag.checkin_baggage || '15 kg').html() + '</span>' +
+                '</div>' +
                 '</div></div>';
 
             if (index < flightsArray.length - 1) {
@@ -383,6 +580,10 @@
             '<div class="qfs-price-col">' +
             '<div class="qfs-price-value">₹' + priceLabel + '</div>' +
             seatsHtml +
+            '<div class="qfs-baggage-meta">' +
+            '<div><i class="fas fa-briefcase mr-1"></i>Hand: ' + $('<div>').text(bagInfo.hand_baggage).html() + '</div>' +
+            '<div><i class="fas fa-suitcase mr-1"></i>Check-in: ' + $('<div>').text(bagInfo.checkin_baggage).html() + '</div>' +
+            '</div>' +
             '</div></div></div>';
         return cardHtml;
     }
@@ -432,6 +633,16 @@
             arrTime = moment(f.aTime, 'DD MMM YYYY | hh:mm A').format('HH:mm');
         }
 
+        var bag = qfsExtractBaggage([
+            f,
+            (f.segments && f.segments[0]) ? f.segments[0] : null,
+            {
+                hand_baggage: f.hand_baggage,
+                checkin_baggage: f.checkin_baggage,
+                baggage: f.baggage
+            }
+        ]);
+
         return {
             from: from,
             to: to,
@@ -441,7 +652,9 @@
             dep_time: depTime,
             arr_date: arrDate,
             arr_time: arrTime,
-            fare: f.tot || ''
+            fare: f.tot || '',
+            hand_baggage: bag.hand_baggage || '',
+            checkin_baggage: bag.checkin_baggage || ''
         };
     }
 

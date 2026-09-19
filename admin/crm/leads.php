@@ -1919,35 +1919,45 @@ foreach ($destinationLookup as $destId => $destName) {
         #leadQuotationPreviewModal .modal-dialog {
             width: 210mm;
             max-width: min(210mm, calc(100vw - 24px));
-            height: calc(100vh - 2rem);
+            height: auto;
             max-height: calc(100vh - 2rem);
             margin: 1rem auto;
-            display: flex;
-            align-items: stretch;
         }
-        #leadQuotationPreviewModal .modal-content {
-            border: 0;
+        #leadQuotationPreviewModal .qp-modal-content {
+            border: none;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
             display: flex;
             flex-direction: column;
             width: 100%;
-            height: 100%;
-            max-height: 100%;
+            max-height: calc(100vh - 2rem);
         }
-        #leadQuotationPreviewModal .modal-header {
+        #leadQuotationPreviewModal .qp-modal-header {
             background: #c4121a;
             color: #fff;
-            border-bottom: 0;
-            padding: 0.75rem 1rem;
+            border-bottom: none;
+            padding: 12px 18px;
+            align-items: center;
             flex: 0 0 auto;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
-        #leadQuotationPreviewModal .modal-header .modal-title {
+        #leadQuotationPreviewModal .qp-modal-header .modal-title {
             font-size: 1.05rem;
             font-weight: 700;
+            letter-spacing: 0.02em;
         }
-        #leadQuotationPreviewModal .modal-header .close {
+        #leadQuotationPreviewModal .qp-modal-hint {
+            display: block;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+        #leadQuotationPreviewModal .qp-modal-unsaved {
+            color: #ffe08a !important;
+        }
+        #leadQuotationPreviewModal .qp-modal-close {
             color: #fff;
             text-shadow: none;
             opacity: 0.9;
@@ -1959,6 +1969,8 @@ foreach ($destinationLookup as $destId => $destName) {
             min-height: 0;
             overflow: hidden;
             position: relative;
+            height: calc(100vh - 10rem);
+            max-height: calc(100vh - 10rem);
         }
         #leadQuotationPreviewModal .lead-q-preview-frame {
             width: 100%;
@@ -1981,11 +1993,49 @@ foreach ($destinationLookup as $destId => $destName) {
             background: #fff;
             z-index: 2;
         }
-        #leadQuotationPreviewModal .modal-footer {
+        #leadQuotationPreviewModal .qp-modal-footer {
             background: #fff;
-            border-top: 1px solid #e2e8f0;
-            padding: 0.65rem 1rem;
+            border-top: 1px solid #e8e8ea;
+            padding: 12px 16px;
+            justify-content: flex-end;
+            gap: 8px;
             flex: 0 0 auto;
+        }
+        #leadQuotationPreviewModal .qp-btn-close {
+            border: 1.5px solid #c4121a;
+            color: #c4121a;
+            background: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+        #leadQuotationPreviewModal .qp-btn-close:hover {
+            background: #fff5f5;
+            color: #a10e15;
+            border-color: #a10e15;
+        }
+        #leadQuotationPreviewModal .qp-btn-edit {
+            background: #c4121a;
+            border-color: #c4121a;
+            color: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+        #leadQuotationPreviewModal .qp-btn-edit:hover {
+            background: #a10e15;
+            border-color: #a10e15;
+            color: #fff;
+        }
+        #leadQuotationPreviewModal .qp-btn-print {
+            background: transparent;
+            border: 1px solid #c5c5c8;
+            color: #555;
+            font-weight: 500;
+            padding: 6px 14px;
+        }
+        #leadQuotationPreviewModal .qp-btn-print:hover {
+            background: #f5f5f5;
+            color: #333;
+            border-color: #b0b0b3;
         }
 
         .crm-leads-ui .action-btns .btn-create-quote {
@@ -4208,13 +4258,19 @@ foreach ($destinationLookup as $destId => $destName) {
 
         <div class="modal fade" id="leadQuotationPreviewModal" tabindex="-1" role="dialog"
             aria-labelledby="leadQuotationPreviewModalLabel" aria-hidden="true" data-backdrop="static">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title mb-0" id="leadQuotationPreviewModalLabel">
-                            <i class="far fa-eye mr-2"></i>Quotation Preview
-                        </h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <div class="modal-dialog modal-dialog-centered qp-a4-dialog" role="document">
+                <div class="modal-content qp-modal-content">
+                    <div class="modal-header qp-modal-header">
+                        <div class="qp-modal-title-wrap">
+                            <h5 class="modal-title mb-0" id="leadQuotationPreviewModalLabel">
+                                <i class="fas fa-eye mr-2"></i>Quotation Preview
+                            </h5>
+                            <small class="qp-modal-hint">Click any text to edit directly</small>
+                            <small class="qp-modal-unsaved d-none ml-2" id="leadQPreviewUnsavedHint">
+                                <i class="fas fa-circle" style="font-size:7px;vertical-align:middle;"></i> Unsaved changes
+                            </small>
+                        </div>
+                        <button type="button" class="close qp-modal-close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -4225,17 +4281,17 @@ foreach ($destinationLookup as $destId => $destName) {
                         <iframe class="lead-q-preview-frame d-none" id="leadQPreviewFrame"
                             title="Quotation Preview" src="about:blank"></iframe>
                     </div>
-                    <div class="modal-footer align-items-center">
-                        <small class="text-warning mr-auto d-none" id="leadQPreviewUnsavedHint">
-                            <i class="fas fa-circle" style="font-size:7px;vertical-align:middle;"></i> Unsaved changes
-                        </small>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Close</button>
+                    <div class="modal-footer qp-modal-footer">
+                        <button type="button" class="btn qp-btn-close btn-sm" data-dismiss="modal">Close</button>
+                        <a href="#" class="btn qp-btn-edit btn-sm" id="leadQPreviewEditBtn" title="Open full quotation editor">
+                            <i class="fas fa-edit mr-1"></i> Edit Quotation
+                        </a>
                         <button type="button" class="btn btn-success btn-sm d-none" id="leadQPreviewSaveBtn" disabled>
                             <i class="fas fa-save mr-1"></i>Save Changes
                         </button>
-                        <a href="#" class="btn btn-danger btn-sm" id="leadQPreviewEditBtn">
-                            <i class="fas fa-edit mr-1"></i> Edit Quotation
-                        </a>
+                        <button type="button" class="btn qp-btn-print btn-sm" id="leadQPreviewPrintBtn">
+                            <i class="fas fa-print mr-1"></i> Print
+                        </button>
                     </div>
                 </div>
             </div>
@@ -5642,6 +5698,22 @@ foreach ($destinationLookup as $destId => $destName) {
             }
         } catch (err) { /* ignore */ }
         window.alert('Could not save preview changes. Please try again.');
+    });
+
+    $('#leadQPreviewPrintBtn').on('click', function (e) {
+        e.preventDefault();
+        var frame = document.getElementById('leadQPreviewFrame');
+        try {
+            if (frame && frame.contentWindow && typeof frame.contentWindow.qPrintPreviewOnly === 'function') {
+                frame.contentWindow.qPrintPreviewOnly();
+                return;
+            }
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({ type: 'mz-quotation-preview-print' }, '*');
+                return;
+            }
+        } catch (err) { /* ignore */ }
+        window.alert('Could not print preview. Please try again.');
     });
 
     $('#leadQuotationPreviewModal').on('hide.bs.modal', function (e) {
