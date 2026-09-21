@@ -7885,7 +7885,8 @@
             { tone: 'red', icon: 'fas fa-suitcase-rolling', value: '1800+', label: 'Trips Sold' },
             { tone: 'gold', icon: 'fas fa-users', value: '6400+', label: 'Happy Travellers' },
             { tone: 'blue', icon: 'fas fa-map-marker-alt', value: '50+', label: 'Destinations Covered' },
-            { tone: 'green', icon: 'fas fa-flag', value: '24', label: 'Group Tours' }
+            { tone: 'green', icon: 'fas fa-flag', value: '24', label: 'Group Tours' },
+            { tone: 'maroon', icon: 'fas fa-award', value: '19+', label: 'Years of Experience' }
         ];
 
         var html = '<div class="qp-sec qp-sec-acc">';
@@ -7959,21 +7960,18 @@
                 text: 'Everything was perfectly planned from hotels to transfers. A truly hassle-free and memorable trip!',
                 name: 'Riya Sharma',
                 place: 'Bali, Indonesia',
-                ago: '2 weeks ago',
                 tone: 'a'
             },
             {
                 text: 'Excellent service and attention to detail. The team made our Europe trip smooth and special.',
                 name: 'Arjun Mehta',
                 place: 'Paris, France',
-                ago: '1 month ago',
                 tone: 'b'
             },
             {
                 text: 'Well-organized itinerary, great hotels and 24/7 support. Highly recommend for a premium experience!',
                 name: 'Sneha Kapoor',
                 place: 'Switzerland',
-                ago: '3 weeks ago',
                 tone: 'c'
             }
         ];
@@ -7982,24 +7980,28 @@
         var html = '<div class="qp-sec qp-sec-reviews">';
         html += '<div class="qp-rev-wrap">';
         html += '<div class="qp-rev-head">' +
-            '<div class="qp-rev-brand">' + qpGoogleLogoSvg(26) + '</div>' +
-            '<div class="qp-rev-title">Trusted by <span class="qp-rev-count">2,000+</span> Happy Travellers</div>' +
-            '<div class="qp-rev-sub">Real reviews from real travellers on Google</div>' +
+            '<div class="qp-rev-eyebrow">' +
+            '<span class="qp-rev-eyebrow-line" aria-hidden="true"></span>' +
+            '<span class="qp-rev-brand" aria-hidden="true">' + qpGoogleLogoSvg(18) + '</span>' +
+            '<span class="qp-rev-eyebrow-line" aria-hidden="true"></span>' +
+            '</div>' +
+            '<div class="qp-rev-title">Trusted by <span class="qp-rev-title-accent">Happy Travellers</span></div>' +
             '<div class="qp-rev-badge">' +
-            qpGoogleLogoSvg(15) +
             '<span class="qp-rev-badge-label">Google Reviews</span>' +
             '<span class="qp-rev-badge-sep" aria-hidden="true"></span>' +
             '<span class="qp-rev-badge-score">4.6</span>' +
             qpRatingStarsHtml(4.6) +
             '<span class="qp-rev-badge-sep" aria-hidden="true"></span>' +
-            '<span class="qp-rev-badge-meta">Based on 500+ verified reviews</span>' +
+            '<span class="qp-rev-badge-verified">' +
+            '<span class="qp-rev-shield" aria-hidden="true"><i class="fas fa-check"></i></span>' +
+            '<span>Verified Google Reviews</span>' +
+            '</span>' +
             '</div>' +
             '</div>';
 
         html += '<div class="qp-rev-grid">';
         reviews.forEach(function (r) {
             html += '<div class="qp-rev-card">' +
-                '<div class="qp-rev-card-top">' +
                 '<div class="qp-rev-person">' +
                 qpReviewAvatarHtml(r.name, r.tone) +
                 '<div class="qp-rev-person-meta">' +
@@ -8007,27 +8009,63 @@
                 '<div class="qp-rev-place">' + esc(r.place) + '</div>' +
                 '</div>' +
                 '</div>' +
-                '<div class="qp-rev-card-meta">' +
-                '<span class="qp-rev-ago">' + esc(r.ago) + '</span>' +
-                '<span class="qp-rev-more" aria-hidden="true"><i class="fas fa-ellipsis-v"></i></span>' +
-                '</div>' +
-                '</div>' +
-                qpReviewStarsHtml(5) +
-                '<div class="qp-rev-text">' + esc(r.text) + '</div>' +
+                '<div class="qp-rev-text">&ldquo;' + esc(r.text) + '&rdquo;</div>' +
                 '<div class="qp-rev-verified">' +
-                '<span class="qp-rev-shield" aria-hidden="true"><i class="fas fa-check"></i></span>' +
-                '<span>Verified Google Review</span>' +
+                
                 '</div>' +
                 '</div>';
         });
         html += '</div>';
 
         html += '<a class="qp-rev-more-btn" href="' + esc(googleHref) + '" target="_blank" rel="noopener noreferrer">' +
-            qpGoogleLogoSvg(16) +
+            '<span class="qp-rev-more-g" aria-hidden="true">' + qpGoogleLogoSvg(14) + '</span>' +
             '<span>Read more reviews on Google</span>' +
             '<i class="fas fa-chevron-right" aria-hidden="true"></i>' +
             '</a>';
 
+        html += '</div></div>';
+        return html;
+    }
+
+    function buildPreviewMembershipsHtml() {
+        var items = [
+            {
+                img: 'crm/assets/accreditations/YI.png',
+                title: 'Young Indians',
+                desc: 'Confederation of Indian Industry (CII), Youth Leadership Network'
+            },
+            {
+                img: 'crm/assets/accreditations/BNI_Logo.jpg',
+                title: 'BNI Member',
+                desc: 'Business Network International, Business Referral Organization'
+            },
+            {
+                img: 'crm/assets/accreditations/FJCCI-Logo.webp',
+                title: 'FJCCI Member',
+                desc: 'Federation of Jharkhand Chamber of Commerce & Industries'
+            },
+            {
+                img: 'crm/assets/accreditations/Tia.png',
+                title: 'Tourism India Alliance',
+                desc: 'National Travel & Tourism Industry Association'
+            }
+        ];
+
+        var html = '<div class="qp-sec qp-sec-memberships">';
+        html += '<div class="qp-mem-head">' +
+            '<div class="qp-mem-heading">Global Accreditations</div>' +
+            '<div class="qp-mem-heading-rule" aria-hidden="true"></div>' +
+            '</div>';
+        html += '<div class="qp-mem-row">';
+        items.forEach(function (item) {
+            html += '<div class="qp-mem-cell">' +
+                '<img class="qp-mem-logo" src="' + esc(absUrl(item.img)) + '" alt="' + esc(item.title) + '" loading="eager" decoding="sync">' +
+                '<div class="qp-mem-copy">' +
+                '<div class="qp-mem-title">' + esc(item.title) + '</div>' +
+                '<div class="qp-mem-desc">' + esc(item.desc) + '</div>' +
+                '</div>' +
+                '</div>';
+        });
         html += '</div></div>';
         return html;
     }
@@ -8037,10 +8075,64 @@
     }
 
     function buildPreviewSupportHtml() {
-        var imgSrc = absUrl('crm/assets/quote_preview.png');
+        var phone = String(Q_PREVIEW_META.phone || '+91 9709400140').trim();
+        var phoneAlt = String(Q_PREVIEW_META.phone_alt || '+91 9709100140').trim();
+        var website = String(Q_PREVIEW_META.website || 'www.multizonetravels.com').trim().replace(/^https?:\/\//i, '');
+        var email = String(Q_PREVIEW_META.email || 'info@multizonetravels.com').trim();
+        var address = String(Q_PREVIEW_META.address || 'ByPass Road, Dibadih, Ranchi-834002').trim();
+
+        function formatPhone(p) {
+            p = String(p || '').replace(/\s+/g, ' ').trim();
+            var m = p.match(/^(\+?\d{1,3})\s*(\d{5})\s*(\d{5})$/);
+            if (m) {
+                return m[1] + ' ' + m[2] + ' ' + m[3];
+            }
+            m = p.match(/^(\+?\d{1,3})\s*(\d{10})$/);
+            if (m) {
+                return m[1] + ' ' + m[2].slice(0, 5) + ' ' + m[2].slice(5);
+            }
+            return p;
+        }
+
+        var addressLines = [];
+        if (/Dibadih|Dibdih/i.test(address)) {
+            addressLines = ['ByPass Road, Dibadih,', 'Ranchi-834002'];
+        } else {
+            var parts = address.split(/,\s*/);
+            if (parts.length >= 2) {
+                addressLines = [parts.slice(0, Math.ceil(parts.length / 2)).join(', ') + (parts.length > 2 ? ',' : ''), parts.slice(Math.ceil(parts.length / 2)).join(', ')];
+            } else {
+                addressLines = [address];
+            }
+        }
+
         return '<div class="qp-sec qp-sec-support">' +
-            '<div class="qp-support-banner">' +
-            '<img src="' + esc(imgSrc) + '" alt="Multizone Travels support and contact" class="qp-support-banner-img">' +
+            '<div class="qp-support-footer">' +
+            '<div class="qp-support-row">' +
+            '<div class="qp-support-cell">' +
+            '<span class="qp-support-ico is-red" aria-hidden="true"><i class="fas fa-phone-alt"></i></span>' +
+            '<div class="qp-support-copy">' +
+            '<span>' + esc(formatPhone(phone)) + '</span>' +
+            '<span>' + esc(formatPhone(phoneAlt)) + '</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="qp-support-cell">' +
+            '<span class="qp-support-ico is-dark" aria-hidden="true"><i class="fas fa-globe"></i></span>' +
+            '<div class="qp-support-copy">' +
+            '<span>' + esc(website) + '</span>' +
+            '<span>' + esc(email) + '</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="qp-support-cell">' +
+            '<span class="qp-support-ico is-red" aria-hidden="true"><i class="fas fa-map-marker-alt"></i></span>' +
+            '<div class="qp-support-copy">' +
+            addressLines.map(function (line) {
+                return '<span>' + esc(line) + '</span>';
+            }).join('') +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="qp-support-bar" aria-hidden="true"></div>' +
             '</div>' +
             '</div>';
     }
@@ -8659,14 +8751,13 @@
             html += '</div>';
         }
 
-        /* —— 10. Global Accreditations —— */
+        /* —— Last print page: Journey + Reviews + Memberships + Footer —— */
+        html += '<div class="qp-print-last-page">';
         html += buildPreviewAccreditationsHtml();
-
-        /* —— 11. Trusted Reviews —— */
         html += buildPreviewReviewsHtml();
-
-        /* —— 12. Support (stats + contact) —— */
+        html += buildPreviewMembershipsHtml();
         html += buildPreviewSupportHtml();
+        html += '</div>';
 
         return html;
     }
@@ -10825,9 +10916,95 @@
                 'html,body{margin:0;padding:0;background:#fff;}' +
                 'body.q-preview-print{min-width:210mm;}' +
                 '.q-preview-doc{' +
-                'width:210mm;max-width:210mm;min-height:297mm;margin:0 auto;' +
-                'padding:8mm 10mm 10mm;box-sizing:border-box;' +
-                'border:1.5px solid #c4121a;background:#fff;' +
+                'box-sizing:border-box!important;' +
+                'width:210mm!important;' +
+                'max-width:210mm!important;' +
+                'min-height:297mm!important;' +
+                'margin:0 auto!important;' +
+                'padding:8mm 10mm 0!important;' +
+                'background:#fff!important;' +
+                'border:1.5px solid #c4121a!important;' +
+                'border-radius:0!important;' +
+                'box-shadow:none!important;' +
+                'overflow:visible!important;' +
+                '-webkit-print-color-adjust:exact!important;' +
+                'print-color-adjust:exact!important;' +
+                '}' +
+                '.qp-sec-memberships,.qp-sec-support{' +
+                'margin-left:-10mm!important;' +
+                'margin-right:-10mm!important;' +
+                'width:calc(100% + 20mm)!important;' +
+                'max-width:none!important;' +
+                '}' +
+                '.qp-sec-support{margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
+                '.qp-support-footer{' +
+                'border-top:1px solid #d1d5db!important;' +
+                'border-bottom:18px solid #e11d2e!important;' +
+                'break-inside:avoid!important;' +
+                'page-break-inside:avoid!important;' +
+                '-webkit-print-color-adjust:exact!important;' +
+                'print-color-adjust:exact!important;' +
+                '}' +
+                '.qp-support-bar{display:none!important;}' +
+                '.qp-support-ico.is-red{background:#e11d2e!important;}' +
+                '.qp-support-ico.is-dark{background:#1f2937!important;}' +
+                '.qp-acc-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important;}' +
+                '.qp-rev-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;}' +
+                '.qp-mem-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
+                '.qp-mem-cell,.qp-mem-cell+.qp-mem-cell{border:0!important;border-left:0!important;}' +
+                '.qp-mem-logo{display:block!important;visibility:visible!important;width:52px!important;height:52px!important;object-fit:contain!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
+                '.qp-sec-memberships{border:0!important;border-top:0!important;}' +
+                '.qp-print-last-page{' +
+                'break-before:page!important;' +
+                'page-break-before:always!important;' +
+                'min-height:285mm!important;' +
+                'display:flex!important;' +
+                'flex-direction:column!important;' +
+                'box-sizing:border-box!important;' +
+                'margin-bottom:0!important;' +
+                'padding-bottom:0!important;' +
+                '}' +
+                '.qp-print-last-page .qp-sec-acc{margin-top:0!important;}' +
+                '.qp-print-last-page .qp-sec-memberships{margin-top:auto!important;margin-bottom:0!important;padding-bottom:0!important;}' +
+                '.qp-print-last-page .qp-sec-support{margin-top:0!important;margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
+                '@page{size:A4;margin:0;}' +
+                '@media print{' +
+                'html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                '.q-preview-doc{' +
+                'box-sizing:border-box!important;' +
+                'width:210mm!important;' +
+                'max-width:210mm!important;' +
+                'min-height:297mm!important;' +
+                'margin:0!important;' +
+                'padding:8mm 10mm 0!important;' +
+                'border:1.5px solid #c4121a!important;' +
+                'overflow:visible!important;' +
+                '-webkit-print-color-adjust:exact!important;' +
+                'print-color-adjust:exact!important;' +
+                '}' +
+                '.qp-print-last-page{' +
+                'break-before:page!important;' +
+                'page-break-before:always!important;' +
+                'min-height:285mm!important;' +
+                'display:flex!important;' +
+                'flex-direction:column!important;' +
+                'margin-bottom:0!important;' +
+                'padding-bottom:0!important;' +
+                '}' +
+                '.qp-print-last-page .qp-sec-memberships{margin-top:auto!important;margin-bottom:0!important;padding-bottom:0!important;}' +
+                '.qp-print-last-page .qp-sec-support{margin-top:0!important;margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
+                '.qp-sec-memberships,.qp-sec-support{' +
+                'margin-left:-10mm!important;' +
+                'margin-right:-10mm!important;' +
+                'width:calc(100% + 20mm)!important;' +
+                '}' +
+                '.qp-sec-memberships{border:0!important;}' +
+                '.qp-mem-cell,.qp-mem-cell+.qp-mem-cell{border:0!important;border-left:0!important;}' +
+                '.qp-mem-logo{display:block!important;visibility:visible!important;width:52px!important;height:52px!important;object-fit:contain!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
+                '.qp-sec-support{margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
+                '.qp-support-footer{border-bottom:18px solid #e11d2e!important;break-inside:avoid!important;page-break-inside:avoid!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
+                '.qp-support-bar{display:none!important;}' +
+                '.q-preview-editable,.q-preview-cell-edit{background:transparent!important;outline:none!important;box-shadow:none!important;}' +
                 '}' +
                 /* Force desktop A4 grids even if a screen media query still matches */
                 '.q-preview-doc .qp-hotel-col-head,' +
@@ -10871,10 +11048,10 @@
                 '.q-preview-doc .qp-trust-stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
                 '.q-preview-doc .qp-foot-contacts{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
                 '@media print{' +
-                '@page{size:A4;margin:12mm 0 10mm 0;}' +
+                '@page{size:A4;margin:0;}' +
                 'body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-                '.q-preview-doc{width:210mm;max-width:210mm;min-height:auto;margin:0;padding:0 10mm 8mm;' +
-                'border:none!important;border-radius:0!important;box-shadow:none!important;}' +
+                '.q-preview-doc{width:210mm;max-width:210mm;min-height:297mm;margin:0;padding:8mm 10mm 0;' +
+                'border:1.5px solid #c4121a!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important;}' +
                 '.q-preview-editable,.q-preview-cell-edit{background:transparent!important;outline:none!important;box-shadow:none!important;}' +
                 '.q-preview-doc,.q-preview-doc *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
                 '.q-preview-services-bar,.q-preview-social a{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
@@ -10890,6 +11067,12 @@
                 'display:block!important;overflow:visible!important;' +
                 '}' +
                 '.qp-rev-grid,.qp-acc-grid{display:grid!important;}' +
+                '.qp-print-last-page{break-before:page!important;page-break-before:always!important;min-height:285mm!important;display:flex!important;flex-direction:column!important;}' +
+                '.qp-print-last-page .qp-sec-memberships{margin-top:auto!important;margin-bottom:0!important;}' +
+                '.qp-print-last-page .qp-sec-support{margin-top:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
+                '.qp-support-footer{border-bottom:18px solid #e11d2e!important;}' +
+                '.qp-support-bar{display:none!important;}' +
+                '.qp-mem-logo{display:block!important;visibility:visible!important;width:52px!important;height:52px!important;object-fit:contain!important;}' +
                 '}' +
                 /* Also apply while print dialog is open / popup preview */
                 '.q-preview-day,.qp-day,.qp-rev-card,.qp-rev-grid,.qp-hotel-row-card,' +
@@ -10908,7 +11091,41 @@
                     printWin.print();
                 } catch (err) { /* ignore */ }
             };
-            window.setTimeout(triggerPrint, 700);
+
+            // Wait for accreditation / logo images to load before printing
+            (function waitForPrintImages() {
+                var doc = printWin.document;
+                var imgs = doc ? Array.prototype.slice.call(doc.images || []) : [];
+                if (!imgs.length) {
+                    window.setTimeout(triggerPrint, 400);
+                    return;
+                }
+                var pending = imgs.length;
+                var finished = false;
+                var finish = function () {
+                    if (finished) return;
+                    finished = true;
+                    window.setTimeout(triggerPrint, 150);
+                };
+                var onOne = function () {
+                    pending -= 1;
+                    if (pending <= 0) finish();
+                };
+                imgs.forEach(function (img) {
+                    try {
+                        img.loading = 'eager';
+                        if (img.complete && img.naturalWidth > 0) {
+                            onOne();
+                            return;
+                        }
+                        img.addEventListener('load', onOne);
+                        img.addEventListener('error', onOne);
+                    } catch (e) {
+                        onOne();
+                    }
+                });
+                window.setTimeout(finish, 6000);
+            })();
         };
 
         function postQuotationSave(p, saveMode, $btn, btnDefaultHtml, onSuccess) {

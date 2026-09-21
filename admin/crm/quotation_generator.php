@@ -8522,7 +8522,7 @@ $qWizardSteps = [
             max-width: 100%;
             min-height: var(--qp-page-h);
             margin: 0 auto;
-            padding: 8mm 10mm 10mm;
+            padding: 8mm 10mm 0;
             background: #fff;
             border: 1.5px solid var(--qp-red);
             border-radius: 0;
@@ -11252,10 +11252,10 @@ $qWizardSteps = [
 
         /* —— Global Accreditations / Journey stats —— */
         .qp-sec-acc {
-            margin: 22px 0 0;
+            margin: 20px 0 0;
             font-family: inherit;
             border-bottom: 0;
-            padding-bottom: 6px;
+            padding-bottom: 4px;
         }
 
         .qp-acc-wrap {
@@ -11264,13 +11264,13 @@ $qWizardSteps = [
             border-radius: 0;
             border: 0;
             background: transparent;
-            padding: 4px 0 0;
+            padding: 2px 0 0;
         }
 
         .qp-acc-head {
             text-align: center;
-            margin: 0 auto 18px;
-            max-width: 560px;
+            margin: 0 auto 16px;
+            max-width: 640px;
         }
 
         .qp-acc-eyebrow {
@@ -11282,153 +11282,172 @@ $qWizardSteps = [
         }
 
         .qp-acc-eyebrow-line {
-            width: 28px;
+            width: 32px;
             height: 2px;
-            background: var(--qp-red);
+            background: #e11d2e;
             flex-shrink: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-acc-eyebrow-text {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
-            letter-spacing: 0.14em;
+            letter-spacing: 0.16em;
             text-transform: uppercase;
-            color: #4b5563;
+            color: #1f2937;
             line-height: 1;
             white-space: nowrap;
         }
 
         .qp-acc-title {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 800;
-            color: #1a2332;
-            letter-spacing: -0.01em;
+            color: #111827;
+            letter-spacing: -0.015em;
             line-height: 1.25;
             margin: 0 0 6px;
         }
 
         .qp-acc-title-accent {
-            color: var(--qp-red);
+            color: #e11d2e;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-acc-sub {
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: 500;
-            color: #8b93a0;
+            color: #9ca3af;
             line-height: 1.4;
         }
 
         .qp-acc-grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
         }
 
         .qp-acc-card {
             position: relative;
             overflow: hidden;
             background: #fff;
-            border: 1.5px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 16px 10px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 14px 8px 12px;
             text-align: center;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-width: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-acc-card.tone-red {
-            background: linear-gradient(180deg, #fff7f7 0%, #fff 70%);
-            border-color: #f0b4b8;
+            background: linear-gradient(180deg, #fff1f2 0%, #ffffff 78%);
+            border-color: #f3b4b9;
         }
 
         .qp-acc-card.tone-gold {
-            background: linear-gradient(180deg, #fffaf0 0%, #fff 70%);
-            border-color: #e8d0a0;
+            background: linear-gradient(180deg, #fbf6ee 0%, #ffffff 78%);
+            border-color: #e4d0ad;
         }
 
         .qp-acc-card.tone-blue {
-            background: linear-gradient(180deg, #f3f7ff 0%, #fff 70%);
+            background: linear-gradient(180deg, #eef4ff 0%, #ffffff 78%);
             border-color: #b7c9ef;
         }
 
         .qp-acc-card.tone-green {
-            background: linear-gradient(180deg, #f3faf4 0%, #fff 70%);
-            border-color: #b7dfc0;
+            background: linear-gradient(180deg, #eef8f0 0%, #ffffff 78%);
+            border-color: #b5dcc0;
+        }
+
+        .qp-acc-card.tone-maroon {
+            background: linear-gradient(180deg, #fff1f3 0%, #ffffff 78%);
+            border-color: #e8b0b8;
         }
 
         .qp-acc-ico {
-            width: 42px;
-            height: 42px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             color: #fff;
-            font-size: 16px;
-            margin-bottom: 10px;
-            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+            font-size: 15px;
+            margin-bottom: 8px;
+            box-shadow: 0 5px 12px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.4);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-acc-card.tone-red .qp-acc-ico {
-            background: linear-gradient(160deg, #ef4444 0%, #c4121a 100%);
+            background: linear-gradient(160deg, #f04444 0%, #c4121a 100%);
         }
 
         .qp-acc-card.tone-gold .qp-acc-ico {
-            background: linear-gradient(160deg, #d4a017 0%, #a67c00 100%);
+            background: linear-gradient(160deg, #d4a574 0%, #b07d3c 100%);
         }
 
         .qp-acc-card.tone-blue .qp-acc-ico {
-            background: linear-gradient(160deg, #3b82f6 0%, #1d4ed8 100%);
+            background: linear-gradient(160deg, #4b8bf5 0%, #2563eb 100%);
         }
 
         .qp-acc-card.tone-green .qp-acc-ico {
-            background: linear-gradient(160deg, #22c55e 0%, #15803d 100%);
+            background: linear-gradient(160deg, #2fa86a 0%, #15803d 100%);
+        }
+
+        .qp-acc-card.tone-maroon .qp-acc-ico {
+            background: linear-gradient(160deg, #e11d48 0%, #9f1239 100%);
         }
 
         .qp-acc-value {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 800;
             letter-spacing: -0.02em;
             line-height: 1.1;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .qp-acc-card.tone-red .qp-acc-value {
-            color: #c4121a;
+            color: #dc2626;
         }
 
         .qp-acc-card.tone-gold .qp-acc-value {
-            color: #a67c00;
+            color: #b07d3c;
         }
 
         .qp-acc-card.tone-blue .qp-acc-value {
-            color: #1d4ed8;
+            color: #2563eb;
         }
 
         .qp-acc-card.tone-green .qp-acc-value {
             color: #15803d;
         }
 
+        .qp-acc-card.tone-maroon .qp-acc-value {
+            color: #be123c;
+        }
+
         .qp-acc-label {
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 600;
             color: #4b5563;
-            line-height: 1.3;
-            margin-bottom: 10px;
+            line-height: 1.25;
+            margin-bottom: 9px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            padding: 0 2px;
         }
 
         .qp-acc-card-rule {
-            width: 36px;
+            width: 34px;
             height: 3px;
             margin: 0 auto;
             border-radius: 999px;
@@ -11437,15 +11456,15 @@ $qWizardSteps = [
         }
 
         .qp-acc-card.tone-red .qp-acc-card-rule {
-            background: #c4121a;
+            background: #dc2626;
         }
 
         .qp-acc-card.tone-gold .qp-acc-card-rule {
-            background: #a67c00;
+            background: #b07d3c;
         }
 
         .qp-acc-card.tone-blue .qp-acc-card-rule {
-            background: #1d4ed8;
+            background: #2563eb;
         }
 
         .qp-acc-card.tone-green .qp-acc-card-rule {
@@ -11468,20 +11487,77 @@ $qWizardSteps = [
             }
         }
 
+        .qp-acc-card.tone-maroon .qp-acc-card-rule {
+            background: #be123c;
+        }
+
+        @media (max-width: 980px) {
+            .qp-acc-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .qp-acc-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .qp-acc-title {
+                font-size: 18px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .qp-acc-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* A4 preview + print: keep journey stats in one aligned row (ignore viewport breakpoints) */
+        .q-preview-doc .qp-acc-grid {
+            display: grid !important;
+            grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+        }
+
+        .q-preview-doc .qp-acc-card {
+            padding: 10px 4px 10px;
+        }
+
+        .q-preview-doc .qp-acc-title {
+            font-size: 18px;
+        }
+
+        .q-preview-doc .qp-acc-value {
+            font-size: 17px;
+        }
+
+        .q-preview-doc .qp-acc-label {
+            font-size: 10px;
+            white-space: normal;
+        }
+
+        .q-preview-doc .qp-acc-ico {
+            width: 34px;
+            height: 34px;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
 
         /* —— Trusted Reviews —— */
         .qp-sec-reviews {
-            margin: 0;
-            padding: 18px 0 16px;
+            margin: 8px 0 0;
+            padding: 18px 0 14px;
             font-family: inherit;
-            border-bottom: 1px solid #f0d5d7;
+            border-bottom: 0;
+            background: #fafafa;
         }
 
         .qp-rev-wrap {
             background: transparent;
             border: 0;
             border-radius: 0;
-            padding: 0;
+            padding: 0 4px;
             box-shadow: none;
             text-align: center;
         }
@@ -11489,41 +11565,58 @@ $qWizardSteps = [
         .qp-rev-head {
             text-align: center;
             margin: 0 auto 16px;
-            max-width: 720px;
+            max-width: 760px;
         }
 
-        .qp-rev-brand {
+        .qp-rev-eyebrow {
             display: flex;
+            align-items: center;
             justify-content: center;
-            margin-bottom: 8px;
+            gap: 12px;
+            margin-bottom: 10px;
         }
 
-        .qp-rev-brand .qp-rev-google-logo {
-            width: 26px;
-            height: 26px;
-        }
-
-        .qp-rev-title {
-            font-size: 20px;
-            font-weight: 800;
-            color: #1a2332;
-            letter-spacing: -0.02em;
-            line-height: 1.25;
-            margin-bottom: 4px;
-        }
-
-        .qp-rev-count {
-            color: #d92027;
+        .qp-rev-eyebrow-line {
+            flex: 1 1 auto;
+            max-width: 120px;
+            height: 1.5px;
+            background: #c4121a;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-rev-sub {
-            font-size: 12px;
-            font-weight: 500;
-            color: #8b93a0;
+        .qp-rev-brand {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-brand .qp-rev-google-logo {
+            width: 16px;
+            height: 16px;
+        }
+
+        .qp-rev-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #111827;
+            letter-spacing: -0.02em;
+            line-height: 1.25;
             margin-bottom: 12px;
-            line-height: 1.4;
+        }
+
+        .qp-rev-title-accent {
+            color: #c4121a;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-rev-badge {
@@ -11532,11 +11625,13 @@ $qWizardSteps = [
             flex-wrap: wrap;
             justify-content: center;
             gap: 8px;
-            padding: 7px 14px;
-            border: 1px solid #e5e7eb;
+            padding: 7px 16px;
+            border: 1px solid #f0b4b8;
             border-radius: 999px;
             background: #fff;
             max-width: 100%;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-rev-google-logo {
@@ -11547,7 +11642,7 @@ $qWizardSteps = [
         .qp-rev-badge-label {
             font-size: 12px;
             font-weight: 600;
-            color: #374151;
+            color: #111827;
         }
 
         .qp-rev-badge-sep {
@@ -11567,17 +11662,20 @@ $qWizardSteps = [
         .qp-rev-rating-stars {
             display: inline-flex;
             align-items: center;
-            gap: 2px;
+            gap: 1px;
             color: #fbbc04;
             font-size: 11px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-rev-badge-meta {
-            font-size: 11px;
+        .qp-rev-badge-verified {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
             font-weight: 500;
-            color: #9ca3af;
+            color: #111827;
         }
 
         .qp-rev-grid {
@@ -11586,43 +11684,38 @@ $qWizardSteps = [
             gap: 12px;
             min-width: 0;
             text-align: left;
-            margin: 0 0 14px;
+            margin: 0 0 16px;
         }
 
         .qp-rev-card {
             background: #fff;
-            border: 1px solid #e8ecf1;
+            border: 0;
             border-radius: 12px;
-            padding: 12px 12px 11px;
+            padding: 14px 14px 12px;
             min-width: 0;
-            box-shadow: 0 3px 10px rgba(17, 24, 39, 0.04);
+            box-shadow: 0 4px 14px rgba(17, 24, 39, 0.08);
+            display: flex;
+            flex-direction: column;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-        }
-
-        .qp-rev-card-top {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 8px;
-            margin-bottom: 8px;
         }
 
         .qp-rev-person {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             min-width: 0;
+            margin-bottom: 10px;
         }
 
         .qp-rev-avatar {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 700;
             color: #fff;
             flex-shrink: 0;
@@ -11639,7 +11732,7 @@ $qWizardSteps = [
         }
 
         .qp-rev-name {
-            font-size: 12.5px;
+            font-size: 13px;
             font-weight: 700;
             color: #111827;
             line-height: 1.25;
@@ -11648,53 +11741,18 @@ $qWizardSteps = [
         .qp-rev-place {
             font-size: 11px;
             font-weight: 500;
-            color: #8b93a0;
+            color: #9ca3af;
             margin-top: 2px;
             line-height: 1.3;
         }
 
-        .qp-rev-card-meta {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .qp-rev-more {
-            color: #9ca3af;
-            font-size: 12px;
-            line-height: 1;
-        }
-
-        .qp-rev-ago {
-            font-size: 10px;
-            font-weight: 500;
-            color: #9ca3af;
-            white-space: nowrap;
-        }
-
-        .qp-rev-stars {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            margin-bottom: 6px;
-        }
-
-        .qp-rev-stars .fa-star {
-            color: #fbbc04;
-            font-size: 11px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
         .qp-rev-text {
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: 400;
-            color: #4b5563;
-            line-height: 1.5;
-            margin-bottom: 10px;
-            min-height: 3em;
+            color: #374151;
+            line-height: 1.55;
+            margin-bottom: 12px;
+            flex: 1 1 auto;
         }
 
         .qp-rev-verified {
@@ -11703,14 +11761,15 @@ $qWizardSteps = [
             gap: 6px;
             font-size: 11px;
             font-weight: 500;
-            color: #1a73e8;
+            color: #6b7280;
+            margin-top: auto;
         }
 
         .qp-rev-shield {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background: #1a73e8;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            background: #c4121a;
             color: #fff;
             display: inline-flex;
             align-items: center;
@@ -11721,7 +11780,7 @@ $qWizardSteps = [
         }
 
         .qp-rev-shield i {
-            font-size: 8px;
+            font-size: 7px;
             line-height: 1;
             color: #fff;
         }
@@ -11730,29 +11789,55 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 9px 16px;
-            border: 1.5px solid #d92027;
+            gap: 10px;
+            min-width: 280px;
+            padding: 10px 18px;
+            border: 0;
             border-radius: 999px;
-            background: #fff;
-            color: #d92027;
-            font-size: 12.5px;
+            background: #c4121a;
+            color: #fff !important;
+            font-size: 13px;
             font-weight: 600;
             text-decoration: none !important;
+            box-shadow: 0 4px 12px rgba(196, 18, 26, 0.28);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-rev-more-btn:hover,
         .qp-rev-more-btn:focus {
-            color: #b3141b;
+            color: #fff !important;
             text-decoration: none !important;
-            border-color: #b3141b;
+            background: #a80f16;
         }
 
-        .qp-rev-more-btn i {
-            font-size: 11px;
-            color: #d92027;
+        .qp-rev-more-g {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-rev-more-g .qp-rev-google-logo {
+            width: 12px;
+            height: 12px;
+        }
+
+        .qp-rev-more-btn > span:not(.qp-rev-more-g) {
+            flex: 1 1 auto;
+            text-align: center;
+        }
+
+        .qp-rev-more-btn > i {
+            font-size: 12px;
+            color: #fff;
+            flex-shrink: 0;
         }
 
         @media screen and (max-width: 900px) {
@@ -11763,36 +11848,284 @@ $qWizardSteps = [
             body:not(.q-preview-only) .qp-rev-title {
                 font-size: 17px;
             }
+
+            body:not(.q-preview-only) .qp-rev-more-btn {
+                min-width: 0;
+                width: 100%;
+                max-width: 360px;
+            }
         }
 
-        /* —— Support footer banner —— */
-        .qp-sec-support {
-            margin: 12px -10mm -10mm;
+        /* A4 preview: keep reviews in 3 columns */
+        .q-preview-doc .qp-rev-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+        }
+
+        .q-preview-doc .qp-rev-badge {
+            flex-wrap: nowrap;
+        }
+
+        .q-preview-doc .qp-mem-row {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+
+        .q-preview-doc .qp-mem-cell:nth-child(n) {
+            border-top: 0 !important;
+            padding-top: 4px;
+        }
+
+        .q-preview-doc .qp-mem-cell + .qp-mem-cell {
+            border-left: 0 !important;
+        }
+
+        /* —— Memberships / accreditations strip —— */
+        .qp-sec-memberships {
+            margin: 0 -10mm !important;
             width: calc(100% + 20mm);
             max-width: none;
-            padding: 0;
+            padding: 14px 0 4px;
             font-family: inherit;
-        }
-
-        .qp-support-banner {
-            margin: 0;
-            line-height: 0;
-            overflow: hidden;
-            border-radius: 0;
+            background: #fff;
+            border-top: 0;
+            border-bottom: 0;
+            box-sizing: border-box;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-support-banner-img {
-            display: block;
-            width: 100%;
-            height: auto;
-            max-width: none;
-            border: 0;
-            vertical-align: top;
+        .qp-mem-head {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 7px;
+            text-align: center;
+            margin: 0;
+            padding: 0 0 12px;
         }
 
-        /* —— Footer leftovers (services bar unused; banner image used instead) —— */
+        .qp-mem-heading {
+            font-size: 16px;
+            font-weight: 800;
+            color: #111827;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+            margin: 0;
+            padding: 0;
+        }
+
+        .qp-mem-heading-rule {
+            width: 56px;
+            height: 2.5px;
+            background: #e11d2e;
+            margin: 0;
+            border-radius: 999px;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-mem-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            align-items: center;
+            gap: 0;
+            margin: 0;
+            padding: 0;
+        }
+
+        .qp-mem-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            padding: 4px 14px;
+            margin: 0;
+        }
+
+        .qp-mem-cell + .qp-mem-cell {
+            border-left: 0;
+        }
+
+        .qp-mem-logo {
+            width: 52px;
+            height: 52px;
+            object-fit: contain;
+            flex-shrink: 0;
+            display: block !important;
+            visibility: visible !important;
+            margin: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-mem-copy {
+            min-width: 0;
+            text-align: left;
+            margin: 0;
+        }
+
+        .qp-mem-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.25;
+            margin: 0;
+            padding: 0 0 2px;
+        }
+
+        .qp-mem-desc {
+            font-size: 9px;
+            font-weight: 400;
+            color: #6b7280;
+            line-height: 1.35;
+            margin: 0;
+        }
+
+        @media (max-width: 900px) {
+            .qp-mem-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                row-gap: 12px;
+            }
+
+            .qp-mem-cell:nth-child(odd),
+            .qp-mem-cell:nth-child(even) {
+                border-left: 0;
+            }
+
+            .qp-mem-cell:nth-child(n + 3) {
+                border-top: 0;
+                padding-top: 12px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .qp-mem-row {
+                grid-template-columns: 1fr;
+            }
+
+            .qp-mem-cell + .qp-mem-cell,
+            .qp-mem-cell:nth-child(even) {
+                border-left: 0;
+                border-top: 0;
+                padding-top: 12px;
+            }
+
+            .qp-mem-cell:nth-child(n + 3) {
+                border-top: 0;
+            }
+        }
+
+        /* —— Support footer (HTML/CSS) —— */
+        .qp-sec-support {
+            margin: 0 -10mm 0;
+            width: calc(100% + 20mm);
+            max-width: none;
+            padding: 0;
+            font-family: inherit;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .qp-support-footer {
+            background: #fff;
+            border-top: 1px solid #d1d5db;
+            /* Red bar as border so it cannot page-break away from contact row */
+            border-bottom: 18px solid #e11d2e;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-support-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            align-items: center;
+            gap: 0;
+            padding: 14px 16px 16px;
+        }
+
+        .qp-support-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            padding: 0 14px;
+            justify-content: flex-start;
+        }
+
+        .qp-support-cell + .qp-support-cell {
+            border-left: 1px solid #d1d5db;
+        }
+
+        .qp-support-ico {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #fff;
+            font-size: 14px;
+            line-height: 1;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-support-ico.is-red {
+            background: #e11d2e;
+        }
+
+        .qp-support-ico.is-dark {
+            background: #1f2937;
+        }
+
+        .qp-support-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #1f2937;
+            line-height: 1.35;
+            letter-spacing: 0.01em;
+        }
+
+        .qp-support-copy span {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .qp-support-bar {
+            display: none;
+        }
+
+        @media (max-width: 720px) {
+            .qp-support-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                padding: 12px 14px;
+            }
+
+            .qp-support-cell {
+                padding: 0;
+            }
+
+            .qp-support-cell + .qp-support-cell {
+                border-left: 0;
+                border-top: 1px solid #e5e7eb;
+                padding-top: 12px;
+            }
+        }
+
+        /* —— Footer leftovers (unused legacy trust/contact styles) —— */
 
         .qp-trust-stats {
             display: grid;
@@ -12091,6 +12424,57 @@ $qWizardSteps = [
             }
         }
 
+        /* —— Last print page wrapper (Journey → Footer) —— */
+        .qp-print-last-page {
+            display: block;
+        }
+
+        @media print {
+            .qp-print-last-page {
+                break-before: page;
+                page-break-before: always;
+                /* Slightly under A4 so contact + red bar stay on this page (no orphan bar) */
+                min-height: 285mm;
+                display: flex !important;
+                flex-direction: column;
+                box-sizing: border-box;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+
+            .qp-print-last-page .qp-sec-acc {
+                margin-top: 0 !important;
+            }
+
+            /* Pin Accreditations + footer together at bottom of last page */
+            .qp-print-last-page .qp-sec-memberships {
+                margin-top: auto !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+
+            .qp-print-last-page .qp-sec-support {
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            .qp-print-last-page .qp-support-footer {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                border-bottom: 18px solid #e11d2e !important;
+            }
+
+            .qp-print-last-page .qp-sec-memberships,
+            .qp-print-last-page .qp-sec-support {
+                margin-left: -10mm !important;
+                margin-right: -10mm !important;
+                width: calc(100% + 20mm) !important;
+                max-width: none !important;
+            }
+        }
+
         @media print {
             @page {
                 size: A4;
@@ -12114,10 +12498,13 @@ $qWizardSteps = [
                 min-height: auto;
                 max-width: 210mm;
                 margin: 0;
-                padding: 0 10mm 8mm;
-                border: none !important;
+                padding: 8mm 10mm 0;
+                box-sizing: border-box !important;
+                background: #fff !important;
+                border: 1.5px solid #c4121a !important;
                 border-radius: 0 !important;
                 box-shadow: none !important;
+                overflow: visible !important;
             }
 
             .q-preview-editable,
@@ -12173,6 +12560,159 @@ $qWizardSteps = [
             .qp-rev-grid,
             .qp-acc-grid {
                 display: grid !important;
+            }
+
+            /* Keep journey / reviews / memberships aligned like on-screen preview */
+            #qPreviewPrintArea .qp-acc-grid {
+                display: grid !important;
+                grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+                gap: 6px !important;
+            }
+
+            #qPreviewPrintArea .qp-acc-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                padding: 8px 3px 8px !important;
+                box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+            }
+
+            #qPreviewPrintArea .qp-acc-title {
+                font-size: 16px !important;
+            }
+
+            #qPreviewPrintArea .qp-acc-value {
+                font-size: 15px !important;
+            }
+
+            #qPreviewPrintArea .qp-acc-label {
+                font-size: 9px !important;
+                white-space: normal !important;
+            }
+
+            #qPreviewPrintArea .qp-acc-ico {
+                width: 30px !important;
+                height: 30px !important;
+                font-size: 12px !important;
+            }
+
+            #qPreviewPrintArea .qp-sec-acc,
+            #qPreviewPrintArea .qp-sec-reviews,
+            #qPreviewPrintArea .qp-sec-memberships {
+                break-inside: auto;
+                page-break-inside: auto;
+            }
+
+            #qPreviewPrintArea .qp-print-last-page {
+                break-before: page !important;
+                page-break-before: always !important;
+                min-height: 285mm !important;
+                display: flex !important;
+                flex-direction: column !important;
+                box-sizing: border-box !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+
+            #qPreviewPrintArea .qp-print-last-page .qp-sec-memberships {
+                margin-top: auto !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+
+            #qPreviewPrintArea .qp-print-last-page .qp-sec-support {
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            #qPreviewPrintArea .qp-support-footer {
+                border-top: 1px solid #d1d5db !important;
+                border-bottom: 18px solid #e11d2e !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            #qPreviewPrintArea .qp-support-bar {
+                display: none !important;
+            }
+
+            #qPreviewPrintArea .qp-rev-grid {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                gap: 8px !important;
+            }
+
+            #qPreviewPrintArea .qp-rev-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            #qPreviewPrintArea .qp-rev-badge {
+                flex-wrap: nowrap !important;
+            }
+
+            #qPreviewPrintArea .qp-mem-row {
+                display: grid !important;
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            }
+
+            #qPreviewPrintArea .qp-mem-cell,
+            #qPreviewPrintArea .qp-mem-cell + .qp-mem-cell {
+                border: 0 !important;
+                border-left: 0 !important;
+            }
+
+            #qPreviewPrintArea .qp-mem-logo {
+                display: block !important;
+                visibility: visible !important;
+                width: 52px !important;
+                height: 52px !important;
+                object-fit: contain !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            #qPreviewPrintArea .qp-sec-memberships {
+                border: 0 !important;
+                border-top: 0 !important;
+            }
+
+            #qPreviewPrintArea .qp-sec-memberships,
+            #qPreviewPrintArea .qp-sec-support {
+                margin-left: -10mm !important;
+                margin-right: -10mm !important;
+                width: calc(100% + 20mm) !important;
+                max-width: none !important;
+            }
+
+            #qPreviewPrintArea .qp-sec-support {
+                margin-bottom: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            #qPreviewPrintArea .qp-support-footer {
+                border-top: 1px solid #d1d5db !important;
+                border-bottom: 18px solid #e11d2e !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            #qPreviewPrintArea .qp-support-bar {
+                display: none !important;
+            }
+
+            #qPreviewPrintArea .qp-support-ico.is-red {
+                background: #e11d2e !important;
+            }
+
+            #qPreviewPrintArea .qp-support-ico.is-dark {
+                background: #1f2937 !important;
             }
         }
 
@@ -14077,7 +14617,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=239"></script>
+    <script src="crm/assets/quotation_generator.js?v=244"></script>
     <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
