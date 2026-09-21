@@ -1,16 +1,38 @@
 <?php
 
 /** @return array<string, string> */
-function crmQuotationTermsFields(): array
+function crmQuotationInclusionFields(): array
 {
     return [
         'inclusion' => 'Inclusion',
         'exclusion' => 'Exclusion',
+    ];
+}
+
+/** @return array<string, string> */
+function crmQuotationPolicyFields(): array
+{
+    return [
         'payment_policy' => 'Payment Policy',
         'cancellation_policy' => 'Cancellation Policy',
         'terms_conditions' => 'Quotation Terms and Conditions',
         'other_details' => 'Other Details',
     ];
+}
+
+/** Master fields (no Inclusion). */
+/** @return array<string, string> */
+function crmQuotationMasterFields(): array
+{
+    return [
+        'exclusion' => 'Exclusion',
+    ] + crmQuotationPolicyFields();
+}
+
+/** @return array<string, string> */
+function crmQuotationTermsFields(): array
+{
+    return crmQuotationInclusionFields() + crmQuotationPolicyFields();
 }
 
 function crmEnsureQuotationTermsMasterTable(mysqli $conn): void
@@ -39,7 +61,7 @@ function crmGetQuotationTermsMaster(mysqli $conn): array
     crmEnsureQuotationTermsMasterTable($conn);
 
     $defaults = [];
-    foreach (array_keys(crmQuotationTermsFields()) as $field) {
+    foreach (array_keys(crmQuotationMasterFields()) as $field) {
         $defaults[$field] = '';
     }
 
@@ -61,7 +83,7 @@ function crmSaveQuotationTermsMaster(mysqli $conn, array $data): bool
 {
     crmEnsureQuotationTermsMasterTable($conn);
 
-    $fields = array_keys(crmQuotationTermsFields());
+    $fields = array_keys(crmQuotationMasterFields());
     $sets = [];
     $values = [];
     foreach ($fields as $field) {

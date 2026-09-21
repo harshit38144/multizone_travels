@@ -67,6 +67,26 @@ function crmLeadRowToQuotationPrefill(array $row, array $destinationLookup = [])
         $adults = 1;
     }
 
+    $childAges = $payload['tp_children_ages'] ?? [];
+    if (!is_array($childAges)) {
+        $childAges = $childAges !== '' && $childAges !== null ? [$childAges] : [];
+    }
+    $childAgesNormalized = [];
+    foreach ($childAges as $age) {
+        if ($age === '' || $age === null) {
+            continue;
+        }
+        $childAgesNormalized[] = max(0, (int) $age);
+    }
+    if ($children > 0) {
+        while (count($childAgesNormalized) < $children) {
+            $childAgesNormalized[] = 0;
+        }
+        $childAgesNormalized = array_slice($childAgesNormalized, 0, $children);
+    } else {
+        $childAgesNormalized = [];
+    }
+
     $referredBy = trim((string) ($row['referred_by'] ?? ''));
     if ($referredBy === '' && !empty($payload['referred_by'])) {
         $referredBy = trim((string) $payload['referred_by']);
@@ -88,6 +108,7 @@ function crmLeadRowToQuotationPrefill(array $row, array $destinationLookup = [])
         'no_of_nights' => $nights,
         'no_of_adults' => $adults,
         'no_of_children' => $children,
+        'children_ages' => $childAgesNormalized,
     ];
 }
 

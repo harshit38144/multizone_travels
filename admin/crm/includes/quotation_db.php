@@ -608,6 +608,21 @@ function crmQuotationRowToPrefill(array $quotation): array
         'no_of_nights' => (int) ($quotation['no_of_nights'] ?? 0),
         'no_of_adults' => (int) ($quotation['no_of_adults'] ?? 1),
         'no_of_children' => (int) ($quotation['no_of_children'] ?? 0),
+        'children_ages' => (static function ($raw) {
+            $cs = json_decode((string) $raw, true);
+            if (!is_array($cs)) {
+                return [];
+            }
+            $ages = $cs['tour_cost']['children_ages'] ?? [];
+            if (!is_array($ages)) {
+                return [];
+            }
+            $out = [];
+            foreach ($ages as $age) {
+                $out[] = max(0, (int) $age);
+            }
+            return $out;
+        })($quotation['cost_sheet_json'] ?? ''),
         'flights' => json_decode($quotation['flights_json'] ?? '[]', true) ?: [],
         'hotels' => (static function ($raw) {
             $decoded = json_decode((string) $raw, true);

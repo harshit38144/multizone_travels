@@ -4,7 +4,7 @@ require_once __DIR__ . '/includes/quotation_terms_db.php';
 
 crmEnsureQuotationTermsMasterTable($conn);
 
-$richSections = crmQuotationTermsFields();
+$richSections = crmQuotationMasterFields();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $payload = [];
@@ -139,7 +139,7 @@ unset($_SESSION['q_terms_master_flash'], $_SESSION['q_terms_master_flash_type'])
                     <div>
                         <h1 class="page-title">Quotation Terms &amp; Policies Master</h1>
                         <p class="page-subtitle">
-                            Set default inclusion, exclusion, payment policy, cancellation policy, terms and other details.
+                            Set default exclusion, payment policy, cancellation policy, terms and other details.
                             New quotations will use these values automatically.
                         </p>
                     </div>
@@ -160,7 +160,7 @@ unset($_SESSION['q_terms_master_flash'], $_SESSION['q_terms_master_flash_type'])
                 <form method="post" id="qTermsMasterForm">
                     <div class="master-card">
                         <div class="master-card-head">
-                            <h2>Default content for quotation Step 5 — Terms &amp; Policies</h2>
+                            <h2>Default content for quotation — Terms &amp; Policies</h2>
                             <a href="crm/quotation_generator.php" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-file-invoice mr-1"></i> Open Quotation Generator
                             </a>

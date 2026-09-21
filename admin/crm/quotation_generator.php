@@ -129,6 +129,9 @@ if (!$quotation && $leadId > 0) {
         if (isset($leadGuestPrefill['no_of_children'])) {
             $prefill['no_of_children'] = max(0, (int) $leadGuestPrefill['no_of_children']);
         }
+        if (isset($leadGuestPrefill['children_ages']) && is_array($leadGuestPrefill['children_ages'])) {
+            $prefill['children_ages'] = array_values($leadGuestPrefill['children_ages']);
+        }
     }
 }
 
@@ -245,8 +248,9 @@ $qWizardSteps = [
     ['id' => 2, 'label' => 'Flight / Train', 'color' => '#e11d2e', 'icon' => 'fas fa-plane'],
     ['id' => 3, 'label' => 'Hotel Details', 'color' => '#e11d2e', 'icon' => 'fas fa-hotel'],
     ['id' => 4, 'label' => 'Itinerary', 'color' => '#e11d2e', 'icon' => 'fas fa-map-marker-alt'],
-    ['id' => 5, 'label' => 'Terms & Policies', 'color' => '#e11d2e', 'icon' => 'fas fa-shield-alt'],
-    ['id' => 6, 'label' => 'Pricing', 'color' => '#e11d2e', 'icon' => 'fas fa-rupee-sign'],
+    ['id' => 5, 'label' => 'Inclusions', 'color' => '#e11d2e', 'icon' => 'fas fa-check-circle'],
+    ['id' => 6, 'label' => 'Terms & Policies', 'color' => '#e11d2e', 'icon' => 'fas fa-shield-alt'],
+    ['id' => 7, 'label' => 'Pricing', 'color' => '#e11d2e', 'icon' => 'fas fa-rupee-sign'],
 ];
 ?>
 <!DOCTYPE html>
@@ -1421,14 +1425,14 @@ $qWizardSteps = [
             flex: 1 1 auto;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-list {
+        .crm-quotation-gen .q-card-accordions .q-terms-list {
             display: flex;
             flex-direction: column;
             gap: 0.65rem;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item,
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-item {
+        .crm-quotation-gen .q-card-accordions .q-terms-item,
+        .crm-quotation-gen .q-card-accordions .q-accordion-item {
             border: 1px solid #e8ecf1;
             border-radius: 12px;
             margin-bottom: 0;
@@ -1437,8 +1441,8 @@ $qWizardSteps = [
             box-shadow: none;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item-head,
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-head {
+        .crm-quotation-gen .q-card-accordions .q-terms-item-head,
+        .crm-quotation-gen .q-card-accordions .q-accordion-head {
             background: #fff;
             border-bottom: 1px solid transparent;
             padding: 0.85rem 1rem;
@@ -1448,17 +1452,17 @@ $qWizardSteps = [
             gap: 0.55rem;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item-head:hover,
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-head:hover {
+        .crm-quotation-gen .q-card-accordions .q-terms-item-head:hover,
+        .crm-quotation-gen .q-card-accordions .q-accordion-head:hover {
             background: #fafbfc;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item-head:not(.collapsed),
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-head:not(.collapsed) {
+        .crm-quotation-gen .q-card-accordions .q-terms-item-head:not(.collapsed),
+        .crm-quotation-gen .q-card-accordions .q-accordion-head:not(.collapsed) {
             border-bottom-color: #eef2f7;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-head.collapsed {
+        .crm-quotation-gen .q-card-accordions .q-accordion-head.collapsed {
             border-bottom: none;
         }
 
@@ -1476,8 +1480,8 @@ $qWizardSteps = [
             color: #0f172a;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item-head .toggle-icon,
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-head i.toggle-icon {
+        .crm-quotation-gen .q-card-accordions .q-terms-item-head .toggle-icon,
+        .crm-quotation-gen .q-card-accordions .q-accordion-head i.toggle-icon {
             flex-shrink: 0;
             color: #e11d2e;
             font-size: 0.72rem;
@@ -1485,25 +1489,25 @@ $qWizardSteps = [
             transition: transform 0.2s ease;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item-body,
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-body {
+        .crm-quotation-gen .q-card-accordions .q-terms-item-body,
+        .crm-quotation-gen .q-card-accordions .q-accordion-body {
             padding: 0.85rem 1rem 1rem;
             background: #fff;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .note-editor.note-frame {
+        .crm-quotation-gen .q-card-accordions .note-editor.note-frame {
             border: 1px solid #e8ecf1;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: none;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .note-toolbar {
+        .crm-quotation-gen .q-card-accordions .note-toolbar {
             background: #f8fafc !important;
             border-bottom: 1px solid #eef2f7 !important;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="5"] .note-editing-area .note-editable {
+        .crm-quotation-gen .q-card-accordions .note-editing-area .note-editable {
             background: #fff;
             color: #0f172a;
             min-height: 140px;
@@ -5914,34 +5918,34 @@ $qWizardSteps = [
             }
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="6"] .q-pricing-grid {
+        .crm-quotation-gen .q-wizard-step[data-q-step="7"] .q-pricing-grid {
             gap: 1rem;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="6"] .q-cost-sheet {
+        .crm-quotation-gen .q-wizard-step[data-q-step="7"] .q-cost-sheet {
             padding: 0;
             background: transparent;
             border: 0;
             border-radius: 0;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="6"] input.form-control:not(.cc-label) {
+        .crm-quotation-gen .q-wizard-step[data-q-step="7"] input.form-control:not(.cc-label) {
             text-align: right;
             font-variant-numeric: tabular-nums;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="6"] input[type="number"] {
+        .crm-quotation-gen .q-wizard-step[data-q-step="7"] input[type="number"] {
             -moz-appearance: textfield;
             appearance: textfield;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="6"] input[type="number"]::-webkit-outer-spin-button,
-        .crm-quotation-gen .q-wizard-step[data-q-step="6"] input[type="number"]::-webkit-inner-spin-button {
+        .crm-quotation-gen .q-wizard-step[data-q-step="7"] input[type="number"]::-webkit-outer-spin-button,
+        .crm-quotation-gen .q-wizard-step[data-q-step="7"] input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
 
-        .crm-quotation-gen .q-wizard-step[data-q-step="6"] .q-pricing-card {
+        .crm-quotation-gen .q-wizard-step[data-q-step="7"] .q-pricing-card {
             background: transparent;
             border: 0;
             box-shadow: none;
@@ -6972,6 +6976,40 @@ $qWizardSteps = [
             display: block;
         }
 
+        .crm-quotation-gen .q-pricing-amount-cell.has-remove .q-pricing-amount-input-wrap {
+            margin-left: auto;
+        }
+
+        .crm-quotation-gen .q-pricing-supplier-remove {
+            flex: 0 0 28px;
+            width: 28px;
+            height: 32px;
+            padding: 0;
+            margin: 0 0 0 0.15rem;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            background: transparent;
+            color: #94a3b8;
+            line-height: 1;
+            font-size: 0.72rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .crm-quotation-gen .q-pricing-amount-cell:hover .q-pricing-supplier-remove,
+        .crm-quotation-gen .q-pricing-amount-cell:focus-within .q-pricing-supplier-remove {
+            color: #64748b;
+        }
+
+        .crm-quotation-gen .q-pricing-supplier-remove:hover {
+            color: #e11d2e;
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
         .crm-quotation-gen .q-pricing-amount-input-wrap .q-cost {
             width: 100% !important;
             max-width: none;
@@ -7196,6 +7234,37 @@ $qWizardSteps = [
             line-height: 1.2;
         }
 
+        .crm-quotation-gen .q-tour-cost-child-age-label {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+        }
+
+        .crm-quotation-gen .q-tour-age-input {
+            border: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 2.4rem;
+            height: 26px !important;
+            min-height: 26px !important;
+            border-radius: 6px !important;
+            background: #f3f4f6 !important;
+            color: #0f172a !important;
+            font-size: 0.78rem !important;
+            font-weight: 800 !important;
+            padding: 0 0.2rem !important;
+            text-align: center;
+            margin: 0 0.1rem;
+            vertical-align: middle;
+        }
+
+        .crm-quotation-gen .q-tour-age-input:focus {
+            background: #e5e7eb !important;
+        }
+
         .crm-quotation-gen .q-tour-cost-traveller-sub {
             display: block;
             font-size: 0.68rem;
@@ -7245,7 +7314,6 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-cost-rate-inline,
-        .crm-quotation-gen .q-tour-cost-qty-inline,
         .crm-quotation-gen .q-tour-cost-gst-inline {
             border: 0 !important;
             outline: none !important;
@@ -7253,6 +7321,35 @@ $qWizardSteps = [
             background: transparent !important;
             -webkit-appearance: none;
             appearance: none;
+        }
+
+        .crm-quotation-gen .q-tour-cost-qty-inline {
+            border: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 2.6rem;
+            height: 30px !important;
+            min-height: 30px !important;
+            border-radius: 8px !important;
+            background: #f3f4f6 !important;
+            color: #0f172a !important;
+            font-size: 0.78rem !important;
+            font-weight: 700 !important;
+            padding: 0 0.25rem !important;
+            text-align: center;
+            margin: 0;
+            vertical-align: middle;
+        }
+
+        .crm-quotation-gen .q-tour-cost-qty-group {
+            display: inline-flex;
+            align-items: center;
+            height: 30px;
+            border-radius: 8px;
+            background: #f3f4f6;
+            overflow: hidden;
         }
 
         .crm-quotation-gen .q-tour-cost-rate-inline {
@@ -7267,8 +7364,19 @@ $qWizardSteps = [
             text-align: right;
         }
 
+        .crm-quotation-gen .q-tour-cost-meta-rate {
+            display: inline-block;
+            min-width: 4.2rem;
+            color: #0f172a;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0 0.35rem;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            line-height: 30px;
+        }
+
         .crm-quotation-gen .q-tour-cost-rate-inline:focus,
-        .crm-quotation-gen .q-tour-cost-qty-inline:focus,
         .crm-quotation-gen .q-tour-cost-gst-inline:focus {
             border: 0 !important;
             box-shadow: none !important;
@@ -7276,19 +7384,11 @@ $qWizardSteps = [
             background: transparent !important;
         }
 
-        .crm-quotation-gen .q-tour-cost-qty-inline {
-            width: 2.5rem;
-            height: 30px !important;
-            min-height: 30px !important;
-            border-radius: 8px !important;
-            background: #f3f4f6 !important;
-            color: #0f172a !important;
-            font-size: 0.78rem !important;
-            font-weight: 700 !important;
-            padding: 0 0.25rem !important;
-            text-align: center;
-            margin: 0;
-            vertical-align: middle;
+        .crm-quotation-gen .q-tour-cost-qty-inline:focus {
+            border: 0 !important;
+            box-shadow: none !important;
+            outline: none !important;
+            background: #e5e7eb !important;
         }
 
         .crm-quotation-gen .q-tour-cost-gst-inline {
@@ -7315,6 +7415,30 @@ $qWizardSteps = [
             flex-shrink: 0;
             min-width: 6.5rem;
             margin-left: 0.25rem;
+        }
+
+        .crm-quotation-gen .q-tour-child-remove {
+            flex: 0 0 28px;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            margin: 0 0 0 0.15rem;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            background: transparent;
+            color: #94a3b8;
+            line-height: 1;
+            font-size: 0.72rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .crm-quotation-gen .q-tour-child-remove:hover {
+            color: #e11d2e;
+            background: #fef2f2;
+            border-color: #fecaca;
         }
 
         .crm-quotation-gen .q-tour-cost-row.is-summary .q-tour-cost-traveller-name {
@@ -7722,10 +7846,10 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-rows {
             min-height: 0;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.35rem;
+            gap: 0;
         }
 
         .crm-quotation-gen .q-pricing-custom-label {
@@ -7739,10 +7863,50 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-add-label {
-            min-height: 42px;
-            height: 42px;
+            min-height: 40px;
+            height: 40px;
             background: transparent !important;
             border-left-color: transparent !important;
+        }
+
+        .crm-quotation-gen .q-pricing-row-label.has-add-cost {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.35rem;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-col .q-add-cost-row {
+            flex: 0 0 26px;
+            width: 26px;
+            min-width: 26px;
+            height: 26px;
+            padding: 0;
+            margin: 0 0 0 0.15rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px dashed rgba(196, 18, 26, 0.55);
+            border-radius: 7px;
+            background: #fff;
+            color: #c4121a;
+            line-height: 1;
+            font-size: 0.7rem;
+            box-shadow: none;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-col .q-add-cost-row:hover {
+            color: #fff;
+            background: #c4121a;
+            border-style: solid;
+            border-color: #c4121a;
+        }
+
+        .crm-quotation-gen .q-pricing-labels-col .q-add-cost-row i {
+            font-size: 0.68rem;
+            margin: 0;
         }
 
         .crm-quotation-gen .q-pricing-labels-col .q-pricing-row-label.is-continuation {
@@ -7759,144 +7923,55 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost {
-            display: block;
-            margin-bottom: 0 !important;
+            display: flex;
+            margin-bottom: 0.45rem !important;
             position: relative;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-empty {
-            min-height: 38px;
-            height: 38px;
-            margin-bottom: 0;
+            min-height: 40px;
+            height: 40px;
+            margin-bottom: 0.45rem !important;
             visibility: hidden;
             pointer-events: none;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-row {
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 0;
-            width: 100%;
-            min-width: 0;
-            min-height: 38px;
-            border: 1px solid var(--q-border);
-            border-radius: 10px;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-            overflow: hidden;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-row:focus-within {
-            border-color: rgba(196, 18, 26, 0.45);
-            box-shadow: 0 0 0 3px rgba(196, 18, 26, 0.08);
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-ico {
-            flex: 0 0 30px;
-            width: 30px;
-            height: 38px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: #c4121a;
-            font-size: 0.68rem;
-            background: rgba(196, 18, 26, 0.06);
-            border-right: 1px solid var(--q-border);
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-label {
             flex: 1 1 auto;
             min-width: 0;
-            height: 38px !important;
-            min-height: 38px !important;
+            width: auto;
+            max-width: none;
+            height: auto !important;
+            min-height: 0 !important;
             border: 0 !important;
             border-radius: 0 !important;
             background: transparent !important;
             box-shadow: none !important;
-            padding: 0.25rem 0.55rem !important;
+            padding: 0 0.15rem 0 0 !important;
+            margin: 0 !important;
             font-size: 0.8rem !important;
             font-weight: 600;
-            color: var(--q-text) !important;
+            color: #1f2937 !important;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-label:focus {
             background: transparent !important;
             box-shadow: none !important;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-custom-cost-amt {
-            display: flex;
-            align-items: center;
-            position: relative;
-            flex: 0 0 6.75rem;
-            width: 6.75rem;
-            min-width: 6.75rem;
-            max-width: 6.75rem;
-            border-left: 1px solid var(--q-border);
-            background: #fff;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-custom-cost-amt::before {
-            content: "₹";
-            position: absolute;
-            left: 0.45rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 0.75rem;
-            font-weight: 700;
-            z-index: 1;
-            pointer-events: none;
+            outline: none;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-amount {
-            width: 100%;
+            width: 100% !important;
             max-width: none;
-            height: 38px !important;
-            min-height: 38px !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            padding: 0.2rem 0.5rem 0.2rem 1.15rem !important;
-            font-size: 0.82rem !important;
-            font-weight: 700;
-            color: var(--q-text) !important;
             text-align: right;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-amount:focus {
-            background: transparent !important;
-            box-shadow: none !important;
-        }
-
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-remove {
-            flex: 0 0 28px;
-            width: 28px;
-            height: 38px;
-            padding: 0;
-            margin: 0;
-            border: 0;
-            border-left: 1px solid var(--q-border);
-            border-radius: 0;
-            background: #fff;
-            color: #94a3b8;
-            line-height: 1;
-            font-size: 0.7rem;
-            opacity: 0;
-            transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost:hover .q-custom-cost-remove,
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-row:focus-within .q-custom-cost-remove {
             opacity: 1;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-remove:hover {
-            color: #e11d2e;
-            background: #fef2f2;
         }
 
         .q-extra-cost-modal .modal-content {
@@ -7981,10 +8056,15 @@ $qWizardSteps = [
         .crm-quotation-gen .q-pricing-add-cell {
             justify-content: stretch;
             align-items: center;
-            min-height: 42px;
-            height: auto;
+            min-height: 40px;
+            height: 40px;
             opacity: 1;
             margin: 0.15rem 0 0.55rem;
+            pointer-events: none;
+        }
+
+        .crm-quotation-gen .q-pricing-add-cell.is-spacer {
+            visibility: hidden;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet:hover .q-pricing-add-cell {
@@ -7992,46 +8072,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-add-cell .q-add-cost-row {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.4rem;
-            width: 100%;
-            min-width: 0;
-            height: 40px;
-            padding: 0 0.85rem;
-            line-height: 1;
-            font-size: 0.8rem;
-            font-weight: 700;
-            letter-spacing: 0.01em;
-            color: #c4121a;
-            background: #fff;
-            border: 1.5px dashed rgba(196, 18, 26, 0.55);
-            border-radius: 10px;
-            box-shadow: none;
-        }
-
-        .crm-quotation-gen .q-pricing-add-cell .q-add-cost-row i {
-            font-size: 0.72rem;
-        }
-
-        .crm-quotation-gen .q-pricing-add-cell .q-add-cost-row:hover {
-            color: #fff;
-            background: #c4121a;
-            border-style: solid;
-            border-color: #c4121a;
-        }
-
-        .crm-quotation-gen .q-pricing-sheets-host:not(.is-single-option) .q-pricing-add-cell .q-add-cost-row span {
-            display: inline;
-        }
-
-        .crm-quotation-gen .q-pricing-sheets-host:not(.is-single-option) .q-pricing-add-cell .q-add-cost-row {
-            width: 100%;
-            height: 36px;
-            padding: 0 0.5rem;
-            border-radius: 8px;
-            font-size: 0.7rem;
+            display: none;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-cost-totals {
@@ -8522,7 +8563,7 @@ $qWizardSteps = [
             max-width: 100%;
             min-height: var(--qp-page-h);
             margin: 0 auto;
-            padding: 8mm 10mm 0;
+            padding: 8mm 3mm 0;
             background: #fff;
             border: 1.5px solid var(--qp-red);
             border-radius: 0;
@@ -8684,7 +8725,7 @@ $qWizardSteps = [
             border: 0;
             border-radius: 16px;
             padding: 5px 12px;
-            min-width: 200px;
+            min-width: 166px;
             max-width: 240px;
             font-family: inherit;
             font-size: 12px;
@@ -8699,7 +8740,7 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             gap: 12px;
-            margin: 0px 0px 0px 15px;
+            margin: 0px 0px 0px 0px;
             padding: 0 0 3px;
         }
 
@@ -8964,13 +9005,14 @@ $qWizardSteps = [
             display: grid;
             grid-template-columns: minmax(150px, 1.35fr) minmax(0, 1.05fr) minmax(78px, 0.65fr) minmax(0, 1.05fr);
             gap: 2px 10px;
-            align-items: center;
+            align-items: start;
         }
 
         .qp-flight-airline-col {
             min-width: 0;
             padding-right: 2px;
             overflow: visible;
+            align-self: center;
         }
 
         .qp-flight-airline-name {
@@ -9080,6 +9122,22 @@ $qWizardSteps = [
             min-width: 0;
         }
 
+        .qp-flight-endpoint-body {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            min-width: 0;
+            width: auto;
+        }
+
+        .qp-flight-endpoint-meta {
+            min-width: 0;
+            flex: 0 1 auto;
+            width: max-content;
+            max-width: 100%;
+        }
+
         .qp-flight-loc-lbl {
             font-size: 10px;
             font-weight: 600;
@@ -9116,6 +9174,8 @@ $qWizardSteps = [
 
         .qp-flight-sched-time {
             margin-top: 0;
+            flex: 0 0 auto;
+            align-self: center;
             font-size: 14px;
             font-weight: 600;
             font-family: inherit;
@@ -9142,6 +9202,9 @@ $qWizardSteps = [
             gap: 3px;
             min-width: 0;
             padding: 0;
+            /* Sit level with city/date/time (skip From/To label height) */
+            margin-top: 13px;
+            align-self: start;
         }
 
         .qp-flight-dur {
@@ -9432,12 +9495,12 @@ $qWizardSteps = [
         }
 
         .qp-hotel-panel {
-            background: #f3f5f8;
-            border: 1px solid #e4e8ef;
+            background: #ffffff;
+            /* border: 1px solid #e4e8ef; */
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(17, 24, 39, 0.04);
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -9460,8 +9523,8 @@ $qWizardSteps = [
         }
 
         .qp-hotel-col-head {
-            margin: 8px 10px 0;
-            padding: 8px 10px;
+            margin: 4px 0px 0;
+            padding: 6px 6px;
             width: auto;
             max-width: none;
             background: #e8edf3;
@@ -9525,15 +9588,15 @@ $qWizardSteps = [
         .qp-hotel-body {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            padding: 8px 10px 10px;
+            gap: 0px;
+            padding: 4px 0px 4px;
         }
 
         .qp-hotel-row-card {
             background: #fff;
             border: 1px solid #e6eaef;
             border-radius: 10px;
-            padding: 10px 10px;
+            padding: 5px 5px;
             box-shadow: 0 1px 2px rgba(17, 24, 39, 0.03);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -11491,24 +11554,25 @@ $qWizardSteps = [
             background: #be123c;
         }
 
-        @media (max-width: 980px) {
-            .qp-acc-grid {
+        /* Screen-only: print popup must keep 5 equal columns (see print CSS) */
+        @media screen and (max-width: 980px) {
+            body:not(.q-preview-only) .qp-acc-grid {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
             }
         }
 
-        @media (max-width: 640px) {
-            .qp-acc-grid {
+        @media screen and (max-width: 640px) {
+            body:not(.q-preview-only) .qp-acc-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            .qp-acc-title {
+            body:not(.q-preview-only) .qp-acc-title {
                 font-size: 18px;
             }
         }
 
-        @media (max-width: 420px) {
-            .qp-acc-grid {
+        @media screen and (max-width: 420px) {
+            body:not(.q-preview-only) .qp-acc-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -12429,26 +12493,72 @@ $qWizardSteps = [
             display: block;
         }
 
+        .qp-last-main,
+        .qp-last-main-inner,
+        .qp-last-foot,
+        .qp-last-foot-inner {
+            display: block;
+        }
+
         @media print {
+            /*
+             * Pin memberships + footer to the absolute bottom of the last sheet.
+             * Table layout is more reliable in Chrome print than flex + margin-top:auto.
+             */
             .qp-print-last-page {
+                page: qp-last;
                 break-before: page;
                 page-break-before: always;
-                /* Slightly under A4 so contact + red bar stay on this page (no orphan bar) */
-                min-height: 285mm;
-                display: flex !important;
-                flex-direction: column;
-                box-sizing: border-box;
+                display: table !important;
+                width: 100% !important;
+                /* A4 (297mm) − doc top padding (8mm); full-bleed @page margin 0 */
+                height: 289mm !important;
+                min-height: 289mm !important;
+                max-height: 289mm !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .qp-last-main {
+                display: table-row !important;
+                height: 100% !important;
+            }
+
+            .qp-last-main-inner {
+                display: table-cell !important;
+                vertical-align: top !important;
+                height: 100% !important;
+                padding: 0 !important;
+            }
+
+            .qp-last-foot {
+                display: table-row !important;
+                height: 1px !important;
+            }
+
+            .qp-last-foot-inner {
+                display: table-cell !important;
+                vertical-align: bottom !important;
+                padding: 0 !important;
+            }
+
+            .qp-print-last-page .qp-sec-acc {
+                margin-top: 2mm !important;
+                padding-top: 0 !important;
+            }
+
+            .qp-print-last-page .qp-sec-reviews {
+                margin-top: 4mm !important;
+                padding-top: 2mm !important;
                 margin-bottom: 0 !important;
                 padding-bottom: 0 !important;
             }
 
-            .qp-print-last-page .qp-sec-acc {
-                margin-top: 0 !important;
-            }
-
-            /* Pin Accreditations + footer together at bottom of last page */
             .qp-print-last-page .qp-sec-memberships {
-                margin-top: auto !important;
+                margin-top: 0 !important;
                 margin-bottom: 0 !important;
                 padding-bottom: 0 !important;
             }
@@ -12456,6 +12566,7 @@ $qWizardSteps = [
             .qp-print-last-page .qp-sec-support {
                 margin-top: 0 !important;
                 margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
             }
@@ -12464,13 +12575,15 @@ $qWizardSteps = [
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
                 border-bottom: 18px solid #e11d2e !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
             }
 
             .qp-print-last-page .qp-sec-memberships,
             .qp-print-last-page .qp-sec-support {
-                margin-left: -10mm !important;
-                margin-right: -10mm !important;
-                width: calc(100% + 20mm) !important;
+                margin-left: -6mm !important;
+                margin-right: -6mm !important;
+                width: calc(100% + 12mm) !important;
                 max-width: none !important;
             }
         }
@@ -12478,7 +12591,24 @@ $qWizardSteps = [
         @media print {
             @page {
                 size: A4;
-                margin: 12mm 0 10mm 0;
+                margin: 0;
+            }
+
+            @page qp-last {
+                size: A4;
+                margin: 0;
+            }
+
+            @page :last {
+                margin: 0;
+            }
+
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                max-width: none !important;
+                background: #fff !important;
             }
 
             body * {
@@ -12491,20 +12621,31 @@ $qWizardSteps = [
             }
 
             #qPreviewPrintArea {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 210mm;
-                min-height: auto;
-                max-width: 210mm;
-                margin: 0;
-                padding: 8mm 10mm 0;
+                position: static !important;
+                left: auto !important;
+                top: auto !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 5mm 5mm 0 !important;
                 box-sizing: border-box !important;
                 background: #fff !important;
-                border: 1.5px solid #c4121a !important;
+                border: 0 !important;
                 border-radius: 0 !important;
                 box-shadow: none !important;
                 overflow: visible !important;
+                -webkit-box-decoration-break: clone !important;
+                box-decoration-break: clone !important;
+            }
+
+            /* Extra top breathing room for major section starts (not last page) */
+            #qPreviewPrintArea .qp-cost-notes-row,
+            #qPreviewPrintArea .qp-terms-card,
+            #qPreviewPrintArea .qp-sec-excl,
+            #qPreviewPrintArea .qp-itin-head {
+                margin-top: 8mm !important;
             }
 
             .q-preview-editable,
@@ -12603,18 +12744,55 @@ $qWizardSteps = [
             }
 
             #qPreviewPrintArea .qp-print-last-page {
+                page: qp-last !important;
                 break-before: page !important;
                 page-break-before: always !important;
-                min-height: 285mm !important;
-                display: flex !important;
-                flex-direction: column !important;
+                display: table !important;
+                width: 100% !important;
+                height: 289mm !important;
+                min-height: 289mm !important;
+                max-height: 289mm !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
                 box-sizing: border-box !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            #qPreviewPrintArea .qp-last-main {
+                display: table-row !important;
+                height: 100% !important;
+            }
+
+            #qPreviewPrintArea .qp-last-main-inner {
+                display: table-cell !important;
+                vertical-align: top !important;
+                height: 100% !important;
+            }
+
+            #qPreviewPrintArea .qp-last-foot {
+                display: table-row !important;
+                height: 1px !important;
+            }
+
+            #qPreviewPrintArea .qp-last-foot-inner {
+                display: table-cell !important;
+                vertical-align: bottom !important;
+            }
+
+            #qPreviewPrintArea .qp-print-last-page .qp-sec-acc {
+                margin-top: 2mm !important;
+                padding-top: 0 !important;
+            }
+
+            #qPreviewPrintArea .qp-print-last-page .qp-sec-reviews {
+                margin-top: 4mm !important;
+                padding-top: 2mm !important;
                 margin-bottom: 0 !important;
-                padding-bottom: 0 !important;
             }
 
             #qPreviewPrintArea .qp-print-last-page .qp-sec-memberships {
-                margin-top: auto !important;
+                margin-top: 0 !important;
                 margin-bottom: 0 !important;
                 padding-bottom: 0 !important;
             }
@@ -12622,8 +12800,15 @@ $qWizardSteps = [
             #qPreviewPrintArea .qp-print-last-page .qp-sec-support {
                 margin-top: 0 !important;
                 margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
+            }
+
+            #qPreviewPrintArea .qp-print-last-page .qp-support-footer {
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+                border-bottom: 18px solid #e11d2e !important;
             }
 
             #qPreviewPrintArea .qp-support-footer {
@@ -12682,9 +12867,9 @@ $qWizardSteps = [
 
             #qPreviewPrintArea .qp-sec-memberships,
             #qPreviewPrintArea .qp-sec-support {
-                margin-left: -10mm !important;
-                margin-right: -10mm !important;
-                width: calc(100% + 20mm) !important;
+                margin-left: -6mm !important;
+                margin-right: -6mm !important;
+                width: calc(100% + 12mm) !important;
                 max-width: none !important;
             }
 
@@ -12748,8 +12933,8 @@ $qWizardSteps = [
         [data-theme="dark"] .crm-quotation-gen .q-toolbar,
         [data-theme="dark"] .crm-quotation-gen .q-day-card,
         [data-theme="dark"] .crm-quotation-gen .q-card-accordions .q-accordion-item,
-        [data-theme="dark"] .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-item,
-        [data-theme="dark"] .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item,
+        [data-theme="dark"] .crm-quotation-gen .q-card-accordions .q-accordion-item,
+        [data-theme="dark"] .crm-quotation-gen .q-card-accordions .q-terms-item,
         [data-theme="dark"] .crm-quotation-gen .q-wizard-nav,
         [data-theme="dark"] .crm-quotation-gen .q-lead-sidebar-inner,
         [data-theme="dark"] .crm-quotation-gen .q-hotel-menu,
@@ -12791,8 +12976,8 @@ $qWizardSteps = [
         [data-theme="dark"] .crm-quotation-gen .q-flight-table-head,
         [data-theme="dark"] .crm-quotation-gen .q-toolbar,
         [data-theme="dark"] .crm-quotation-gen .q-day-head,
-        [data-theme="dark"] .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-head,
-        [data-theme="dark"] .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item-head,
+        [data-theme="dark"] .crm-quotation-gen .q-card-accordions .q-accordion-head,
+        [data-theme="dark"] .crm-quotation-gen .q-card-accordions .q-terms-item-head,
         [data-theme="dark"] .crm-quotation-gen .q-accordion-head,
         [data-theme="dark"] .crm-quotation-gen .q-pricing-compare-body,
         [data-theme="dark"] .crm-quotation-gen .q-pricing-sheets-host {
@@ -13265,39 +13450,47 @@ $qWizardSteps = [
             color: var(--q-text) !important;
         }
 
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-label,
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-amount {
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-label {
             background: transparent !important;
             border-color: transparent !important;
             color: var(--q-text) !important;
         }
 
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-row {
-            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
-            border-color: var(--q-border) !important;
-        }
-
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-ico {
-            background: rgba(225, 29, 46, 0.14) !important;
-            border-right-color: var(--q-border) !important;
-            color: #fca5a5 !important;
-        }
-
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-custom-cost-amt,
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-remove {
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-amount {
             background: var(--mz-theme-input-bg, #1e2128) !important;
-            border-left-color: var(--q-border) !important;
-            color: var(--q-text-muted) !important;
+            border-color: var(--mz-theme-input-border, #454b58) !important;
+            color: var(--q-text) !important;
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-pricing-amount-cell::before,
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-inr,
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-custom-cost-amt::before {
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-inr {
             color: var(--q-text-muted) !important;
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-pricing-supplier-name {
             color: var(--q-text-muted) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-supplier-remove {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-supplier-remove:hover {
+            color: #fca5a5;
+            background: rgba(225, 29, 46, 0.12);
+            border-color: rgba(225, 29, 46, 0.35);
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-labels-col .q-add-cost-row {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: rgba(225, 29, 46, 0.45) !important;
+            color: #fca5a5 !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-labels-col .q-add-cost-row:hover {
+            background: #c4121a !important;
+            border-color: #c4121a !important;
+            color: #fff !important;
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-pricing-add-cell .btn,
@@ -13440,15 +13633,15 @@ $qWizardSteps = [
             color: #fca5a5 !important;
         }
 
-        [data-theme="dark"] .crm-quotation-gen .q-wizard-step[data-q-step="5"] .note-toolbar,
+        [data-theme="dark"] .crm-quotation-gen .q-card-accordions .note-toolbar,
         [data-theme="dark"] .crm-quotation-gen .q-day-body .note-toolbar {
             background: var(--mz-theme-bg-elevated, #2a2e38) !important;
             border-color: var(--q-border) !important;
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-day-head,
-        [data-theme="dark"] .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-accordion-head,
-        [data-theme="dark"] .crm-quotation-gen .q-wizard-step[data-q-step="5"] .q-terms-item-head,
+        [data-theme="dark"] .crm-quotation-gen .q-card-accordions .q-accordion-head,
+        [data-theme="dark"] .crm-quotation-gen .q-card-accordions .q-terms-item-head,
         [data-theme="dark"] .crm-quotation-gen .q-accordion-head {
             background: var(--mz-theme-bg-elevated, #2a2e38) !important;
             background-image: none !important;
@@ -14134,33 +14327,27 @@ $qWizardSteps = [
                         </div>
                         </div>
 
-                        <!-- Rich-text accordions -->
+                        <!-- Inclusions -->
                         <div class="q-wizard-step" id="qWizardSection5" data-q-step="5">
-                        <div class="q-card q-card-accordions q-section-accordion q-terms-section">
+                        <div class="q-card q-card-accordions q-section-accordion q-inclusions-section">
                             <div class="q-section-accordion-head q-wizard-section-head collapsed" data-target="#qSectionBody5" role="button" tabindex="0" aria-expanded="false">
                                 <div class="q-section-accordion-head-main">
-                                    <h3 class="q-section-title">Terms &amp; Policies</h3>
-                                    <p class="q-wizard-section-subtitle">Load master terms or customize inclusions, exclusions, and policies.</p>
+                                    <h3 class="q-section-title">Inclusions</h3>
+                                    <p class="q-wizard-section-subtitle">Add what is included and excluded in this quotation.</p>
                                 </div>
                                 <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody5" style="display:none;">
-                            <div class="q-terms-actions q-section-body-toolbar">
-                                    <button type="button" class="btn btn-sm q-flight-btn q-flight-btn-outline" id="qLoadTermsMasterBtn">
-                                        <i class="fas fa-cloud-download-alt mr-1"></i> Load from Master
-                                    </button>
-                                    <a href="crm/quotation_terms_master.php" class="btn btn-sm q-flight-btn q-flight-btn-outline" target="_blank" rel="noopener">
-                                        <i class="fas fa-cog mr-1"></i> Manage Master
-                                    </a>
-                            </div>
                             <div class="q-terms-list">
                         <?php
-                        $richSections = crmQuotationTermsFields();
-                        foreach ($richSections as $field => $label):
+                        $inclusionSections = crmQuotationInclusionFields();
+                        foreach ($inclusionSections as $field => $label):
                             if ($quotation) {
                                 $val = (string) ($quotation[$field] ?? '');
-                            } else {
+                            } elseif ($field === 'exclusion') {
                                 $val = (string) ($prefill[$field] ?? ($quotationTermsMaster[$field] ?? ''));
+                            } else {
+                                $val = (string) ($prefill[$field] ?? '');
                             }
                             ?>
                             <div class="q-terms-item q-accordion-item">
@@ -14185,16 +14372,67 @@ $qWizardSteps = [
                         </div>
                         </div>
 
-                        <!-- Pricing -->
+                        <!-- Terms & Policies -->
                         <div class="q-wizard-step" id="qWizardSection6" data-q-step="6">
-                            <div class="q-card q-pricing-card q-section-accordion">
+                        <div class="q-card q-card-accordions q-section-accordion q-terms-section">
                             <div class="q-section-accordion-head q-wizard-section-head collapsed" data-target="#qSectionBody6" role="button" tabindex="0" aria-expanded="false">
+                                <div class="q-section-accordion-head-main">
+                                    <h3 class="q-section-title">Terms &amp; Policies</h3>
+                                    <p class="q-wizard-section-subtitle">Load master terms or customize payment, cancellation, and other policies.</p>
+                                </div>
+                                <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                            </div>
+                            <div class="q-section-accordion-body" id="qSectionBody6" style="display:none;">
+                            <div class="q-terms-actions q-section-body-toolbar">
+                                    <button type="button" class="btn btn-sm q-flight-btn q-flight-btn-outline" id="qLoadTermsMasterBtn">
+                                        <i class="fas fa-cloud-download-alt mr-1"></i> Load from Master
+                                    </button>
+                                    <a href="crm/quotation_terms_master.php" class="btn btn-sm q-flight-btn q-flight-btn-outline" target="_blank" rel="noopener">
+                                        <i class="fas fa-cog mr-1"></i> Manage Master
+                                    </a>
+                            </div>
+                            <div class="q-terms-list">
+                        <?php
+                        $richSections = crmQuotationPolicyFields();
+                        foreach ($richSections as $field => $label):
+                            if ($quotation) {
+                                $val = (string) ($quotation[$field] ?? '');
+                            } else {
+                                $val = (string) ($prefill[$field] ?? ($quotationTermsMaster[$field] ?? ''));
+                            }
+                            ?>
+                            <div class="q-terms-item q-accordion-item">
+                                <div class="q-terms-item-head q-accordion-head collapsed" data-target="#qbody_<?= $field ?>" role="button" tabindex="0" aria-expanded="false">
+                                    <div class="q-terms-item-head-main">
+                                        <i class="fas fa-chevron-down toggle-icon" aria-hidden="true"></i>
+                                        <span class="q-terms-item-label"><?= htmlspecialchars($label) ?></span>
+                                    </div>
+                                </div>
+                                <div class="q-terms-item-body q-accordion-body" id="qbody_<?= $field ?>" style="display:none;">
+                                    <textarea name="<?= $field ?>" id="qed_<?= $field ?>" class="form-control q-editor"><?= htmlspecialchars($val) ?></textarea>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                            </div>
+                            <div class="q-section-next-bar">
+                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="6">
+                                    Next <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+
+                        <!-- Pricing -->
+                        <div class="q-wizard-step" id="qWizardSection7" data-q-step="7">
+                            <div class="q-card q-pricing-card q-section-accordion">
+                            <div class="q-section-accordion-head q-wizard-section-head collapsed" data-target="#qSectionBody7" role="button" tabindex="0" aria-expanded="false">
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Pricing</h3>
                                 </div>
                                 <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
                             </div>
-                            <div class="q-section-accordion-body" id="qSectionBody6" style="display:none;">
+                            <div class="q-section-accordion-body" id="qSectionBody7" style="display:none;">
                             <p class="q-hint mb-2 d-none">Compare hotel options side by side. Flight amounts sync from fares; hotel amounts sync from each option’s rates.</p>
 
                             <div class="q-pricing-compare">
@@ -14316,6 +14554,8 @@ $qWizardSteps = [
                             <input type="hidden" id="q_profit_percent" value="">
                             <input type="hidden" id="q_profit_amount" value="">
                             <input type="hidden" id="q_tour_cost_json" name="tour_cost_json" value="">
+                            <input type="hidden" id="q_children_ages" name="children_ages" value="[]">
+                            <input type="hidden" id="q_children_qtys" name="children_qtys" value="[]">
 
                             <div class="q-check-row mt-3">
                                 <div class="custom-control custom-checkbox">
@@ -14617,7 +14857,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=244"></script>
+    <script src="crm/assets/quotation_generator.js?v=273"></script>
     <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

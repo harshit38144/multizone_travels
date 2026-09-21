@@ -459,6 +459,7 @@
         qInitSupplierSelect2In($('#qFlightRows'));
         initQuotationDatePickers($('#qFlightRows'));
         refreshFlightLayovers();
+        scheduleSyncReturnAirfareInclusion();
     }
 
     function flightSupplierOptionsHtml(selectedId, selectedName) {
@@ -839,6 +840,21 @@
         return m ? m[1].toUpperCase() : '';
     }
 
+    function extractFlightCityName(place) {
+        var s = String(place || '').trim();
+        if (!s) {
+            return '';
+        }
+        s = s.replace(/\s*\(([A-Za-z0-9]{3})\)\s*$/, '').trim();
+        if (!s) {
+            return '';
+        }
+        if (/^[A-Za-z]{3}$/.test(s)) {
+            return s.toUpperCase();
+        }
+        return s;
+    }
+
     function flightPlacesConnect(prevTo, curFrom) {
         var prevCode = extractFlightAirportCode(prevTo);
         var curCode = extractFlightAirportCode(curFrom);
@@ -848,6 +864,438 @@
         var a = String(prevTo || '').trim().toLowerCase();
         var b = String(curFrom || '').trim().toLowerCase();
         return !!(a && b && a === b);
+    }
+
+    /** Ordered unique places along all flight segments (from → to → …). */
+    function collectFlightRoutePlaces() {
+        var places = [];
+        $('#qFlightRows .q-flight-row').each(function () {
+            var from = String($(this).find('.f-from').val() || '').trim();
+            var to = String($(this).find('.f-to').val() || '').trim();
+            if (from) {
+                if (!places.length || !flightPlacesConnect(places[places.length - 1], from)) {
+                    places.push(from);
+                }
+            }
+            if (to) {
+                if (!places.length || !flightPlacesConnect(places[places.length - 1], to)) {
+                    places.push(to);
+                }
+            }
+        });
+        return places;
+    }
+
+    /** Auto inclusion line: return Ex-city, or full routing when endpoints differ. */
+    function getAutoAirfareInclusionText() {
+        var places = collectFlightRoutePlaces();
+        if (places.length < 2) {
+            return '';
+        }
+        var first = places[0];
+        var last = places[places.length - 1];
+        if (flightPlacesConnect(first, last)) {
+            var city = extractFlightCityName(first) || extractFlightCityName(last);
+            return city ? ('Return airfare Ex-' + city) : '';
+        }
+        var names = [];
+        places.forEach(function (place) {
+            var name = extractFlightCityName(place);
+            if (name) {
+                names.push(name);
+            }
+        });
+        if (names.length < 2) {
+            return '';
+        }
+        return 'Airfare : ' + names.join(' -> ');
+    }
+
+    function stripAutoReturnAirfareHtml(html) {
+        html = String(html || '');
+        html = html.replace(/<(p|div|li)([^>]*)\sdata-q-auto-return-airfare(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
+        html = html.replace(/<(p|div|li)([^>]*)\sdata-q-auto-accommodation(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
+        html = html.replace(/<(p|div|li|h[1-6]|ul)([^>]*)\sdata-q-auto-sightseeing(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
+        html = html.replace(/<(p|div|li|h[1-6]|ul)([^>]*)\sdata-q-auto-meals(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
+        html = html.replace(/^\s*<(p|li)(?:\s[^>]*)?>\s*(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*Return\s+airfare\s+Ex-[^<]*(?:<\/(?:strong|b|em|span)>\s*)*<\/\1>/i, '');
+        html = html.replace(/^\s*<(p|li)(?:\s[^>]*)?>\s*(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*Airfare\s*(?::|Ex-)[^<]*(?:<\/(?:strong|b|em|span)>\s*)*<\/\1>/i, '');
+        html = html.replace(/^\s*<(p|li)(?:\s[^>]*)?>\s*\d+\s+nights?\s+accommodation\s+in[\s\S]*?<\/\1>/i, '');
+        while (/\d+\s+nights?\s+accommodation\s+in/i.test(html)) {
+            var before = html;
+            html = html.replace(/^\s*<(p|li)(?:\s[^>]*)?>[\s\S]*?\d+\s+nights?\s+accommodation\s+in[\s\S]*?<\/\1>/i, '');
+            if (html === before) {
+                break;
+            }
+        }
+        html = html.replace(/^(?:\s*<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+/i, '');
+        return html;
+    }
+
+    function buildAutoReturnAirfareHtml(text) {
+        text = String(text || '').trim();
+        if (!text) {
+            return '';
+        }
+        return '<p data-q-auto-return-airfare="1">' + esc(text) + '</p>';
+    }
+
+    function padTourNightsLabel(nights) {
+        nights = parseInt(nights, 10) || 0;
+        if (nights < 0) {
+            nights = 0;
+        }
+        return nights < 10 ? ('0' + nights) : String(nights);
+    }
+
+    /** Active hotel option rows → inclusion lines. */
+    function getAutoAccommodationInclusionHtml() {
+        var hotels = [];
+        try {
+            hotels = typeof collectHotels === 'function' ? (collectHotels() || []) : [];
+        } catch (e) {
+            hotels = [];
+        }
+        var html = '';
+        hotels.forEach(function (h) {
+            var nights = parseInt(h && h.nights, 10);
+            if (isNaN(nights) || nights <= 0) {
+                return;
+            }
+            var city = String((h && h.city) || '').trim();
+            var hotelName = String((h && h.name) || '').trim();
+            if (!city || !hotelName) {
+                return;
+            }
+            html += '<p data-q-auto-accommodation="1">' +
+                esc(padTourNightsLabel(nights)) + ' nights accommodation in <strong>' + esc(city) + '</strong> at <strong>' + esc(hotelName) + '</strong>.</p>';
+        });
+        return html;
+    }
+
+    function isGenericItineraryDayTitle(title) {
+        title = String(title || '').trim();
+        if (!title) {
+            return true;
+        }
+        if (/^day\s*\d+\b/i.test(title)) {
+            return true;
+        }
+        if (/^(arrival|departure|check[\s-]?in|check[\s-]?out|free day|leisure day|travel day|transfer)$/i.test(title)) {
+            return true;
+        }
+        return false;
+    }
+
+    function extractActivitiesFromDayDescription(html) {
+        var text = String(html || '');
+        var items = [];
+        var m = text.match(/Activities[:\s]*<\/?(?:strong|b|span)[^>]*>\s*([^<]+)/i)
+            || text.match(/Activities[:\s]+([^<\n]+)/i);
+        if (m && m[1]) {
+            String(m[1]).split(/\s*[;•|\n]+\s*/).forEach(function (part) {
+                var t = String(part || '').replace(/<\/?[^>]+>/g, '').trim();
+                if (t) {
+                    items.push(t);
+                }
+            });
+        }
+        return items;
+    }
+
+    function formatSightseeingInclusionLine(text) {
+        text = String(text || '').trim().replace(/\.+$/, '');
+        if (!text) {
+            return '';
+        }
+        var withMeal = text.match(/^(.*?)(\s+(?:with|&)\s+(?:Lunch|Dinner|Breakfast|Meal)(?:\s.*)?)$/i);
+        if (withMeal) {
+            return '<strong>' + esc(withMeal[1].trim()) + '</strong>' + esc(withMeal[2]) + '.';
+        }
+        var covering = text.match(/^(.*?covering\s+)(.+)$/i);
+        if (covering) {
+            return esc(covering[1]) + '<strong>' + esc(covering[2].replace(/\.+$/, '')) + '</strong>.';
+        }
+        return '<strong>' + esc(text) + '</strong>.';
+    }
+
+    function readItineraryDaysForInclusions() {
+        var data = [];
+        $('#qItineraryDays .q-day-card').each(function () {
+            var $c = $(this);
+            data.push({
+                title: String($c.find('.q-day-title').val() || '').trim(),
+                description: readSummernoteHtml($c.find('.q-day-textarea'))
+            });
+        });
+        return data;
+    }
+
+    /** Itinerary day titles / Activities fields → inclusion lines. */
+    function getAutoSightseeingInclusionHtml() {
+        var days = readItineraryDaysForInclusions();
+        var items = [];
+        var seen = {};
+        days.forEach(function (day) {
+            var fromDesc = extractActivitiesFromDayDescription(day.description);
+            var candidates = fromDesc.length ? fromDesc : (isGenericItineraryDayTitle(day.title) ? [] : [day.title]);
+            candidates.forEach(function (raw) {
+                var t = String(raw || '').replace(/\s+/g, ' ').trim();
+                if (!t || isGenericItineraryDayTitle(t)) {
+                    return;
+                }
+                var key = t.toLowerCase();
+                if (seen[key]) {
+                    return;
+                }
+                seen[key] = true;
+                items.push(t);
+            });
+        });
+        if (!items.length) {
+            return '';
+        }
+        var html = '<p data-q-auto-sightseeing="1"><strong>Sightseeing &amp; Activities</strong></p>';
+        items.forEach(function (item) {
+            html += '<p data-q-auto-sightseeing="1">' + formatSightseeingInclusionLine(item) + '</p>';
+        });
+        return html;
+    }
+
+    function cleanTourNameForMealLine(name) {
+        return String(name || '')
+            .replace(/\s*[–-]\s*Regular Seat\s*$/i, '')
+            .replace(/\s+by\s+Speed Boat\b.*$/i, '')
+            .replace(/\s+by\s+Big Boat\b.*$/i, '')
+            .replace(/\s+by\s+Boat\b.*$/i, '')
+            .replace(/\s+with\s+Sea Canoe\b.*$/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function mealLinesFromActivityTitle(title) {
+        title = String(title || '').replace(/\s+/g, ' ').trim();
+        if (!title) {
+            return [];
+        }
+        var lines = [];
+        var lunch = title.match(/^(.+?)\s+(?:with|&)\s+Lunch\b/i);
+        if (lunch) {
+            var lunchName = cleanTourNameForMealLine(lunch[1]);
+            if (lunchName) {
+                lines.push('Lunch during ' + lunchName + '.');
+            }
+        }
+        var dinner = title.match(/^(.+?)\s+(?:with|&)\s+Dinner\b/i);
+        if (dinner) {
+            var dinnerName = cleanTourNameForMealLine(dinner[1]);
+            if (dinnerName) {
+                if (/show|magic|carnival|theatre|theater|cruise|cabaret/i.test(dinnerName)) {
+                    lines.push('Dinner with ' + dinnerName + '.');
+                } else {
+                    lines.push('Dinner during ' + dinnerName + '.');
+                }
+            }
+        }
+        var breakfast = title.match(/^(.+?)\s+(?:with|&)\s+Breakfast\b/i);
+        if (breakfast) {
+            var bfName = cleanTourNameForMealLine(breakfast[1]);
+            if (bfName) {
+                lines.push('Breakfast during ' + bfName + '.');
+            }
+        }
+        return lines;
+    }
+
+    function extractMealsFieldFromDescription(html) {
+        var text = String(html || '');
+        var m = text.match(/Meals?[:\s]*<\/?(?:strong|b|span)[^>]*>\s*([^<]+)/i)
+            || text.match(/Meals?[:\s]+([^<\n]+)/i);
+        if (!m || !m[1]) {
+            return [];
+        }
+        var raw = String(m[1]).replace(/<\/?[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        if (!raw || /^(none|-|n\/a|nil)$/i.test(raw)) {
+            return [];
+        }
+        // Skip plain hotel breakfast labels already covered by hotel meal plan.
+        if (/^(breakfast|bf|cp)(\s*[+&].*)?$/i.test(raw)) {
+            return [];
+        }
+        return [raw.replace(/\.+$/, '') + '.'];
+    }
+
+    function getHotelMealInclusionLines() {
+        var hotels = [];
+        try {
+            hotels = typeof collectHotels === 'function' ? (collectHotels() || []) : [];
+        } catch (e) {
+            hotels = [];
+        }
+        var hasBreakfast = false;
+        var hasLunch = false;
+        var hasDinner = false;
+        hotels.forEach(function (h) {
+            var nights = parseInt(h && h.nights, 10);
+            if (isNaN(nights) || nights <= 0) {
+                return;
+            }
+            var code = '';
+            try {
+                code = String(typeof qpHotelMealCode === 'function' ? qpHotelMealCode(h.meal_plan) : '').toUpperCase();
+            } catch (err) {
+                code = String(h.meal_plan || '').trim().toUpperCase();
+            }
+            if (!code || code === 'EP') {
+                return;
+            }
+            if (code === 'CP' || code === 'MAP' || code === 'AP' || code === 'AI') {
+                hasBreakfast = true;
+            }
+            if (code === 'AP' || code === 'AI') {
+                hasLunch = true;
+            }
+            if (code === 'MAP' || code === 'AP' || code === 'AI') {
+                hasDinner = true;
+            }
+        });
+        var lines = [];
+        if (hasBreakfast) {
+            lines.push('Daily breakfast at the hotel.');
+        }
+        if (hasLunch) {
+            lines.push('Daily lunch at the hotel.');
+        }
+        if (hasDinner) {
+            lines.push('Daily dinner at the hotel.');
+        }
+        return lines;
+    }
+
+    function getItineraryMealInclusionLines() {
+        var days = readItineraryDaysForInclusions();
+        var lines = [];
+        var seen = {};
+        var add = function (line) {
+            line = String(line || '').replace(/\s+/g, ' ').trim();
+            if (!line) {
+                return;
+            }
+            if (!/\.$/.test(line)) {
+                line += '.';
+            }
+            var key = line.toLowerCase();
+            if (seen[key]) {
+                return;
+            }
+            seen[key] = true;
+            lines.push(line);
+        };
+        days.forEach(function (day) {
+            var fromDesc = extractActivitiesFromDayDescription(day.description);
+            var candidates = fromDesc.length ? fromDesc : (day.title ? [day.title] : []);
+            candidates.forEach(function (title) {
+                mealLinesFromActivityTitle(title).forEach(add);
+            });
+            extractMealsFieldFromDescription(day.description).forEach(add);
+        });
+        return lines;
+    }
+
+    /** Hotel meal plans + itinerary tour meals → inclusion block. */
+    function getAutoMealsInclusionHtml() {
+        var lines = getHotelMealInclusionLines().concat(getItineraryMealInclusionLines());
+        if (!lines.length) {
+            return '';
+        }
+        var html = '<p data-q-auto-meals="1"><strong>Meals</strong></p>';
+        lines.forEach(function (line) {
+            html += '<p data-q-auto-meals="1">' + esc(line) + '</p>';
+        });
+        return html;
+    }
+
+    function buildAutoInclusionPrefixHtml() {
+        var parts = '';
+        var air = getAutoAirfareInclusionText();
+        if (air) {
+            parts += buildAutoReturnAirfareHtml(air);
+        }
+        parts += getAutoAccommodationInclusionHtml();
+        parts += getAutoSightseeingInclusionHtml();
+        parts += getAutoMealsInclusionHtml();
+        return parts;
+    }
+
+    var qReturnAirfareSyncTimer = null;
+    var qAutoInclusionSyncing = false;
+
+    function isInclusionEditorFocused() {
+        var $ta = $('#qed_inclusion');
+        if (!$ta.length) {
+            return false;
+        }
+        var active = document.activeElement;
+        if (!active) {
+            return false;
+        }
+        if ($ta[0] === active) {
+            return true;
+        }
+        // Only treat the rich-text editable as focused (not the whole inclusions panel).
+        var $editable = $ta.next('.note-editor').find('.note-editable');
+        if ($editable.length && $editable[0] === active) {
+            return true;
+        }
+        if ($editable.length && $editable[0].contains(active)) {
+            return true;
+        }
+        return false;
+    }
+
+    function syncReturnAirfareInclusion(force) {
+        var $ta = $('#qed_inclusion');
+        if (!$ta.length) {
+            return;
+        }
+        if (!force && isInclusionEditorFocused()) {
+            return;
+        }
+        var prefix = buildAutoInclusionPrefixHtml();
+        var current = readSummernoteHtml($ta);
+        var cleaned = stripAutoReturnAirfareHtml(current);
+        var next = prefix + cleaned;
+        var norm = function (h) {
+            return String(h || '').replace(/\s+/g, ' ').trim();
+        };
+        if (norm(next) === norm(current)) {
+            return;
+        }
+        qAutoInclusionSyncing = true;
+        try {
+            if ($.fn.summernote && $ta.data('summernote')) {
+                $ta.summernote('code', next || '<p><br></p>');
+            } else {
+                $ta.val(next);
+            }
+        } finally {
+            window.setTimeout(function () {
+                qAutoInclusionSyncing = false;
+            }, 0);
+        }
+    }
+
+    function scheduleSyncReturnAirfareInclusion(force) {
+        clearTimeout(qReturnAirfareSyncTimer);
+        qReturnAirfareSyncTimer = setTimeout(function () {
+            if (qAutoInclusionSyncing) {
+                scheduleSyncReturnAirfareInclusion(force);
+                return;
+            }
+            if (!force && isInclusionEditorFocused()) {
+                return;
+            }
+            syncReturnAirfareInclusion(!!force);
+        }, 120);
     }
 
     function formatLayoverDurationLabel(ms) {
@@ -1667,6 +2115,7 @@
         refreshHotelCategoryTabs();
         renderPricingSheets();
         scheduleItineraryMetaFromHotels();
+        scheduleSyncReturnAirfareInclusion();
     }
 
     function collectHotelsFromPanel($panel) {
@@ -1808,6 +2257,7 @@
         qActiveHotelCategoryId = data.active_category_id || String($wrap.find('.q-hotel-category').first().attr('data-cat-id') || '');
         refreshHotelCategoryTabs();
         renderPricingSheets();
+        scheduleSyncReturnAirfareInclusion();
     }
 
     function ensureHotelCategoriesReady() {
@@ -2249,6 +2699,7 @@
         cache.selectedHotel = hotel;
         setHotelRowCache($row, cache);
         scheduleItineraryMetaFromHotels();
+        scheduleSyncReturnAirfareInclusion();
     }
 
     function showHotelRoomSuggestions($row) {
@@ -2672,6 +3123,7 @@
                 },
                 onChange: function () {
                     updateDayCharCount($ta.closest('.q-day-card'));
+                    scheduleSyncReturnAirfareInclusion(true);
                 }
             };
         }
@@ -3026,6 +3478,7 @@
             syncDayMetaDisplay($card);
         });
         itineraryPreserveSeed = snapshotItinerary();
+        scheduleSyncReturnAirfareInclusion();
     }
 
     function scheduleItineraryMetaFromHotels() {
@@ -3059,6 +3512,7 @@
         $el.removeClass('is-editing');
         $el.text(value || '—').toggleClass('is-empty', !value);
         itineraryPreserveSeed = snapshotItinerary();
+        scheduleSyncReturnAirfareInclusion();
     }
 
     function beginDayMetaEdit($meta) {
@@ -3458,6 +3912,7 @@
             if ($('#qSectionBody4').is(':visible')) {
                 initItineraryEditors();
             }
+            scheduleSyncReturnAirfareInclusion();
         }, 50);
     }
 
@@ -3483,9 +3938,10 @@
         }
     }
 
-    function loadTermsFromMaster() {
+    function loadTermsFromMaster(fields) {
         var master = (typeof QUOTATION_TERMS_MASTER === 'object' && QUOTATION_TERMS_MASTER) ? QUOTATION_TERMS_MASTER : {};
-        richEditors.forEach(function (field) {
+        var list = Array.isArray(fields) && fields.length ? fields : richEditors;
+        list.forEach(function (field) {
             var html = master[field] || '';
             var $ta = $('#qed_' + field);
             if (!$ta.length) {
@@ -4070,6 +4526,7 @@
         syncDayMetaDisplay($card);
         updateDayCharCount($card);
         itineraryPreserveSeed = snapshotItinerary();
+        scheduleSyncReturnAirfareInclusion();
     }
 
     var dayAiTargetCard = null;
@@ -4503,21 +4960,21 @@
     function customCostRowHtml(data) {
         data = data || {};
         if (!customCostRowHasData(data)) {
-            return '<div class="q-custom-cost q-custom-cost-empty" aria-hidden="true"></div>';
+            return '<div class="q-custom-cost q-custom-cost-empty q-pricing-amount-cell" aria-hidden="true"></div>';
         }
         var label = String(data.label || '').trim();
         var amount = data.amount != null ? data.amount : '';
         return '' +
-            '<div class="form-group q-custom-cost mb-1">' +
-            '<div class="q-custom-cost-row">' +
-            '<span class="q-custom-cost-ico" aria-hidden="true"><i class="fas fa-tag"></i></span>' +
-            '<input type="text" class="form-control form-control-sm cc-label" placeholder="Cost name" value="' + esc(label) + '" title="' + esc(label) + '" aria-label="Extra cost name">' +
-            '<div class="q-custom-cost-amt">' +
+            '<div class="q-pricing-amount-cell has-supplier has-ico has-remove q-custom-cost">' +
+            '<span class="q-pricing-row-ico" aria-hidden="true"><i class="fas fa-tag"></i></span>' +
+            '<input type="text" class="q-pricing-supplier-name cc-label" placeholder="Cost name" value="' + esc(label) + '" title="' + esc(label) + '" aria-label="Extra cost name">' +
+            '<div class="q-pricing-amount-input-wrap">' +
+            '<span class="q-pricing-inr" aria-hidden="true">₹</span>' +
             '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost cc-amount" value="' + esc(amount) + '" placeholder="0" aria-label="Extra cost amount">' +
             '</div>' +
-            '<button type="button" class="btn q-custom-cost-remove q-remove" data-remove=".q-custom-cost" title="Remove extra cost" aria-label="Remove">' +
-            '<i class="fas fa-times"></i></button>' +
-            '</div></div>';
+            '<button type="button" class="btn q-pricing-supplier-remove q-custom-cost-remove q-remove" data-remove=".q-custom-cost" title="Remove extra cost" aria-label="Remove">' +
+            '<i class="fas fa-times" aria-hidden="true"></i></button>' +
+            '</div>';
     }
 
     function defaultPricingSheetState() {
@@ -4584,6 +5041,9 @@
         });
         var custom = [];
         $sheet.find('.q-custom-cost').each(function () {
+            if ($(this).hasClass('q-custom-cost-empty')) {
+                return;
+            }
             custom.push({
                 label: $(this).find('.cc-label').val(),
                 amount: $(this).find('.cc-amount').val()
@@ -4804,7 +5264,7 @@
     function pricingSupplierRateEntriesForKey(key, cat) {
         var entries = [];
         if (key === 'flight_train') {
-            collectFlights().forEach(function (f) {
+            collectFlights().forEach(function (f, idx) {
                 var name = String((f && f.supplier) || '').trim();
                 var rateRaw = f && f.fare;
                 var rateNum = parseFloat(rateRaw);
@@ -4814,14 +5274,15 @@
                 }
                 entries.push({
                     name: name,
-                    rate: hasRate ? rateNum.toFixed(2) : ''
+                    rate: hasRate ? rateNum.toFixed(2) : '',
+                    sourceIndex: idx
                 });
             });
             return entries;
         }
         if (key === 'hotel') {
             var hotels = (cat && Array.isArray(cat.hotels)) ? cat.hotels : [];
-            hotels.forEach(function (h) {
+            hotels.forEach(function (h, idx) {
                 var name = String((h && (h.hotel_name || h.name || h.supplier || h.supplier_name)) || '').trim();
                 var rateNum = parseFloat(h && h.rate);
                 var hasRate = !isNaN(rateNum) && rateNum > 0;
@@ -4830,13 +5291,14 @@
                 }
                 entries.push({
                     name: name,
-                    rate: hasRate ? rateNum.toFixed(2) : ''
+                    rate: hasRate ? rateNum.toFixed(2) : '',
+                    sourceIndex: idx
                 });
             });
             return entries;
         }
         if (key === 'land') {
-            $('#qItinerarySupplierRows .q-itin-supplier-row').each(function () {
+            $('#qItinerarySupplierRows .q-itin-supplier-row').each(function (idx) {
                 var $row = $(this);
                 var name = readPricingSupplierNameFromSelect($row.find('.q-itin-supplier'));
                 var rateRaw = $.trim($row.find('.q-itin-rate').val() || '');
@@ -4847,13 +5309,14 @@
                 }
                 entries.push({
                     name: name,
-                    rate: hasRate ? String(Math.round(rateNum)) : ''
+                    rate: hasRate ? String(Math.round(rateNum)) : '',
+                    sourceIndex: idx
                 });
             });
             if (!entries.length && $('#q_itinerary_supplier').length) {
                 var legacyName = readPricingSupplierNameFromSelect($('#q_itinerary_supplier'));
                 if (legacyName) {
-                    entries.push({ name: legacyName, rate: '' });
+                    entries.push({ name: legacyName, rate: '', sourceIndex: 0, legacy: true });
                 }
             }
             return entries;
@@ -4891,8 +5354,16 @@
         var supplierName = String(opts.supplierName || '').trim();
         var icon = String(opts.icon || '').trim();
         var partIndex = opts.partIndex != null ? String(opts.partIndex) : '0';
+        var sourceIndex = opts.sourceIndex;
+        var hasSource = sourceIndex != null && sourceIndex !== '' && !isNaN(parseInt(sourceIndex, 10));
         var hasSupplier = !!supplierName;
-        var html = '<div class="q-pricing-amount-cell' + (hasSupplier ? ' has-supplier' : '') + (icon ? ' has-ico' : '') + '" data-cost-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '">';
+        var removable = !!(opts.removable && hasSource);
+        var html = '<div class="q-pricing-amount-cell' +
+            (hasSupplier ? ' has-supplier' : '') +
+            (icon ? ' has-ico' : '') +
+            (removable ? ' has-remove' : '') +
+            '" data-cost-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '"' +
+            (removable ? ' data-source-index="' + esc(String(sourceIndex)) + '"' : '') + '>';
         if (icon) {
             html += '<span class="q-pricing-row-ico" aria-hidden="true"><i class="' + esc(icon) + '"></i></span>';
         }
@@ -4902,8 +5373,128 @@
         html += '<div class="q-pricing-amount-input-wrap">';
         html += '<span class="q-pricing-inr" aria-hidden="true">₹</span>';
         html += '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '" value="' + esc(value) + '" data-user-edited="' + edited + '" placeholder="0">';
-        html += '</div></div>';
+        html += '</div>';
+        if (removable) {
+            html += '<button type="button" class="btn q-pricing-supplier-remove" title="Remove supplier and rate" aria-label="Remove supplier and rate">' +
+                '<i class="fas fa-times" aria-hidden="true"></i></button>';
+        }
+        html += '</div>';
         return html;
+    }
+
+    function clearPricingKeySyncedEdits(key, catId) {
+        function clearState(st) {
+            if (!st) {
+                return;
+            }
+            if (!st.user_edited) {
+                st.user_edited = {};
+            }
+            st.user_edited[key] = 0;
+            if (st.fixed_parts && Object.prototype.hasOwnProperty.call(st.fixed_parts, key)) {
+                delete st.fixed_parts[key];
+            }
+            if (st.fixed) {
+                st.fixed[key] = '';
+            }
+        }
+        if (key === 'hotel' && catId && qPricingOptionsState[catId]) {
+            clearState(qPricingOptionsState[catId]);
+            return;
+        }
+        Object.keys(qPricingOptionsState || {}).forEach(function (id) {
+            clearState(qPricingOptionsState[id]);
+        });
+    }
+
+    function clearPricingSupplierSelect($sel) {
+        if (!$sel || !$sel.length) {
+            return;
+        }
+        $sel.val('').trigger('change');
+        $sel.data('prevSupplierVal', '');
+    }
+
+    /** Remove supplier + rate from the source section that feeds a Pricing row. */
+    function removePricingSupplierSource(key, sourceIndex, catId) {
+        sourceIndex = parseInt(sourceIndex, 10);
+        if (isNaN(sourceIndex) || sourceIndex < 0) {
+            return false;
+        }
+        snapshotPricingSheets();
+
+        if (key === 'flight_train') {
+            var $fRow = $('#qFlightRows .q-flight-row').eq(sourceIndex);
+            if (!$fRow.length) {
+                return false;
+            }
+            $fRow.find('.f-fare').val('');
+            clearPricingSupplierSelect($fRow.find('.f-supplier'));
+            clearPricingKeySyncedEdits(key);
+            return true;
+        }
+
+        if (key === 'hotel') {
+            var catSel = String(catId || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            var $panel = catSel
+                ? getHotelCategoryPanels().filter('[data-cat-id="' + catSel + '"]').first()
+                : $();
+            if (!$panel.length) {
+                $panel = getHotelCategoryPanels().filter('.is-active').first();
+            }
+            if (!$panel.length) {
+                $panel = getHotelCategoryPanels().first();
+            }
+            var $hRows = $panel.find('.q-hotel-rows .q-hotel-row');
+            if (!$hRows.length) {
+                $hRows = $panel.find('.q-hotel-row');
+            }
+            var $hRow = $hRows.eq(sourceIndex);
+            if (!$hRow.length) {
+                return false;
+            }
+            $hRow.find('.h-supplier').each(function () {
+                qDestroySupplierSelect2($(this));
+            });
+            if ($hRows.length > 1) {
+                $hRow.remove();
+            } else {
+                $hRow.find('.h-rate').val('');
+                $hRow.find('.h-name').val('');
+                $hRow.find('.h-hotel-id').val('');
+                clearPricingSupplierSelect($hRow.find('.h-supplier'));
+            }
+            clearPricingKeySyncedEdits(key, catId);
+            if (typeof scheduleItineraryMetaFromHotels === 'function') {
+                scheduleItineraryMetaFromHotels();
+            }
+            return true;
+        }
+
+        if (key === 'land') {
+            var $iRows = $('#qItinerarySupplierRows .q-itin-supplier-row');
+            var $iRow = $iRows.eq(sourceIndex);
+            if ($iRow.length) {
+                if ($iRows.length > 1) {
+                    qDestroySupplierSelect2($iRow.find('.q-itin-supplier'));
+                    $iRow.remove();
+                    refreshItinerarySupplierRemoveState();
+                } else {
+                    $iRow.find('.q-itin-rate').val('');
+                    clearPricingSupplierSelect($iRow.find('.q-itin-supplier'));
+                }
+                clearPricingKeySyncedEdits(key);
+                return true;
+            }
+            if ($('#q_itinerary_supplier').length) {
+                clearPricingSupplierSelect($('#q_itinerary_supplier'));
+                clearPricingKeySyncedEdits(key);
+                return true;
+            }
+            return false;
+        }
+
+        return false;
     }
 
     function pricingPartValueForRender(state, key, partIndex, entryRate, slots) {
@@ -4958,6 +5549,7 @@
             var i;
             for (i = 0; i < slots; i++) {
                 var entry = entries[i] || { name: '', rate: '' };
+                var canRemove = synced && entry.sourceIndex != null && entry.sourceIndex !== '';
                 html += pricingAmountCellHtml({
                     key: row.key,
                     value: pricingPartValueForRender(state, row.key, i, entry.rate, slots),
@@ -4965,7 +5557,9 @@
                     synced: synced,
                     supplierName: entry.name || '',
                     icon: row.icon || '',
-                    partIndex: i
+                    partIndex: i,
+                    sourceIndex: entry.sourceIndex,
+                    removable: canRemove
                 });
             }
         });
@@ -4983,10 +5577,10 @@
             html += customCostRowHtml(customs[ci] || {});
         }
         html += '</div>';
-        html += '<div class="q-pricing-amount-cell q-pricing-add-cell">' +
-            '<button type="button" class="btn q-add-cost-row" title="Add extra cost">' +
-            '<i class="fas fa-plus"></i><span>Add Extra Cost</span></button>' +
-            '</div>';
+        // Spacer only — Add Extra Cost (+) lives on the Extra Costs label, not in hotel options.
+        if (maxCustom === 0) {
+            html += '<div class="q-pricing-amount-cell q-pricing-add-cell is-spacer" aria-hidden="true"></div>';
+        }
 
         html += '<div class="q-sheet-profit-block">';
         html += '<div class="q-profit-line q-profit-total-line">' +
@@ -5053,6 +5647,11 @@
         }
     }
 
+    function pricingExtraCostsAddBtnHtml() {
+        return '<button type="button" class="btn q-add-cost-row" title="Add extra cost" aria-label="Add extra cost">' +
+            '<i class="fas fa-plus" aria-hidden="true"></i></button>';
+    }
+
     function pricingLabelsColumnHtml(maxCustom, visibleKeys, customLabels, slotCounts) {
         maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
         visibleKeys = visibleKeys || pricingFixedCostKeys();
@@ -5072,17 +5671,21 @@
             }
         });
         for (var i = 0; i < maxCustom; i++) {
-            html += '<div class="q-pricing-row-label q-pricing-custom-label">' +
-                (i === 0
-                    ? '<i class="fas fa-ellipsis-h" aria-hidden="true"></i><span>Extra Costs</span>'
-                    : '') +
+            if (i === 0) {
+                html += '<div class="q-pricing-row-label q-pricing-custom-label has-add-cost">' +
+                    '<i class="fas fa-ellipsis-h" aria-hidden="true"></i><span>Extra Costs</span>' +
+                    pricingExtraCostsAddBtnHtml() +
+                    '</div>';
+            } else {
+                html += '<div class="q-pricing-row-label q-pricing-custom-label"></div>';
+            }
+        }
+        if (maxCustom === 0) {
+            html += '<div class="q-pricing-row-label q-pricing-add-label has-add-cost">' +
+                '<i class="fas fa-ellipsis-h" aria-hidden="true"></i><span>Extra Costs</span>' +
+                pricingExtraCostsAddBtnHtml() +
                 '</div>';
         }
-        html += '<div class="q-pricing-row-label q-pricing-add-label">' +
-            (maxCustom === 0
-                ? '<i class="fas fa-ellipsis-h" aria-hidden="true"></i><span>Extra Costs</span>'
-                : '') +
-            '</div>';
         html += '</div></div>';
         return html;
     }
@@ -5269,16 +5872,20 @@
     }
 
     /* ------------------------------------------------------------------ */
-    /* Tour Cost Pricing card (separate Total Cost)                        */
+    /* Tour Cost Pricing card (Package Total distributed among travelers) */
     /* ------------------------------------------------------------------ */
     var qTourCostState = {
         adult_rate: '',
         adult_rate_edited: 0,
         child_rates: [],
         infant_rate: '',
-        gst_percent: 5
+        gst_percent: 5,
+        children_ages: [],
+        child_qtys: []
     };
     var qTourCostAutoSaveTimer = null;
+    /** When true, #q_children handlers must not expand/rebuild child age rows. */
+    var qTourCostChildQtySync = false;
 
     function pad2(n) {
         return (n < 10 ? '0' : '') + n;
@@ -5290,8 +5897,18 @@
             adult_rate_edited: 0,
             child_rates: [],
             infant_rate: '',
-            gst_percent: 5
+            gst_percent: 5,
+            children_ages: [],
+            child_qtys: []
         };
+    }
+
+    function roundTourMoney(n) {
+        var num = parseFloat(n);
+        if (isNaN(num)) {
+            num = 0;
+        }
+        return Math.round(num * 100) / 100;
     }
 
     function readGuestCounts() {
@@ -5302,17 +5919,216 @@
         return { adults: adults, children: children };
     }
 
+    function parseTourJsonArray(raw) {
+        if (Array.isArray(raw)) {
+            return raw.slice();
+        }
+        if (raw == null || raw === '') {
+            return [];
+        }
+        if (typeof raw === 'string') {
+            try {
+                var parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+        return [];
+    }
+
+    function normalizeChildrenAges(raw, childCount) {
+        childCount = Math.max(0, parseInt(childCount, 10) || 0);
+        var ages = [];
+        parseTourJsonArray(raw).forEach(function (age) {
+            var n = parseInt(age, 10);
+            ages.push(isNaN(n) || n < 0 ? 0 : n);
+        });
+        while (ages.length < childCount) {
+            ages.push(0);
+        }
+        if (ages.length > childCount) {
+            ages = ages.slice(0, childCount);
+        }
+        return ages;
+    }
+
+    /** Child cost rows: one UI row per age group, with editable qty (not one row per traveler). */
+    function readChildCostRows() {
+        var ages = parseTourJsonArray($('#q_children_ages').val() || '[]');
+        if (!ages.length && Array.isArray(qTourCostState.children_ages)) {
+            ages = qTourCostState.children_ages.slice();
+        }
+        var qtys = parseTourJsonArray($('#q_children_qtys').val() || '[]');
+        if (!qtys.length && Array.isArray(qTourCostState.child_qtys)) {
+            qtys = qTourCostState.child_qtys.slice();
+        }
+        var rows = [];
+        var i;
+        if (ages.length) {
+            for (i = 0; i < ages.length; i++) {
+                var age = parseInt(ages[i], 10);
+                if (isNaN(age) || age < 0) {
+                    age = 0;
+                }
+                var qty = parseInt(qtys[i], 10);
+                if (isNaN(qty) || qty < 1) {
+                    qty = 1;
+                }
+                rows.push({ age: age, qty: qty });
+            }
+        } else {
+            var n = readGuestCounts().children;
+            for (i = 0; i < n; i++) {
+                rows.push({ age: 0, qty: 1 });
+            }
+        }
+        return rows;
+    }
+
+    function writeChildCostRows(rows, opts) {
+        opts = opts || {};
+        rows = Array.isArray(rows) ? rows : [];
+        var ages = [];
+        var qtys = [];
+        var total = 0;
+        rows.forEach(function (r) {
+            var age = parseInt(r && r.age, 10);
+            if (isNaN(age) || age < 0) {
+                age = 0;
+            }
+            var qty = parseInt(r && r.qty, 10);
+            if (isNaN(qty) || qty < 1) {
+                qty = 1;
+            }
+            ages.push(age);
+            qtys.push(qty);
+            total += qty;
+        });
+        qTourCostState.children_ages = ages.slice();
+        qTourCostState.child_qtys = qtys.slice();
+        $('#q_children_ages').val(JSON.stringify(ages));
+        $('#q_children_qtys').val(JSON.stringify(qtys));
+        if (!opts.skipChildrenField) {
+            $('#q_children').val(String(total));
+        }
+        return { ages: ages, qtys: qtys, totalChildren: total, rows: rows };
+    }
+
+    function readChildrenAges() {
+        var rows = readChildCostRows();
+        writeChildCostRows(rows, { skipChildrenField: true });
+        return rows.map(function (r) { return r.age; });
+    }
+
+    function writeChildrenAges(ages) {
+        ages = parseTourJsonArray(ages);
+        var existing = readChildCostRows();
+        var rows = [];
+        var i;
+        for (i = 0; i < ages.length; i++) {
+            var age = parseInt(ages[i], 10);
+            if (isNaN(age) || age < 0) {
+                age = 0;
+            }
+            var qty = existing[i] && existing[i].qty ? existing[i].qty : 1;
+            rows.push({ age: age, qty: qty });
+        }
+        return writeChildCostRows(rows).ages;
+    }
+
+    function syncChildRowsToGuestChildrenCount() {
+        var target = readGuestCounts().children;
+        var rows = readChildCostRows();
+        var total = 0;
+        rows.forEach(function (r) { total += r.qty; });
+        while (total < target) {
+            rows.push({ age: 0, qty: 1 });
+            total++;
+        }
+        while (total > target && rows.length) {
+            var last = rows[rows.length - 1];
+            if (last.qty > 1) {
+                last.qty -= 1;
+                total -= 1;
+            } else {
+                rows.pop();
+                total -= 1;
+            }
+        }
+        writeChildCostRows(rows, { skipChildrenField: true });
+        return rows;
+    }
+
     function ensureTourCostChildRates(childCount) {
         childCount = Math.max(0, parseInt(childCount, 10) || 0);
         if (!Array.isArray(qTourCostState.child_rates)) {
             qTourCostState.child_rates = [];
         }
-        while (qTourCostState.child_rates.length < childCount) {
+        var rows = readChildCostRows();
+        while (qTourCostState.child_rates.length < rows.length) {
             qTourCostState.child_rates.push('');
         }
-        if (qTourCostState.child_rates.length > childCount) {
-            qTourCostState.child_rates = qTourCostState.child_rates.slice(0, childCount);
+        if (qTourCostState.child_rates.length > rows.length) {
+            qTourCostState.child_rates = qTourCostState.child_rates.slice(0, rows.length);
         }
+    }
+
+    /** Split total into `count` shares (2dp) that always sum exactly to total. */
+    function distributeEqualShares(total, count) {
+        total = roundTourMoney(total);
+        count = Math.max(0, parseInt(count, 10) || 0);
+        if (count <= 0) {
+            return [];
+        }
+        var cents = Math.round(total * 100);
+        var base = Math.floor(cents / count);
+        var rem = cents - (base * count);
+        var out = [];
+        var i;
+        for (i = 0; i < count; i++) {
+            out.push((base + (i < rem ? 1 : 0)) / 100);
+        }
+        return out;
+    }
+
+    function buildPackageTravelerBreakdown(packageTotal, adults, childQtys) {
+        adults = Math.max(1, parseInt(adults, 10) || 1);
+        childQtys = Array.isArray(childQtys) ? childQtys : [];
+        var childTotal = 0;
+        var normalizedQtys = [];
+        childQtys.forEach(function (q) {
+            var qty = parseInt(q, 10);
+            if (isNaN(qty) || qty < 0) {
+                qty = 0;
+            }
+            normalizedQtys.push(qty);
+            childTotal += qty;
+        });
+        var totalTravelers = Math.max(1, adults + childTotal);
+        packageTotal = roundTourMoney(packageTotal);
+        var shares = distributeEqualShares(packageTotal, totalTravelers);
+        var adultShares = shares.slice(0, adults);
+        var adultAmount = roundTourMoney(adultShares.reduce(function (sum, v) { return sum + v; }, 0));
+        var childAmounts = [];
+        var idx = adults;
+        normalizedQtys.forEach(function (qty) {
+            var part = shares.slice(idx, idx + qty);
+            var amt = roundTourMoney(part.reduce(function (sum, v) { return sum + v; }, 0));
+            childAmounts.push(amt);
+            idx += qty;
+        });
+        var perPerson = roundTourMoney(packageTotal / totalTravelers);
+        return {
+            package_total: packageTotal,
+            total_travelers: totalTravelers,
+            per_person: perPerson,
+            adult_amount: adultAmount,
+            child_amounts: childAmounts,
+            child_qtys: normalizedQtys,
+            adult_rate: perPerson,
+            child_rate: perPerson
+        };
     }
 
     function formatTourMoney(n) {
@@ -5322,6 +6138,14 @@
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
+    }
+
+    function formatTourRateValue(n) {
+        var num = roundTourMoney(n);
+        if (!num) {
+            return '';
+        }
+        return String(num);
     }
 
     function tourCostCardShellHtml() {
@@ -5352,19 +6176,15 @@
     }
 
     function tourCostRowSubtitle(key, name) {
-        var map = {
-            adult: 'Number of adults traveling',
-            subtotal: 'Base fare for all travelers',
-            gst: 'Goods & Services Tax',
-            infant: 'Infant fare'
-        };
-        if (map[key]) {
-            return map[key];
+        return '';
+    }
+
+    function tourCostChildLabel(index, age) {
+        var ageNum = parseInt(age, 10);
+        if (!isNaN(ageNum) && ageNum > 0) {
+            return 'Child – ' + ageNum + ' Yrs';
         }
-        if (String(key || '').indexOf('child_') === 0) {
-            return 'Child fare';
-        }
-        return name ? (String(name) + ' fare') : '';
+        return 'Child – Yrs';
     }
 
     function tourCostRowHtml(opts) {
@@ -5376,24 +6196,33 @@
         var qty = opts.qty != null ? opts.qty : '';
         var amountText = opts.amountText || 'INR 0.00';
         var editable = opts.editable !== false;
+        var rateReadonly = opts.rateReadonly !== false;
         var qtyEditable = !!opts.qtyEditable;
+        var ageEditable = !!opts.ageEditable;
+        var ageVal = opts.age != null ? opts.age : '';
         var summary = !!opts.summary;
         var hideMeta = !!opts.hideMeta;
         var gstEditable = !!opts.gstEditable;
         var gstPct = opts.gstPct != null ? opts.gstPct : 5;
-        var subtitle = opts.subtitle != null ? opts.subtitle : tourCostRowSubtitle(key, name);
+        var removable = !!opts.removable;
+        var removeIndex = opts.removeIndex != null ? String(opts.removeIndex) : '';
+        var subtitle = '';
 
         var controlsHtml = '';
-        if (!hideMeta && editable) {
+        if (!hideMeta && (editable || rateReadonly)) {
             controlsHtml =
                 '<div class="q-tour-cost-controls">' +
                 '<span class="q-tour-cost-rate-group">' +
                 '<span class="q-tour-cost-meta-prefix">INR</span>' +
-                '<input type="number" step="0.01" min="0" class="form-control q-tour-rate-input q-tour-cost-rate-inline" data-tour-key="' + esc(key) + '" value="' + esc(rate) + '" placeholder="0">' +
+                (rateReadonly
+                    ? '<span class="q-tour-cost-meta-rate" data-tour-rate="' + esc(key) + '">' + esc(rate !== '' ? String(rate) : '0') + '</span>'
+                    : '<input type="number" step="0.01" min="0" class="form-control q-tour-rate-input q-tour-cost-rate-inline" data-tour-key="' + esc(key) + '" value="' + esc(rate) + '" placeholder="0">') +
                 '</span>' +
                 '<span class="q-tour-cost-meta-mul">×</span>' +
                 (qtyEditable
-                    ? '<input type="number" step="1" min="1" class="form-control q-tour-qty-input q-tour-cost-qty-inline" data-tour-qty="' + esc(key) + '" value="' + esc(qty) + '">'
+                    ? '<span class="q-tour-cost-qty-group">' +
+                    '<input type="number" step="1" min="1" class="form-control q-tour-qty-input q-tour-cost-qty-inline" data-tour-qty="' + esc(key) + '" value="' + esc(qty) + '" aria-label="Quantity">' +
+                    '</span>'
                     : '<span class="q-tour-cost-meta-qty">' + esc(String(qty)) + '</span>') +
                 '</div>';
         } else if (gstEditable) {
@@ -5405,19 +6234,67 @@
                 '</span></div>';
         }
 
-        var rowClass = 'q-tour-cost-row' + (summary ? ' is-summary' : '') + (gstEditable ? ' q-tour-gst-row' : '');
+        var nameHtml;
+        if (ageEditable) {
+            var ageShow = parseInt(ageVal, 10);
+            nameHtml =
+                '<span class="q-tour-cost-traveller-name q-tour-cost-child-age-label">' +
+                'Child – ' +
+                '<input type="number" step="1" min="0" max="17" class="form-control q-tour-age-input" data-tour-age="' + esc(key) + '" value="' +
+                esc(!isNaN(ageShow) && ageShow > 0 ? String(ageShow) : '') +
+                '" placeholder="—" aria-label="Child age">' +
+                ' Yrs</span>';
+        } else {
+            nameHtml = '<span class="q-tour-cost-traveller-name">' + esc(name) + '</span>';
+        }
+
+        var rowClass = 'q-tour-cost-row' +
+            (summary ? ' is-summary' : '') +
+            (gstEditable ? ' q-tour-gst-row' : '') +
+            (removable ? ' has-remove' : '');
 
         return '' +
-            '<div class="' + rowClass + '" data-tour-key="' + esc(key) + '">' +
+            '<div class="' + rowClass + '" data-tour-key="' + esc(key) + '"' +
+            (removable ? ' data-child-index="' + esc(removeIndex) + '"' : '') + '>' +
             '<div class="q-tour-cost-traveller">' +
             '<span class="q-tour-cost-avatar" aria-hidden="true"><i class="' + icon + '"></i></span>' +
             '<div class="q-tour-cost-traveller-text">' +
-            '<span class="q-tour-cost-traveller-name">' + esc(name) + '</span>' +
+            nameHtml +
             (subtitle ? '<span class="q-tour-cost-traveller-sub">' + esc(subtitle) + '</span>' : '') +
             '</div></div>' +
             controlsHtml +
             '<div class="q-tour-cost-amount" data-tour-amount="' + esc(key) + '">' + esc(amountText) + '</div>' +
+            (removable
+                ? '<button type="button" class="btn q-tour-child-remove" title="Remove child cost" aria-label="Remove child cost" data-child-index="' + esc(removeIndex) + '">' +
+                '<i class="fas fa-times" aria-hidden="true"></i></button>'
+                : '') +
             '</div>';
+    }
+
+    function removeTourCostChildAtIndex(childIndex) {
+        childIndex = parseInt(childIndex, 10);
+        if (isNaN(childIndex) || childIndex < 0) {
+            return false;
+        }
+        var rows = readChildCostRows();
+        if (childIndex >= rows.length) {
+            return false;
+        }
+        rows.splice(childIndex, 1);
+        qTourCostChildQtySync = true;
+        try {
+            writeChildCostRows(rows);
+        } finally {
+            qTourCostChildQtySync = false;
+        }
+        if (Array.isArray(qTourCostState.child_rates) && qTourCostState.child_rates.length > childIndex) {
+            qTourCostState.child_rates.splice(childIndex, 1);
+        }
+        snapshotTourCostFromDom();
+        renderTourCostRows();
+        recalcCosts();
+        saveFormDraftToStorage();
+        return true;
     }
 
     function getActivePricingSheet() {
@@ -5463,74 +6340,71 @@
         } else if (!isNaN(pct) && pct > 0) {
             profit = total * pct / 100;
         }
-        return total + profit;
+        return roundTourMoney(total + profit);
     }
 
-    function getSheetAdultRate($sheet, adults) {
+    function getSheetPerPersonRate($sheet, adults, children) {
         if (!$sheet || !$sheet.length) {
             return 0;
         }
-        adults = adults || readGuestCounts().adults;
-        var $ppa = $sheet.find('.q-sheet-price-per-adult');
-        if ($ppa.attr('data-user-edited') === '1') {
-            var edited = parseFloat($ppa.val());
-            if (!isNaN(edited) && edited >= 0) {
-                return edited;
-            }
-        }
+        var counts = readGuestCounts();
+        adults = adults != null ? adults : counts.adults;
+        children = children != null ? children : counts.children;
         var pkgBase = getSheetPackageBase($sheet);
         if (pkgBase <= 0) {
             return 0;
         }
-        var perAdult = adults > 0 ? (pkgBase / adults) : pkgBase;
-        return Math.round(perAdult * 100) / 100;
+        var totalTravelers = Math.max(1, (parseInt(adults, 10) || 0) + (parseInt(children, 10) || 0));
+        return roundTourMoney(pkgBase / totalTravelers);
     }
 
-    function buildTourCostRowsHtml(adultRate) {
+    /** @deprecated alias for older call sites */
+    function getSheetAdultRate($sheet, adults) {
+        return getSheetPerPersonRate($sheet, adults, readGuestCounts().children);
+    }
+
+    function buildTourCostRowsHtml(perPersonRate) {
         var counts = readGuestCounts();
-        ensureTourCostChildRates(counts.children);
+        var childRows = readChildCostRows();
+        qTourCostChildQtySync = true;
+        try {
+            writeChildCostRows(childRows);
+        } finally {
+            qTourCostChildQtySync = false;
+        }
+        counts = readGuestCounts();
+        ensureTourCostChildRates(childRows.length);
         var hideGst = $('#q_hide_gst_note').is(':checked');
         var gstPct = hideGst ? 0 : (parseFloat(qTourCostState.gst_percent) || 5);
+        var rateStr = perPersonRate != null && perPersonRate !== '' ? String(perPersonRate) : '';
         var html = '';
         html += tourCostRowHtml({
             key: 'adult',
             icon: 'fas fa-user-friends',
             name: 'Adults',
-            rate: adultRate != null ? adultRate : '',
+            rate: rateStr,
             qty: counts.adults,
             qtyEditable: true,
+            rateReadonly: true,
+            editable: true,
             amountText: 'INR 0.00'
         });
-        if (counts.children > 0) {
-            for (var i = 0; i < counts.children; i++) {
-                html += tourCostRowHtml({
-                    key: 'child_' + i,
-                    icon: 'fas fa-child',
-                    name: counts.children === 1 ? 'Child' : ('Child ' + pad2(i + 1)),
-                    rate: qTourCostState.child_rates[i] || '',
-                    qty: 1,
-                    amountText: 'INR 0.00'
-                });
-            }
-        }
-        if (pricingCostHasAmount(qTourCostState.infant_rate)) {
+        childRows.forEach(function (row, i) {
             html += tourCostRowHtml({
-                key: 'infant',
-                icon: 'fas fa-baby',
-                name: 'Infant',
-                rate: qTourCostState.infant_rate,
-                qty: 1,
-                amountText: 'INR 0.00'
+                key: 'child_' + i,
+                icon: 'fas fa-child',
+                name: tourCostChildLabel(i, row.age),
+                age: row.age,
+                ageEditable: true,
+                rate: rateStr,
+                qty: row.qty,
+                qtyEditable: true,
+                rateReadonly: true,
+                editable: true,
+                amountText: 'INR 0.00',
+                removable: true,
+                removeIndex: i
             });
-        }
-        html += tourCostRowHtml({
-            key: 'subtotal',
-            icon: 'fas fa-calculator',
-            name: 'Subtotal',
-            editable: false,
-            hideMeta: true,
-            summary: true,
-            amountText: 'INR 0.00'
         });
         if (!hideGst) {
             html += tourCostRowHtml({
@@ -5550,12 +6424,12 @@
 
     function renderTourCostRows() {
         var $sheets = $('#qPricingSheetsHost .q-pricing-option-sheet');
-        var adults = readGuestCounts().adults;
+        var counts = readGuestCounts();
         if ($sheets.length) {
             $sheets.each(function () {
                 var $sheet = $(this);
-                var adultRate = getSheetAdultRate($sheet, adults);
-                $sheet.find('.q-sheet-tour-cost-rows').html(buildTourCostRowsHtml(adultRate > 0 ? String(adultRate) : ''));
+                var perPerson = getSheetPerPersonRate($sheet, counts.adults, counts.children);
+                $sheet.find('.q-sheet-tour-cost-rows').html(buildTourCostRowsHtml(perPerson > 0 ? formatTourRateValue(perPerson) : ''));
             });
             return;
         }
@@ -5563,82 +6437,109 @@
         if (!$host.length) {
             return;
         }
-        var legacyRate = getSheetAdultRate(getActivePricingSheet(), adults);
+        var legacyRate = getSheetPerPersonRate(getActivePricingSheet(), counts.adults, counts.children);
         if (legacyRate <= 0 && qTourCostState.adult_rate) {
             legacyRate = parseFloat(qTourCostState.adult_rate) || 0;
         }
-        $host.html(buildTourCostRowsHtml(legacyRate > 0 ? String(legacyRate) : ''));
+        $host.html(buildTourCostRowsHtml(legacyRate > 0 ? formatTourRateValue(legacyRate) : ''));
     }
 
     function snapshotTourCostFromDom($fromEl) {
-        var counts = readGuestCounts();
-        ensureTourCostChildRates(counts.children);
         var $scope = getTourCostScope($fromEl);
-        if (!$scope.length) {
+        if ($scope.length) {
+            var rows = readChildCostRows();
+            var changed = false;
+            rows.forEach(function (row, i) {
+                var $qty = $scope.find('.q-tour-qty-input[data-tour-qty="child_' + i + '"]');
+                if ($qty.length) {
+                    var rawQty = String($qty.val() == null ? '' : $qty.val()).trim();
+                    if (rawQty !== '') {
+                        var q = parseInt(rawQty, 10);
+                        if (!isNaN(q) && q >= 1 && q !== row.qty) {
+                            row.qty = q;
+                            changed = true;
+                        }
+                    }
+                }
+                var $age = $scope.find('.q-tour-age-input[data-tour-age="child_' + i + '"]');
+                if ($age.length) {
+                    var rawAge = String($age.val() == null ? '' : $age.val()).trim();
+                    if (rawAge !== '') {
+                        var a = parseInt(rawAge, 10);
+                        if (!isNaN(a) && a >= 0 && a !== row.age) {
+                            row.age = a;
+                            changed = true;
+                        }
+                    }
+                }
+            });
+            if (changed) {
+                qTourCostChildQtySync = true;
+                try {
+                    writeChildCostRows(rows);
+                } finally {
+                    qTourCostChildQtySync = false;
+                }
+            }
+            ensureTourCostChildRates(rows.length);
+            var $gst = $scope.find('.q-tour-gst-input').first();
+            if ($gst.length) {
+                var g = parseFloat($gst.val());
+                if (!isNaN(g) && g >= 0) {
+                    qTourCostState.gst_percent = g;
+                }
+            }
             return;
         }
-        for (var i = 0; i < counts.children; i++) {
-            var $c = $scope.find('.q-tour-rate-input[data-tour-key="child_' + i + '"]');
-            if ($c.length) {
-                qTourCostState.child_rates[i] = $c.val() || '';
-            }
-        }
-        var $inf = $scope.find('.q-tour-rate-input[data-tour-key="infant"]');
-        if ($inf.length) {
-            qTourCostState.infant_rate = $inf.val() || '';
-        }
-        var $gst = $scope.find('.q-tour-gst-input').first();
-        if ($gst.length) {
-            var g = parseFloat($gst.val());
-            if (!isNaN(g) && g >= 0) {
-                qTourCostState.gst_percent = g;
-            }
-        }
+        ensureTourCostChildRates(readChildCostRows().length);
     }
 
-    function collectTourCostPayload(adultRateOverride, $scopeEl) {
+    function collectTourCostPayload(packageTotalOverride, $scopeEl) {
         snapshotTourCostFromDom($scopeEl);
         var counts = readGuestCounts();
-        var adultRate;
-        if (adultRateOverride != null && !isNaN(adultRateOverride)) {
-            adultRate = adultRateOverride;
+        var childRows = readChildCostRows();
+        var childQtys = childRows.map(function (r) { return r.qty; });
+        var ages = childRows.map(function (r) { return r.age; });
+        var $sheet = $scopeEl && $scopeEl.length ? $scopeEl.closest('.q-pricing-option-sheet') : getActivePricingSheet();
+        var packageTotal;
+        if (packageTotalOverride != null && !isNaN(packageTotalOverride)) {
+            packageTotal = roundTourMoney(packageTotalOverride);
+        } else if ($sheet.length) {
+            packageTotal = getSheetPackageBase($sheet);
         } else {
-            var $scope = getTourCostScope($scopeEl);
-            adultRate = parseFloat($scope.find('.q-tour-rate-input[data-tour-key="adult"]').val());
-            if (isNaN(adultRate)) {
-                adultRate = 0;
-            }
+            packageTotal = roundTourMoney(String($('#q_package_total').val() || '').replace(/,/g, ''));
         }
-        var infantRate = parseFloat(qTourCostState.infant_rate);
-        if (isNaN(infantRate)) infantRate = 0;
-        var childRates = [];
-        var childTotal = 0;
-        for (var i = 0; i < counts.children; i++) {
-            var cr = parseFloat(qTourCostState.child_rates[i]);
-            if (isNaN(cr)) cr = 0;
-            childRates.push(cr);
-            childTotal += cr;
-        }
-        var adultTotal = adultRate * counts.adults;
-        var infantTotal = infantRate > 0 ? infantRate : 0;
-        var subtotal = adultTotal + childTotal + infantTotal;
+        var breakdown = buildPackageTravelerBreakdown(packageTotal, counts.adults, childQtys);
         var hideGst = $('#q_hide_gst_note').is(':checked');
         var gstPct = hideGst ? 0 : (parseFloat(qTourCostState.gst_percent) || 5);
-        var gst = subtotal * gstPct / 100;
-        var grand = Math.round(subtotal + gst);
-        var $sheet = $scopeEl && $scopeEl.length ? $scopeEl.closest('.q-pricing-option-sheet') : getActivePricingSheet();
-        var adultEdited = $sheet.length && $sheet.find('.q-sheet-price-per-adult').attr('data-user-edited') === '1' ? 1 : 0;
+        var gst = roundTourMoney(breakdown.package_total * gstPct / 100);
+        var grand = roundTourMoney(breakdown.package_total + gst);
+        var childRates = [];
+        var i;
+        for (i = 0; i < childRows.length; i++) {
+            childRates.push(String(breakdown.child_amounts[i] != null ? breakdown.child_amounts[i] : 0));
+        }
+        qTourCostState.adult_rate = breakdown.per_person > 0 ? String(breakdown.per_person) : '';
+        qTourCostState.child_rates = childRates.slice();
+        qTourCostState.child_qtys = childQtys.slice();
+        qTourCostState.children_ages = ages.slice();
         return {
-            adult_rate: adultRate > 0 ? String(adultRate) : '',
-            adult_rate_edited: adultEdited || qTourCostState.adult_rate_edited || 0,
-            child_rates: qTourCostState.child_rates.slice(),
-            infant_rate: qTourCostState.infant_rate,
+            adult_rate: breakdown.per_person > 0 ? String(breakdown.per_person) : '',
+            adult_rate_edited: 0,
+            child_rates: childRates,
+            children_ages: ages.slice(),
+            child_qtys: childQtys.slice(),
+            infant_rate: '',
             adults: counts.adults,
-            children: counts.children,
-            adult_amount: adultTotal,
-            child_amount: childTotal,
-            infant_amount: infantTotal,
-            subtotal: subtotal,
+            children: breakdown.total_travelers - counts.adults,
+            total_travelers: breakdown.total_travelers,
+            per_person: breakdown.per_person,
+            adult_amount: breakdown.adult_amount,
+            child_amount: roundTourMoney(breakdown.child_amounts.reduce(function (s, v) { return s + v; }, 0)),
+            child_amounts: breakdown.child_amounts.slice(),
+            infant_amount: 0,
+            package_total: breakdown.package_total,
+            subtotal: breakdown.package_total,
             gst_percent: gstPct,
             gst_amount: gst,
             grand_total: grand,
@@ -5650,15 +6551,26 @@
         if (!$scope || !$scope.length || !payload) {
             return;
         }
-        var counts = readGuestCounts();
+        var childRows = readChildCostRows();
+        var perPerson = payload.per_person != null ? payload.per_person : payload.adult_rate;
+        $scope.find('[data-tour-rate="adult"]').text(perPerson != null && perPerson !== '' ? String(roundTourMoney(perPerson)) : '0');
         $scope.find('[data-tour-amount="adult"]').text(formatTourMoney(payload.adult_amount));
-        for (var i = 0; i < counts.children; i++) {
-            var cr = parseFloat(qTourCostState.child_rates[i]);
-            if (isNaN(cr)) cr = 0;
-            $scope.find('[data-tour-amount="child_' + i + '"]').text(formatTourMoney(cr));
+        var childAmounts = Array.isArray(payload.child_amounts) ? payload.child_amounts : [];
+        var i;
+        for (i = 0; i < childRows.length; i++) {
+            var childAmt = childAmounts[i] != null ? childAmounts[i] : 0;
+            $scope.find('[data-tour-rate="child_' + i + '"]').text(perPerson != null && perPerson !== '' ? String(roundTourMoney(perPerson)) : '0');
+            $scope.find('[data-tour-amount="child_' + i + '"]').text(formatTourMoney(childAmt));
+            var $qty = $scope.find('.q-tour-qty-input[data-tour-qty="child_' + i + '"]');
+            if ($qty.length && !$qty.is(':focus')) {
+                $qty.val(String(childRows[i].qty));
+            }
+            var $age = $scope.find('.q-tour-age-input[data-tour-age="child_' + i + '"]');
+            if ($age.length && !$age.is(':focus')) {
+                var ageNum = parseInt(childRows[i].age, 10);
+                $age.val(!isNaN(ageNum) && ageNum > 0 ? String(ageNum) : '');
+            }
         }
-        $scope.find('[data-tour-amount="infant"]').text(formatTourMoney(payload.infant_amount));
-        $scope.find('[data-tour-amount="subtotal"]').text(formatTourMoney(payload.subtotal));
         if (payload.hide_gst) {
             $scope.find('.q-tour-gst-row').hide();
         } else {
@@ -5680,32 +6592,14 @@
         if (!$rows.length || !$rows.find('.q-tour-cost-row').length) {
             return null;
         }
-        var adults = readGuestCounts().adults;
+        var counts = readGuestCounts();
+        var packageTotal = getSheetPackageBase($sheet);
+        var perPerson = getSheetPerPersonRate($sheet, counts.adults, counts.children);
         var $ppa = $sheet.find('.q-sheet-price-per-adult');
-        var $adultInput = $rows.find('.q-tour-rate-input[data-tour-key="adult"]');
-        var adultRate;
-        if ($ppa.attr('data-user-edited') === '1') {
-            if ($adultInput.length && $adultInput.is(':focus')) {
-                adultRate = parseFloat($adultInput.val());
-            } else {
-                adultRate = parseFloat($ppa.val());
-                if ((isNaN(adultRate) || adultRate < 0) && $adultInput.length) {
-                    adultRate = parseFloat($adultInput.val());
-                }
-            }
-        } else {
-            adultRate = getSheetAdultRate($sheet, adults);
-            if ($adultInput.length && !$adultInput.is(':focus')) {
-                $adultInput.val(adultRate > 0 ? String(adultRate) : '');
-            }
-            if (!$ppa.is(':focus')) {
-                $ppa.val(adultRate > 0 ? String(adultRate) : '');
-            }
+        if (!$ppa.is(':focus')) {
+            $ppa.val(perPerson > 0 ? String(perPerson) : '').removeAttr('data-user-edited');
         }
-        if (isNaN(adultRate)) {
-            adultRate = 0;
-        }
-        var payload = collectTourCostPayload(adultRate, $sheet);
+        var payload = collectTourCostPayload(packageTotal, $sheet);
         updateTourCostDomFromPayload($rows, payload);
         $sheet.find('.q-sheet-tour-grand').text(formatTourMoney(payload.grand_total));
         $sheet.find('.q-sheet-quotation-total').val(money(payload.grand_total));
@@ -5747,9 +6641,29 @@
         if (activePayload) {
             var $active = getActivePricingSheet();
             $('#q_quotation_total').val(money(activePayload.grand_total));
-            $('#q_package_total').val(money(activePayload.subtotal));
-            $('#q_price_per_adult').val($active.length ? ($active.find('.q-sheet-price-per-adult').val() || '') : (activePayload.adult_rate || ''));
+            $('#q_package_total').val(money(activePayload.package_total != null ? activePayload.package_total : activePayload.subtotal));
+            $('#q_price_per_adult').val($active.length ? ($active.find('.q-sheet-price-per-adult').val() || '') : (activePayload.per_person || activePayload.adult_rate || ''));
             qTourCostState.adult_rate = activePayload.adult_rate || '';
+            if (Array.isArray(activePayload.children_ages) || Array.isArray(activePayload.child_qtys)) {
+                var rows = [];
+                var ages = Array.isArray(activePayload.children_ages) ? activePayload.children_ages : readChildCostRows().map(function (r) { return r.age; });
+                var qtys = Array.isArray(activePayload.child_qtys) ? activePayload.child_qtys : [];
+                var ri;
+                for (ri = 0; ri < ages.length; ri++) {
+                    rows.push({
+                        age: ages[ri],
+                        qty: qtys[ri] != null ? qtys[ri] : 1
+                    });
+                }
+                qTourCostChildQtySync = true;
+                try {
+                    writeChildCostRows(rows, { skipChildrenField: true });
+                    var totalKids = rows.reduce(function (s, r) { return s + (parseInt(r.qty, 10) || 0); }, 0);
+                    $('#q_children').val(String(totalKids));
+                } finally {
+                    qTourCostChildQtySync = false;
+                }
+            }
             $('#q_tour_cost_json').val(JSON.stringify(activePayload));
         }
         return activePayload;
@@ -5762,14 +6676,15 @@
         if (!$sheet.length) {
             return;
         }
+        var counts = readGuestCounts();
+        var perPerson = getSheetPerPersonRate($sheet, counts.adults, counts.children);
         var $ppa = $sheet.find('.q-sheet-price-per-adult');
-        if (!force && $ppa.attr('data-user-edited') === '1') {
-            return;
+        if (!$ppa.is(':focus')) {
+            $ppa.val(perPerson > 0 ? String(perPerson) : '').removeAttr('data-user-edited');
         }
-        var $input = $sheet.find('.q-sheet-tour-cost-rows .q-tour-rate-input[data-tour-key="adult"]');
-        if ($input.length && !$input.is(':focus')) {
-            $input.val($ppa.val() || '');
-        }
+        $sheet.find('.q-sheet-tour-cost-rows [data-tour-rate="adult"], .q-sheet-tour-cost-rows [data-tour-rate^="child_"]').each(function () {
+            $(this).text(perPerson > 0 ? String(perPerson) : '0');
+        });
     }
 
     function markTourCostAutoSaved($badge) {
@@ -5795,16 +6710,32 @@
         state = state || {};
         qTourCostState = defaultTourCostState();
         if (state.adult_rate != null) qTourCostState.adult_rate = state.adult_rate;
-        if (state.adult_rate_edited != null) qTourCostState.adult_rate_edited = parseInt(state.adult_rate_edited, 10) ? 1 : 0;
+        if (state.adult_rate_edited != null) qTourCostState.adult_rate_edited = 0;
         if (Array.isArray(state.child_rates)) qTourCostState.child_rates = state.child_rates.slice();
         if (state.infant_rate != null) qTourCostState.infant_rate = state.infant_rate;
         if (state.gst_percent != null) qTourCostState.gst_percent = state.gst_percent;
-        var $active = getActivePricingSheet();
-        if ($active.length && state.adult_rate != null) {
-            $active.find('.q-sheet-price-per-adult').val(state.adult_rate);
-            if (qTourCostState.adult_rate_edited) {
-                $active.find('.q-sheet-price-per-adult').attr('data-user-edited', '1');
+        if (Array.isArray(state.children_ages) || Array.isArray(state.child_qtys)) {
+            var agesApply = Array.isArray(state.children_ages) ? state.children_ages : [];
+            var qtysApply = Array.isArray(state.child_qtys) ? state.child_qtys : [];
+            var rowsApply = [];
+            var ai;
+            for (ai = 0; ai < agesApply.length; ai++) {
+                rowsApply.push({
+                    age: agesApply[ai],
+                    qty: qtysApply[ai] != null ? qtysApply[ai] : 1
+                });
             }
+            qTourCostChildQtySync = true;
+            try {
+                writeChildCostRows(rowsApply);
+            } finally {
+                qTourCostChildQtySync = false;
+            }
+        }
+        var $active = getActivePricingSheet();
+        if ($active.length && (state.per_person != null || state.adult_rate != null)) {
+            var pp = state.per_person != null ? state.per_person : state.adult_rate;
+            $active.find('.q-sheet-price-per-adult').val(pp).removeAttr('data-user-edited');
         }
         renderTourCostRows();
         recalcAllTourCostCards();
@@ -5844,20 +6775,14 @@
         $sheet.find('.q-sum-selling').text(money(pkgBase));
         $sheet.find('.q-sheet-package-total').val(money(pkgBase));
 
+        var counts = readGuestCounts();
+        var totalTravelers = Math.max(1, counts.adults + counts.children);
         var $ppa = $sheet.find('.q-sheet-price-per-adult');
-        var perAdult;
-        if ($ppa.attr('data-user-edited') !== '1') {
-            perAdult = adults > 0 ? (pkgBase / adults) : pkgBase;
-            perAdult = Math.round(perAdult * 100) / 100;
-            $ppa.val(pkgBase > 0 ? perAdult : '');
-        } else {
-            perAdult = parseFloat($ppa.val());
+        var perPerson = Math.round((pkgBase / totalTravelers) * 100) / 100;
+        if (!$ppa.is(':focus')) {
+            $ppa.val(pkgBase > 0 ? perPerson : '').removeAttr('data-user-edited');
         }
-        if (!isNaN(perAdult) && perAdult > 0) {
-            $sheet.find('.q-sheet-quotation-total').val(money(perAdult * adults));
-        } else {
-            $sheet.find('.q-sheet-quotation-total').val(money(pkgBase));
-        }
+        $sheet.find('.q-sheet-quotation-total').val(money(pkgBase));
         if (tourCostRowsPresent() && $sheet.find('.q-sheet-tour-cost-rows .q-tour-cost-row').length) {
             recalcTourCostForSheet($sheet);
         }
@@ -5874,9 +6799,29 @@
         var payload = recalcTourCostForSheet($active);
         if (payload) {
             $('#q_quotation_total').val(money(payload.grand_total));
-            $('#q_package_total').val(money(payload.subtotal));
+            $('#q_package_total').val(money(payload.package_total != null ? payload.package_total : payload.subtotal));
             $('#q_price_per_adult').val($active.find('.q-sheet-price-per-adult').val() || '');
             qTourCostState.adult_rate = payload.adult_rate || '';
+            if (Array.isArray(payload.children_ages) || Array.isArray(payload.child_qtys)) {
+                var agesLeg = Array.isArray(payload.children_ages) ? payload.children_ages : readChildCostRows().map(function (r) { return r.age; });
+                var qtysLeg = Array.isArray(payload.child_qtys) ? payload.child_qtys : [];
+                var rowsLeg = [];
+                var li;
+                for (li = 0; li < agesLeg.length; li++) {
+                    rowsLeg.push({
+                        age: agesLeg[li],
+                        qty: qtysLeg[li] != null ? qtysLeg[li] : 1
+                    });
+                }
+                qTourCostChildQtySync = true;
+                try {
+                    writeChildCostRows(rowsLeg, { skipChildrenField: true });
+                    var kidsLeg = rowsLeg.reduce(function (s, r) { return s + (parseInt(r.qty, 10) || 0); }, 0);
+                    $('#q_children').val(String(kidsLeg));
+                } finally {
+                    qTourCostChildQtySync = false;
+                }
+            }
             $('#q_tour_cost_json').val(JSON.stringify(payload));
         }
     }
@@ -5976,36 +6921,18 @@
         qCalcUpdateTargetLabel();
     });
 
-    $(document).on('input change', '.q-sheet-tour-cost-rows .q-tour-rate-input, .q-sheet-tour-cost-rows .q-tour-gst-input, #qTourCostRows .q-tour-rate-input, #qTourCostRows .q-tour-gst-input', function () {
+    $(document).on('input change', '.q-sheet-tour-cost-rows .q-tour-gst-input, #qTourCostRows .q-tour-gst-input', function () {
         var $sheet = $(this).closest('.q-pricing-option-sheet');
-        var key = String($(this).attr('data-tour-key') || '');
         snapshotTourCostFromDom($(this));
-        if (key === 'adult' && $sheet.length) {
-            $sheet.find('.q-sheet-price-per-adult').val($(this).val() || '').attr('data-user-edited', '1');
-        }
-        if ($(this).hasClass('q-tour-gst-input')) {
-            var gstVal = $(this).val();
-            $('.q-sheet-tour-cost-rows .q-tour-gst-input, #qTourCostRows .q-tour-gst-input').not(this).each(function () {
-                if (!$(this).is(':focus')) {
-                    $(this).val(gstVal);
-                }
-            });
-        }
-        if (key.indexOf('child_') === 0 || key === 'infant') {
-            var val = $(this).val();
-            var selector = '.q-tour-rate-input[data-tour-key="' + key.replace(/"/g, '\\"') + '"]';
-            $('.q-sheet-tour-cost-rows ' + selector + ', #qTourCostRows ' + selector).not(this).each(function () {
-                if (!$(this).is(':focus')) {
-                    $(this).val(val);
-                }
-            });
-        }
+        var gstVal = $(this).val();
+        $('.q-sheet-tour-cost-rows .q-tour-gst-input, #qTourCostRows .q-tour-gst-input').not(this).each(function () {
+            if (!$(this).is(':focus')) {
+                $(this).val(gstVal);
+            }
+        });
         if ($sheet.length) {
-            var $targets = (key !== 'adult' || $(this).hasClass('q-tour-gst-input'))
-                ? $('#qPricingSheetsHost .q-pricing-option-sheet')
-                : $sheet;
             var activePayload = null;
-            $targets.each(function () {
+            $('#qPricingSheetsHost .q-pricing-option-sheet').each(function () {
                 var payload = recalcTourCostForSheet($(this));
                 if ($(this).hasClass('is-active')) {
                     activePayload = payload;
@@ -6013,7 +6940,7 @@
             });
             if (activePayload) {
                 $('#q_quotation_total').val(money(activePayload.grand_total));
-                $('#q_package_total').val(money(activePayload.subtotal));
+                $('#q_package_total').val(money(activePayload.package_total != null ? activePayload.package_total : activePayload.subtotal));
                 $('#q_price_per_adult').val($sheet.find('.q-sheet-price-per-adult').val() || '');
                 qTourCostState.adult_rate = activePayload.adult_rate || '';
                 $('#q_tour_cost_json').val(JSON.stringify(activePayload));
@@ -6025,14 +6952,164 @@
         saveFormDraftToStorage();
     });
 
+    function applyTourCostChildQty($input, newQty) {
+        var key = String($input.attr('data-tour-qty') || '');
+        var m = key.match(/^child_(\d+)$/);
+        if (!m) {
+            return;
+        }
+        var childIndex = parseInt(m[1], 10);
+        var rows = readChildCostRows();
+        if (childIndex < 0 || childIndex >= rows.length) {
+            return;
+        }
+        newQty = Math.max(1, parseInt(newQty, 10) || 1);
+        rows[childIndex].qty = newQty;
+        $input.val(String(newQty));
+        qTourCostChildQtySync = true;
+        try {
+            writeChildCostRows(rows);
+            recalcCosts();
+        } finally {
+            qTourCostChildQtySync = false;
+        }
+        markTourCostAutoSaved($input.closest('.q-pricing-option-sheet').find('.q-sheet-tour-autosave'));
+        saveFormDraftToStorage();
+    }
+
+    function applyTourCostChildAge($input, newAge) {
+        var key = String($input.attr('data-tour-age') || '');
+        var m = key.match(/^child_(\d+)$/);
+        if (!m) {
+            return;
+        }
+        var childIndex = parseInt(m[1], 10);
+        var rows = readChildCostRows();
+        if (childIndex < 0 || childIndex >= rows.length) {
+            return;
+        }
+        newAge = parseInt(newAge, 10);
+        if (isNaN(newAge) || newAge < 0) {
+            newAge = 0;
+        }
+        if (newAge > 17) {
+            newAge = 17;
+        }
+        rows[childIndex].age = newAge;
+        if (newAge > 0) {
+            $input.val(String(newAge));
+        }
+        qTourCostChildQtySync = true;
+        try {
+            writeChildCostRows(rows, { skipChildrenField: true });
+        } finally {
+            qTourCostChildQtySync = false;
+        }
+        markTourCostAutoSaved($input.closest('.q-pricing-option-sheet').find('.q-sheet-tour-autosave'));
+        saveFormDraftToStorage();
+    }
+
     $(document).on('change input', '.q-sheet-tour-cost-rows .q-tour-qty-input[data-tour-qty="adult"], #qTourCostRows .q-tour-qty-input[data-tour-qty="adult"]', function () {
         var n = parseInt($(this).val(), 10);
         if (isNaN(n) || n < 1) n = 1;
+        $(this).val(String(n));
         $('#q_adults').val(n).trigger('change');
     });
 
-    $(document).on('change input', '#q_adults, #q_children', function () {
+    // Child qty: allow empty while typing — never delete the row (use × to remove).
+    $(document).on('input', '.q-sheet-tour-cost-rows .q-tour-qty-input[data-tour-qty^="child_"], #qTourCostRows .q-tour-qty-input[data-tour-qty^="child_"]', function () {
+        var raw = String($(this).val() == null ? '' : $(this).val()).trim();
+        if (raw === '') {
+            return;
+        }
+        var newQty = parseInt(raw, 10);
+        if (isNaN(newQty) || newQty < 1) {
+            return;
+        }
+        applyTourCostChildQty($(this), newQty);
+    });
+
+    $(document).on('blur', '.q-sheet-tour-cost-rows .q-tour-qty-input[data-tour-qty^="child_"], #qTourCostRows .q-tour-qty-input[data-tour-qty^="child_"]', function () {
+        var $input = $(this);
+        var key = String($input.attr('data-tour-qty') || '');
+        var m = key.match(/^child_(\d+)$/);
+        if (!m) {
+            return;
+        }
+        var childIndex = parseInt(m[1], 10);
+        var raw = String($input.val() == null ? '' : $input.val()).trim();
+        var newQty = parseInt(raw, 10);
+        if (raw === '' || isNaN(newQty) || newQty < 1) {
+            var rows = readChildCostRows();
+            newQty = (rows[childIndex] && rows[childIndex].qty) ? rows[childIndex].qty : 1;
+            if (isNaN(newQty) || newQty < 1) {
+                newQty = 1;
+            }
+            $input.val(String(newQty));
+        }
+        applyTourCostChildQty($input, newQty);
+    });
+
+    $(document).on('input change', '.q-sheet-tour-cost-rows .q-tour-age-input, #qTourCostRows .q-tour-age-input', function () {
+        var raw = String($(this).val() == null ? '' : $(this).val()).trim();
+        if (raw === '') {
+            return;
+        }
+        var age = parseInt(raw, 10);
+        if (isNaN(age) || age < 0) {
+            return;
+        }
+        applyTourCostChildAge($(this), age);
+    });
+
+    $(document).on('blur', '.q-sheet-tour-cost-rows .q-tour-age-input, #qTourCostRows .q-tour-age-input', function () {
+        var $input = $(this);
+        var key = String($input.attr('data-tour-age') || '');
+        var m = key.match(/^child_(\d+)$/);
+        if (!m) {
+            return;
+        }
+        var childIndex = parseInt(m[1], 10);
+        var raw = String($input.val() == null ? '' : $input.val()).trim();
+        var age = parseInt(raw, 10);
+        if (raw === '' || isNaN(age) || age < 0) {
+            var rows = readChildCostRows();
+            age = (rows[childIndex] && rows[childIndex].age != null) ? rows[childIndex].age : 0;
+            if (!isNaN(age) && age > 0) {
+                $input.val(String(age));
+            } else {
+                $input.val('');
+                age = 0;
+            }
+        }
+        applyTourCostChildAge($input, age);
+    });
+
+    $(document).on('click', '.q-tour-child-remove', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var idx = $(this).attr('data-child-index');
+        if (idx == null || idx === '') {
+            idx = $(this).closest('.q-tour-cost-row').attr('data-child-index');
+        }
+        removeTourCostChildAtIndex(idx);
+    });
+
+    $(document).on('change input', '#q_adults', function () {
+        if (qTourCostChildQtySync) {
+            return;
+        }
         snapshotTourCostFromDom();
+        renderTourCostRows();
+        recalcCosts();
+    });
+
+    $(document).on('change input', '#q_children', function () {
+        if (qTourCostChildQtySync) {
+            return;
+        }
+        snapshotTourCostFromDom();
+        syncChildRowsToGuestChildrenCount();
         renderTourCostRows();
         recalcCosts();
     });
@@ -7145,13 +8222,17 @@
     function qpFlightEndpointBlockHtml(label, place, dateStr, timeStr, editPath) {
         return '<div class="qp-flight-endpoint">' +
             '<div class="qp-flight-loc-lbl">' + esc(label) + '</div>' +
+            '<div class="qp-flight-endpoint-body">' +
+            '<div class="qp-flight-endpoint-meta">' +
             '<div class="qp-flight-loc-city">' + esc(qpFlightPlaceLine(place)) + '</div>' +
             '<div class="qp-flight-sched-date">' + esc(qpFormatFlightDayDate(dateStr)) + '</div>' +
+            '</div>' +
             '<div class="qp-flight-sched-time">' +
             previewEditable(qpFormatTime12(timeStr), editPath, {
                 type: 'datetime',
                 cls: 'q-preview-cell-edit qp-flight-time-edit'
             }) +
+            '</div>' +
             '</div>' +
             '</div>';
     }
@@ -8452,40 +9533,41 @@
 
             if (tourCost && parseFloat(tourCost.grand_total) > 0) {
                 var rowsTc = '';
-                var adultRate = parseFloat(tourCost.adult_rate) || 0;
+                var adultRate = parseFloat(tourCost.per_person != null ? tourCost.per_person : tourCost.adult_rate) || 0;
                 var adultQty = parseInt(tourCost.adults, 10) || adults;
-                if (adultRate > 0) {
+                var adultAmt = parseFloat(tourCost.adult_amount);
+                if (isNaN(adultAmt)) adultAmt = adultRate * adultQty;
+                if (adultRate > 0 || adultAmt > 0) {
                     rowsTc += qpTourCostRowHtml(
                         '<i class="fas fa-users"></i>',
                         'INR ' + esc(money(adultRate)) + ' × ' + esc(adultQty) + ' Adults',
-                        esc(money(adultRate * adultQty))
+                        esc(money(adultAmt))
                     );
                 }
+                var childAmounts = Array.isArray(tourCost.child_amounts) ? tourCost.child_amounts : null;
                 var childRates = tourCost.child_rates || [];
-                var childWithRate = childRates.filter(function (cr) { return parseFloat(cr) > 0; });
-                if (childWithRate.length === 1) {
-                    var oneChild = parseFloat(childWithRate[0]) || 0;
+                var childAges = Array.isArray(tourCost.children_ages) ? tourCost.children_ages : [];
+                var childQtysPrev = Array.isArray(tourCost.child_qtys) ? tourCost.child_qtys : null;
+                var childRowCount = childQtysPrev && childQtysPrev.length
+                    ? childQtysPrev.length
+                    : (childAges.length || (childAmounts ? childAmounts.length : childRates.length));
+                var ci;
+                for (ci = 0; ci < childRowCount; ci++) {
+                    var cQty = childQtysPrev && childQtysPrev[ci] != null
+                        ? Math.max(1, parseInt(childQtysPrev[ci], 10) || 1)
+                        : 1;
+                    var cAmt = childAmounts && childAmounts[ci] != null
+                        ? parseFloat(childAmounts[ci])
+                        : parseFloat(childRates[ci]);
+                    if (isNaN(cAmt)) cAmt = adultRate * cQty;
+                    var ageNum = parseInt(childAges[ci], 10);
+                    var childLabel = (!isNaN(ageNum) && ageNum > 0)
+                        ? ('Child – ' + ageNum + ' Yrs')
+                        : ('Child – Yrs');
                     rowsTc += qpTourCostRowHtml(
                         '<i class="far fa-user"></i>',
-                        'INR ' + esc(money(oneChild)) + ' × 01 Child',
-                        esc(money(oneChild))
-                    );
-                } else {
-                    childWithRate.forEach(function (cr, ci) {
-                        var rate = parseFloat(cr) || 0;
-                        rowsTc += qpTourCostRowHtml(
-                            '<i class="far fa-user"></i>',
-                            'INR ' + esc(money(rate)) + ' × Child ' + pad2(ci + 1),
-                            esc(money(rate))
-                        );
-                    });
-                }
-                var infantRate = parseFloat(tourCost.infant_rate) || 0;
-                if (infantRate > 0) {
-                    rowsTc += qpTourCostRowHtml(
-                        '<i class="fas fa-baby"></i>',
-                        'INR ' + esc(money(infantRate)) + ' × Infant',
-                        esc(money(infantRate))
+                        'INR ' + esc(money(adultRate > 0 ? adultRate : (cQty > 0 ? (cAmt / cQty) : cAmt))) + ' × ' + esc(cQty) + ' ' + esc(childLabel),
+                        esc(money(cAmt))
                     );
                 }
                 var showGst = !parseInt(tourCost.hide_gst, 10) && parseFloat(tourCost.gst_amount) > 0;
@@ -8509,22 +9591,31 @@
             if (!(ppa > 0 || qt > 0 || pkg > 0)) {
                 return '';
             }
-            var adultTotal = ppa > 0 ? ppa * adults : (pkg > 0 ? pkg : qt);
-            var totalVal = qt > 0 ? qt : (pkg > 0 ? pkg : adultTotal);
+            var packageTotal = pkg > 0 ? pkg : (qt > 0 ? qt : (ppa * adults));
+            var childCountFb = parseInt(p.no_of_children, 10) || 0;
+            var totalTravelers = Math.max(1, adults + childCountFb);
+            var perPerson = Math.round((packageTotal / totalTravelers) * 100) / 100;
             var rows = '';
-            if (ppa > 0) {
-                var ratePart = editable
-                    ? previewEditable(money(ppa), 'price_per_adult', { type: 'money' })
-                    : esc(money(ppa));
+            rows += qpTourCostRowHtml(
+                '<i class="fas fa-users"></i>',
+                'INR ' + (editable ? previewEditable(money(perPerson), 'price_per_adult', { type: 'money' }) : esc(money(perPerson))) +
+                    ' × ' + esc(adults) + ' Adults',
+                esc(money(Math.round(perPerson * adults * 100) / 100))
+            );
+            var agesFb = Array.isArray(p.children_ages) ? p.children_ages : [];
+            var cfi;
+            for (cfi = 0; cfi < childCountFb; cfi++) {
+                var ageFb = parseInt(agesFb[cfi], 10);
+                var lblFb = (!isNaN(ageFb) && ageFb > 0) ? ('Child – Age ' + ageFb) : 'Child – Age —';
                 rows += qpTourCostRowHtml(
-                    '<i class="fas fa-users"></i>',
-                    'INR ' + ratePart + ' × ' + esc(adults) + ' Adults',
-                    esc(money(ppa * adults))
+                    '<i class="far fa-user"></i>',
+                    'INR ' + esc(money(perPerson)) + ' × 1 ' + esc(lblFb),
+                    esc(money(perPerson))
                 );
             }
             var totalPart = editable
-                ? previewEditable(money(totalVal), 'quotation_total', { type: 'money' })
-                : esc(money(totalVal));
+                ? previewEditable(money(packageTotal), 'quotation_total', { type: 'money' })
+                : esc(money(qt > 0 ? qt : packageTotal));
             return wrapTourCostBlock(rows, qpTourGrandHtml(totalPart, false));
         }
 
@@ -8753,10 +9844,14 @@
 
         /* —— Last print page: Journey + Reviews + Memberships + Footer —— */
         html += '<div class="qp-print-last-page">';
+        html += '<div class="qp-last-main"><div class="qp-last-main-inner">';
         html += buildPreviewAccreditationsHtml();
         html += buildPreviewReviewsHtml();
+        html += '</div></div>';
+        html += '<div class="qp-last-foot"><div class="qp-last-foot-inner">';
         html += buildPreviewMembershipsHtml();
         html += buildPreviewSupportHtml();
+        html += '</div></div>';
         html += '</div>';
 
         return html;
@@ -8942,6 +10037,9 @@
         if (lead.no_of_children != null && lead.no_of_children !== '') {
             $('#q_children').val(Math.max(0, parseInt(lead.no_of_children, 10) || 0));
         }
+        if (Array.isArray(lead.children_ages)) {
+            writeChildrenAges(lead.children_ages);
+        }
         suspendItineraryRebuild();
         rebuildItinerary();
         resumeItineraryRebuild();
@@ -9024,6 +10122,13 @@
         $('#q_nights').val(p.no_of_nights || 0);
         $('#q_adults').val(p.no_of_adults || 1);
         $('#q_children').val(p.no_of_children || 0);
+        if (Array.isArray(p.children_ages)) {
+            writeChildrenAges(p.children_ages);
+        } else if (p.cost_sheet && p.cost_sheet.tour_cost && Array.isArray(p.cost_sheet.tour_cost.children_ages)) {
+            writeChildrenAges(p.cost_sheet.tour_cost.children_ages);
+        } else {
+            writeChildrenAges([]);
+        }
 
         var draft = loadFormDraftFromStorage();
         var flights = Array.isArray(p.flights) ? p.flights.slice() : [];
@@ -9187,7 +10292,7 @@
     /* ------------------------------------------------------------------ */
     /* Step wizard (single-page scroll mode)                               */
     /* ------------------------------------------------------------------ */
-    var Q_WIZARD_TOTAL = 6;
+    var Q_WIZARD_TOTAL = 7;
     var Q_WIZARD_SCROLL_MODE = true;
     var qWizardCurrent = 1;
     var qWizardMax = 1;
@@ -9340,6 +10445,9 @@
                     sessionStorage.setItem(key, raw);
                 } catch (eKey) {}
             });
+            if (!qAutoInclusionSyncing) {
+                scheduleSyncReturnAirfareInclusion();
+            }
         } catch (e) {}
     }
 
@@ -9549,7 +10657,7 @@
     function ensureWizardSectionsReady() {
         var max = Math.max(1, Math.min(Q_WIZARD_TOTAL, qWizardMax || 1));
         for (var step = 1; step <= max; step++) {
-            if (step === 4 || step === 6) {
+            if (step === 4 || step === 7) {
                 onWizardStepShown(step);
             }
         }
@@ -9595,7 +10703,7 @@
                 refreshAllItineraryImagePreviews();
             }
         }
-        if (step === 6) {
+        if (step === 7) {
             if (!$('#qPricingSheetsHost .q-pricing-option-sheet').length) {
                 renderPricingSheets();
             } else if (typeof recalcCosts === 'function') {
@@ -10009,6 +11117,7 @@
     $(function () {
         initQuotationWizard();
         initRichEditors();
+        scheduleSyncReturnAirfareInclusion();
         initLeadLookup();
         initDestinationPicker();
         initPackageSuggest();
@@ -10023,6 +11132,7 @@
             qInitSupplierSelect2($row.find('.f-supplier'), { placeholder: 'Select' });
             renumberFlightRows();
             recalcCosts();
+            scheduleSyncReturnAirfareInclusion();
         }
 
         $('#qAddFlight, #qAddFlightSegment').on('click', function () {
@@ -10046,6 +11156,7 @@
             initQuotationDatePickers($('#qFlightRows'));
             renumberFlightRows();
             recalcCosts();
+            scheduleSyncReturnAirfareInclusion();
         };
 
         $('#qUploadSsInput').on('change', function () {
@@ -10070,9 +11181,13 @@
             recalcCosts();
             saveFormDraftToStorage();
             scheduleItineraryMetaFromHotels();
+            scheduleSyncReturnAirfareInclusion();
         };
         $(document).on('input change', '#qFlightRows .f-from, #qFlightRows .f-to, #qFlightRows .f-dep-date, #qFlightRows .f-dep-time, #qFlightRows .f-arr-date, #qFlightRows .f-arr-time', function () {
             refreshFlightLayovers();
+            if ($(this).hasClass('f-from') || $(this).hasClass('f-to')) {
+                scheduleSyncReturnAirfareInclusion(true);
+            }
         });
 
         $(document).on('change', '#qFlightRows .f-supplier', function () {
@@ -10349,6 +11464,23 @@
             }
             openExtraCostModal(id);
         });
+        $(document).on('click', '#qPricingSheetsHost .q-pricing-supplier-remove', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $cell = $(this).closest('.q-pricing-amount-cell');
+            var key = String($cell.attr('data-cost-key') || '');
+            var sourceIndex = $cell.attr('data-source-index');
+            var catId = String($cell.closest('.q-pricing-option-sheet').attr('data-cat-id') || '');
+            if (!key || sourceIndex == null || sourceIndex === '') {
+                return;
+            }
+            if (!removePricingSupplierSource(key, sourceIndex, catId)) {
+                return;
+            }
+            renderPricingSheets({ skipSnapshot: true });
+            recalcCosts();
+            saveFormDraftToStorage();
+        });
         $(document).on('submit', '#qExtraCostForm', function (e) {
             e.preventDefault();
             saveExtraCostFromModal();
@@ -10360,6 +11492,20 @@
             qExtraCostTargetCatId = '';
             $('#qExtraCostForm')[0].reset();
             $('#qExtraCostError').addClass('d-none').text('');
+        });
+        $(document).on('input change', '#qFlightRows input, #qFlightRows select, #qHotelCategories input, #qHotelCategories select, #qItineraryDays .q-day-title, #qItineraryDays .q-day-overnight, #qItineraryDays .q-day-meal, #q_nights, #q_tentative_date', function () {
+            scheduleSyncReturnAirfareInclusion(true);
+        });
+        $(document).on('focusin', '#qFlightRows, #qHotelCategories, #qItineraryDays, #q_nights, #q_tentative_date', function () {
+            scheduleSyncReturnAirfareInclusion(true);
+        });
+        $(document).on('blur', '#qed_inclusion, #qbody_inclusion .note-editable', function () {
+            scheduleSyncReturnAirfareInclusion(true);
+        });
+        $(document).on('click', '.q-inclusions-section .q-section-accordion-head, .q-inclusions-section .q-terms-item-head[data-target="#qbody_inclusion"]', function () {
+            window.setTimeout(function () {
+                syncReturnAirfareInclusion(true);
+            }, 80);
         });
         $(document).on('input change', '#qHotelCategories .q-hotel-row input, #qHotelCategories .q-hotel-row select', function () {
             saveFormDraftToStorage();
@@ -10557,7 +11703,7 @@
             }
         });
 
-        var pricingNumberSelector = '.q-wizard-step[data-q-step="6"] input[type="number"]';
+        var pricingNumberSelector = '.q-wizard-step[data-q-step="7"] input[type="number"]';
 
         function sanitizePricingNumberValue(raw) {
             var value = String(raw == null ? '' : raw);
@@ -10700,11 +11846,16 @@
                 qDestroySupplierSelect2($(this));
             });
             var wasHotelRow = $row.hasClass('q-hotel-row') || selector === '.q-hotel-row';
+            var wasFlightRow = $row.hasClass('q-flight-row') || selector === '.q-flight-row';
             $row.remove();
             renumberFlightRows();
             recalcCosts();
             if (wasHotelRow) {
                 scheduleItineraryMetaFromHotels();
+                scheduleSyncReturnAirfareInclusion();
+            }
+            if (wasFlightRow) {
+                scheduleSyncReturnAirfareInclusion();
             }
         });
 
@@ -10836,10 +11987,10 @@
         });
 
         $('#qLoadTermsMasterBtn').on('click', function () {
-            if (!window.confirm('Replace all Terms & Policies fields with master content?')) {
+            if (!window.confirm('Replace Terms & Policies fields with master content?')) {
                 return;
             }
-            loadTermsFromMaster();
+            loadTermsFromMaster(['exclusion', 'payment_policy', 'cancellation_policy', 'terms_conditions', 'other_details']);
         });
 
         $('#qPreviewPrintBtn').on('click', function () {
@@ -10901,6 +12052,82 @@
                 }
             })();
 
+            // Neutralize A4 “card” chrome copied from the modal (border/shadow/min-height/margins)
+            styles = styles
+                .replace(/box-shadow\s*:[^;]+;/gi, 'box-shadow:none!important;')
+                .replace(/min-height\s*:\s*var\(--qp-page-h\)\s*;/gi, 'min-height:0!important;')
+                .replace(/min-height\s*:\s*297mm\s*;/gi, 'min-height:0!important;');
+
+            var printBleedCss =
+                /* Last rules win — force full-bleed print, no outer frame/margin */
+                '@page{size:A4;margin:0}' +
+                '@page qp-last{size:A4;margin:0}' +
+                '@page :first{margin:0}' +
+                '@page :left{margin:0}' +
+                '@page :right{margin:0}' +
+                '@page :last{margin:0}' +
+                'html,body{' +
+                'margin:0!important;padding:0!important;background:#fff!important;' +
+                'width:100%!important;max-width:none!important;min-width:0!important;' +
+                '}' +
+                'body.q-preview-print,body.q-preview-only{' +
+                'margin:0!important;padding:0!important;background:#fff!important;' +
+                'width:100%!important;min-width:0!important;' +
+                '}' +
+                '#qPreviewPrintArea.q-preview-doc,#qPreviewPrintArea,.q-preview-doc{' +
+                'margin:0!important;' +
+                'padding:5mm 5mm 0!important;' +
+                'border:0!important;outline:0!important;' +
+                'box-shadow:none!important;-webkit-box-shadow:none!important;' +
+                'border-radius:0!important;' +
+                'width:100%!important;max-width:none!important;min-width:0!important;' +
+                'min-height:0!important;height:auto!important;' +
+                'background:#fff!important;' +
+                'box-sizing:border-box!important;' +
+                'overflow:visible!important;' +
+                'position:static!important;left:auto!important;top:auto!important;' +
+                '}' +
+                '.qp-sec-memberships,.qp-sec-support{' +
+                'margin-left:-5mm!important;margin-right:-5mm!important;' +
+                'width:calc(100% + 10mm)!important;max-width:none!important;' +
+                '}' +
+                '@media print{' +
+                '@page{size:A4;margin:0}' +
+                'html,body{' +
+                'margin:0!important;padding:0!important;background:#fff!important;' +
+                'width:100%!important;max-width:none!important;' +
+                '-webkit-print-color-adjust:exact;print-color-adjust:exact;' +
+                '}' +
+                '#qPreviewPrintArea.q-preview-doc,#qPreviewPrintArea,.q-preview-doc{' +
+                'margin:0!important;padding:5mm 5mm 0!important;' +
+                'border:0!important;box-shadow:none!important;' +
+                'width:100%!important;max-width:none!important;min-width:0!important;' +
+                'min-height:0!important;background:#fff!important;' +
+                'box-sizing:border-box!important;overflow:visible!important;' +
+                '}' +
+                '.qp-print-last-page{' +
+                'page:qp-last!important;break-before:page!important;page-break-before:always!important;' +
+                'display:table!important;width:100%!important;' +
+                'height:292mm!important;min-height:292mm!important;max-height:292mm!important;' +
+                'table-layout:fixed!important;border-collapse:collapse!important;' +
+                'margin:0!important;padding:0!important;' +
+                '}' +
+                '.qp-last-main{display:table-row!important;height:100%!important;}' +
+                '.qp-last-main-inner{display:table-cell!important;vertical-align:top!important;height:100%!important;}' +
+                '.qp-last-foot{display:table-row!important;height:1px!important;}' +
+                '.qp-last-foot-inner{display:table-cell!important;vertical-align:bottom!important;}' +
+                '.qp-print-last-page .qp-sec-memberships,.qp-print-last-page .qp-sec-support{' +
+                'margin-left:-5mm!important;margin-right:-5mm!important;' +
+                'width:calc(100% + 10mm)!important;margin-top:0!important;margin-bottom:0!important;' +
+                '}' +
+                '.qp-support-footer{margin-bottom:0!important;padding-bottom:0!important;' +
+                'border-bottom:18px solid #e11d2e!important;}' +
+                '.q-preview-day,.qp-day,.qp-rev-card,.qp-hotel-row-card,.qp-flight-seg-card,' +
+                '.qp-info-card,.qp-acc-card,.qp-tour-card,.qp-notes-card,.qp-terms-card{' +
+                'break-inside:avoid!important;page-break-inside:avoid!important;' +
+                '}' +
+                '}';
+
             var printWin = window.open('', '_blank');
             if (!printWin) {
                 alert('Please allow pop-ups to print.');
@@ -10909,21 +12136,20 @@
             printWin.document.open();
             printWin.document.write(
                 '<!DOCTYPE html><html><head><title>Quotation Preview</title><meta charset="utf-8">' +
-                '<meta name="viewport" content="width=1200">' +
+                '<meta name="viewport" content="width=device-width,initial-scale=1">' +
                 '<link rel="stylesheet" href="' + esc(absUrl('plugins/fontawesome-free/css/all.min.css')) + '">' +
                 '<style>' +
                 styles +
-                'html,body{margin:0;padding:0;background:#fff;}' +
-                'body.q-preview-print{min-width:210mm;}' +
+                'html,body{margin:0!important;padding:0!important;background:#fff!important;}' +
+                'body.q-preview-print{margin:0!important;padding:0!important;background:#fff!important;}' +
                 '.q-preview-doc{' +
                 'box-sizing:border-box!important;' +
-                'width:210mm!important;' +
-                'max-width:210mm!important;' +
-                'min-height:297mm!important;' +
-                'margin:0 auto!important;' +
-                'padding:8mm 10mm 0!important;' +
+                'width:100%!important;max-width:none!important;min-width:0!important;' +
+                'min-height:0!important;' +
+                'margin:0!important;' +
+                'padding:5mm 5mm 0!important;' +
                 'background:#fff!important;' +
-                'border:1.5px solid #c4121a!important;' +
+                'border:0!important;' +
                 'border-radius:0!important;' +
                 'box-shadow:none!important;' +
                 'overflow:visible!important;' +
@@ -10931,9 +12157,9 @@
                 'print-color-adjust:exact!important;' +
                 '}' +
                 '.qp-sec-memberships,.qp-sec-support{' +
-                'margin-left:-10mm!important;' +
-                'margin-right:-10mm!important;' +
-                'width:calc(100% + 20mm)!important;' +
+                'margin-left:-5mm!important;' +
+                'margin-right:-5mm!important;' +
+                'width:calc(100% + 10mm)!important;' +
                 'max-width:none!important;' +
                 '}' +
                 '.qp-sec-support{margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
@@ -10942,6 +12168,7 @@
                 'border-bottom:18px solid #e11d2e!important;' +
                 'break-inside:avoid!important;' +
                 'page-break-inside:avoid!important;' +
+                'margin-bottom:0!important;' +
                 '-webkit-print-color-adjust:exact!important;' +
                 'print-color-adjust:exact!important;' +
                 '}' +
@@ -10955,54 +12182,86 @@
                 '.qp-mem-logo{display:block!important;visibility:visible!important;width:52px!important;height:52px!important;object-fit:contain!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
                 '.qp-sec-memberships{border:0!important;border-top:0!important;}' +
                 '.qp-print-last-page{' +
+                'page:qp-last!important;' +
                 'break-before:page!important;' +
                 'page-break-before:always!important;' +
-                'min-height:285mm!important;' +
-                'display:flex!important;' +
-                'flex-direction:column!important;' +
+                'display:table!important;' +
+                'width:100%!important;' +
+                'height:292mm!important;' +
+                'min-height:292mm!important;' +
+                'max-height:292mm!important;' +
+                'table-layout:fixed!important;' +
+                'border-collapse:collapse!important;' +
                 'box-sizing:border-box!important;' +
-                'margin-bottom:0!important;' +
-                'padding-bottom:0!important;' +
-                '}' +
-                '.qp-print-last-page .qp-sec-acc{margin-top:0!important;}' +
-                '.qp-print-last-page .qp-sec-memberships{margin-top:auto!important;margin-bottom:0!important;padding-bottom:0!important;}' +
-                '.qp-print-last-page .qp-sec-support{margin-top:0!important;margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
-                '@page{size:A4;margin:0;}' +
-                '@media print{' +
-                'html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-                '.q-preview-doc{' +
-                'box-sizing:border-box!important;' +
-                'width:210mm!important;' +
-                'max-width:210mm!important;' +
-                'min-height:297mm!important;' +
                 'margin:0!important;' +
-                'padding:8mm 10mm 0!important;' +
-                'border:1.5px solid #c4121a!important;' +
+                'padding:0!important;' +
+                '}' +
+                '.qp-last-main{display:table-row!important;height:100%!important;}' +
+                '.qp-last-main-inner{display:table-cell!important;vertical-align:top!important;height:100%!important;}' +
+                '.qp-last-foot{display:table-row!important;height:1px!important;}' +
+                '.qp-last-foot-inner{display:table-cell!important;vertical-align:bottom!important;}' +
+                '.qp-print-last-page .qp-sec-acc{margin-top:2mm!important;padding-top:0!important;}' +
+                '.qp-print-last-page .qp-sec-reviews{margin-top:4mm!important;padding-top:2mm!important;margin-bottom:0!important;}' +
+                '.qp-print-last-page .qp-sec-memberships{margin-top:0!important;margin-bottom:0!important;padding-bottom:0!important;}' +
+                '.qp-print-last-page .qp-sec-support{margin-top:0!important;margin-bottom:0!important;padding-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
+                '@page{size:A4;margin:0;}' +
+                '@page qp-last{size:A4;margin:0;}' +
+                '@page :last{margin:0;}' +
+                '@media print{' +
+                'html,body{margin:0!important;padding:0!important;background:#fff!important;width:100%!important;max-width:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                '#qPreviewPrintArea.q-preview-doc,#qPreviewPrintArea,.q-preview-doc{' +
+                'position:static!important;' +
+                'box-sizing:border-box!important;' +
+                'width:100%!important;' +
+                'min-width:0!important;' +
+                'max-width:none!important;' +
+                'min-height:0!important;' +
+                'height:auto!important;' +
+                'margin:0!important;' +
+                'padding:5mm 5mm 0!important;' +
+                'border:0!important;' +
+                'box-shadow:none!important;' +
                 'overflow:visible!important;' +
+                '-webkit-box-decoration-break:clone!important;' +
+                'box-decoration-break:clone!important;' +
                 '-webkit-print-color-adjust:exact!important;' +
                 'print-color-adjust:exact!important;' +
                 '}' +
+                '.qp-cost-notes-row,.qp-terms-card,.qp-sec-excl,.qp-itin-head{' +
+                'margin-top:8mm!important;' +
+                '}' +
                 '.qp-print-last-page{' +
+                'page:qp-last!important;' +
                 'break-before:page!important;' +
                 'page-break-before:always!important;' +
-                'min-height:285mm!important;' +
-                'display:flex!important;' +
-                'flex-direction:column!important;' +
-                'margin-bottom:0!important;' +
-                'padding-bottom:0!important;' +
+                'display:table!important;' +
+                'width:100%!important;' +
+                'height:292mm!important;' +
+                'min-height:292mm!important;' +
+                'max-height:292mm!important;' +
+                'table-layout:fixed!important;' +
+                'border-collapse:collapse!important;' +
+                'margin:0!important;' +
+                'padding:0!important;' +
                 '}' +
-                '.qp-print-last-page .qp-sec-memberships{margin-top:auto!important;margin-bottom:0!important;padding-bottom:0!important;}' +
-                '.qp-print-last-page .qp-sec-support{margin-top:0!important;margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
+                '.qp-last-main{display:table-row!important;height:100%!important;}' +
+                '.qp-last-main-inner{display:table-cell!important;vertical-align:top!important;height:100%!important;}' +
+                '.qp-last-foot{display:table-row!important;height:1px!important;}' +
+                '.qp-last-foot-inner{display:table-cell!important;vertical-align:bottom!important;}' +
+                '.qp-print-last-page .qp-sec-acc{margin-top:2mm!important;padding-top:0!important;}' +
+                '.qp-print-last-page .qp-sec-reviews{margin-top:4mm!important;padding-top:2mm!important;margin-bottom:0!important;}' +
+                '.qp-print-last-page .qp-sec-memberships{margin-top:0!important;margin-bottom:0!important;padding-bottom:0!important;}' +
+                '.qp-print-last-page .qp-sec-support{margin-top:0!important;margin-bottom:0!important;padding-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
                 '.qp-sec-memberships,.qp-sec-support{' +
-                'margin-left:-10mm!important;' +
-                'margin-right:-10mm!important;' +
-                'width:calc(100% + 20mm)!important;' +
+                'margin-left:-5mm!important;' +
+                'margin-right:-5mm!important;' +
+                'width:calc(100% + 10mm)!important;' +
                 '}' +
                 '.qp-sec-memberships{border:0!important;}' +
                 '.qp-mem-cell,.qp-mem-cell+.qp-mem-cell{border:0!important;border-left:0!important;}' +
                 '.qp-mem-logo{display:block!important;visibility:visible!important;width:52px!important;height:52px!important;object-fit:contain!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
                 '.qp-sec-support{margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
-                '.qp-support-footer{border-bottom:18px solid #e11d2e!important;break-inside:avoid!important;page-break-inside:avoid!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
+                '.qp-support-footer{border-bottom:18px solid #e11d2e!important;break-inside:avoid!important;page-break-inside:avoid!important;margin-bottom:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
                 '.qp-support-bar{display:none!important;}' +
                 '.q-preview-editable,.q-preview-cell-edit{background:transparent!important;outline:none!important;box-shadow:none!important;}' +
                 '}' +
@@ -11018,7 +12277,8 @@
                 '.q-preview-doc .qp-hotel-col-head{display:grid!important;}' +
                 '.q-preview-doc .qp-hotel-sec-rule{display:block!important;}' +
                 '.q-preview-doc .qp-hotel-sec-slogan{width:auto!important;text-align:right!important;white-space:nowrap!important;}' +
-                '.q-preview-doc .qp-acc-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
+                '.q-preview-doc .qp-acc-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important;}' +
+                '.q-preview-doc .qp-acc-card{min-width:0!important;}' +
                 '.q-preview-doc .qp-rev-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}' +
                 '.q-preview-doc .qp-info-card.qp-cols-3{grid-template-columns:repeat(3,1fr)!important;}' +
                 '.q-preview-doc .qp-info-card.qp-cols-5{grid-template-columns:repeat(5,1fr)!important;}' +
@@ -11047,38 +12307,7 @@
                 '.q-preview-doc .qp-day-main.has-photo{grid-template-columns:minmax(0,1fr) 180px!important;}' +
                 '.q-preview-doc .qp-trust-stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
                 '.q-preview-doc .qp-foot-contacts{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
-                '@media print{' +
-                '@page{size:A4;margin:0;}' +
-                'body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-                '.q-preview-doc{width:210mm;max-width:210mm;min-height:297mm;margin:0;padding:8mm 10mm 0;' +
-                'border:1.5px solid #c4121a!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important;}' +
-                '.q-preview-editable,.q-preview-cell-edit{background:transparent!important;outline:none!important;box-shadow:none!important;}' +
-                '.q-preview-doc,.q-preview-doc *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
-                '.q-preview-services-bar,.q-preview-social a{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-                /* Keep cards whole — push to next page instead of cutting */
-                '.q-preview-day,.qp-day,.qp-rev-card,.qp-rev-grid,.qp-rev-wrap,.qp-sec-reviews,' +
-                '.qp-hotel-row-card,.qp-hotel-panel,.qp-flight-seg-card,.qp-flight-journey,' +
-                '.qp-info-card,.qp-acc-card,.qp-acc-grid,.qp-acc-wrap,' +
-                '.qp-tour-card,.qp-notes-card,.qp-cost-notes-row,.qp-terms-card,' +
-                '.qp-incl-banner,.qp-meal-legend{' +
-                'break-inside:avoid!important;page-break-inside:avoid!important;-webkit-column-break-inside:avoid!important;' +
-                '}' +
-                '.q-preview-day,.qp-day,.qp-rev-card,.qp-hotel-row-card,.qp-flight-seg-card{' +
-                'display:block!important;overflow:visible!important;' +
-                '}' +
-                '.qp-rev-grid,.qp-acc-grid{display:grid!important;}' +
-                '.qp-print-last-page{break-before:page!important;page-break-before:always!important;min-height:285mm!important;display:flex!important;flex-direction:column!important;}' +
-                '.qp-print-last-page .qp-sec-memberships{margin-top:auto!important;margin-bottom:0!important;}' +
-                '.qp-print-last-page .qp-sec-support{margin-top:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
-                '.qp-support-footer{border-bottom:18px solid #e11d2e!important;}' +
-                '.qp-support-bar{display:none!important;}' +
-                '.qp-mem-logo{display:block!important;visibility:visible!important;width:52px!important;height:52px!important;object-fit:contain!important;}' +
-                '}' +
-                /* Also apply while print dialog is open / popup preview */
-                '.q-preview-day,.qp-day,.qp-rev-card,.qp-rev-grid,.qp-hotel-row-card,' +
-                '.qp-flight-seg-card,.qp-info-card,.qp-acc-card,.qp-acc-grid{' +
-                'break-inside:avoid;page-break-inside:avoid;' +
-                '}' +
+                printBleedCss +
                 '</style></head><body class="q-preview-print q-preview-only">' +
                 '<div id="qPreviewPrintArea" class="q-preview-doc">' + $clone.html() + '</div>' +
                 '</body></html>'
@@ -11434,6 +12663,11 @@
             if (data.no_of_children != null && data.no_of_children !== '') {
                 var children = Math.max(0, parseInt(data.no_of_children, 10) || 0);
                 $('#q_children').val(children).trigger('change');
+            }
+            if (Array.isArray(data.children_ages)) {
+                writeChildrenAges(data.children_ages);
+                renderTourCostRows();
+                recalcCosts();
             }
         });
 
