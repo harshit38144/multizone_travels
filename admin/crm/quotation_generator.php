@@ -2626,6 +2626,198 @@ $qWizardSteps = [
             cursor: wait;
         }
 
+        /* —— AI Inclusions modal —— */
+        .crm-quotation-gen .q-ai-incl-inline-btn {
+            margin-left: auto;
+            flex-shrink: 0;
+            border: 1px solid #c7d2fe;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 0.72rem;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 0.2rem 0.65rem;
+            line-height: 1.3;
+        }
+
+        .crm-quotation-gen .q-ai-incl-inline-btn:hover {
+            background: #e0e7ff;
+            color: #312e81;
+        }
+
+        .crm-quotation-gen .q-inclusions-section .q-terms-item-head {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .q-ai-incl-modal .modal-content {
+            border: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
+        }
+
+        .q-ai-incl-modal .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            align-items: flex-start;
+            padding: 1rem 1.15rem;
+        }
+
+        .q-ai-incl-modal-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .q-ai-incl-modal .modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .q-ai-incl-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .q-ai-incl-chips .q-ai-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #f1f5f9;
+            color: #334155;
+            border-radius: 999px;
+            padding: 0.28rem 0.65rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .q-ai-incl-chips .q-ai-chip i {
+            color: #6366f1;
+            font-size: 0.7rem;
+        }
+
+        .q-ai-incl-chips .q-ai-chip.is-warn {
+            background: #fff7ed;
+            color: #9a3412;
+        }
+
+        .q-ai-incl-chips .q-ai-chip.is-warn i {
+            color: #ea580c;
+        }
+
+        .q-ai-incl-modal #qAiInclContext,
+        .q-ai-incl-modal #qAiInclResult,
+        .q-ai-incl-modal #qAiInclNotes {
+            border-radius: 10px;
+            border-color: #e2e8f0;
+            font-size: 0.86rem;
+        }
+
+        .q-ai-incl-modal #qAiInclContext:focus,
+        .q-ai-incl-modal #qAiInclResult:focus,
+        .q-ai-incl-modal #qAiInclNotes:focus {
+            border-color: #818cf8;
+            box-shadow: 0 0 0 0.15rem rgba(99, 102, 241, 0.2);
+        }
+
+        .q-ai-incl-result {
+            margin-top: 1rem;
+            padding-top: 0.85rem;
+            border-top: 1px dashed #e2e8f0;
+        }
+
+        .q-ai-incl-result-hd {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.45rem;
+        }
+
+        .q-ai-incl-footer {
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        .q-ai-incl-use {
+            background: #059669;
+            border-color: #059669;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .q-ai-incl-use:hover {
+            background: #047857;
+            border-color: #047857;
+            color: #fff;
+        }
+
+        @media (max-width: 576px) {
+            .crm-quotation-gen .q-ai-incl-inline-btn span {
+                display: none;
+            }
+        }
+
+        /* AI inclusions categorized layout (editor + preview) */
+        .q-ai-incl-doc .q-ai-incl-sec {
+            margin: 0 0 0.85rem;
+        }
+
+        .q-ai-incl-doc .q-ai-incl-sec:last-child {
+            margin-bottom: 0;
+        }
+
+        .q-ai-incl-doc .q-ai-incl-sec-title {
+            margin: 0 0 0.35rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .q-ai-incl-doc .q-ai-incl-sec-title i {
+            width: 1.15rem;
+            text-align: center;
+            color: #4f46e5;
+            font-size: 0.95rem;
+        }
+
+        .q-ai-incl-doc .q-ai-incl-sec[data-sec="airfare"] .q-ai-incl-sec-title i { color: #2563eb; }
+        .q-ai-incl-doc .q-ai-incl-sec[data-sec="accommodation"] .q-ai-incl-sec-title i { color: #dc2626; }
+        .q-ai-incl-doc .q-ai-incl-sec[data-sec="meals"] .q-ai-incl-sec-title i { color: #ca8a04; }
+        .q-ai-incl-doc .q-ai-incl-sec[data-sec="sightseeing"] .q-ai-incl-sec-title i { color: #ea580c; }
+        .q-ai-incl-doc .q-ai-incl-sec[data-sec="transfers"] .q-ai-incl-sec-title i { color: #0284c7; }
+        .q-ai-incl-doc .q-ai-incl-sec[data-sec="other"] .q-ai-incl-sec-title i { color: #78716c; }
+
+        .q-ai-incl-doc .q-ai-incl-sec ul {
+            margin: 0 0 0 1.35rem;
+            padding: 0;
+            list-style: disc;
+        }
+
+        .q-ai-incl-doc .q-ai-incl-sec li {
+            margin: 0 0 0.28rem;
+            line-height: 1.45;
+            color: #1f2937;
+        }
+
+        .note-editable .q-ai-incl-doc .q-ai-incl-sec-title,
+        .qp-incl-edit .q-ai-incl-doc .q-ai-incl-sec-title,
+        .q-preview-rich .q-ai-incl-doc .q-ai-incl-sec-title {
+            margin: 0 0 0.35rem;
+        }
+
         .crm-quotation-gen .q-day-body {
             padding: 1rem 1.15rem 1.15rem;
         }
@@ -14356,6 +14548,11 @@ $qWizardSteps = [
                                         <i class="fas fa-chevron-down toggle-icon" aria-hidden="true"></i>
                                         <span class="q-terms-item-label"><?= htmlspecialchars($label) ?></span>
                                     </div>
+                                    <?php if ($field === 'inclusion'): ?>
+                                    <button type="button" class="btn btn-sm q-ai-incl-inline-btn" id="qAiInclusionsInlineBtn" title="AI Generate inclusions">
+                                        <i class="fas fa-magic"></i><span> AI Generate</span>
+                                    </button>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="q-terms-item-body q-accordion-body" id="qbody_<?= $field ?>" style="display:none;">
                                     <textarea name="<?= $field ?>" id="qed_<?= $field ?>" class="form-control q-editor"><?= htmlspecialchars($val) ?></textarea>
@@ -14642,6 +14839,61 @@ $qWizardSteps = [
         </div>
     </div>
 
+    <div class="modal fade q-ai-incl-modal" id="qAiInclusionsModal" tabindex="-1" role="dialog" aria-labelledby="qAiInclusionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="q-day-ai-modal-hd">
+                        <div class="q-ai-incl-modal-icon"><i class="fas fa-magic"></i></div>
+                        <div>
+                            <h5 class="modal-title mb-0" id="qAiInclusionsModalLabel">AI Inclusions Generator</h5>
+                            <p class="q-day-ai-modal-sub mb-0">Review booking context, then generate a professional inclusions list</p>
+                        </div>
+                    </div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none py-2 px-3" id="qAiInclError" role="alert"></div>
+                    <div class="alert alert-success d-none py-2 px-3" id="qAiInclSuccess" role="alert"></div>
+
+                    <div class="q-ai-incl-chips" id="qAiInclChips" aria-label="Collected booking summary"></div>
+
+                    <div class="form-group">
+                        <label class="q-label" for="qAiInclContext">Booking context <span class="text-muted font-weight-normal">(auto-filled — edit if needed)</span></label>
+                        <textarea class="form-control" id="qAiInclContext" rows="10" placeholder="Guest, tour, flights, hotels, and itinerary details will appear here..."></textarea>
+                        <small class="form-text text-muted">Only services present in this context will be used. Missing sections are skipped — nothing is invented.</small>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="q-label" for="qAiInclNotes">Extra instructions <span class="text-muted font-weight-normal">(optional)</span></label>
+                        <textarea class="form-control" id="qAiInclNotes" rows="2" placeholder="e.g. Keep wording formal; group hotel lines together..."></textarea>
+                    </div>
+
+                    <div class="q-ai-incl-result d-none" id="qAiInclResultWrap">
+                        <div class="q-ai-incl-result-hd">
+                            <strong>Generated inclusions</strong>
+                            <span class="badge badge-light border" id="qAiInclSourceBadge"></span>
+                        </div>
+                        <textarea class="form-control" id="qAiInclResult" rows="8" placeholder="Generated list will appear here for review/edit..."></textarea>
+                        <small class="form-text text-muted">Edit the list before inserting into the Inclusions field.</small>
+                    </div>
+                </div>
+                <div class="modal-footer q-ai-incl-footer">
+                    <button type="button" class="btn btn-light border" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-light border d-none" id="qAiInclRegenerate">
+                        <i class="fas fa-sync-alt mr-1"></i> Regenerate
+                    </button>
+                    <button type="button" class="btn q-ai-incl-use d-none" id="qAiInclUse">
+                        <i class="fas fa-check mr-1"></i> Use / Insert
+                    </button>
+                    <button type="button" class="btn q-day-ai-generate" id="qAiInclGenerate">
+                        <i class="fas fa-bolt mr-1"></i> Generate Inclusions
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade q-day-ai-modal" id="qDayAiModal" tabindex="-1" role="dialog" aria-labelledby="qDayAiModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -14857,7 +15109,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=273"></script>
+    <script src="crm/assets/quotation_generator.js?v=276"></script>
     <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

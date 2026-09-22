@@ -76,14 +76,59 @@ function crmAiJsonResponse(array $payload, int $code = 200): void
     exit;
 }
 
-function crmAiCallGemini(string $prompt, string $model = 'gemini-2.0-flash'): array
+/**
+ * Preferred Gemini models (tried in order on overload / unavailability).
+ *
+ * @return list<string>
+ */
+function crmAiGeminiModels(): array
+{
+    return [
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash',
+        'gemini-3.6-flash',
+        'gemini-3.7-flash',
+    ];
+}
+
+function crmAiIsTransientGeminiError(string $error): bool
+{
+    $error = strtolower($error);
+    $needles = [
+        'high demand',
+        'try again later',
+        'temporarily',
+        'unavailable',
+        'overloaded',
+        'resource exhausted',
+        'rate limit',
+        'rate-limit',
+        'quota',
+        '503',
+        '429',
+        'no longer available',
+        'not found',
+    ];
+    foreach ($needles as $needle) {
+        if (strpos($error, $needle) !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Single-model request (no fallbacks).
+ */
+function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds = 12): array
 {
     $apiKey = crmAiGeminiApiKey();
     if ($apiKey === '') {
         return ['ok' => false, 'error' => 'Gemini API key is not configured.'];
     }
 
-    $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . urlencode($apiKey);
+    // Prefer header auth (works for classic AIza… keys and newer AI Studio keys).
+    $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent';
     $body = json_encode([
         'contents' => [
             ['parts' => [['text' => $prompt]]],
@@ -98,15 +143,36 @@ function crmAiCallGemini(string $prompt, string $model = 'gemini-2.0-flash'): ar
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $body,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'x-goog-api-key: ' . $apiKey,
+        ],
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => 12,
+        CURLOPT_TIMEOUT => max(8, $timeoutSeconds),
     ]);
     $raw = curl_exec($ch);
     $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlErr = curl_error($ch);
     curl_close($ch);
+
+    // Fallback: retry with ?key= (works for both legacy AIza… and new AQ. auth keys).
+    if ($raw === false || $httpCode === 401 || $httpCode === 403) {
+        $urlQs = $url . '?key=' . urlencode($apiKey);
+        $ch = curl_init($urlQs);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_TIMEOUT => max(8, $timeoutSeconds),
+        ]);
+        $raw = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+    }
 
     if ($raw === false || $httpCode !== 200) {
         $msg = $curlErr ?: ('Gemini request failed (HTTP ' . $httpCode . ')');
@@ -116,7 +182,7 @@ function crmAiCallGemini(string $prompt, string $model = 'gemini-2.0-flash'): ar
                 $msg = (string) $errData['error']['message'];
             }
         }
-        return ['ok' => false, 'error' => $msg];
+        return ['ok' => false, 'error' => $msg, 'http_code' => $httpCode];
     }
 
     $data = json_decode($raw, true);
@@ -130,7 +196,66 @@ function crmAiCallGemini(string $prompt, string $model = 'gemini-2.0-flash'): ar
         return ['ok' => false, 'error' => 'Could not parse AI response.'];
     }
 
-    return ['ok' => true, 'data' => $parsed];
+    return ['ok' => true, 'data' => $parsed, 'model' => $model];
+}
+
+/**
+ * Call Gemini with automatic model fallbacks + short retries on overload.
+ *
+ * @param list<string>|null $models
+ */
+function crmAiCallGemini(string $prompt, string $model = 'gemini-3.5-flash-lite', int $timeoutSeconds = 12, ?array $models = null): array
+{
+    $queue = [];
+    if (is_array($models) && $models) {
+        foreach ($models as $m) {
+            $m = trim((string) $m);
+            if ($m !== '') {
+                $queue[] = $m;
+            }
+        }
+    } else {
+        $queue = crmAiGeminiModels();
+        $preferred = trim($model);
+        if ($preferred !== '') {
+            array_unshift($queue, $preferred);
+        }
+    }
+
+    $seen = [];
+    $unique = [];
+    foreach ($queue as $m) {
+        if (isset($seen[$m])) {
+            continue;
+        }
+        $seen[$m] = true;
+        $unique[] = $m;
+    }
+
+    $lastError = 'Gemini request failed.';
+    foreach ($unique as $tryModel) {
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $result = crmAiCallGeminiOnce($prompt, $tryModel, $timeoutSeconds);
+            if (!empty($result['ok'])) {
+                return $result;
+            }
+            $lastError = (string) ($result['error'] ?? $lastError);
+            $transient = crmAiIsTransientGeminiError($lastError)
+                || in_array((int) ($result['http_code'] ?? 0), [429, 503, 404], true);
+            if (!$transient) {
+                // Auth / hard failure — no point hopping models forever.
+                if (in_array((int) ($result['http_code'] ?? 0), [401, 403], true)) {
+                    return ['ok' => false, 'error' => $lastError];
+                }
+                break;
+            }
+            if ($attempt < 2) {
+                usleep(450000);
+            }
+        }
+    }
+
+    return ['ok' => false, 'error' => $lastError];
 }
 
 function crmAiSanitizeItineraryHtml(string $html): string
@@ -223,14 +348,7 @@ function crmAiBuildItineraryPrompt(
 
 function crmAiIsQuotaOrRateError(string $error): bool
 {
-    $error = strtolower($error);
-    $needles = ['quota', 'rate limit', 'rate-limit', 'resource exhausted', 'please retry', 'limit: 0', '429'];
-    foreach ($needles as $needle) {
-        if (strpos($error, $needle) !== false) {
-            return true;
-        }
-    }
-    return false;
+    return crmAiIsTransientGeminiError($error);
 }
 
 function crmAiDestinationProfile(string $destination): array
@@ -707,5 +825,623 @@ function crmAiSuggestItineraryDay(
         'source' => 'ai',
         'message' => '',
         'day' => $normalized[0] ?? ['title' => $title, 'description' => $description, 'image' => ''],
+    ];
+}
+
+/**
+ * Sanitize inclusions HTML for Summernote / preview.
+ */
+function crmAiSanitizeInclusionsHtml(string $html): string
+{
+    $html = trim($html);
+    if ($html === '') {
+        return '';
+    }
+    $allowed = '<ul><ol><li><p><br><strong><em><b><i><div><span>';
+    return strip_tags($html, $allowed);
+}
+
+/**
+ * Canonical inclusion section definitions (label + icon), matching quote layout.
+ *
+ * @return array<string, array{label:string,icon:string}>
+ */
+function crmAiInclusionsSectionMeta(): array
+{
+    return [
+        'airfare' => ['label' => 'Airfare', 'icon' => 'fas fa-plane'],
+        'accommodation' => ['label' => 'Accommodation', 'icon' => 'fas fa-hotel'],
+        'meals' => ['label' => 'Meals', 'icon' => 'fas fa-utensils'],
+        'sightseeing' => ['label' => 'Sightseeing & Activities', 'icon' => 'fas fa-ticket-alt'],
+        'transfers' => ['label' => 'Transfers & Transportation', 'icon' => 'fas fa-shuttle-van'],
+        'other' => ['label' => 'Other Inclusions', 'icon' => 'fas fa-clipboard-list'],
+    ];
+}
+
+/**
+ * Allow limited inline markup inside a bullet (bold / italic / arrow).
+ */
+function crmAiInclusionsFormatBulletHtml(string $text): string
+{
+    $text = trim(html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($text === '') {
+        return '';
+    }
+
+    // Preserve intentional simple markup from the model: <strong>, <em>, <b>, <i>
+    $text = strip_tags($text, '<strong><em><b><i>');
+    // Normalize arrows
+    $text = str_replace(['->', '=>', '→'], '→', $text);
+    $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+    return $text;
+}
+
+/**
+ * Build categorized inclusions HTML (icon heading + bullets), matching quote format.
+ *
+ * @param array<string, mixed> $sections  keyed by airfare|accommodation|meals|sightseeing|transfers|other
+ */
+function crmAiInclusionsSectionsToHtml(array $sections): string
+{
+    $meta = crmAiInclusionsSectionMeta();
+    $html = '';
+    $flatItems = [];
+
+    foreach ($meta as $key => $info) {
+        $rawItems = $sections[$key] ?? [];
+        if (!is_array($rawItems)) {
+            continue;
+        }
+        $bullets = [];
+        foreach ($rawItems as $item) {
+            if (is_array($item)) {
+                $item = (string) ($item['html'] ?? $item['text'] ?? $item['title'] ?? $item['label'] ?? '');
+            }
+            $formatted = crmAiInclusionsFormatBulletHtml((string) $item);
+            if ($formatted === '') {
+                continue;
+            }
+            $bullets[] = $formatted;
+            $flatItems[] = trim(strip_tags($formatted));
+            if (count($bullets) >= 20) {
+                break;
+            }
+        }
+        if (!$bullets) {
+            continue;
+        }
+
+        $html .= '<div class="q-ai-incl-sec" data-sec="' . htmlspecialchars($key, ENT_QUOTES, 'UTF-8') . '">';
+        $html .= '<p class="q-ai-incl-sec-title">'
+            . '<i class="' . htmlspecialchars($info['icon'], ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></i> '
+            . '<strong>' . htmlspecialchars($info['label'], ENT_QUOTES, 'UTF-8') . '</strong>'
+            . '</p>';
+        $html .= '<ul>';
+        foreach ($bullets as $b) {
+            $html .= '<li>' . $b . '</li>';
+        }
+        $html .= '</ul></div>';
+    }
+
+    if ($html === '') {
+        return '';
+    }
+
+    return '<div data-q-ai-inclusions="1" class="q-ai-incl-doc">' . $html . '</div>';
+}
+
+/**
+ * @deprecated kept for callers — wraps flat items into "other"
+ * @param array<int, mixed> $items
+ */
+function crmAiInclusionsItemsToHtml(array $items): string
+{
+    return crmAiInclusionsSectionsToHtml(['other' => $items]);
+}
+
+/**
+ * Normalize AI/instant section payload into canonical keys.
+ *
+ * @param array<string, mixed> $sections
+ * @return array<string, array<int, string>>
+ */
+function crmAiNormalizeInclusionsSections(array $sections): array
+{
+    $aliases = [
+        'airfare' => 'airfare',
+        'air fare' => 'airfare',
+        'flights' => 'airfare',
+        'flight' => 'airfare',
+        'accommodation' => 'accommodation',
+        'hotel' => 'accommodation',
+        'hotels' => 'accommodation',
+        'stay' => 'accommodation',
+        'meals' => 'meals',
+        'meal' => 'meals',
+        'food' => 'meals',
+        'sightseeing' => 'sightseeing',
+        'sightseeing & activities' => 'sightseeing',
+        'sightseeing and activities' => 'sightseeing',
+        'activities' => 'sightseeing',
+        'tours' => 'sightseeing',
+        'transfers' => 'transfers',
+        'transfers & transportation' => 'transfers',
+        'transfers and transportation' => 'transfers',
+        'transportation' => 'transfers',
+        'transport' => 'transfers',
+        'other' => 'other',
+        'other inclusions' => 'other',
+        'misc' => 'other',
+        'miscellaneous' => 'other',
+    ];
+
+    $out = [
+        'airfare' => [],
+        'accommodation' => [],
+        'meals' => [],
+        'sightseeing' => [],
+        'transfers' => [],
+        'other' => [],
+    ];
+
+    foreach ($sections as $key => $items) {
+        if (!is_array($items)) {
+            continue;
+        }
+        $normKey = $aliases[strtolower(trim((string) $key))] ?? '';
+        if ($normKey === '' || !isset($out[$normKey])) {
+            $normKey = 'other';
+        }
+        foreach ($items as $item) {
+            if (is_array($item)) {
+                $item = (string) ($item['html'] ?? $item['text'] ?? $item['title'] ?? '');
+            }
+            $item = trim((string) $item);
+            if ($item === '') {
+                continue;
+            }
+            $out[$normKey][] = $item;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<string, mixed> $context
+ */
+function crmAiNormalizeInclusionsContext(array $context): array
+{
+    $guest = is_array($context['guest'] ?? null) ? $context['guest'] : [];
+    $tour = is_array($context['tour'] ?? null) ? $context['tour'] : [];
+    $flights = is_array($context['flights'] ?? null) ? $context['flights'] : [];
+    $hotels = is_array($context['hotels'] ?? null) ? $context['hotels'] : [];
+    $itinerary = is_array($context['itinerary'] ?? null) ? $context['itinerary'] : [];
+    $notes = trim((string) ($context['notes'] ?? $context['user_notes'] ?? ''));
+    $contextText = trim((string) ($context['context_text'] ?? $context['prompt_context'] ?? ''));
+
+    $cleanFlights = [];
+    foreach ($flights as $f) {
+        if (!is_array($f)) {
+            continue;
+        }
+        $from = trim((string) ($f['from'] ?? ''));
+        $to = trim((string) ($f['to'] ?? ''));
+        $name = trim((string) ($f['name'] ?? $f['airline'] ?? ''));
+        $no = trim((string) ($f['fl_tr_no'] ?? $f['flight_no'] ?? ''));
+        if ($from === '' && $to === '' && $name === '' && $no === '') {
+            continue;
+        }
+        $cleanFlights[] = [
+            'from' => $from,
+            'to' => $to,
+            'name' => $name,
+            'fl_tr_no' => $no,
+            'dep_date' => trim((string) ($f['dep_date'] ?? '')),
+            'dep_time' => trim((string) ($f['dep_time'] ?? '')),
+            'arr_date' => trim((string) ($f['arr_date'] ?? '')),
+            'arr_time' => trim((string) ($f['arr_time'] ?? '')),
+            'hand_baggage' => trim((string) ($f['hand_baggage'] ?? '')),
+            'checkin_baggage' => trim((string) ($f['checkin_baggage'] ?? '')),
+        ];
+    }
+
+    $cleanHotels = [];
+    foreach ($hotels as $h) {
+        if (!is_array($h)) {
+            continue;
+        }
+        $name = trim((string) ($h['name'] ?? $h['hotel_name'] ?? ''));
+        $city = trim((string) ($h['city'] ?? ''));
+        $nights = (int) ($h['nights'] ?? 0);
+        if ($name === '' && $city === '') {
+            continue;
+        }
+        $cleanHotels[] = [
+            'name' => $name,
+            'city' => $city,
+            'nights' => max(0, $nights),
+            'room_type' => trim((string) ($h['room_type'] ?? $h['room'] ?? '')),
+            'meal_plan' => trim((string) ($h['meal_plan'] ?? $h['meal'] ?? '')),
+            'star_category' => trim((string) ($h['star_category'] ?? $h['star'] ?? '')),
+        ];
+    }
+
+    $cleanDays = [];
+    foreach ($itinerary as $i => $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        $title = trim((string) ($day['title'] ?? ''));
+        $desc = trim(strip_tags((string) ($day['description'] ?? '')));
+        $desc = preg_replace('/\s+/u', ' ', $desc) ?? $desc;
+        if ($title === '' && $desc === '') {
+            continue;
+        }
+        $cleanDays[] = [
+            'day' => (int) ($day['day'] ?? ($i + 1)),
+            'title' => $title !== '' ? $title : ('Day ' . ($i + 1)),
+            'description' => mb_substr($desc, 0, 500),
+            'overnight' => trim((string) ($day['overnight'] ?? '')),
+            'meal' => trim((string) ($day['meal'] ?? $day['meals'] ?? '')),
+        ];
+    }
+
+    return [
+        'guest' => [
+            'guest_name' => trim((string) ($guest['guest_name'] ?? $guest['name'] ?? '')),
+            'adults' => max(0, (int) ($guest['adults'] ?? $guest['no_of_adults'] ?? 0)),
+            'children' => max(0, (int) ($guest['children'] ?? $guest['no_of_children'] ?? 0)),
+            'mobile_no' => trim((string) ($guest['mobile_no'] ?? '')),
+            'email' => trim((string) ($guest['email'] ?? '')),
+        ],
+        'tour' => [
+            'destination' => trim((string) ($tour['destination'] ?? '')),
+            'nights' => max(0, (int) ($tour['nights'] ?? $tour['no_of_nights'] ?? 0)),
+            'tentative_date' => trim((string) ($tour['tentative_date'] ?? $tour['start_date'] ?? '')),
+            'package_name' => trim((string) ($tour['package_name'] ?? $tour['header_text'] ?? '')),
+        ],
+        'flights' => $cleanFlights,
+        'hotels' => $cleanHotels,
+        'itinerary' => $cleanDays,
+        'notes' => $notes,
+        'context_text' => $contextText,
+    ];
+}
+
+/**
+ * Extract a simple Ex-city label from flight places when round-trip-like.
+ *
+ * @param array<int, array<string, mixed>> $flights
+ */
+function crmAiInclusionsAirfareLine(array $flights): string
+{
+    if (!$flights) {
+        return '';
+    }
+
+    $places = [];
+    foreach ($flights as $f) {
+        $from = trim((string) ($f['from'] ?? ''));
+        $to = trim((string) ($f['to'] ?? ''));
+        if ($from !== '') {
+            $places[] = $from;
+        }
+        if ($to !== '') {
+            $places[] = $to;
+        }
+    }
+    if (count($places) < 2) {
+        return '';
+    }
+
+    $first = $places[0];
+    $last = $places[count($places) - 1];
+    $cityFrom = preg_replace('/\s*\([^)]*\)\s*$/', '', $first) ?? $first;
+    $cityLast = preg_replace('/\s*\([^)]*\)\s*$/', '', $last) ?? $last;
+    $cityFrom = trim((string) $cityFrom);
+    $cityLast = trim((string) $cityLast);
+
+    $bags = [];
+    foreach ($flights as $f) {
+        if (!empty($f['checkin_baggage'])) {
+            $bags[] = trim((string) $f['checkin_baggage']);
+        }
+    }
+    $bagNote = $bags ? ' <em>(' . htmlspecialchars($bags[0], ENT_QUOTES, 'UTF-8') . ' Check-in Baggage)</em>' : '';
+
+    if ($cityFrom !== '' && strcasecmp($cityFrom, $cityLast) === 0) {
+        return '<strong>Return airfare Ex-' . htmlspecialchars($cityFrom, ENT_QUOTES, 'UTF-8') . '.</strong>' . $bagNote;
+    }
+
+    // Multi-city / open-jaw: list legs briefly
+    $legs = [];
+    foreach ($flights as $f) {
+        $from = trim((string) ($f['from'] ?? ''));
+        $to = trim((string) ($f['to'] ?? ''));
+        if ($from === '' || $to === '') {
+            continue;
+        }
+        $legs[] = htmlspecialchars($from, ENT_QUOTES, 'UTF-8') . ' → ' . htmlspecialchars($to, ENT_QUOTES, 'UTF-8');
+    }
+    if (!$legs) {
+        return '';
+    }
+    return '<strong>Airfare:</strong> ' . implode('; ', $legs) . '.' . $bagNote;
+}
+
+/**
+ * Deterministic categorized inclusions from booking facts only.
+ *
+ * @param array<string, mixed> $context
+ */
+function crmAiInstantInclusions(array $context): array
+{
+    $ctx = crmAiNormalizeInclusionsContext($context);
+    $sections = [
+        'airfare' => [],
+        'accommodation' => [],
+        'meals' => [],
+        'sightseeing' => [],
+        'transfers' => [],
+        'other' => [],
+    ];
+
+    $dest = (string) ($ctx['tour']['destination'] ?? '');
+    $air = crmAiInclusionsAirfareLine($ctx['flights']);
+    if ($air !== '') {
+        $sections['airfare'][] = $air;
+    }
+
+    $cities = [];
+    foreach ($ctx['hotels'] as $h) {
+        $city = trim((string) ($h['city'] ?? ''));
+        if ($city !== '' && !in_array($city, $cities, true)) {
+            $cities[] = $city;
+        }
+    }
+    if ($cities) {
+        $place = count($cities) === 1 ? $cities[0] : implode(' / ', $cities);
+        $sections['accommodation'][] = 'Hotel accommodation in <strong>'
+            . htmlspecialchars($place, ENT_QUOTES, 'UTF-8')
+            . '</strong> as per the selected room category and duration.';
+    } elseif ($dest !== '') {
+        // Only if hotels missing but destination known — still avoid inventing hotel names
+        $sections['accommodation'][] = 'Hotel accommodation in <strong>'
+            . htmlspecialchars($dest, ENT_QUOTES, 'UTF-8')
+            . '</strong> as per the selected room category and duration.';
+    }
+
+    // Meals from hotel meal plans + itinerary meal fields only
+    $mealPlanCounts = [];
+    foreach ($ctx['hotels'] as $h) {
+        $plan = strtoupper(trim((string) ($h['meal_plan'] ?? '')));
+        $nights = (int) ($h['nights'] ?? 0);
+        if ($plan === '' || $nights <= 0) {
+            continue;
+        }
+        $city = trim((string) ($h['city'] ?? $dest));
+        $label = $plan;
+        if (in_array($plan, ['CP', 'BB'], true)) {
+            $label = 'Breakfast';
+            $mealPlanCounts[$label . '|' . $city] = ($mealPlanCounts[$label . '|' . $city] ?? 0) + $nights;
+        } elseif (in_array($plan, ['MAP', 'HB'], true)) {
+            $mealPlanCounts['Breakfast|' . $city] = ($mealPlanCounts['Breakfast|' . $city] ?? 0) + $nights;
+            $mealPlanCounts['Dinner|' . $city] = ($mealPlanCounts['Dinner|' . $city] ?? 0) + $nights;
+        } elseif (in_array($plan, ['AP', 'FB'], true)) {
+            $mealPlanCounts['Breakfast|' . $city] = ($mealPlanCounts['Breakfast|' . $city] ?? 0) + $nights;
+            $mealPlanCounts['Lunch|' . $city] = ($mealPlanCounts['Lunch|' . $city] ?? 0) + $nights;
+            $mealPlanCounts['Dinner|' . $city] = ($mealPlanCounts['Dinner|' . $city] ?? 0) + $nights;
+        } else {
+            $mealPlanCounts[$plan . '|' . $city] = ($mealPlanCounts[$plan . '|' . $city] ?? 0) + $nights;
+        }
+    }
+    foreach ($mealPlanCounts as $key => $count) {
+        [$type, $city] = array_pad(explode('|', $key, 2), 2, '');
+        $qty = str_pad((string) $count, 2, '0', STR_PAD_LEFT);
+        $plural = $count === 1 ? $type : ($type . (substr($type, -1) === 's' ? '' : 's'));
+        if (preg_match('/breakfast|lunch|dinner/i', $type) && $count !== 1) {
+            // Breakfasts / Lunches / Dinners
+            if (stripos($type, 'Breakfast') === 0) {
+                $plural = 'Breakfasts';
+            } elseif (stripos($type, 'Lunch') === 0) {
+                $plural = 'Lunches';
+            } elseif (stripos($type, 'Dinner') === 0) {
+                $plural = 'Dinners';
+            }
+        }
+        $line = $qty . ' ' . $plural;
+        if ($city !== '') {
+            $line .= ' at ' . $city;
+        }
+        $sections['meals'][] = $line;
+    }
+    foreach ($ctx['itinerary'] as $day) {
+        $meal = trim((string) ($day['meal'] ?? ''));
+        if ($meal === '') {
+            continue;
+        }
+        $title = trim((string) ($day['title'] ?? ''));
+        $sections['meals'][] = $meal . ($title !== '' ? (' — ' . $title) : '');
+    }
+
+    foreach ($ctx['itinerary'] as $day) {
+        $title = trim((string) ($day['title'] ?? ''));
+        if ($title === '' || preg_match('/^day\s*\d+\b/i', $title)) {
+            continue;
+        }
+        if (preg_match('/^(arrival|departure|check[\s-]?in|check[\s-]?out|free day|leisure day|travel day)$/i', $title)) {
+            continue;
+        }
+        // Transfers mentioned in title go to transfers section
+        if (preg_match('/\btransfer/i', $title)) {
+            $sections['transfers'][] = $title;
+            continue;
+        }
+        $sections['sightseeing'][] = '<strong>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</strong>';
+    }
+
+    $sections = crmAiNormalizeInclusionsSections($sections);
+    $html = crmAiInclusionsSectionsToHtml($sections);
+
+    $flat = [];
+    foreach ($sections as $list) {
+        foreach ($list as $line) {
+            $flat[] = trim(strip_tags((string) $line));
+        }
+    }
+
+    $missing = [];
+    if ($dest === '') {
+        $missing[] = 'destination';
+    }
+    if (!$ctx['flights'] && !$ctx['hotels'] && !$ctx['itinerary']) {
+        $missing[] = 'flights/hotels/itinerary details';
+    }
+
+    if ($html === '') {
+        return [
+            'ok' => false,
+            'error' => 'Not enough booking data to build inclusions. Add destination, hotels, flights, or itinerary first.',
+            'missing' => $missing,
+        ];
+    }
+
+    $message = '';
+    if ($missing) {
+        $message = 'Generated from available data only. Missing: ' . implode(', ', $missing) . '.';
+    }
+
+    return [
+        'ok' => true,
+        'source' => 'instant',
+        'message' => $message,
+        'items' => $flat,
+        'sections' => $sections,
+        'inclusions_html' => $html,
+        'missing' => $missing,
+    ];
+}
+
+/**
+ * @param array<string, mixed> $context
+ */
+function crmAiBuildInclusionsPrompt(array $context): string
+{
+    $ctx = crmAiNormalizeInclusionsContext($context);
+    $facts = json_encode($ctx, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    if ($facts === false) {
+        $facts = '{}';
+    }
+
+    $prompt = "You are a professional travel quotation writer for Multizone Travels (India).\n";
+    $prompt .= "Task: Generate INCLUSIONS in a categorized quote format.\n\n";
+    $prompt .= "OUTPUT FORMAT (JSON only):\n";
+    $prompt .= "{\n";
+    $prompt .= "  \"sections\": {\n";
+    $prompt .= "    \"airfare\": [\"<strong>Return airfare Ex-City.</strong> <em>(20 Kgs Check-in Baggage)</em>\"],\n";
+    $prompt .= "    \"accommodation\": [\"Hotel accommodation in <strong>City</strong> as per the selected room category and duration.\"],\n";
+    $prompt .= "    \"meals\": [\"01 Breakfast at ...\", \"02 Lunches at ...\"],\n";
+    $prompt .= "    \"sightseeing\": [\"<strong>Attraction Name</strong> – short detail\", \"<strong>Tour Name with Lunch</strong>\"],\n";
+    $prompt .= "    \"transfers\": [\"Airport → Hotel\", \"<strong>4 hours shopping en route</strong>\", \"Private transportation as mentioned in the itinerary.\"],\n";
+    $prompt .= "    \"other\": [\"<strong>DOCUMENT NAME</strong>\"]\n";
+    $prompt .= "  },\n";
+    $prompt .= "  \"notes\": \"optional note if data incomplete\"\n";
+    $prompt .= "}\n\n";
+    $prompt .= "SECTION RULES:\n";
+    $prompt .= "- Use ONLY these section keys: airfare, accommodation, meals, sightseeing, transfers, other.\n";
+    $prompt .= "- Omit any section that has no supporting facts in BOOKING_DATA.\n";
+    $prompt .= "- Do NOT invent airport transfers, visas, insurance, tips, shopping hours, restaurants, or sightseeing unless clearly present in the data.\n";
+    $prompt .= "- Do NOT invent meals unless meal_plan / meal fields exist.\n";
+    $prompt .= "- Airfare: prefer \"Return airfare Ex-{city}.\" when round-trip; add baggage in <em>(...)</em> only if present.\n";
+    $prompt .= "- Accommodation: city-level wording like the sample; do not invent hotel brand unless in data.\n";
+    $prompt .= "- Sightseeing: bold the attraction/tour name with <strong>...</strong>.\n";
+    $prompt .= "- Transfers: use → between points when route is known from itinerary/flights.\n";
+    $prompt .= "- Each section value is an array of HTML-ready bullet strings (only <strong> and <em> tags allowed).\n";
+    $prompt .= "- Keep bullets concise and professional.\n\n";
+    $prompt .= "BOOKING_DATA:\n" . $facts . "\n";
+
+    if ($ctx['context_text'] !== '') {
+        $prompt .= "\nEDITOR_CONTEXT (user-editable summary — additional facts only, do not invent):\n";
+        $prompt .= $ctx['context_text'] . "\n";
+    }
+    if ($ctx['notes'] !== '') {
+        $prompt .= "\nUSER_NOTES:\n" . $ctx['notes'] . "\n";
+    }
+
+    return $prompt;
+}
+
+/**
+ * @param array<string, mixed> $context
+ */
+function crmAiSuggestInclusions(array $context): array
+{
+    $instant = crmAiInstantInclusions($context);
+    if (!crmAiUseGemini()) {
+        if (!$instant['ok']) {
+            return $instant;
+        }
+        $instant['message'] = trim(
+            ($instant['message'] ?? '')
+            . (crmAiGeminiApiKey() === ''
+                ? ' (Gemini key not configured — used booking facts only.)'
+                : ' (Gemini AI disabled in ai_config — used booking facts only. Set use_gemini_ai to true to enable.)')
+        );
+        return $instant;
+    }
+
+    $prompt = crmAiBuildInclusionsPrompt($context);
+    $result = crmAiCallGemini($prompt, 'gemini-3.5-flash-lite', 45, crmAiGeminiModels());
+    if (!$result['ok']) {
+        if (crmAiIsQuotaOrRateError($result['error'] ?? '') && !empty($instant['ok'])) {
+            $instant['message'] = 'Gemini busy / quota reached — inclusions built from booking facts only. Click Generate again in a moment.';
+            return $instant;
+        }
+        if (!empty($instant['ok'])) {
+            $instant['message'] = 'AI unavailable (' . ($result['error'] ?? 'error') . ') — inclusions built from booking facts only.';
+            return $instant;
+        }
+        return $result;
+    }
+
+    $data = is_array($result['data'] ?? null) ? $result['data'] : [];
+    $sections = [];
+    if (!empty($data['sections']) && is_array($data['sections'])) {
+        $sections = $data['sections'];
+    } elseif (!empty($data['items']) && is_array($data['items'])) {
+        $sections = ['other' => $data['items']];
+    } elseif (!empty($data['inclusions']) && is_array($data['inclusions'])) {
+        $sections = ['other' => $data['inclusions']];
+    }
+
+    $sections = crmAiNormalizeInclusionsSections($sections);
+    $html = crmAiInclusionsSectionsToHtml($sections);
+    if ($html === '') {
+        if (!empty($instant['ok'])) {
+            $instant['message'] = 'AI returned empty inclusions — used booking facts instead.';
+            return $instant;
+        }
+        return ['ok' => false, 'error' => 'AI returned an empty inclusions list.'];
+    }
+
+    $flat = [];
+    foreach ($sections as $list) {
+        foreach ($list as $line) {
+            $t = trim(strip_tags((string) $line));
+            if ($t !== '') {
+                $flat[] = $t;
+            }
+        }
+    }
+
+    return [
+        'ok' => true,
+        'source' => 'ai',
+        'message' => trim((string) ($data['notes'] ?? '')),
+        'items' => $flat,
+        'sections' => $sections,
+        'inclusions_html' => $html,
+        'missing' => $instant['missing'] ?? [],
     ];
 }

@@ -1260,8 +1260,12 @@
         if (!force && isInclusionEditorFocused()) {
             return;
         }
-        var prefix = buildAutoInclusionPrefixHtml();
         var current = readSummernoteHtml($ta);
+        // Keep AI-generated inclusions intact until the user regenerates/clears them.
+        if (/data-q-ai-inclusions/i.test(String(current || ''))) {
+            return;
+        }
+        var prefix = buildAutoInclusionPrefixHtml();
         var cleaned = stripAutoReturnAirfareHtml(current);
         var next = prefix + cleaned;
         var norm = function (h) {
@@ -4643,6 +4647,422 @@
         });
     }
 
+    /* ------------------------------------------------------------------ */
+    /* AI inclusions generator                                             */
+    /* ------------------------------------------------------------------ */
+    var pendingAiInclusionsHtml = '';
+
+    function collectAiInclusionsContext() {
+        var flights = [];
+        try {
+            flights = (typeof collectFlights === 'function' ? collectFlights() : []) || [];
+        } catch (e1) {
+            flights = [];
+        }
+        var hotels = [];
+        try {
+            hotels = (typeof collectHotels === 'function' ? collectHotels() : []) || [];
+        } catch (e2) {
+            hotels = [];
+        }
+        var itinerary = [];
+        try {
+            itinerary = (typeof snapshotItinerary === 'function' ? snapshotItinerary() : []) || [];
+        } catch (e3) {
+            itinerary = [];
+        }
+
+        return {
+            guest: {
+                guest_name: String($('[name=guest_name]').val() || '').trim(),
+                adults: parseInt($('#q_adults').val(), 10) || 0,
+                children: parseInt($('#q_children').val(), 10) || 0,
+                mobile_no: String($('[name=mobile_no]').val() || '').trim(),
+                email: String($('[name=email]').val() || '').trim()
+            },
+            tour: {
+                destination: String($('[name=destination]').val() || '').trim(),
+                nights: parseInt($('#q_nights').val(), 10) || 0,
+                tentative_date: String($('#q_tentative_date').val() || '').trim(),
+                package_name: String($('#q_header_text').val() || '').trim()
+            },
+            flights: flights.map(function (f) {
+                return {
+                    from: f.from || '',
+                    to: f.to || '',
+                    name: f.name || '',
+                    fl_tr_no: f.fl_tr_no || '',
+                    dep_date: f.dep_date || '',
+                    dep_time: f.dep_time || '',
+                    arr_date: f.arr_date || '',
+                    arr_time: f.arr_time || '',
+                    hand_baggage: f.hand_baggage || '',
+                    checkin_baggage: f.checkin_baggage || ''
+                };
+            }),
+            hotels: hotels.map(function (h) {
+                return {
+                    name: h.name || '',
+                    city: h.city || '',
+                    nights: h.nights || 0,
+                    room_type: h.room_type || '',
+                    meal_plan: h.meal_plan || '',
+                    star_category: h.star_category || ''
+                };
+            }),
+            itinerary: (itinerary || []).map(function (d, i) {
+                return {
+                    day: i + 1,
+                    title: d.title || '',
+                    description: d.description || '',
+                    overnight: d.overnight || '',
+                    meal: d.meal || ''
+                };
+            })
+        };
+    }
+
+    function formatAiInclusionsContextText(ctx) {
+        ctx = ctx || {};
+        var lines = [];
+        var g = ctx.guest || {};
+        var t = ctx.tour || {};
+
+        lines.push('=== GUESTS / PAX ===');
+        lines.push('Guest: ' + (g.guest_name || '(not set)'));
+        lines.push('Adults: ' + (g.adults || 0) + ' | Children: ' + (g.children || 0));
+        if (g.mobile_no) {
+            lines.push('Mobile: ' + g.mobile_no);
+        }
+        if (g.email) {
+            lines.push('Email: ' + g.email);
+        }
+
+        lines.push('');
+        lines.push('=== TOUR / PACKAGE ===');
+        lines.push('Destination: ' + (t.destination || '(not set)'));
+        lines.push('Nights: ' + (t.nights || 0) + ' (Days: ' + ((parseInt(t.nights, 10) || 0) + 1) + ')');
+        if (t.tentative_date) {
+            lines.push('Travel date: ' + t.tentative_date);
+        }
+        if (t.package_name) {
+            lines.push('Package / header: ' + t.package_name);
+        }
+
+        lines.push('');
+        lines.push('=== FLIGHTS / TRAIN ===');
+        if (!(ctx.flights || []).length) {
+            lines.push('(none entered)');
+        } else {
+            (ctx.flights || []).forEach(function (f, i) {
+                lines.push(
+                    (i + 1) + '. ' + (f.from || '?') + ' → ' + (f.to || '?') +
+                    (f.name || f.fl_tr_no ? (' | ' + [f.name, f.fl_tr_no].filter(Boolean).join(' ')) : '') +
+                    (f.dep_date ? (' | Dep ' + f.dep_date + (f.dep_time ? (' ' + f.dep_time) : '')) : '') +
+                    (f.hand_baggage || f.checkin_baggage
+                        ? (' | Bags: ' + [f.hand_baggage ? ('cabin ' + f.hand_baggage) : '', f.checkin_baggage ? ('check-in ' + f.checkin_baggage) : ''].filter(Boolean).join(', '))
+                        : '')
+                );
+            });
+        }
+
+        lines.push('');
+        lines.push('=== HOTELS ===');
+        if (!(ctx.hotels || []).length) {
+            lines.push('(none entered)');
+        } else {
+            (ctx.hotels || []).forEach(function (h, i) {
+                lines.push(
+                    (i + 1) + '. ' + (h.name || '(hotel)') +
+                    (h.city ? (' — ' + h.city) : '') +
+                    (h.nights ? (' | ' + h.nights + ' night(s)') : '') +
+                    (h.room_type ? (' | ' + h.room_type) : '') +
+                    (h.meal_plan ? (' | Meal: ' + h.meal_plan) : '') +
+                    (h.star_category ? (' | ' + h.star_category) : '')
+                );
+            });
+        }
+
+        lines.push('');
+        lines.push('=== ITINERARY ===');
+        if (!(ctx.itinerary || []).length) {
+            lines.push('(none entered)');
+        } else {
+            (ctx.itinerary || []).forEach(function (d) {
+                var desc = String(d.description || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                if (desc.length > 220) {
+                    desc = desc.slice(0, 220).replace(/\s+\S*$/, '') + '…';
+                }
+                lines.push('Day ' + (d.day || '') + ': ' + (d.title || '(untitled)'));
+                if (desc) {
+                    lines.push('  ' + desc);
+                }
+                if (d.overnight) {
+                    lines.push('  Overnight: ' + d.overnight);
+                }
+                if (d.meal) {
+                    lines.push('  Meals: ' + d.meal);
+                }
+            });
+        }
+
+        return lines.join('\n');
+    }
+
+    function refreshAiInclusionsChips(ctx) {
+        ctx = ctx || collectAiInclusionsContext();
+        var chips = [];
+        var dest = (ctx.tour && ctx.tour.destination) || '';
+        var nights = (ctx.tour && ctx.tour.nights) || 0;
+        var adults = (ctx.guest && ctx.guest.adults) || 0;
+        var children = (ctx.guest && ctx.guest.children) || 0;
+        var flights = (ctx.flights || []).length;
+        var hotels = (ctx.hotels || []).length;
+        var days = (ctx.itinerary || []).length;
+
+        if (dest) {
+            chips.push('<span class="q-ai-chip"><i class="fas fa-map-marker-alt"></i>' + esc(dest) + '</span>');
+        } else {
+            chips.push('<span class="q-ai-chip is-warn"><i class="fas fa-exclamation-circle"></i>No destination</span>');
+        }
+        chips.push('<span class="q-ai-chip"><i class="far fa-calendar-alt"></i>' + nights + 'N / ' + (nights + 1) + 'D</span>');
+        chips.push('<span class="q-ai-chip"><i class="fas fa-users"></i>' + adults + 'A' + (children ? (', ' + children + 'C') : '') + '</span>');
+        chips.push('<span class="q-ai-chip' + (flights ? '' : ' is-warn') + '"><i class="fas fa-plane"></i>' + flights + ' flight' + (flights === 1 ? '' : 's') + '</span>');
+        chips.push('<span class="q-ai-chip' + (hotels ? '' : ' is-warn') + '"><i class="fas fa-hotel"></i>' + hotels + ' hotel' + (hotels === 1 ? '' : 's') + '</span>');
+        chips.push('<span class="q-ai-chip' + (days ? '' : ' is-warn') + '"><i class="fas fa-route"></i>' + days + ' day' + (days === 1 ? '' : 's') + '</span>');
+        $('#qAiInclChips').html(chips.join(''));
+    }
+
+    function aiInclusionsHtmlToEditableText(html) {
+        var $tmp = $('<div>').html(html || '');
+        var lines = [];
+        var $secs = $tmp.find('.q-ai-incl-sec');
+        if ($secs.length) {
+            $secs.each(function () {
+                var title = String($(this).find('.q-ai-incl-sec-title').text() || '').replace(/\s+/g, ' ').trim();
+                if (title) {
+                    lines.push(title.toUpperCase());
+                }
+                $(this).find('ul li').each(function () {
+                    var t = String($(this).text() || '').replace(/\s+/g, ' ').trim();
+                    if (t) {
+                        lines.push('• ' + t);
+                    }
+                });
+                lines.push('');
+            });
+            while (lines.length && lines[lines.length - 1] === '') {
+                lines.pop();
+            }
+            return lines.join('\n');
+        }
+        $tmp.find('li').each(function () {
+            var t = String($(this).text() || '').replace(/\s+/g, ' ').trim();
+            if (t) {
+                lines.push('• ' + t);
+            }
+        });
+        if (!lines.length) {
+            $tmp.find('p').each(function () {
+                var t = String($(this).text() || '').replace(/\s+/g, ' ').trim();
+                if (t) {
+                    lines.push('• ' + t);
+                }
+            });
+        }
+        if (!lines.length) {
+            var plain = String($tmp.text() || '').replace(/\s+/g, ' ').trim();
+            if (plain) {
+                lines.push('• ' + plain);
+            }
+        }
+        return lines.join('\n');
+    }
+
+    function aiInclusionsSectionKeyFromTitle(title) {
+        title = String(title || '').toLowerCase();
+        if (/air\s*fare|flight/.test(title)) return 'airfare';
+        if (/accommodation|hotel|stay/.test(title)) return 'accommodation';
+        if (/meal|food|breakfast|lunch|dinner/.test(title)) return 'meals';
+        if (/sight|activit|tour|excursion/.test(title)) return 'sightseeing';
+        if (/transfer|transport/.test(title)) return 'transfers';
+        return 'other';
+    }
+
+    function aiInclusionsEditableTextToHtml(text) {
+        var meta = {
+            airfare: { label: 'Airfare', icon: 'fas fa-plane' },
+            accommodation: { label: 'Accommodation', icon: 'fas fa-hotel' },
+            meals: { label: 'Meals', icon: 'fas fa-utensils' },
+            sightseeing: { label: 'Sightseeing & Activities', icon: 'fas fa-ticket-alt' },
+            transfers: { label: 'Transfers & Transportation', icon: 'fas fa-shuttle-van' },
+            other: { label: 'Other Inclusions', icon: 'fas fa-clipboard-list' }
+        };
+        var order = ['airfare', 'accommodation', 'meals', 'sightseeing', 'transfers', 'other'];
+        var sections = {};
+        order.forEach(function (k) { sections[k] = []; });
+        var current = 'other';
+        var lines = String(text || '').split(/\r?\n/);
+        var hasHeadings = false;
+
+        lines.forEach(function (raw) {
+            var line = String(raw || '').trim();
+            if (!line) {
+                return;
+            }
+            var heading = line.replace(/^[\s#]+/, '');
+            var isHeading = !/^[\s•\-\*]/.test(line)
+                && (
+                    /^(airfare|accommodation|meals|sightseeing|transfers|other)/i.test(heading)
+                    || (/^[A-Z0-9 &]+$/.test(heading) && heading.length < 48)
+                );
+            if (isHeading && !/^•/.test(line)) {
+                hasHeadings = true;
+                current = aiInclusionsSectionKeyFromTitle(heading);
+                return;
+            }
+            line = line.replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
+            if (line) {
+                sections[current].push(line);
+            }
+        });
+
+        if (!hasHeadings) {
+            // Flat list → Other
+            sections = { airfare: [], accommodation: [], meals: [], sightseeing: [], transfers: [], other: [] };
+            lines.forEach(function (raw) {
+                var line = String(raw || '').replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
+                if (line) {
+                    sections.other.push(line);
+                }
+            });
+        }
+
+        var html = '';
+        order.forEach(function (key) {
+            var items = sections[key] || [];
+            if (!items.length) {
+                return;
+            }
+            var info = meta[key];
+            html += '<div class="q-ai-incl-sec" data-sec="' + key + '">';
+            html += '<p class="q-ai-incl-sec-title"><i class="' + info.icon + '" aria-hidden="true"></i> <strong>' + esc(info.label) + '</strong></p>';
+            html += '<ul>';
+            items.forEach(function (item) {
+                html += '<li>' + esc(item) + '</li>';
+            });
+            html += '</ul></div>';
+        });
+        if (!html) {
+            return '';
+        }
+        return '<div data-q-ai-inclusions="1" class="q-ai-incl-doc">' + html + '</div>';
+    }
+
+    function resetAiInclusionsResultUi() {
+        pendingAiInclusionsHtml = '';
+        $('#qAiInclResult').val('');
+        $('#qAiInclResultWrap').addClass('d-none');
+        $('#qAiInclRegenerate, #qAiInclUse').addClass('d-none');
+        $('#qAiInclSourceBadge').text('');
+        $('#qAiInclError, #qAiInclSuccess').addClass('d-none').text('');
+    }
+
+    function openAiInclusionsModal() {
+        var ctx = collectAiInclusionsContext();
+        refreshAiInclusionsChips(ctx);
+        $('#qAiInclContext').val(formatAiInclusionsContextText(ctx));
+        $('#qAiInclNotes').val('');
+        resetAiInclusionsResultUi();
+        $('#qAiInclGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Inclusions');
+        $('#qAiInclusionsModal').modal('show');
+        window.setTimeout(function () {
+            $('#qAiInclContext').trigger('focus');
+        }, 350);
+    }
+
+    function requestAiInclusionsGenerate() {
+        var ctx = collectAiInclusionsContext();
+        var contextText = String($('#qAiInclContext').val() || '').trim();
+        var notes = String($('#qAiInclNotes').val() || '').trim();
+
+        if (!contextText) {
+            $('#qAiInclError').removeClass('d-none').text('Booking context is empty. Add guest/tour/hotel/flight/itinerary details first.');
+            return;
+        }
+
+        $('#qAiInclError, #qAiInclSuccess').addClass('d-none').text('');
+        var $btn = $('#qAiInclGenerate').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Generating...');
+        $('#qAiInclRegenerate').prop('disabled', true);
+
+        $.ajax({
+            url: absUrl('crm/ajax/ai_suggest_inclusions.php'),
+            type: 'POST',
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: JSON.stringify({
+                context: ctx,
+                context_text: contextText,
+                notes: notes
+            })
+        }).done(function (res) {
+            if (!(res && res.success && res.inclusions_html)) {
+                $('#qAiInclError').removeClass('d-none').text((res && res.message) ? res.message : 'Could not generate inclusions.');
+                return;
+            }
+            pendingAiInclusionsHtml = res.inclusions_html;
+            $('#qAiInclResult').val(aiInclusionsHtmlToEditableText(res.inclusions_html));
+            $('#qAiInclResultWrap').removeClass('d-none');
+            $('#qAiInclRegenerate, #qAiInclUse').removeClass('d-none');
+            var src = res.source === 'ai' ? 'Gemini AI' : 'Booking facts';
+            if (res.instant_mode) {
+                src += ' (AI off)';
+            }
+            $('#qAiInclSourceBadge').text(src);
+            var okMsg = res.message || 'Inclusions generated. Review or edit, then click Use / Insert.';
+            $('#qAiInclSuccess').removeClass('d-none').text(okMsg);
+        }).fail(function (xhr) {
+            var msg = 'Could not generate inclusions.';
+            try {
+                var j = JSON.parse(xhr.responseText);
+                if (j && j.message) {
+                    msg = j.message;
+                }
+            } catch (e) { /* ignore */ }
+            $('#qAiInclError').removeClass('d-none').text(msg);
+        }).always(function () {
+            $btn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Inclusions');
+            $('#qAiInclRegenerate').prop('disabled', false);
+        });
+    }
+
+    function applyAiInclusionsToEditor() {
+        var edited = String($('#qAiInclResult').val() || '').trim();
+        var html = edited ? aiInclusionsEditableTextToHtml(edited) : pendingAiInclusionsHtml;
+        if (!html) {
+            $('#qAiInclError').removeClass('d-none').text('Nothing to insert. Generate inclusions first.');
+            return;
+        }
+
+        var existing = (readSummernoteHtml($('#qed_inclusion')) || '').replace(/<[^>]*>/g, '').trim();
+        if (existing && !window.confirm('Replace the current Inclusions content with the AI list?')) {
+            return;
+        }
+
+        setRichEditorValue('qed_inclusion', html);
+        // Expand inclusion accordion so the user sees the result.
+        var $body = $('#qbody_inclusion');
+        if ($body.length && !$body.is(':visible')) {
+            $body.closest('.q-terms-item').find('.q-terms-item-head').trigger('click');
+        }
+        $('#qAiInclusionsModal').modal('hide');
+        $('#qAlert').html('<div class="alert alert-success"><i class="fas fa-check-circle mr-1"></i> AI inclusions inserted into the Inclusions field.</div>');
+        try {
+            saveFormDraftToStorage();
+        } catch (e) { /* ignore */ }
+    }
+
     function openFullItineraryModal() {
         var days = snapshotItinerary();
         var baseDate = $('#q_tentative_date').val();
@@ -4837,6 +5257,24 @@
             dayAiTargetCard = null;
             $('#qDayAiPrompt').val('');
             $('#qDayAiGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate');
+        });
+
+        $(document).on('click', '#qAiInclusionsInlineBtn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openAiInclusionsModal();
+        });
+
+        $('#qAiInclGenerate, #qAiInclRegenerate').on('click', function () {
+            requestAiInclusionsGenerate();
+        });
+
+        $('#qAiInclUse').on('click', function () {
+            applyAiInclusionsToEditor();
+        });
+
+        $('#qAiInclusionsModal').on('hidden.bs.modal', function () {
+            $('#qAiInclGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Inclusions');
         });
     }
 
