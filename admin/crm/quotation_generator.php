@@ -2812,9 +2812,7 @@ $qWizardSteps = [
             color: #1f2937;
         }
 
-        .note-editable .q-ai-incl-doc .q-ai-incl-sec-title,
-        .qp-incl-edit .q-ai-incl-doc .q-ai-incl-sec-title,
-        .q-preview-rich .q-ai-incl-doc .q-ai-incl-sec-title {
+        .note-editable .q-ai-incl-doc .q-ai-incl-sec-title {
             margin: 0 0 0.35rem;
         }
 
@@ -7638,7 +7636,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-cost-grand-wrap {
-            padding: 0.55rem 0.85rem 0.85rem;
+            padding: 0.55rem 0rem 0.85rem;
             background: #fff;
         }
 
@@ -10583,157 +10581,237 @@ $qWizardSteps = [
         }
 
         /* —— Inclusions —— */
-        .qp-incl-banner {
-            position: relative;
+        .qp-sec-incl {
+            --qp-incl-red: #d92027;
+            --qp-incl-ink: #1a1d23;
+            --qp-incl-muted: #8b93a0;
+            font-family: inherit;
+            margin-bottom: 16px;
+        }
+
+        .qp-incl-card {
+            border: 1px solid #e8ecf1;
+            border-radius: 14px;
             overflow: hidden;
-            background: linear-gradient(100deg, #8b1218 0%, #6e0e14 28%, #3a090c 62%, #1a0507 100%);
-            color: #fff;
-            border-radius: 6px;
-            padding: 10px 18px;
-            margin-bottom: 12px;
-            min-height: 0;
+            background: #fff;
+            box-shadow: 0 4px 16px rgba(17, 24, 39, 0.06);
+            padding: 18px 20px 16px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-incl-banner-inner {
-            position: relative;
-            z-index: 1;
+        .qp-incl-head {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 14px;
-            min-height: 0;
+            gap: 12px;
+            margin: 0 0 16px;
+            padding: 0 0 14px;
+            border-bottom: 1px solid #eef2f7;
         }
 
-        .qp-incl-left {
+        .qp-incl-head-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
             min-width: 0;
-            flex: 1 1 auto;
         }
 
-        .qp-incl-main {
-            font-size: 22px;
+        .qp-incl-vbar {
+            width: 4px;
+            min-height: 36px;
+            align-self: stretch;
+            background: var(--qp-incl-red);
+            border-radius: 999px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: #fde8ea;
+            color: var(--qp-incl-red);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-head-copy {
+            min-width: 0;
+        }
+
+        .qp-incl-title {
+            font-size: 15px;
             font-weight: 800;
             letter-spacing: 0.04em;
-            line-height: 1.05;
             text-transform: uppercase;
-            color: #fff;
-            margin: 0;
+            color: var(--qp-incl-ink);
+            line-height: 1.2;
         }
 
         .qp-incl-sub {
-            font-size: 9px;
-            font-weight: 600;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.9);
             margin-top: 3px;
-            line-height: 1.25;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--qp-incl-muted);
+            line-height: 1.3;
         }
 
-        .qp-incl-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-
-        .qp-incl-right-bar {
-            width: 2px;
-            align-self: stretch;
-            min-height: 40px;
-            background: #c4121a;
-            flex-shrink: 0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .qp-incl-right-copy {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0;
+        .qp-incl-slogan {
             font-size: 8px;
             font-weight: 600;
             letter-spacing: 0.12em;
-            line-height: 1.3;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.95);
+            color: #a0a8b4;
+            line-height: 1;
             text-align: right;
+            text-transform: uppercase;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
-        .qp-incl-right-dash {
-            display: block;
-            width: 18px;
-            height: 2px;
-            margin-top: 4px;
-            background: #e11d2e;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        .qp-incl-slogan-dot {
+            color: var(--qp-incl-red);
+            margin: 0 1px;
+        }
+
+        .qp-incl-body {
+            min-width: 0;
         }
 
         @media screen and (max-width: 640px) {
-            body:not(.q-preview-only) .qp-incl-banner {
-                padding: 10px 12px;
+            body:not(.q-preview-only) .qp-incl-card {
+                padding: 14px 14px 12px;
             }
 
-            body:not(.q-preview-only) .qp-incl-banner-inner {
+            body:not(.q-preview-only) .qp-incl-head {
                 flex-direction: column;
                 align-items: flex-start;
             }
 
-            body:not(.q-preview-only) .qp-incl-main {
-                font-size: 18px;
-            }
-
-            body:not(.q-preview-only) .qp-incl-right {
-                width: 100%;
-            }
-
-            body:not(.q-preview-only) .qp-incl-right-copy {
-                align-items: flex-start;
+            body:not(.q-preview-only) .qp-incl-slogan {
                 text-align: left;
+                white-space: normal;
             }
         }
 
-        .qp-incl-edit.q-preview-rich ul {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 10px;
+        /* Categorized AI inclusions inside preview */
+        .qp-incl-edit .q-ai-incl-doc {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            border: 0;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec-title,
+        .qp-incl-edit .q-ai-incl-doc .q-ai-incl-sec-title,
+        .q-preview-rich .q-ai-incl-doc .q-ai-incl-sec-title {
+            margin: 0 0 8px;
+            padding: 0;
+            font-size: 12.5px;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: var(--qp-incl-ink, #1a1d23);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            border: 0;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec-title i,
+        .qp-incl-edit .q-ai-incl-doc .q-ai-incl-sec-title i {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            background: #fde8ea;
+            color: var(--qp-incl-red, #d92027) !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec-title strong {
+            font-weight: 800;
+        }
+
+        .qp-incl-edit.q-preview-rich ul,
+        .qp-incl-edit .q-ai-incl-sec ul {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
             list-style: none;
             margin: 0;
             padding: 0;
         }
 
-        .qp-incl-edit.q-preview-rich ul li {
-            background: #fff;
-            border: 1px solid var(--qp-line);
+        .qp-incl-edit.q-preview-rich ul li,
+        .qp-incl-edit .q-ai-incl-sec ul li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: #f8fafc;
+            border: 1px solid #e8ecf1;
             border-radius: 8px;
-            padding: 10px 12px 10px 36px;
+            padding: 9px 12px;
             position: relative;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            box-shadow: none;
             font-size: 12.5px;
+            line-height: 1.45;
+            color: #334155;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-incl-edit.q-preview-rich ul li::before {
+        .qp-incl-edit.q-preview-rich ul li::before,
+        .qp-incl-edit .q-ai-incl-sec ul li::before {
             content: "\f00c";
             font-family: "Font Awesome 5 Free";
             font-weight: 900;
-            position: absolute;
-            left: 12px;
-            top: 11px;
-            color: #16a34a;
-            font-size: 12px;
+            position: static;
+            left: auto;
+            top: auto;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: #e8f8ef;
+            color: #15803d;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 10px;
+            line-height: 22px;
+            text-align: center;
+            margin-top: 1px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .qp-incl-edit.q-preview-rich > *:not(ul) {
-            background: #fff;
-            border: 1px solid var(--qp-line);
+        .qp-incl-edit.q-preview-rich > *:not(ul):not(.q-ai-incl-doc) {
+            background: #f8fafc;
+            border: 1px solid #e8ecf1;
             border-radius: 8px;
-            padding: 12px 14px;
+            padding: 10px 12px;
             margin-bottom: 8px;
         }
 
@@ -11327,7 +11405,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            margin: 2px 12px 14px;
+            margin: 2px 7px 14px;
             padding: 8px 10px;
             background: #fff5f5;
             border-radius: 10px;
@@ -11369,7 +11447,7 @@ $qWizardSteps = [
         }
 
         .qp-tc-grand-amt {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 800;
             font-family: inherit;
             color: var(--qp-red);
@@ -12835,6 +12913,7 @@ $qWizardSteps = [
             /* Extra top breathing room for major section starts (not last page) */
             #qPreviewPrintArea .qp-cost-notes-row,
             #qPreviewPrintArea .qp-terms-card,
+            #qPreviewPrintArea .qp-incl-card,
             #qPreviewPrintArea .qp-sec-excl,
             #qPreviewPrintArea .qp-itin-head {
                 margin-top: 8mm !important;
@@ -12874,7 +12953,7 @@ $qWizardSteps = [
             .qp-notes-card,
             .qp-cost-notes-row,
             .qp-terms-card,
-            .qp-incl-banner,
+            .qp-incl-card,
             .qp-meal-legend {
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
@@ -15109,7 +15188,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=276"></script>
+    <script src="crm/assets/quotation_generator.js?v=278"></script>
     <script src="crm/assets/quotation_flight_search.js?v=17"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

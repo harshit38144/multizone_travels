@@ -2751,31 +2751,15 @@
     }
 
     var HOTEL_MEAL_PLAN_OPTIONS = [
-        { name: 'EP', description: 'European Plan - No Meals' },
-        { name: 'CP', description: 'Continental Plan - BF' },
-        { name: 'MAP', description: 'Modified American Plan - BF+D' },
-        { name: 'AP', description: 'American Plan - all meals - BF+L+D' }
+        { name: 'EP' },
+        { name: 'CP' },
+        { name: 'MAP' },
+        { name: 'AP' }
     ];
 
     function getHotelMealPlanOptions(typed) {
-        var q = String(typed || '').trim().toLowerCase();
-        var all = HOTEL_MEAL_PLAN_OPTIONS.slice();
-        if (!q) {
-            return all;
-        }
-        var matched = [];
-        var rest = [];
-        all.forEach(function (m) {
-            var name = String(m.name || '').toLowerCase();
-            var desc = String(m.description || '').toLowerCase();
-            if (name.indexOf(q) !== -1 || desc.indexOf(q) !== -1 || q.indexOf(name) !== -1) {
-                matched.push(m);
-            } else {
-                rest.push(m);
-            }
-        });
-        // Always keep all standard plans visible; matched ones first.
-        return matched.concat(rest);
+        // Always show standard plans in fixed order: EP, CP, MAP, AP.
+        return HOTEL_MEAL_PLAN_OPTIONS.slice();
     }
 
     function showHotelMealSuggestions($row) {
@@ -2793,17 +2777,13 @@
                 .attr('data-index', idx)
                 .data('meal', m);
             $btn.append($('<span></span>').text(m.name || ('Meal ' + (idx + 1))));
-            if (m.description) {
-                $btn.append($('<span class="q-hotel-menu-sub"></span>').text(m.description));
-            }
             $menu.append($btn);
         });
         if (typed && !exactMatch) {
             $menu.append(
                 $('<button type="button" class="q-hotel-menu-item q-hotel-meal-pick"></button>')
-                    .data('meal', { name: typed, description: 'Custom meal plan' })
+                    .data('meal', { name: typed })
                     .append($('<span></span>').text(typed))
-                    .append($('<span class="q-hotel-menu-sub"></span>').text('Use custom value'))
             );
         }
         $menu.show();
@@ -10184,31 +10164,30 @@
 
         /* —— 7. Inclusions —— */
         if (previewHasHtmlContent(p.inclusion)) {
-            html += '<div class="qp-sec">';
-            html += '<div class="qp-incl-banner">' +
-                '<div class="qp-incl-banner-inner">' +
-                '<div class="qp-incl-left">' +
-                '<div class="qp-incl-main">INCLUSIONS</div>' +
+            html += '<div class="qp-sec qp-sec-incl">';
+            html += '<div class="qp-incl-card">';
+            html += '<div class="qp-incl-head">' +
+                '<div class="qp-incl-head-left">' +
+                '<span class="qp-incl-vbar" aria-hidden="true"></span>' +
+                '<span class="qp-incl-icon" aria-hidden="true"><i class="fas fa-check-circle"></i></span>' +
+                '<div class="qp-incl-head-copy">' +
+                '<div class="qp-incl-title">INCLUSIONS</div>' +
                 '<div class="qp-incl-sub">WHAT\'S INCLUDED IN YOUR JOURNEY</div>' +
                 '</div>' +
-                '<div class="qp-incl-right">' +
-                '<span class="qp-incl-right-bar" aria-hidden="true"></span>' +
-                '<div class="qp-incl-right-copy">' +
-                '<span>JOURNEYS</span>' +
-                '<span>THAT CREATE</span>' +
-                '<span>LASTING</span>' +
-                '<span>MEMORIES</span>' +
-                '<span class="qp-incl-right-dash" aria-hidden="true"></span>' +
                 '</div>' +
-                '</div>' +
+                '<div class="qp-incl-slogan">' +
+                'JOURNEYS <span class="qp-incl-slogan-dot">•</span> ' +
+                'CARE <span class="qp-incl-slogan-dot">•</span> ' +
+                'MEMORIES' +
                 '</div>' +
                 '</div>';
+            html += '<div class="qp-incl-body">';
             html += previewEditable(p.inclusion || '', 'inclusion', {
                 type: 'html',
                 multiline: true,
                 cls: 'q-preview-rich qp-incl-edit'
             });
-            html += '</div>';
+            html += '</div></div></div>';
         }
 
         /* —— 8. Terms —— */
