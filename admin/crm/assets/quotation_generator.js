@@ -804,6 +804,63 @@
         }
     }
 
+    function setFlightRowFareSupplierEnabled($row, enabled) {
+        if (!$row || !$row.length) {
+            return;
+        }
+        var $fare = $row.find('.f-fare');
+        var $sup = $row.find('.f-supplier');
+        $fare.prop('disabled', !enabled);
+        $sup.prop('disabled', !enabled);
+        $row.find('.q-ft-col-fare, .q-ft-col-supplier').toggleClass('is-connecting-locked', !enabled);
+        $row.toggleClass('is-connecting-follow-on', !enabled);
+        if (!enabled) {
+            var fareNum = parseFloat($fare.val());
+            if ($fare.val() === '' || isNaN(fareNum) || fareNum === 0) {
+                $fare.val('0.00');
+            }
+        }
+        if ($sup.data('select2')) {
+            try {
+                $sup.trigger('change.select2');
+            } catch (e) { /* ignore */ }
+        }
+    }
+
+    function isConnectingSecondSegment($prev, $row) {
+        if (!$prev || !$prev.length || !$row || !$row.length) {
+            return false;
+        }
+        if (isFlightJourneyBoundary($prev, $row)) {
+            return false;
+        }
+        var prevTo = String($prev.find('.f-to').val() || '').trim();
+        var curFrom = String($row.find('.f-from').val() || '').trim();
+        if (!prevTo || !curFrom) {
+            return false;
+        }
+        return flightPlacesConnect(prevTo, curFrom);
+    }
+
+    function syncConnectingSegmentFareSupplier() {
+        // Lock Rate/Supplier only on the true connecting 2nd segment (follow-on after first leg).
+        // First segment and any other / later / standalone flights stay editable.
+        $('#qFlightRows .q-flight-journey-card').each(function () {
+            var $rows = $(this).find('.q-flight-row');
+            $rows.each(function (idx) {
+                var $row = $(this);
+                var lock = false;
+                if (idx === 1) {
+                    lock = isConnectingSecondSegment($rows.eq(0), $row);
+                }
+                setFlightRowFareSupplierEnabled($row, !lock);
+            });
+        });
+        $('#qFlightRows > .q-flight-row').each(function () {
+            setFlightRowFareSupplierEnabled($(this), true);
+        });
+    }
+
     function renumberFlightRows() {
         refreshFlightLayovers();
     }
@@ -1395,6 +1452,7 @@
                 $row.find('.q-flight-segment-card').before(html);
             }
         });
+        syncConnectingSegmentFareSupplier();
     }
 
     function flightRowHtml(data) {
@@ -1989,6 +2047,7 @@
             '<input type="hidden" class="h-star-category" value="' + esc(d.star_category) + '">' +
             '<input type="hidden" class="h-country" value="' + esc(d.country) + '">' +
             '<div class="q-hotel-fields">' +
+            '<div class="q-hotel-accom">' +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-city',
                 ico: 'fa-map-marker-alt',
@@ -2028,30 +2087,32 @@
                 control: '<input type="number" min="0" class="form-control h-nights" value="' + esc(d.nights !== '' && d.nights != null ? d.nights : '0') + '" placeholder="0">'
             }) +
             hotelFieldWrap({
-                extraClass: 'q-hotel-field-date',
+                extraClass: 'q-hotel-field-date q-hotel-field-checkin',
                 ico: false,
                 caret: false,
                 control: '<input type="text" class="form-control h-checkin js-q-date-input" value="' + esc(formatDisplayDate(d.checkin)) + '" placeholder="dd/mm/yyyy" autocomplete="off">'
             }) +
             hotelFieldWrap({
-                extraClass: 'q-hotel-field-date',
+                extraClass: 'q-hotel-field-date q-hotel-field-checkout',
                 ico: false,
                 caret: false,
                 control: '<input type="text" class="form-control h-checkout js-q-date-input" value="' + esc(formatDisplayDate(d.checkout)) + '" placeholder="dd/mm/yyyy" autocomplete="off">'
             }) +
-            hotelFieldWrap({
-                extraClass: 'q-hotel-field-rate',
-                ico: 'fa-rupee-sign',
-                caret: false,
-                control: '<input type="number" min="0" step="1" inputmode="numeric" class="form-control h-rate" value="' + esc(d.rate) + '" placeholder="0">'
-            }) +
-            // Same Select2 supplier control pattern as Flight / Train details.
+            '</div>' +
+            '<div class="q-hotel-commercial">' +
+            '<div class="q-hotel-field q-hotel-field-rate">' +
+            '<div class="q-hotel-rate-box">' +
+            '<span class="q-hotel-rate-prefix" aria-hidden="true">₹</span>' +
+            '<input type="number" min="0" step="1" inputmode="numeric" class="form-control h-rate" value="' + esc(d.rate) + '" placeholder="0">' +
+            '</div></div>' +
             '<div class="q-hotel-field q-hotel-field-supplier">' +
             '<select class="form-control form-control-sm h-supplier">' +
             hotelSupplierOptionsHtml(d.supplier_id, d.supplier, { allowCreate: true, emptyLabel: 'Select' }) +
             '</select></div>' +
             '<div class="q-hotel-field q-hotel-field-action">' +
+            '<button type="button" class="btn q-hotel-row-more" title="More options" aria-label="More options"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>' +
             '<button type="button" class="btn q-hotel-row-remove q-remove" data-remove=".q-hotel-row" title="Remove hotel" aria-label="Remove hotel"><i class="fas fa-trash-alt"></i></button>' +
+            '</div>' +
             '</div>' +
             '</div></div>';
     }
@@ -3200,6 +3261,24 @@
         return meals.join(' · ');
     }
 
+    function normalizeDayServiceMode(val) {
+        var v = String(val || '').trim().toLowerCase();
+        if (v === 'private' || v === 'sic') {
+            return v;
+        }
+        return '';
+    }
+
+    function dayServiceModeLabel(val) {
+        if (val === 'private') {
+            return 'Private';
+        }
+        if (val === 'sic') {
+            return 'SIC';
+        }
+        return '';
+    }
+
     function normalizeItineraryDay(day) {
         day = day || {};
         var title = day.title || day.caption || '';
@@ -3214,7 +3293,9 @@
             description: day.description || day.todo || '',
             image: day.image || day.img || day.image_url || '',
             overnight: String(day.overnight || day.overnight_stay || day.stay || '').trim(),
-            meal: String(day.meal || day.meals || day.meal_plan || '').trim()
+            meal: String(day.meal || day.meals || day.meal_plan || '').trim(),
+            tours: normalizeDayServiceMode(day.tours || day.tour_type || day.tour_mode),
+            transfers: normalizeDayServiceMode(day.transfers || day.transfer_type || day.transfer_mode)
         };
     }
 
@@ -3236,7 +3317,9 @@
                 description: cur.description || saved.description,
                 image: cur.image || saved.image,
                 overnight: cur.overnight || saved.overnight,
-                meal: cur.meal || saved.meal
+                meal: cur.meal || saved.meal,
+                tours: cur.tours || saved.tours,
+                transfers: cur.transfers || saved.transfers
             });
         }
         return out;
@@ -3743,11 +3826,56 @@
                 description: html,
                 image: imageVal,
                 overnight: ($c.find('.q-day-overnight').val() || '').trim(),
-                meal: ($c.find('.q-day-meal').val() || '').trim()
+                meal: ($c.find('.q-day-meal').val() || '').trim(),
+                tours: normalizeDayServiceMode($c.find('.q-day-tours').val()),
+                transfers: normalizeDayServiceMode($c.find('.q-day-transfers').val())
             });
         });
         itineraryPreserveSeed = normalizeItineraryList(data);
         return data;
+    }
+
+    function dayServiceDropdownHtml(kind, label, selected) {
+        selected = normalizeDayServiceMode(selected);
+        var selLabel = dayServiceModeLabel(selected);
+        var btnText = selLabel ? (label + ' · ' + selLabel) : label;
+        var isSet = selected ? ' is-set' : '';
+        return '' +
+            '<div class="dropdown q-day-svc-dd" data-svc="' + esc(kind) + '">' +
+            '<button type="button" class="btn q-day-svc-btn' + isSet + '" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="' + esc(label) + '">' +
+            '<span class="q-day-svc-btn-label">' + esc(btnText) + '</span>' +
+            '<i class="fas fa-chevron-down q-day-svc-caret" aria-hidden="true"></i>' +
+            '</button>' +
+            '<div class="dropdown-menu dropdown-menu-right q-day-svc-menu">' +
+            '<a class="dropdown-item q-day-svc-option' + (selected === 'private' ? ' active' : '') + '" href="#" data-svc-value="private">' +
+            '<i class="fas fa-check q-day-svc-check" aria-hidden="true"></i>Private</a>' +
+            '<a class="dropdown-item q-day-svc-option' + (selected === 'sic' ? ' active' : '') + '" href="#" data-svc-value="sic">' +
+            '<i class="fas fa-check q-day-svc-check" aria-hidden="true"></i>SIC <span class="q-day-svc-option-sub">(Seat in Coach)</span></a>' +
+            '</div></div>';
+    }
+
+    function syncDayServiceControl($card, kind) {
+        if (!$card || !$card.length) {
+            return;
+        }
+        var $input = $card.find('.q-day-' + kind);
+        var val = normalizeDayServiceMode($input.val());
+        $input.val(val);
+        var label = kind === 'transfers' ? 'Transfers' : 'Tours';
+        var selLabel = dayServiceModeLabel(val);
+        var $dd = $card.find('.q-day-svc-dd[data-svc="' + kind + '"]');
+        var $btn = $dd.find('.q-day-svc-btn');
+        $btn.toggleClass('is-set', !!val);
+        $btn.find('.q-day-svc-btn-label').text(selLabel ? (label + ' · ' + selLabel) : label);
+        $dd.find('.q-day-svc-option').each(function () {
+            var optVal = String($(this).attr('data-svc-value') || '');
+            $(this).toggleClass('active', optVal === val);
+        });
+    }
+
+    function syncDayServiceControls($card) {
+        syncDayServiceControl($card, 'tours');
+        syncDayServiceControl($card, 'transfers');
     }
 
     function rebuildItinerary(preserve) {
@@ -3790,6 +3918,8 @@
             for (var m = 0; m < totalDays; m++) {
                 dayMenuItems += '<a class="dropdown-item q-day-jump" href="#" data-day-index="' + m + '">Day ' + (m + 1) + '</a>';
             }
+            var toursVal = prev.tours || '';
+            var transfersVal = prev.transfers || '';
             var $card = $(
                 '<div class="q-day-card" data-day-index="' + i + '" data-editor-id="' + editorId + '" aria-hidden="true">' +
                 '<div class="q-day-toolbar">' +
@@ -3801,14 +3931,15 @@
                 '</div>' +
                 '</div>' +
                 '<div class="q-day-toolbar-right">' +
+                dayServiceDropdownHtml('tours', 'Tours', toursVal) +
+                dayServiceDropdownHtml('transfers', 'Transfers', transfersVal) +
                 '<button type="button" class="btn q-day-ai-btn" title="AI Suggest this day"><i class="fas fa-magic mr-1"></i>AI Suggest</button>' +
                 '<button type="button" class="btn q-day-nav-btn q-day-prev"><i class="fas fa-chevron-left"></i><span>Previous Day</span></button>' +
                 '<button type="button" class="btn q-day-nav-btn q-day-nav-primary q-day-next"><span>Next Day</span><i class="fas fa-chevron-right"></i></button>' +
                 '<button type="button" class="btn q-day-nav-btn q-view-full-itinerary" title="View full itinerary" aria-label="View full itinerary"><i class="fas fa-eye"></i></button>' +
                 '<div class="dropdown q-day-more-wrap">' +
                 '<button type="button" class="btn q-day-more-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="More">' +
-                '<i class="fas fa-ellipsis-v"></i>' +
-                '</button>' +
+                '<i class="fas fa-ellipsis-v"></i></button>' +
                 '<div class="dropdown-menu dropdown-menu-right">' + dayMenuItems + '</div>' +
                 '</div>' +
                 '</div>' +
@@ -3868,6 +3999,8 @@
                 '</div>' +
                 '</div>' +
                 '<input type="hidden" class="q-day-image">' +
+                '<input type="hidden" class="q-day-tours" value="' + esc(toursVal) + '">' +
+                '<input type="hidden" class="q-day-transfers" value="' + esc(transfersVal) + '">' +
                 '</div></div>'
             );
             $card.find('.q-day-head-label').text(heading);
@@ -3877,7 +4010,10 @@
             $card.find('.q-day-overnight').val(overnightVal);
             $card.find('.q-day-meal').val(mealVal);
             $card.find('.q-day-image').val(imgVal);
+            $card.find('.q-day-tours').val(toursVal);
+            $card.find('.q-day-transfers').val(transfersVal);
             syncDayMetaDisplay($card);
+            syncDayServiceControls($card);
             updateDayImagePreview($card, imgVal);
             $wrap.append($card);
         }
@@ -3981,6 +4117,7 @@
         }
 
         $('#q_without_itinerary').prop('checked', false);
+        syncTourCostOptUiFromMasters();
         rebuildItinerary(pkg.itinerary || []);
         recalcCosts();
 
@@ -4355,6 +4492,7 @@
         }
 
         $('#q_without_itinerary').prop('checked', false);
+        syncTourCostOptUiFromMasters();
         rebuildItinerary(itinerary);
         recalcCosts();
 
@@ -5120,6 +5258,28 @@
             openDayAiModal($(this).closest('.q-day-card'));
         });
 
+        $(document).on('click', '.q-day-svc-option', function (e) {
+            e.preventDefault();
+            var $opt = $(this);
+            var $dd = $opt.closest('.q-day-svc-dd');
+            var $card = $opt.closest('.q-day-card');
+            var kind = String($dd.attr('data-svc') || '');
+            var val = normalizeDayServiceMode($opt.attr('data-svc-value'));
+            if (!kind || !$card.length) {
+                return;
+            }
+            var $input = $card.find('.q-day-' + kind);
+            // Toggle off if the same option is clicked again.
+            if (normalizeDayServiceMode($input.val()) === val) {
+                val = '';
+            }
+            $input.val(val);
+            syncDayServiceControl($card, kind);
+            try {
+                saveFormDraftToStorage();
+            } catch (err) { /* ignore */ }
+        });
+
         $(document).on('click', '.q-day-prev', function (e) {
             e.preventDefault();
             var idx = parseInt($(this).closest('.q-day-card').attr('data-day-index'), 10) || 0;
@@ -5390,8 +5550,10 @@
             '<span class="q-pricing-inr" aria-hidden="true">₹</span>' +
             '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost cc-amount" value="' + esc(amount) + '" placeholder="0" aria-label="Extra cost amount">' +
             '</div>' +
+            '<div class="q-pricing-amount-action">' +
             '<button type="button" class="btn q-pricing-supplier-remove q-custom-cost-remove q-remove" data-remove=".q-custom-cost" title="Remove extra cost" aria-label="Remove">' +
             '<i class="fas fa-times" aria-hidden="true"></i></button>' +
+            '</div>' +
             '</div>';
     }
 
@@ -5792,10 +5954,12 @@
         html += '<span class="q-pricing-inr" aria-hidden="true">₹</span>';
         html += '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '" value="' + esc(value) + '" data-user-edited="' + edited + '" placeholder="0">';
         html += '</div>';
+        html += '<div class="q-pricing-amount-action">';
         if (removable) {
             html += '<button type="button" class="btn q-pricing-supplier-remove" title="Remove supplier and rate" aria-label="Remove supplier and rate">' +
                 '<i class="fas fa-times" aria-hidden="true"></i></button>';
         }
+        html += '</div>';
         html += '</div>';
         return html;
     }
@@ -6023,7 +6187,7 @@
             '<div class="q-profit-readonly q-sum-selling" data-display="selling">0</div>' +
             '</div>';
         html += '</div>';
-        html += tourCostCardShellHtml();
+        html += tourCostCardShellHtml(id);
         html += '<input type="hidden" class="q-sheet-total-cost" value="0">';
         html += '<input type="hidden" class="q-sheet-package-total" value="0">';
         html += '<input type="hidden" class="q-sheet-price-per-adult" value="' + esc(state.price_per_adult || '') + '"' +
@@ -6172,6 +6336,7 @@
             });
             renderTourCostRows();
             recalcCosts();
+            syncTourCostOptUiFromMasters();
         } finally {
             qPricingRenderLock = false;
         }
@@ -6566,7 +6731,33 @@
         return String(num);
     }
 
-    function tourCostCardShellHtml() {
+    function tourCostOptsHtml(suffix) {
+        var sid = String(suffix || 'x').replace(/[^a-zA-Z0-9_-]/g, '_');
+        var wi = $('#q_without_itinerary').is(':checked') ? ' checked' : '';
+        var hg = $('#q_hide_gst_note').is(':checked') ? ' checked' : '';
+        return '' +
+            '<div class="q-tour-cost-opts" role="group" aria-label="Quotation display options">' +
+            '<label class="q-tour-opt-check" for="q_tour_opt_wi_' + sid + '">' +
+            '<input type="checkbox" class="q-tour-opt-input q-tour-opt-without-itinerary" id="q_tour_opt_wi_' + sid + '"' + wi + '>' +
+            '<span class="q-tour-opt-box" aria-hidden="true"></span>' +
+            '<span class="q-tour-opt-text">Without Itinerary</span>' +
+            '</label>' +
+            '<label class="q-tour-opt-check" for="q_tour_opt_hg_' + sid + '">' +
+            '<input type="checkbox" class="q-tour-opt-input q-tour-opt-hide-gst" id="q_tour_opt_hg_' + sid + '"' + hg + '>' +
+            '<span class="q-tour-opt-box" aria-hidden="true"></span>' +
+            '<span class="q-tour-opt-text">Hide GST Note</span>' +
+            '</label>' +
+            '</div>';
+    }
+
+    function syncTourCostOptUiFromMasters() {
+        var wi = $('#q_without_itinerary').is(':checked');
+        var hg = $('#q_hide_gst_note').is(':checked');
+        $('.q-tour-opt-without-itinerary').prop('checked', wi);
+        $('.q-tour-opt-hide-gst').prop('checked', hg);
+    }
+
+    function tourCostCardShellHtml(suffix) {
         return '' +
             '<div class="q-tour-cost-card q-sheet-tour-cost" aria-label="Tour Cost Summary">' +
             '<div class="q-tour-cost-hd">' +
@@ -6590,7 +6781,9 @@
             '</div></div>' +
             '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
             '<strong class="q-tour-cost-grand-amount q-sheet-tour-grand">INR 0.00</strong>' +
-            '</div></div></div>';
+            '</div></div>' +
+            tourCostOptsHtml(suffix) +
+            '</div>';
     }
 
     function tourCostRowSubtitle(key, name) {
@@ -6631,7 +6824,6 @@
             controlsHtml =
                 '<div class="q-tour-cost-controls">' +
                 '<span class="q-tour-cost-rate-group">' +
-                '<span class="q-tour-cost-meta-prefix">INR</span>' +
                 (rateReadonly
                     ? '<span class="q-tour-cost-meta-rate" data-tour-rate="' + esc(key) + '">' + esc(rate !== '' ? String(rate) : '0') + '</span>'
                     : '<input type="number" step="0.01" min="0" class="form-control q-tour-rate-input q-tour-cost-rate-inline" data-tour-key="' + esc(key) + '" value="' + esc(rate) + '" placeholder="0">') +
@@ -6657,11 +6849,12 @@
             var ageShow = parseInt(ageVal, 10);
             nameHtml =
                 '<span class="q-tour-cost-traveller-name q-tour-cost-child-age-label">' +
-                'Child – ' +
+                '<span class="q-tour-cost-child-name">Child</span>' +
                 '<input type="number" step="1" min="0" max="17" class="form-control q-tour-age-input" data-tour-age="' + esc(key) + '" value="' +
                 esc(!isNaN(ageShow) && ageShow > 0 ? String(ageShow) : '') +
                 '" placeholder="—" aria-label="Child age">' +
-                ' Yrs</span>';
+                '<span class="q-tour-cost-child-age-unit">Y</span>' +
+                '</span>';
         } else {
             nameHtml = '<span class="q-tour-cost-traveller-name">' + esc(name) + '</span>';
         }
@@ -6669,7 +6862,8 @@
         var rowClass = 'q-tour-cost-row' +
             (summary ? ' is-summary' : '') +
             (gstEditable ? ' q-tour-gst-row' : '') +
-            (removable ? ' has-remove' : '');
+            (removable ? ' has-remove' : '') +
+            (ageEditable ? ' has-child-age' : '');
 
         return '' +
             '<div class="' + rowClass + '" data-tour-key="' + esc(key) + '"' +
@@ -6682,10 +6876,12 @@
             '</div></div>' +
             controlsHtml +
             '<div class="q-tour-cost-amount" data-tour-amount="' + esc(key) + '">' + esc(amountText) + '</div>' +
+            '<div class="q-tour-cost-action">' +
             (removable
                 ? '<button type="button" class="btn q-tour-child-remove" title="Remove child cost" aria-label="Remove child cost" data-child-index="' + esc(removeIndex) + '">' +
                 '<i class="fas fa-times" aria-hidden="true"></i></button>'
                 : '') +
+            '</div>' +
             '</div>';
     }
 
@@ -7533,6 +7729,22 @@
     });
 
     $(document).on('change', '#q_hide_gst_note', function () {
+        syncTourCostOptUiFromMasters();
+        snapshotTourCostFromDom();
+        renderTourCostRows();
+        recalcAllTourCostCards();
+    });
+
+    $(document).on('change', '.q-tour-opt-without-itinerary', function () {
+        var checked = $(this).is(':checked');
+        $('#q_without_itinerary').prop('checked', checked);
+        syncTourCostOptUiFromMasters();
+    });
+
+    $(document).on('change', '.q-tour-opt-hide-gst', function () {
+        var checked = $(this).is(':checked');
+        $('#q_hide_gst_note').prop('checked', checked);
+        syncTourCostOptUiFromMasters();
         snapshotTourCostFromDom();
         renderTourCostRows();
         recalcAllTourCostCards();
@@ -8386,7 +8598,6 @@
             var base = 'hotel.' + catIdx + '.' + hi + '.';
             var mealInfo = qpHotelMealLabels(d.meal_plan, d.room_type);
             var mealCode = qpHotelMealCode(d.meal_plan) || mealInfo.code || '';
-            var country = String(d.country || '').trim();
             var cityText = String(d.city || '').trim();
             var starsHtml = qpHotelStarsHtml(d.star_category);
             var roomsNum = parseInt(d.rooms, 10);
@@ -8401,9 +8612,6 @@
             var cityValueHtml = '<div class="qp-hotel-primary qp-hotel-city-name">' +
                 previewEditable(previewVal(cityText).toUpperCase(), base + 'city', { cls: 'q-preview-cell-edit' }) +
                 '</div>';
-            if (country && cityText.toLowerCase().indexOf(country.toLowerCase()) === -1) {
-                cityValueHtml += '<div class="qp-hotel-secondary">' + esc(country.toUpperCase()) + '</div>';
-            }
 
             var roomCombinedHtml =
                 '<div class="qp-hotel-room-combined">' +
@@ -10649,6 +10857,7 @@
 
         if (parseInt(p.without_itinerary, 10)) $('#q_without_itinerary').prop('checked', true);
         if (parseInt(p.hide_gst_note, 10)) $('#q_hide_gst_note').prop('checked', true);
+        syncTourCostOptUiFromMasters();
 
         var notesVal = '';
         if (cs.pricing_notes != null && String(cs.pricing_notes) !== '') {
@@ -11542,9 +11751,20 @@
         initPreviewInlineEditing();
         initQuotationDatePickers();
 
-        function addFlightSegment(data) {
-            var $row = $(flightRowHtml(data || {}));
-            $('#qFlightRows').append($row);
+        function addFlightSegment(data, opts) {
+            opts = opts || {};
+            var rowData = data || {};
+            var $row = $(flightRowHtml(rowData));
+            var $target = $('#qFlightRows');
+            // "Add Another Segment" continues a journey only when the last card is already a multi-leg connection.
+            if (opts.continueJourney) {
+                var $lastJourney = $('#qFlightRows .q-flight-journey-card').last();
+                if ($lastJourney.length && $lastJourney.find('.q-flight-row').length >= 1) {
+                    $target = $lastJourney.find('.q-flight-journey-body').first();
+                    $row.find('.f-journey-start').val('0');
+                }
+            }
+            $target.append($row);
             initQuotationDatePickers($row);
             qInitSupplierSelect2($row.find('.f-supplier'), { placeholder: 'Select' });
             renumberFlightRows();
@@ -11552,8 +11772,12 @@
             scheduleSyncReturnAirfareInclusion();
         }
 
-        $('#qAddFlight, #qAddFlightSegment').on('click', function () {
+        $('#qAddFlight').on('click', function () {
             addFlightSegment({});
+        });
+
+        $('#qAddFlightSegment').on('click', function () {
+            addFlightSegment({}, { continueJourney: true });
         });
 
         function setFlightActionActive($el) {
