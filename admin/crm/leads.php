@@ -532,6 +532,7 @@ if ($hasLeadsTable) {
 crmLeadsAttachQuotationLines($conn, $leadRows);
 crmLeadsEnrichDisplayFromQuotations($conn, $leadRows);
 crmLeadsResolveMissingQuotationActions($conn, $leadRows);
+crmLeadsAttachBookingStatus($conn, $leadRows);
 crmLeadsSyncFeatureStages($conn, $leadRows);
 
 $deletedLeadsCount = $hasLeadsTable ? crmLeadsDeletedCount($conn) : 0;
@@ -699,6 +700,7 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui table.crm-leads-table[data-col-assign="0"] .col-ld-assign,
         .crm-leads-ui table.crm-leads-table[data-col-stage="0"] .col-ld-stage,
         .crm-leads-ui table.crm-leads-table[data-col-stage="0"] .col-stage,
+        .crm-leads-ui table.crm-leads-table[data-col-booking="0"] .col-ld-booking,
         .crm-leads-ui table.crm-leads-table[data-col-actions="0"] .col-actions {
             display: none !important;
         }
@@ -713,6 +715,7 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui table.crm-leads-table[data-col-assign="1"] .col-ld-assign,
         .crm-leads-ui table.crm-leads-table[data-col-stage="1"] .col-ld-stage,
         .crm-leads-ui table.crm-leads-table[data-col-stage="1"] .col-stage,
+        .crm-leads-ui table.crm-leads-table[data-col-booking="1"] .col-ld-booking,
         .crm-leads-ui table.crm-leads-table[data-col-actions="1"] .col-actions {
             display: table-cell !important;
         }
@@ -1230,10 +1233,12 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui table.crm-leads-table thead th.col-ld-date,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-services,
         .crm-leads-ui table.crm-leads-table thead th.col-ld-stage,
+        .crm-leads-ui table.crm-leads-table thead th.col-ld-booking,
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-assign,
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-date,
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-services,
-        .crm-leads-ui table.crm-leads-table tbody td.col-ld-stage {
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-stage,
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-booking {
             text-align: center;
             vertical-align: middle;
         }
@@ -1284,6 +1289,34 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui table.crm-leads-table thead th.col-ld-assign,
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-assign {
             width: auto;
+        }
+
+        .crm-leads-ui table.crm-leads-table thead th.col-ld-booking,
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-booking {
+            width: 1%;
+            min-width: 3.25rem !important;
+            max-width: none !important;
+            padding-left: 0.3rem;
+            padding-right: 0.3rem;
+            white-space: nowrap !important;
+        }
+
+        .crm-leads-ui table.crm-leads-table thead th.col-ld-booking .ld-th-label {
+            display: block;
+            white-space: nowrap;
+            line-height: 1.15;
+            margin: 0 auto;
+        }
+
+        .crm-leads-ui table.crm-leads-table thead th.col-actions,
+        .crm-leads-ui table.crm-leads-table tbody td.col-actions {
+            width: 6.25rem !important;
+            min-width: 6.25rem !important;
+            max-width: 6.75rem !important;
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+            white-space: nowrap;
+            text-align: center;
         }
 
         .crm-leads-ui table.crm-leads-table thead th.col-ld-assign,
@@ -1727,6 +1760,65 @@ foreach ($destinationLookup as $destId => $destName) {
             flex-wrap: wrap;
         }
 
+        .crm-leads-ui .ld-book-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: nowrap;
+            gap: 0.2rem;
+            max-width: none;
+            white-space: nowrap;
+        }
+
+        .crm-leads-ui .ld-book-status-empty {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .crm-leads-ui .ld-book-status-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 9px;
+            line-height: 1;
+            flex: 0 0 18px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+            cursor: pointer;
+        }
+
+        .crm-leads-ui .ld-book-status-icon:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+
+        .crm-leads-ui .ld-book-status-icon:focus {
+            outline: 2px solid rgba(37, 99, 235, 0.45);
+            outline-offset: 1px;
+        }
+
+        .crm-leads-ui .ld-book-status-icon.is-unpaid {
+            background: #dc2626;
+        }
+
+        .crm-leads-ui .ld-book-status-icon.is-partial {
+            background: #ea580c;
+        }
+
+        .crm-leads-ui .ld-book-status-icon.is-paid {
+            background: #16a34a;
+        }
+
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-booking {
+            overflow: visible;
+            white-space: nowrap !important;
+            text-align: center;
+            vertical-align: middle;
+        }
+
         .crm-leads-ui td.col-services {
             vertical-align: middle;
             text-align: center;
@@ -1879,26 +1971,26 @@ foreach ($destinationLookup as $destId => $destName) {
 
         .crm-leads-ui .action-btns {
             display: inline-flex;
-            gap: 4px;
+            gap: 2px;
             align-items: center;
             justify-content: center;
             flex-wrap: nowrap;
             white-space: nowrap;
-            width: 100%;
+            width: auto;
             max-width: 100%;
             overflow: visible;
         }
 
         .crm-leads-ui .action-btns .btn-icon {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             padding: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: 7px;
             border: 1px solid transparent;
-            font-size: calc(0.78rem + 1px);
+            font-size: calc(0.72rem + 1px);
             text-decoration: none;
             transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         }
@@ -2058,8 +2150,8 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui .action-btns .btn-book .btn-book-img {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             object-fit: contain;
             display: block;
             pointer-events: none;
@@ -3547,6 +3639,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                 data-col-source="<?= !empty($leadsColumnVisibility['source']) ? '1' : '0' ?>"
                                 data-col-assign="<?= !empty($leadsColumnVisibility['assign']) ? '1' : '0' ?>"
                                 data-col-stage="<?= !empty($leadsColumnVisibility['stage']) ? '1' : '0' ?>"
+                                data-col-booking="<?= !empty($leadsColumnVisibility['booking']) ? '1' : '0' ?>"
                                 data-col-actions="<?= !empty($leadsColumnVisibility['actions']) ? '1' : '0' ?>">
                                 <thead>
                                     <tr>
@@ -3558,13 +3651,14 @@ foreach ($destinationLookup as $destId => $destName) {
                                         <th class="col-ld-source" data-col-key="source"><span class="ld-th-label">Lead Source</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                         <th class="col-ld-assign" data-col-key="assign"><span class="ld-th-label">Assigned</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                         <th class="col-ld-stage" data-col-key="stage"><span class="ld-th-label">Stage</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
+                                        <th class="col-ld-booking" data-col-key="booking"><span class="ld-th-label">Status</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                         <th class="col-actions" data-col-key="actions"><span class="ld-th-label">Actions</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($leadRows)) { ?>
                                         <tr>
-                                            <td colspan="9" class="text-center text-muted">No leads found.</td>
+                                            <td colspan="10" class="text-center text-muted">No leads found.</td>
                                         </tr>
                                     <?php } else { ?>
                                         <?php foreach ($leadRows as $rowIndex => $lead) {
@@ -3751,6 +3845,9 @@ foreach ($destinationLookup as $destId => $destName) {
                                                             </option>
                                                         <?php } ?>
                                                     </select>
+                                                </td>
+                                                <td class="col-ld-booking js-booking-status"<?= ((int) ($lead['latest_quotation_id'] ?? 0) > 0) ? ' data-id="' . (int) $lead['latest_quotation_id'] . '"' : '' ?>>
+                                                    <?= $lead['booking_status_html'] ?? '<span class="ld-book-status-empty">—</span>' ?>
                                                 </td>
                                                 <td class="col-actions">
                                                     <div class="action-btns">
@@ -4027,6 +4124,10 @@ foreach ($destinationLookup as $destId => $destName) {
                             <label class="leads-col-settings-item">
                                 <input type="checkbox" class="js-leads-col-toggle" data-col-key="stage"<?= !empty($leadsColumnVisibility['stage']) ? ' checked' : '' ?>>
                                 <span class="leads-col-settings-label">Stage</span>
+                            </label>
+                            <label class="leads-col-settings-item">
+                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="booking"<?= !empty($leadsColumnVisibility['booking']) ? ' checked' : '' ?>>
+                                <span class="leads-col-settings-label">Booking Status</span>
                             </label>
                             <label class="leads-col-settings-item is-locked">
                                 <input type="checkbox" class="js-leads-col-toggle" data-col-key="actions" checked disabled>
@@ -4478,7 +4579,8 @@ foreach ($destinationLookup as $destId => $destName) {
         { key: 'source', className: 'col-ld-source', label: 'Lead Source', locked: false, weight: 12, minWidth: 100 },
         { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 10, minWidth: 100 },
         { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 9, minWidth: 110 },
-        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '9.5rem', minWidth: 100 }
+        { key: 'booking', className: 'col-ld-booking', label: 'Status', locked: false, minWidth: 52, weight: 5 },
+        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '6.25rem', minWidth: 90 }
     ];
     var leadsColumnVisibilityState = <?= json_encode($leadsColumnVisibility, JSON_UNESCAPED_UNICODE) ?>;
     var leadsColumnSaveTimer = null;
@@ -6849,7 +6951,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=3"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=6"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {

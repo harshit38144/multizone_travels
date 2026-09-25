@@ -22,7 +22,8 @@ if ($id <= 0) {
 }
 
 $stmt = $conn->prepare(
-    'SELECT `id`, `quotation_uid`, `guest_name`, `mobile_no`, `tour_confirmed`, `tour_confirm_json`
+    'SELECT `id`, `quotation_uid`, `guest_name`, `mobile_no`, `tour_confirmed`, `tour_confirm_json`,
+            `flights_json`, `hotels_json`, `cost_sheet_json`
      FROM `crm_quotations` WHERE `id` = ? LIMIT 1'
 );
 if (!$stmt) {
@@ -47,6 +48,11 @@ if ($payload['mobile_no'] === '') {
     $payload['mobile_no'] = (string) $row['mobile_no'];
 }
 
+// First-time Book: prefill supplier + totals from quotation details.
+if (empty($payload['services'])) {
+    $payload['services'] = crmQuotationBuildConfirmServicesFromQuote($row);
+}
+
 qConfirmJson(true, 'OK', [
     'quotation' => [
         'id' => (int) $row['id'],
@@ -57,4 +63,5 @@ qConfirmJson(true, 'OK', [
     ],
     'confirm' => $payload,
     'services' => crmQuotationConfirmServiceMap(),
+    'autofilled' => !is_array($stored) || empty($stored['services']),
 ]);

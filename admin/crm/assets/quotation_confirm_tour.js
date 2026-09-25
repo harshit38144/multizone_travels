@@ -45,6 +45,16 @@
             '#ctSupplierSuggestMenu .ct-supplier-item.is-active{background:#eff6ff;color:#1d4ed8;}' +
             '#ctSupplierSuggestMenu .ct-supplier-item-sub{display:block;font-size:.72rem;color:#94a3b8;margin-top:.1rem;}' +
             '#ctSupplierSuggestMenu .ct-supplier-empty{padding:.55rem .7rem;font-size:.8rem;color:#94a3b8;}' +
+            '#confirmTourModal .ct-detail-row.ct-row-highlight{' +
+            'background:linear-gradient(90deg,#fff7ed 0%,#ffedd5 55%,#fff 100%)!important;' +
+            'box-shadow:inset 3px 0 0 #ea580c,0 0 0 1px rgba(234,88,12,.28);' +
+            'animation:ctRowPulse 1.1s ease-in-out 2;}' +
+            '#confirmTourModal .ct-chip.ct-chip-highlight{' +
+            'background:#ffedd5!important;border-color:#fb923c!important;color:#c2410c!important;' +
+            'box-shadow:0 0 0 2px rgba(251,146,60,.28);}' +
+            '@keyframes ctRowPulse{' +
+            '0%,100%{transform:translateX(0);}' +
+            '50%{transform:translateX(2px);}}' +
             '</style>'
         );
     }
@@ -224,12 +234,51 @@
         syncChipStates();
     }
 
-    function openModal(quotationId, $triggerRow) {
+    var highlightServiceTimer = null;
+
+    function clearServiceHighlight() {
+        if (highlightServiceTimer) {
+            window.clearTimeout(highlightServiceTimer);
+            highlightServiceTimer = null;
+        }
+        $('#ctDetailRows .ct-detail-row').removeClass('ct-row-highlight');
+        $('#ctIncludedChips .ct-chip').removeClass('ct-chip-highlight');
+    }
+
+    function highlightServiceInModal(serviceKey) {
+        clearServiceHighlight();
+        serviceKey = String(serviceKey || '').trim();
+        if (!serviceKey) {
+            return;
+        }
+        var $rows = $('#ctDetailRows .ct-detail-row[data-key="' + serviceKey + '"]');
+        var $chip = $('#ctIncludedChips .ct-chip[data-key="' + serviceKey + '"]');
+        if ($rows.length) {
+            $rows.addClass('ct-row-highlight');
+            try {
+                var el = $rows.get(0);
+                if (el && typeof el.scrollIntoView === 'function') {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            } catch (err) {}
+        }
+        if ($chip.length) {
+            $chip.addClass('ct-chip-highlight');
+        }
+        highlightServiceTimer = window.setTimeout(function () {
+            highlightServiceTimer = null;
+            $('#ctDetailRows .ct-detail-row').removeClass('ct-row-highlight');
+            $('#ctIncludedChips .ct-chip').removeClass('ct-chip-highlight');
+        }, 2800);
+    }
+
+    function openModal(quotationId, $triggerRow, highlightKey) {
         activeQuotationId = quotationId;
         activeRow = $triggerRow;
         $('#ctQuotationId').val(quotationId);
         $('#ctGuestName').val('');
         $('#ctMobileNo').val('');
+        clearServiceHighlight();
         renderRows([]);
         $('#confirmTourModal').modal('show');
 
@@ -245,6 +294,11 @@
                 $('#ctGuestName').val(confirm.guest_name || q.guest_name || '');
                 $('#ctMobileNo').val(confirm.mobile_no || q.mobile_no || '');
                 renderRows(confirm.services || []);
+                if (highlightKey) {
+                    window.setTimeout(function () {
+                        highlightServiceInModal(highlightKey);
+                    }, 80);
+                }
             })
             .fail(function () {
                 alert('Could not load quotation details.');
@@ -257,6 +311,9 @@
         }
         if (res.status_html) {
             activeRow.find('.js-q-status').html(res.status_html);
+        }
+        if (res.booking_status_html) {
+            activeRow.find('.js-booking-status').html(res.booking_status_html);
         }
         var $bookBtn = activeRow.find('.js-q-book');
         if (parseInt(res.tour_confirmed, 10) === 1) {
@@ -324,6 +381,30 @@
             e.preventDefault();
             var id = $(this).data('id');
             openModal(id, $(this).closest('tr'));
+        });
+
+        $(document).on('click', '.js-booking-status-open', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $icon = $(this);
+            var $cell = $icon.closest('.js-booking-status');
+            var id = parseInt($cell.attr('data-id') || $cell.data('id') || 0, 10) || 0;
+            if (!id) {
+                id = parseInt($icon.closest('tr').find('.js-q-book').data('id') || 0, 10) || 0;
+            }
+            if (!id) {
+                return;
+            }
+            var highlightKey = String($icon.attr('data-key') || $icon.data('key') || '').trim();
+            openModal(id, $icon.closest('tr'), highlightKey);
+        });
+
+        $(document).on('keydown', '.js-booking-status-open', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') {
+                return;
+            }
+            e.preventDefault();
+            $(this).trigger('click');
         });
 
         $(document).on('click', '#ctIncludedChips .ct-chip', function () {
@@ -401,6 +482,7 @@
 
         $('#confirmTourModal').on('hidden.bs.modal', function () {
             hideSupplierSuggest();
+            clearServiceHighlight();
         });
 
         $(document).on('click', '.ct-remove-row', function () {

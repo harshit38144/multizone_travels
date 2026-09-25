@@ -94,5 +94,6 @@ qConfirmSaveJson(true, 'Tour confirmation saved.', [
     'id' => $id,
     'tour_confirmed' => $tourConfirmed,
     'status_html' => crmQuotationRenderStatusBadges($json),
+    'booking_status_html' => crmQuotationBookingStatusIconsHtml($json),
     'confirm' => $payload,
 ]);

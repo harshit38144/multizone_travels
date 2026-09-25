@@ -148,6 +148,252 @@ function crmQuotationNormalizeConfirmPayload($raw)
     ];
 }
 
+/**
+ * Active hotel list from hotels_json (supports multi-option + flat list).
+ *
+ * @param mixed $raw
+ * @return list<array<string, mixed>>
+ */
+function crmQuotationActiveHotelsFromJson($raw): array
+{
+    $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+    if (!is_array($decoded)) {
+        return [];
+    }
+
+    if (isset($decoded['categories']) && is_array($decoded['categories'])) {
+        $activeId = (string) ($decoded['active_category_id'] ?? '');
+        $active = null;
+        foreach ($decoded['categories'] as $cat) {
+            if (!is_array($cat)) {
+                continue;
+            }
+            if ($activeId !== '' && (string) ($cat['id'] ?? '') === $activeId) {
+                $active = $cat;
+                break;
+            }
+        }
+        if ($active === null) {
+            foreach ($decoded['categories'] as $cat) {
+                if (is_array($cat)) {
+                    $active = $cat;
+                    break;
+                }
+            }
+        }
+        $hotels = is_array($active['hotels'] ?? null) ? $active['hotels'] : [];
+        return array_values(array_filter($hotels, 'is_array'));
+    }
+
+    if (array_keys($decoded) === range(0, count($decoded) - 1)) {
+        return array_values(array_filter($decoded, 'is_array'));
+    }
+
+    return [];
+}
+
+/**
+ * Build Confirm-Tour service rows from quotation flights / hotels / land / cost sheet.
+ * One row per supplier within each service type (amounts summed when same supplier repeats).
+ *
+ * @param array<string, mixed> $quotation DB row or partial row with JSON columns
+ * @return list<array{key:string,label:string,supplier:string,total:float,paid:float,balance:float}>
+ */
+function crmQuotationBuildConfirmServicesFromQuote(array $quotation): array
+{
+    $map = crmQuotationConfirmServiceMap();
+    /** @var array<string, array{key:string,supplier:string,total:float}> $buckets */
+    $buckets = [];
+
+    $add = static function (string $key, string $supplier, float $total) use (&$buckets, $map): void {
+        if (!isset($map[$key])) {
+            return;
+        }
+        $supplier = trim($supplier);
+        $total = round(max(0, $total), 2);
+        if ($supplier === '' && $total <= 0) {
+            return;
+        }
+        $bucketKey = $key . "\0" . strtolower($supplier !== '' ? $supplier : '__none__');
+        if (!isset($buckets[$bucketKey])) {
+            $buckets[$bucketKey] = [
+                'key' => $key,
+                'supplier' => $supplier,
+                'total' => 0.0,
+            ];
+        }
+        $buckets[$bucketKey]['total'] += $total;
+        if ($supplier !== '' && $buckets[$bucketKey]['supplier'] === '') {
+            $buckets[$bucketKey]['supplier'] = $supplier;
+        }
+    };
+
+    $num = static function ($v): float {
+        if (is_string($v)) {
+            $v = str_replace(',', '', $v);
+        }
+        $n = (float) $v;
+        return is_finite($n) ? $n : 0.0;
+    };
+
+    $supplierName = static function ($row): string {
+        if (!is_array($row)) {
+            return '';
+        }
+        foreach (['supplier', 'supplier_name', 'airline_supplier'] as $k) {
+            $name = trim((string) ($row[$k] ?? ''));
+            if ($name !== '' && strcasecmp($name, 'Select') !== 0 && stripos($name, 'Create new') !== 0) {
+                return $name;
+            }
+        }
+        return '';
+    };
+
+    $isTrain = static function ($row) use ($supplierName): bool {
+        if (!is_array($row)) {
+            return false;
+        }
+        $type = strtolower(trim((string) ($row['_legacy_type'] ?? $row['mode'] ?? $row['type'] ?? '')));
+        if ($type === 'train' || $type === 'rail') {
+            return true;
+        }
+        $blob = strtolower(
+            trim((string) ($row['name'] ?? '')) . ' ' .
+            trim((string) ($row['fl_tr_no'] ?? '')) . ' ' .
+            $supplierName($row)
+        );
+        return (bool) preg_match('/\b(train|rail|irctc)\b/', $blob);
+    };
+
+    $flights = json_decode((string) ($quotation['flights_json'] ?? '[]'), true);
+    if (is_array($flights)) {
+        foreach ($flights as $f) {
+            if (!is_array($f)) {
+                continue;
+            }
+            $amt = $num($f['fare'] ?? ($f['amount'] ?? 0));
+            $name = $supplierName($f);
+            if ($amt <= 0 && $name === '') {
+                continue;
+            }
+            $add($isTrain($f) ? 'train' : 'flight', $name, $amt);
+        }
+    }
+
+    $hotels = crmQuotationActiveHotelsFromJson($quotation['hotels_json'] ?? '[]');
+    foreach ($hotels as $h) {
+        $amt = $num($h['rate'] ?? ($h['amount'] ?? 0));
+        $name = $supplierName($h);
+        if ($amt <= 0 && $name === '') {
+            continue;
+        }
+        $add('hotels', $name, $amt);
+    }
+
+    $costSheet = json_decode((string) ($quotation['cost_sheet_json'] ?? '{}'), true);
+    if (!is_array($costSheet)) {
+        $costSheet = [];
+    }
+
+    $itinMeta = is_array($costSheet['itinerary_meta'] ?? null) ? $costSheet['itinerary_meta'] : [];
+    $landSuppliers = [];
+    if (!empty($itinMeta['suppliers']) && is_array($itinMeta['suppliers'])) {
+        $landSuppliers = $itinMeta['suppliers'];
+    } elseif (!empty($itinMeta['supplier']) || isset($itinMeta['rate'])) {
+        $landSuppliers = [$itinMeta];
+    }
+    foreach ($landSuppliers as $ls) {
+        if (!is_array($ls)) {
+            continue;
+        }
+        $amt = $num($ls['rate'] ?? ($ls['amount'] ?? 0));
+        $name = $supplierName($ls);
+        if ($amt <= 0 && $name === '') {
+            continue;
+        }
+        $add('land_package', $name, $amt);
+    }
+
+    // Cost-sheet fixed amounts (active option) for services that may lack a dedicated supplier row.
+    $fixed = [];
+    if (!empty($costSheet['options']) && is_array($costSheet['options'])) {
+        $activeId = (string) ($costSheet['active_option_id'] ?? '');
+        $activeOpt = null;
+        foreach ($costSheet['options'] as $opt) {
+            if (!is_array($opt)) {
+                continue;
+            }
+            if ($activeId !== '' && (string) ($opt['category_id'] ?? '') === $activeId) {
+                $activeOpt = $opt;
+                break;
+            }
+        }
+        if ($activeOpt === null) {
+            foreach ($costSheet['options'] as $opt) {
+                if (is_array($opt)) {
+                    $activeOpt = $opt;
+                    break;
+                }
+            }
+        }
+        if (is_array($activeOpt['fixed'] ?? null)) {
+            $fixed = $activeOpt['fixed'];
+        }
+    }
+    if (!$fixed && is_array($costSheet['fixed'] ?? null)) {
+        $fixed = $costSheet['fixed'];
+    }
+
+    $fixedMap = [
+        'visa' => 'visa',
+        'travel_insurance' => 'travel_insurance',
+        'transport' => 'transfers',
+    ];
+    foreach ($fixedMap as $sheetKey => $serviceKey) {
+        $amt = $num($fixed[$sheetKey] ?? 0);
+        if ($amt <= 0) {
+            continue;
+        }
+        // Skip if we already have any row for this service (prefer supplier-linked source data).
+        $already = false;
+        foreach ($buckets as $b) {
+            if ($b['key'] === $serviceKey) {
+                $already = true;
+                break;
+            }
+        }
+        if (!$already) {
+            $add($serviceKey, '', $amt);
+        }
+    }
+
+    // Preferred display order.
+    $order = array_flip(array_keys($map));
+    uasort($buckets, static function ($a, $b) use ($order) {
+        $oa = $order[$a['key']] ?? 99;
+        $ob = $order[$b['key']] ?? 99;
+        if ($oa !== $ob) {
+            return $oa <=> $ob;
+        }
+        return strcasecmp($a['supplier'], $b['supplier']);
+    });
+
+    $out = [];
+    foreach ($buckets as $b) {
+        $total = round((float) $b['total'], 2);
+        $out[] = [
+            'key' => $b['key'],
+            'label' => $map[$b['key']],
+            'supplier' => $b['supplier'],
+            'total' => $total,
+            'paid' => 0.0,
+            'balance' => $total,
+        ];
+    }
+
+    return $out;
+}
+
 function crmQuotationRenderStatusBadges($tourConfirmJson)
 {
     $payload = json_decode((string) $tourConfirmJson, true);
@@ -172,6 +418,95 @@ function crmQuotationRenderStatusBadges($tourConfirmJson)
             'minimum' => 'status-minimum',
         ][$level];
         $html .= '<span class="q-status-badge ' . $class . '">' . $label . '</span>';
+    }
+    $html .= '</div>';
+
+    return $html;
+}
+
+/**
+ * Compact booking-status icons for leads table (payment traffic-light).
+ *
+ * @return string HTML
+ */
+function crmQuotationBookingStatusIconsHtml($tourConfirmJson): string
+{
+    $payload = json_decode((string) $tourConfirmJson, true);
+    if (!is_array($payload) || empty($payload['services']) || !is_array($payload['services'])) {
+        return '<span class="ld-book-status-empty" title="No booking services yet">—</span>';
+    }
+
+    $map = crmQuotationConfirmServiceMap();
+    $icons = [
+        'visa' => 'fas fa-passport',
+        'hotels' => 'fas fa-hotel',
+        'land_package' => 'fas fa-map-marked-alt',
+        'forex' => 'fas fa-exchange-alt',
+        'train' => 'fas fa-train',
+        'flight' => 'fas fa-plane',
+        'travel_insurance' => 'fas fa-shield-alt',
+        'transfers' => 'fas fa-shuttle-van',
+        'tours' => 'fas fa-binoculars',
+        'cruise' => 'fas fa-ship',
+    ];
+
+    /** @var array<string, array{key:string,label:string,total:float,paid:float}> $byKey */
+    $byKey = [];
+    foreach ($payload['services'] as $svc) {
+        if (!is_array($svc)) {
+            continue;
+        }
+        $key = trim((string) ($svc['key'] ?? ''));
+        if ($key === '' || !isset($map[$key])) {
+            continue;
+        }
+        $total = (float) ($svc['total'] ?? 0);
+        $paid = (float) ($svc['paid'] ?? 0);
+        if (!isset($byKey[$key])) {
+            $byKey[$key] = [
+                'key' => $key,
+                'label' => $map[$key],
+                'total' => 0.0,
+                'paid' => 0.0,
+            ];
+        }
+        $byKey[$key]['total'] += $total;
+        $byKey[$key]['paid'] += $paid;
+    }
+
+    if (!$byKey) {
+        return '<span class="ld-book-status-empty" title="No booking services yet">—</span>';
+    }
+
+    // Keep stable service order from the confirm map.
+    $ordered = [];
+    foreach ($map as $key => $_label) {
+        if (isset($byKey[$key])) {
+            $ordered[] = $byKey[$key];
+        }
+    }
+
+    $html = '<div class="ld-book-status" role="list" aria-label="Booking payment status">';
+    foreach ($ordered as $row) {
+        $level = crmQuotationPaymentLevel($row['total'], $row['paid']);
+        if ($level === 'full') {
+            $state = 'paid';
+            $stateLabel = 'Fully Paid';
+        } elseif ($level === null) {
+            $state = 'unpaid';
+            $stateLabel = 'Unpaid';
+        } else {
+            $state = 'partial';
+            $stateLabel = 'Partially Paid';
+        }
+        $icon = $icons[$row['key']] ?? 'fas fa-circle';
+        $title = $row['label'] . ' — ' . $stateLabel;
+        $html .= '<span class="ld-book-status-icon is-' . $state . ' js-booking-status-open" role="button" tabindex="0"'
+            . ' data-key="' . htmlspecialchars($row['key'], ENT_QUOTES, 'UTF-8') . '"'
+            . ' title="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '"'
+            . ' aria-label="' . htmlspecialchars($title . ' — Open Confirm Tour', ENT_QUOTES, 'UTF-8') . '">'
+            . '<i class="' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></i>'
+            . '</span>';
     }
     $html .= '</div>';
 
@@ -1280,6 +1615,49 @@ function crmLeadsResolveMissingQuotationActions(mysqli $conn, array &$leadRows):
         if ($lead['latest_is_tour_confirmed']) {
             $lead['is_tour_confirmed'] = true;
         }
+    }
+    unset($lead);
+}
+
+/**
+ * Attach booking-status icons HTML from latest quotation tour_confirm_json.
+ *
+ * @param array<int, array<string, mixed>> $leadRows
+ */
+function crmLeadsAttachBookingStatus(mysqli $conn, array &$leadRows): void
+{
+    if (empty($leadRows)) {
+        return;
+    }
+
+    crmEnsureQuotationTables($conn);
+
+    $ids = [];
+    foreach ($leadRows as $lead) {
+        $qid = (int) ($lead['latest_quotation_id'] ?? 0);
+        if ($qid > 0) {
+            $ids[$qid] = true;
+        }
+    }
+
+    $byId = [];
+    if (!empty($ids)) {
+        $idsSql = implode(',', array_map('intval', array_keys($ids)));
+        $res = $conn->query(
+            'SELECT `id`, `tour_confirm_json` FROM `crm_quotations` WHERE `id` IN (' . $idsSql . ')'
+        );
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $byId[(int) ($row['id'] ?? 0)] = (string) ($row['tour_confirm_json'] ?? '');
+            }
+        }
+    }
+
+    foreach ($leadRows as &$lead) {
+        $qid = (int) ($lead['latest_quotation_id'] ?? 0);
+        $json = ($qid > 0 && isset($byId[$qid])) ? $byId[$qid] : '';
+        $lead['latest_tour_confirm_json'] = $json;
+        $lead['booking_status_html'] = crmQuotationBookingStatusIconsHtml($json);
     }
     unset($lead);
 }
