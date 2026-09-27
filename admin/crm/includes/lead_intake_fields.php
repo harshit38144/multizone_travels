@@ -33,6 +33,7 @@ function crmLeadIntakeFieldCatalog()
                 'tp_rooms' => 'Rooms',
                 'tp_adults' => 'Adults',
                 'tp_children' => 'Children',
+                'tp_infants' => 'Infants',
                 'tp_children_ages' => 'Children Ages',
                 'tp_notes' => 'Package Notes',
             ],
@@ -178,7 +179,7 @@ function crmInferPayloadServices(array $payload)
 function crmLeadIntakeServiceFieldMap()
 {
     return [
-        'tour_package' => ['tp_travel_date', 'tp_departure', 'tp_arrival', 'tp_tour_type', 'tp_destination', 'tp_budget', 'tp_hotel_category', 'tp_rooms', 'tp_adults', 'tp_children', 'tp_children_ages', 'tp_notes'],
+        'tour_package' => ['tp_travel_date', 'tp_departure', 'tp_arrival', 'tp_tour_type', 'tp_destination', 'tp_budget', 'tp_hotel_category', 'tp_rooms', 'tp_adults', 'tp_children', 'tp_infants', 'tp_children_ages', 'tp_notes'],
         'cruise' => ['cruise_embark_date', 'cruise_line', 'cruise_cabin', 'cruise_pax', 'cruise_port'],
         'visa' => ['visa_country', 'visa_type', 'visa_travel_date', 'visa_passport_no', 'visa_passport_exp'],
         'passport' => ['passport_service', 'passport_urgency', 'passport_expiry', 'passport_notes'],
@@ -267,5 +268,6 @@ function crmLeadIntakeShowTourRgRow(array $enabled)
         || crmLeadIntakeFieldEnabled($enabled, 'tp_rooms')
         || crmLeadIntakeFieldEnabled($enabled, 'tp_adults')
         || crmLeadIntakeFieldEnabled($enabled, 'tp_children')
+        || crmLeadIntakeFieldEnabled($enabled, 'tp_infants')
         || crmLeadIntakeFieldEnabled($enabled, 'tp_children_ages');
 }

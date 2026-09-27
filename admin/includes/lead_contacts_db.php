@@ -621,3 +621,90 @@ function lcDisplayName($row)
     $title = trim($row['title'] ?? '');
     return trim($title . ($title && $name ? ' ' : '') . $name);
 }
+
+/**
+ * Sync guest name / phone / email from Confirm Tour (or similar) onto the lead
+ * and its contact profile so leads.php + lead_contacts.php stay aligned.
+ */
+function lcSyncLeadGuestDetails(mysqli $conn, int $leadId, string $name, string $phone, string $email): bool
+{
+    $leadId = (int) $leadId;
+    $name = trim($name);
+    $phone = trim($phone);
+    $email = trim($email);
+    if ($leadId <= 0 || $name === '') {
+        return false;
+    }
+
+    lcEnsureContactTables($conn);
+
+    $stmt = $conn->prepare(
+        'UPDATE `crm_leads`
+         SET `customer_name` = ?, `customer_phone` = ?, `customer_email` = ?
+         WHERE `id` = ? LIMIT 1'
+    );
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param('sssi', $name, $phone, $email, $leadId);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return false;
+    }
+    $stmt->close();
+
+    // Keep payload_json guest fields in sync for the lead edit form.
+    $payloadStmt = $conn->prepare('SELECT `payload_json` FROM `crm_leads` WHERE `id` = ? LIMIT 1');
+    if ($payloadStmt) {
+        $payloadStmt->bind_param('i', $leadId);
+        if ($payloadStmt->execute()) {
+            $pres = $payloadStmt->get_result();
+            $prow = $pres ? $pres->fetch_assoc() : null;
+            if ($prow) {
+                $payload = json_decode((string) ($prow['payload_json'] ?? ''), true);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+                $payload['customer_name'] = $name;
+                $payload['customer_phone'] = $phone;
+                $payload['customer_email'] = $email;
+                $payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
+                if ($payloadJson !== false) {
+                    $updPayload = $conn->prepare('UPDATE `crm_leads` SET `payload_json` = ? WHERE `id` = ? LIMIT 1');
+                    if ($updPayload) {
+                        $updPayload->bind_param('si', $payloadJson, $leadId);
+                        $updPayload->execute();
+                        $updPayload->close();
+                    }
+                }
+            }
+        }
+        $payloadStmt->close();
+    }
+
+    $profile = lcGetProfile($conn, $leadId);
+    if ($profile) {
+        $upd = $conn->prepare(
+            'UPDATE `crm_contact_profiles`
+             SET `first_name` = ?, `last_name` = \'\', `mobile` = ?, `email` = ?
+             WHERE `lead_id` = ? LIMIT 1'
+        );
+        if ($upd) {
+            $upd->bind_param('sssi', $name, $phone, $email, $leadId);
+            $upd->execute();
+            $upd->close();
+        }
+    } else {
+        $ins = $conn->prepare(
+            'INSERT INTO `crm_contact_profiles` (`lead_id`, `first_name`, `last_name`, `mobile`, `email`)
+             VALUES (?, ?, \'\', ?, ?)'
+        );
+        if ($ins) {
+            $ins->bind_param('isss', $leadId, $name, $phone, $email);
+            $ins->execute();
+            $ins->close();
+        }
+    }
+
+    return true;
+}

@@ -27,13 +27,86 @@
     };
 
     window.qfsOpenDatePicker = function (id) {
-        var input = document.getElementById(id);
-        if (input && input.showPicker) {
-            input.showPicker();
-        } else if (input) {
-            input.focus();
+        var $text = $('#' + id + 'Text');
+        if ($text.hasClass('hasDatepicker')) {
+            $text.datepicker('show');
+        } else {
+            $text.trigger('focus');
         }
     };
+
+    /* Visible "<id>Text" field shows dd/mm/yy; hidden "<id>" keeps YYYY-MM-DD for the search API. */
+    function qfsYmdToDate(ymd) {
+        var m = moment(ymd, 'YYYY-MM-DD', true);
+        return m.isValid() ? m.toDate() : null;
+    }
+
+    function qfsSetDateField(id, ymd) {
+        var $hidden = $('#' + id);
+        var $text = $('#' + id + 'Text');
+        var min = String($hidden.attr('min') || '');
+        if (ymd && min && ymd < min) {
+            ymd = min;
+        }
+        $hidden.val(ymd || '');
+        var d = qfsYmdToDate(ymd);
+        if ($text.hasClass('hasDatepicker')) {
+            $text.datepicker('setDate', d);
+        } else {
+            $text.val(d ? moment(d).format('DD/MM/YY') : '');
+        }
+    }
+
+    function qfsSetDateMin(id, ymd) {
+        $('#' + id).attr('min', ymd);
+        var $text = $('#' + id + 'Text');
+        if ($text.hasClass('hasDatepicker')) {
+            $text.datepicker('option', 'minDate', qfsYmdToDate(ymd));
+        }
+        var cur = String($('#' + id).val() || '');
+        if (cur && ymd && cur < ymd) {
+            qfsSetDateField(id, ymd);
+        }
+    }
+
+    function qfsInitDateField(id) {
+        var $hidden = $('#' + id);
+        var $text = $('#' + id + 'Text');
+        if (!$text.length) {
+            return;
+        }
+        if ($.fn.datepicker) {
+            $text.datepicker({
+                dateFormat: 'dd/mm/y',
+                showButtonPanel: true,
+                closeText: 'Done',
+                currentText: 'Today',
+                prevText: '',
+                nextText: '',
+                minDate: qfsYmdToDate(String($hidden.attr('min') || '')),
+                beforeShow: function (input, inst) {
+                    inst.dpDiv.addClass('crm-q-datepicker');
+                    setTimeout(function () {
+                        inst.dpDiv.css({ zIndex: 2200 });
+                    }, 0);
+                },
+                onSelect: function () {
+                    $text.trigger('change');
+                }
+            });
+        }
+        $text.on('change', function () {
+            var raw = String($text.val() || '').trim();
+            var m = moment(raw, ['DD/MM/YY', 'D/M/YY', 'DD/MM/YYYY', 'D/M/YYYY', 'DD-MM-YY', 'DD-MM-YYYY'], true);
+            if (!m.isValid()) {
+                qfsSetDateField(id, String($hidden.val() || ''));
+                return;
+            }
+            qfsSetDateField(id, m.format('YYYY-MM-DD'));
+            $hidden.trigger('change', ['user']);
+        });
+        qfsSetDateField(id, String($hidden.val() || ''));
+    }
 
     function initQfsAirportAutosuggest(inputId, suggestDivId) {
         var timeoutId = null;
@@ -458,17 +531,34 @@
             ? Math.floor(pDurationRaw / 60) + ' hrs ' + (pDurationRaw % 60) + ' min'
             : pDurationRaw;
 
-        var faresObj = journey.fares || {};
-        var paxFares = (faresObj.paxFares && faresObj.paxFares.adt) ? faresObj.paxFares.adt : {};
-        var totObj = paxFares.total || faresObj.totalFare || primaryF.fareDetails || {};
-        var baseObj = paxFares.base || {};
-        var taxObj = paxFares.tax || {};
+        var guestFares = (item._qfsMeta && item._qfsMeta.fares) ? item._qfsMeta.fares : qfsJourneyGuestFares(journey, primaryF);
+        var base = guestFares.base;
+        var tax = guestFares.tax;
+        var unitFare = guestFares.adt;
 
-        var base = Math.round(parseFloat(baseObj.amount || baseObj.baseFare || 3500) || 0);
-        var tax = Math.round(parseFloat(taxObj.amount || taxObj.taxes || 500) || 0);
-        var tot = item._qfsMeta
-            ? item._qfsMeta.price
-            : Math.round(parseFloat(totObj.amount || totObj.total || (base + tax)) || 0);
+        var paxAdults = Math.max(1, parseInt(qfsResultsState.adults, 10) || 1);
+        var paxChildren = Math.max(0, parseInt(qfsResultsState.children, 10) || 0);
+        var paxInfants = Math.max(0, parseInt(qfsResultsState.infants, 10) || 0);
+        var paxCount = Math.max(1, paxAdults + paxChildren + paxInfants);
+        var totalFare = qfsGuestTotal(guestFares);
+        var inr = function (n) {
+            return '₹' + Math.round(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        };
+        var totalLabel = Math.round(totalFare).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        var guestLine = function (label, count, fare, estimated) {
+            if (!count) {
+                return '';
+            }
+            return '<div class="qfs-pax-line"' + (estimated ? ' title="Fare not returned for this guest type — adult fare used"' : '') + '>' +
+                '<span class="qfs-pax-type">' + label + '</span>' +
+                '<span class="qfs-pax-calc">' + inr(fare) + ' × ' + count + (estimated ? '<sup>*</sup>' : '') + '</span>' +
+                '<span class="qfs-pax-sum">' + inr(fare * count) + '</span></div>';
+        };
+        var guestBreakdownHtml = '<div class="qfs-pax-breakdown">' +
+            guestLine('Adult', paxAdults, guestFares.adt, false) +
+            guestLine('Child', paxChildren, guestFares.chd, guestFares.chdEstimated) +
+            guestLine('Infant', paxInfants, guestFares.inf, guestFares.infEstimated) +
+            '</div>';
 
         var dTimeRaw = (primaryF.depDetail && primaryF.depDetail.time) ? primaryF.depDetail.time : (primaryF.departureTime || primaryF.depTime || '08:00 AM');
         var aTimeRaw = (primaryF.arrDetail && primaryF.arrDetail.time) ? primaryF.arrDetail.time : (primaryF.arrivalTime || primaryF.arrTime || '10:30 AM');
@@ -478,7 +568,13 @@
         var bagInfo = qfsBaggageFromFlightItem(item, primaryF);
         var fData = {
             fname: pFname, fno: pFno, dTime: dTime, aTime: aTime,
-            base: base, tax: tax, tot: tot,
+            base: base, tax: tax, tot: totalFare,
+            unit_fare: unitFare,
+            pax_count: paxCount,
+            pax_fares: {
+                adult: guestFares.adt, child: guestFares.chd, infant: guestFares.inf,
+                adults: paxAdults, children: paxChildren, infants: paxInfants
+            },
             terminal: (primaryF.depDetail && primaryF.depDetail.terminal) ? primaryF.depDetail.terminal : 'T1',
             stops: stopsStr, duration: pDuration,
             baggage: bagInfo.baggage || primaryF.baggage || '',
@@ -497,7 +593,7 @@
         var qfsId = opts.qfsId || item._qfsId || '';
         var selectedBorder = opts.selected ? '2px solid #28a745' : '1px solid #e9ecef';
 
-        var cardHtml = '<div class="card mb-2 qfs-select-flight-card" data-qfs-id="' + qfsId + '" data-flight="' + encodedData + '" data-duration="' + pDurationRaw + '" data-dtime="' + dTimeRawUnix + '" data-atime="' + aTimeRawUnix + '" data-stops="' + stops + '" data-airline="' + pFname + '" data-price="' + tot + '" style="border: ' + selectedBorder + '; box-shadow: none; border-radius:4px; cursor:pointer; background-color: #f8f9fa;">' +
+        var cardHtml = '<div class="card mb-2 qfs-select-flight-card" data-qfs-id="' + qfsId + '" data-flight="' + encodedData + '" data-duration="' + pDurationRaw + '" data-dtime="' + dTimeRawUnix + '" data-atime="' + aTimeRawUnix + '" data-stops="' + stops + '" data-airline="' + pFname + '" data-price="' + totalFare + '" style="border: ' + selectedBorder + '; box-shadow: none; border-radius:4px; cursor:pointer; background-color: #f8f9fa;">' +
             '<div class="card-body p-3 d-flex align-items-stretch">' +
             '<div class="qfs-flight-main flex-grow-1">';
 
@@ -567,23 +663,18 @@
             }
         });
 
-        var priceLabel = (typeof tot === 'number' && !isNaN(tot))
-            ? Math.round(tot).toLocaleString('en-IN', { maximumFractionDigits: 0 })
-            : String(Math.round(parseFloat(tot) || 0));
         var seatsLeftMeta = item._qfsMeta ? item._qfsMeta.seatsLeft : null;
         var seatsHtml = '';
         if (seatsLeftMeta !== null && seatsLeftMeta !== undefined && !isNaN(parseInt(seatsLeftMeta, 10))) {
-            seatsHtml = '<div class="text-muted" style="font-size:11px; margin-top:4px;">' +
+            seatsHtml = '<div class="text-muted" style="font-size:11px; margin-top:2px;">' +
                 parseInt(seatsLeftMeta, 10) + ' seat' + (parseInt(seatsLeftMeta, 10) === 1 ? '' : 's') + ' left</div>';
         }
         cardHtml += '</div>' +
             '<div class="qfs-price-col">' +
-            '<div class="qfs-price-value">₹' + priceLabel + '</div>' +
+            '<div class="qfs-price-value">₹' + totalLabel + '</div>' +
+            '<div class="qfs-price-total-label">Total for ' + paxCount + ' guest' + (paxCount === 1 ? '' : 's') + '</div>' +
+            guestBreakdownHtml +
             seatsHtml +
-            '<div class="qfs-baggage-meta">' +
-            '<div><i class="fas fa-briefcase mr-1"></i>Hand: ' + $('<div>').text(bagInfo.hand_baggage).html() + '</div>' +
-            '<div><i class="fas fa-suitcase mr-1"></i>Check-in: ' + $('<div>').text(bagInfo.checkin_baggage).html() + '</div>' +
-            '</div>' +
             '</div></div></div>';
         return cardHtml;
     }
@@ -686,19 +777,85 @@
         });
     }
 
+    function qfsPaxFareTotal(paxFare) {
+        if (!paxFare || typeof paxFare !== 'object') {
+            return 0;
+        }
+        var tot = paxFare.total || paxFare.totalFare || {};
+        var amount = typeof tot === 'object' ? parseFloat(tot.amount || tot.total) : parseFloat(tot);
+        if (!isNaN(amount) && amount > 0) {
+            return Math.round(amount);
+        }
+        var base = parseFloat((paxFare.base && (paxFare.base.amount || paxFare.base.baseFare)) || 0) || 0;
+        var tax = parseFloat((paxFare.tax && (paxFare.tax.amount || paxFare.tax.taxes)) || 0) || 0;
+        return Math.round(base + tax);
+    }
+
+    /**
+     * Per-guest fares from the journey (paxFares.adt / chd / inf). A missing child or infant
+     * fare falls back to the adult fare and is flagged so the card can say it is estimated.
+     */
+    function qfsJourneyGuestFares(journey, primaryF) {
+        var faresObj = (journey && journey.fares) || {};
+        var pax = faresObj.paxFares || {};
+        var pick = function (keys) {
+            for (var i = 0; i < keys.length; i++) {
+                if (pax[keys[i]]) {
+                    return pax[keys[i]];
+                }
+            }
+            return null;
+        };
+        var adtObj = pick(['adt', 'ADT', 'adult']) || {};
+        var totObj = adtObj.total || faresObj.totalFare || (primaryF && primaryF.fareDetails) || {};
+        var base = Math.round(parseFloat((adtObj.base && (adtObj.base.amount || adtObj.base.baseFare)) || 3500) || 0);
+        var tax = Math.round(parseFloat((adtObj.tax && (adtObj.tax.amount || adtObj.tax.taxes)) || 500) || 0);
+        var adt = Math.round(parseFloat(totObj.amount || totObj.total || (base + tax)) || 0);
+        var chd = qfsPaxFareTotal(pick(['chd', 'CHD', 'child']));
+        var inf = qfsPaxFareTotal(pick(['inf', 'INF', 'infant']));
+        return {
+            adt: adt,
+            chd: chd > 0 ? chd : adt,
+            inf: inf > 0 ? inf : adt,
+            chdEstimated: !(chd > 0),
+            infEstimated: !(inf > 0),
+            base: base,
+            tax: tax
+        };
+    }
+
+    function qfsGuestTotal(fares) {
+        var s = qfsResultsState || {};
+        var a = Math.max(1, parseInt(s.adults, 10) || 1);
+        var c = Math.max(0, parseInt(s.children, 10) || 0);
+        var i = Math.max(0, parseInt(s.infants, 10) || 0);
+        return (fares.adt * a) + (fares.chd * c) + (fares.inf * i);
+    }
+
+    function qfsBuildSearchText(journey, flightsArray, meta) {
+        var parts = [];
+        flightsArray.forEach(function (f) {
+            var al = f.carrier || f.airline || {};
+            parts.push(al.name || f.airlineName || f.carrierName || '');
+            parts.push((al.code || '') + '-' + (f.flightNo || f.flightNumber || ''));
+            parts.push((al.code || '') + (f.flightNo || f.flightNumber || ''));
+            ['depDetail', 'arrDetail'].forEach(function (k) {
+                var d = f[k] || {};
+                parts.push(d.code || '', d.name || '', d.city || '');
+            });
+        });
+        parts.push(String(meta.price || ''));
+        parts.push(meta.stops === 0 ? 'non stop nonstop direct' : meta.stops + ' stop');
+        return parts.join(' ').toLowerCase();
+    }
+
     function qfsPrepareFlightList(list, prefix) {
         return (list || []).map(function (item, index) {
             var journey = item.journey || item;
             var flightsArray = (journey.flights && journey.flights.length > 0) ? journey.flights : [item.primaryFlight || item];
             var primaryF = item.primaryFlight || flightsArray[0] || item;
-            var faresObj = journey.fares || {};
-            var paxFares = (faresObj.paxFares && faresObj.paxFares.adt) ? faresObj.paxFares.adt : {};
-            var totObj = paxFares.total || faresObj.totalFare || primaryF.fareDetails || {};
-            var baseObj = paxFares.base || {};
-            var taxObj = paxFares.tax || {};
-            var base = Math.round(parseFloat(baseObj.amount || baseObj.baseFare || 3500) || 0);
-            var tax = Math.round(parseFloat(taxObj.amount || taxObj.taxes || 500) || 0);
-            var price = Math.round(parseFloat(totObj.amount || totObj.total || (base + tax)) || 0);
+            var guestFares = qfsJourneyGuestFares(journey, primaryF);
+            var price = qfsGuestTotal(guestFares);
             var dTimeRaw = (primaryF.depDetail && primaryF.depDetail.time) ? primaryF.depDetail.time : (primaryF.departureTime || primaryF.depTime || '');
             var aTimeRaw = (primaryF.arrDetail && primaryF.arrDetail.time) ? primaryF.arrDetail.time : (primaryF.arrivalTime || primaryF.arrTime || '');
             var duration = primaryF.flyTime || primaryF.duration || 150;
@@ -715,12 +872,14 @@
             item._qfsId = prefix + '-' + index;
             item._qfsMeta = {
                 price: price,
+                fares: guestFares,
                 duration: duration,
                 dtime: moment(dTimeRaw).isValid() ? moment(dTimeRaw).valueOf() : 0,
                 atime: moment(aTimeRaw).isValid() ? moment(aTimeRaw).valueOf() : 0,
                 stops: flightsArray.length > 1 ? (flightsArray.length - 1) : 0,
                 seatsLeft: seatsLeft
             };
+            item._qfsMeta.searchText = qfsBuildSearchText(journey, flightsArray, item._qfsMeta);
             return item;
         });
     }
@@ -732,6 +891,17 @@
         var requiredSeats = parseInt(qfsResultsState.requiredSeats, 10);
         if (isNaN(requiredSeats) || requiredSeats < 1) {
             requiredSeats = 1;
+        }
+
+        var query = String(qfsResultsState.searchText || '').trim().toLowerCase();
+        if (query) {
+            var haystack = meta.searchText || '';
+            var terms = query.split(/\s+/);
+            for (var t = 0; t < terms.length; t++) {
+                if (haystack.indexOf(terms[t]) === -1) {
+                    return false;
+                }
+            }
         }
 
         if (meta.seatsLeft !== null && meta.seatsLeft !== undefined) {
@@ -832,6 +1002,15 @@
             $wrap.html('<div class="alert alert-info mb-0">No ' + emptyLabel + 'flights found.</div>');
             return;
         }
+        if (!filtered.length && String(qfsResultsState.searchText || '').trim()) {
+            $wrap.html(
+                qfsBuildPaginationHtml(listKey, 1, 0) +
+                '<div class="alert alert-info mb-0">No flights match "<strong>' +
+                $('<div>').text(String(qfsResultsState.searchText).trim()).html() +
+                '</strong>". Try another airline, flight number or city.</div>'
+            );
+            return;
+        }
         if (!filtered.length) {
             $wrap.html(
                 qfsBuildPaginationHtml(listKey, 1, 0) +
@@ -890,21 +1069,29 @@
         var tType = opts.tType || 'ONEWAY';
         var adults = parseInt(opts.adults, 10);
         var children = parseInt(opts.children, 10);
+        var infants = parseInt(opts.infants, 10);
         if (isNaN(adults) || adults < 1) {
             adults = 1;
         }
         if (isNaN(children) || children < 0) {
             children = 0;
         }
+        if (isNaN(infants) || infants < 0) {
+            infants = 0;
+        }
         var nonStopOnly = !!opts.nonStopOnly;
         var paxLabel = adults + ' Adult' + (adults > 1 ? 's' : '');
         if (children > 0) {
             paxLabel += ', ' + children + ' Child' + (children > 1 ? 'ren' : '');
         }
+        if (infants > 0) {
+            paxLabel += ', ' + infants + ' Infant' + (infants > 1 ? 's' : '');
+        }
         if (nonStopOnly) {
             paxLabel += ' · Non-stop';
         }
-        var requiredSeats = adults + children;
+        // Require enough seats for all searched guests (adults + children + infants).
+        var requiredSeats = Math.max(1, adults + children + infants);
 
         qfsSelectedOnward = null;
         qfsSelectedReturn = null;
@@ -919,8 +1106,8 @@
             toCity: toCity,
             date: date,
             returnDate: returnDate,
-            onward: qfsPrepareFlightList(flights, 'onward'),
-            returning: qfsPrepareFlightList(rFlights, 'return'),
+            onward: [],
+            returning: [],
             onwardPage: 1,
             returnPage: 1,
             stopFilter: nonStopOnly ? '0' : 'all',
@@ -930,8 +1117,13 @@
             nonStopOnly: nonStopOnly,
             requiredSeats: requiredSeats,
             adults: adults,
-            children: children
+            children: children,
+            infants: infants,
+            searchText: ''
         };
+        // Prepared after the state is set: guest-wise totals read the pax counts from it.
+        qfsResultsState.onward = qfsPrepareFlightList(flights, 'onward');
+        qfsResultsState.returning = qfsPrepareFlightList(rFlights, 'return');
 
         var modalBody = $('#qfsFlightsModalBody');
         modalBody.empty();
@@ -939,14 +1131,20 @@
         var stopAllCls = nonStopOnly ? 'btn btn-sm btn-outline-secondary qfs-flight-filter-btn' : 'btn btn-sm btn-secondary active qfs-flight-filter-btn';
         var stopZeroCls = nonStopOnly ? 'btn btn-sm btn-secondary active qfs-flight-filter-btn' : 'btn btn-sm btn-outline-secondary qfs-flight-filter-btn';
 
-        var sortHtml = '<div class="d-flex justify-content-end align-items-center w-100 mt-2 pb-2" style="font-size: 14px; border-bottom: 1px solid #eee;">' +
+        var sortHtml = '<div class="d-flex justify-content-between align-items-center flex-wrap w-100 mt-2 pb-2" style="font-size: 14px; border-bottom: 1px solid #eee; gap: .5rem;">' +
+            '<div class="qfs-results-search">' +
+            '<i class="fa fa-search"></i>' +
+            '<input type="search" class="form-control" id="qfsResultsSearch" placeholder="Search airline, flight no., city or airport" autocomplete="off" spellcheck="false" aria-label="Search flights">' +
+            '<button type="button" class="qfs-search-clear d-none" id="qfsResultsSearchClear" title="Clear search" aria-label="Clear search">&times;</button>' +
+            '</div>' +
+            '<div class="d-flex align-items-center">' +
             '<label class="mb-0 mr-2" style="font-weight: 600; color: #555; font-size: 13px;"><i class="fa fa-sort-amount-desc"></i> Sort By:</label>' +
             '<div class="btn-group" role="group">' +
             '<button type="button" class="btn btn-sm btn-outline-secondary qfs-flight-sort-btn" data-sort="price" data-order="asc">Price <i class="fa fa-sort"></i></button>' +
             '<button type="button" class="btn btn-sm btn-outline-secondary qfs-flight-sort-btn" data-sort="duration" data-order="asc">Duration <i class="fa fa-sort"></i></button>' +
             '<button type="button" class="btn btn-sm btn-outline-secondary qfs-flight-sort-btn" data-sort="dtime" data-order="asc">Departure <i class="fa fa-sort"></i></button>' +
             '<button type="button" class="btn btn-sm btn-outline-secondary qfs-flight-sort-btn" data-sort="atime" data-order="asc">Arrival <i class="fa fa-sort"></i></button>' +
-            '</div></div>' +
+            '</div></div></div>' +
             '<div class="w-100 pt-2 pb-2 mb-2" style="font-size: 13px; border-bottom: 1px solid #ddd;">' +
             '<div class="row m-0"><div class="col-md-5 p-0 d-flex align-items-center">' +
             '<label class="mb-0 mr-2" style="font-weight: 600; color: #555;"><i class="fa fa-filter"></i> Stops:</label>' +
@@ -1017,20 +1215,24 @@
         return code.substring(0, 3);
     }
 
-    function qfsBuildViaSearchPayload(sectorInfos, isDomestic, adults, children) {
+    function qfsBuildViaSearchPayload(sectorInfos, isDomestic, adults, children, infants) {
         var adt = parseInt(adults, 10);
         var chd = parseInt(children, 10);
+        var inf = parseInt(infants, 10);
         if (isNaN(adt) || adt < 1) {
             adt = 1;
         }
         if (isNaN(chd) || chd < 0) {
             chd = 0;
         }
+        if (isNaN(inf) || inf < 0) {
+            inf = 0;
+        }
         return {
             sectorInfos: sectorInfos,
             prefAirlines: [{ code: 'ALL', name: 'ALL' }],
             class: 'ALL',
-            paxCount: { adt: adt, chd: chd, inf: 0 },
+            paxCount: { adt: adt, chd: chd, inf: inf },
             route: 'ALL',
             disc: false,
             multiHop: false,
@@ -1083,50 +1285,226 @@
     function qfsReadGuestCounts() {
         var adults = parseInt($('#q_adults').val(), 10);
         var children = parseInt($('#q_children').val(), 10);
+        var infants = parseInt($('#q_infants').val(), 10);
         if (isNaN(adults) || adults < 1) {
             adults = 1;
         }
         if (isNaN(children) || children < 0) {
             children = 0;
         }
-        return { adults: adults, children: children };
+        if (isNaN(infants) || infants < 0) {
+            infants = 0;
+        }
+        return { adults: adults, children: children, infants: infants };
     }
 
     function qfsSyncPaxFromQuotation() {
         var counts = qfsReadGuestCounts();
         $('#qfsAdults').val(counts.adults);
         $('#qfsChildren').val(counts.children);
+        $('#qfsInfants').val(counts.infants);
     }
 
     function qfsSyncPaxToQuotation() {
         var adults = parseInt($('#qfsAdults').val(), 10);
         var children = parseInt($('#qfsChildren').val(), 10);
+        var infants = parseInt($('#qfsInfants').val(), 10);
         if (isNaN(adults) || adults < 1) {
             adults = 1;
         }
         if (isNaN(children) || children < 0) {
             children = 0;
         }
+        if (isNaN(infants) || infants < 0) {
+            infants = 0;
+        }
         $('#qfsAdults').val(adults);
         $('#qfsChildren').val(children);
+        $('#qfsInfants').val(infants);
+        if ($('#q_adults').prop('readonly')) {
+            return { adults: adults, children: children, infants: infants };
+        }
         if ($('#q_adults').length) {
             $('#q_adults').val(adults).trigger('change');
         }
         if ($('#q_children').length) {
             $('#q_children').val(children).trigger('change');
         }
-        return { adults: adults, children: children };
+        if ($('#q_infants').length) {
+            $('#q_infants').val(infants).trigger('change');
+        }
+        return { adults: adults, children: children, infants: infants };
+    }
+
+    function qfsApplyAirportToInput($input, city, code) {
+        var $input = $($input);
+        if (!$input.length) {
+            return;
+        }
+        city = String(city || '').trim();
+        code = String(code || '').trim().toUpperCase();
+        if (!city && !code) {
+            return;
+        }
+        if (code) {
+            $input
+                .val(city ? (city + ' (' + code + ')') : code)
+                .attr('data-code', code)
+                .attr('data-city', city || code);
+            return;
+        }
+        $input.val(city).attr('data-city', city).removeAttr('data-code');
+    }
+
+    function qfsResolveAirportByCity(city, done) {
+        city = String(city || '').trim();
+        if (!city) {
+            if (typeof done === 'function') {
+                done(null);
+            }
+            return;
+        }
+        $.ajax({
+            url: 'ajax/mmt_autosuggest.php',
+            type: 'GET',
+            dataType: 'json',
+            data: { q: city },
+            success: function (res) {
+                var items = res && res.r ? res.r : (Array.isArray(res) ? res : []);
+                if (!Array.isArray(items)) {
+                    items = [items];
+                }
+                var cityLower = city.toLowerCase();
+                var match = null;
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i] || {};
+                    var code = String(item.iata || '').trim().toUpperCase();
+                    var itemCity = String(item.ct || item.cName || '').trim();
+                    if (!code || !itemCity) {
+                        continue;
+                    }
+                    if (itemCity.toLowerCase() === cityLower) {
+                        match = { city: itemCity, code: code };
+                        break;
+                    }
+                    if (!match && itemCity.toLowerCase().indexOf(cityLower) === 0) {
+                        match = { city: itemCity, code: code };
+                    }
+                }
+                if (!match) {
+                    for (var j = 0; j < items.length; j++) {
+                        var it = items[j] || {};
+                        var c = String(it.iata || '').trim().toUpperCase();
+                        var ct = String(it.ct || it.cName || '').trim();
+                        if (c && ct) {
+                            match = { city: ct, code: c };
+                            break;
+                        }
+                    }
+                }
+                if (typeof done === 'function') {
+                    done(match);
+                }
+            },
+            error: function () {
+                if (typeof done === 'function') {
+                    done(null);
+                }
+            }
+        });
+    }
+
+    function qfsReadDeparturePrefill() {
+        var p = (typeof window.QUOTATION_PREFILL === 'object' && window.QUOTATION_PREFILL) ? window.QUOTATION_PREFILL : {};
+        var city = String(p.departure_city || p.tp_departure || '').trim();
+        var code = String(p.departure_airport_code || p.tp_departure_code || '').trim().toUpperCase();
+        return { city: city, code: code };
+    }
+
+    function qfsReadDestinationPrefill() {
+        var liveDest = String($('[name=destination]').val() || $('#qDestinationInput').val() || '').trim();
+        var p = (typeof window.QUOTATION_PREFILL === 'object' && window.QUOTATION_PREFILL) ? window.QUOTATION_PREFILL : {};
+        var raw = liveDest || String(p.destination || p.tp_arrival || '').trim();
+        if (!raw || raw === '—') {
+            return { city: '', code: '' };
+        }
+        // Prefer the first destination when multiple are listed (e.g. "Goa, Manali").
+        var first = raw.split(/[,;|]+/)[0] || raw;
+        first = String(first).replace(/\s*-\s*\d+\s*N\b/i, '').trim();
+        return { city: first, code: '' };
+    }
+
+    function qfsPrefillAirportField($input, city, code) {
+        if (!$input || !$input.length || (!city && !code)) {
+            return;
+        }
+        // Keep a user-edited value if already set with a valid airport code.
+        if ($input.val().trim() && ($input.attr('data-code') || '').trim().length === 3) {
+            return;
+        }
+        if (code) {
+            qfsApplyAirportToInput($input, city, code);
+            return;
+        }
+        qfsResolveAirportByCity(city, function (match) {
+            if (match && match.code) {
+                qfsApplyAirportToInput($input, match.city || city, match.code);
+            } else {
+                qfsApplyAirportToInput($input, city, '');
+            }
+        });
+    }
+
+    function qfsPrefillRouteAirports() {
+        var dep = qfsReadDeparturePrefill();
+        var dest = qfsReadDestinationPrefill();
+        qfsPrefillAirportField($('#qfsApiFrom'), dep.city, dep.code);
+        qfsPrefillAirportField($('#qfsApiTo'), dest.city, dest.code);
+    }
+
+    /** Tentative Date from Guest & Tour (dd/mm/yyyy) as YYYY-MM-DD, or '' when empty/invalid. */
+    function qfsReadTentativeDateYmd() {
+        var raw = String($('#q_tentative_date').val() || '').trim();
+        if (!raw) {
+            return '';
+        }
+        var m = moment(raw, ['DD/MM/YYYY', 'D/M/YYYY', 'DD-MM-YYYY', 'YYYY-MM-DD'], true);
+        return m.isValid() ? m.format('YYYY-MM-DD') : '';
     }
 
     function prefillQfsSearchFromQuotation() {
         var today = qfsTodayYmd();
         var tomorrow = qfsTomorrowYmd();
-        $('#qfsApiDate').attr('min', today).val(today);
-        $('#qfsApiReturnDate').attr('min', today);
-        if (!$('#qfsApiReturnDate').val() || $('#qfsApiReturnDate').val() < today) {
-            $('#qfsApiReturnDate').val(tomorrow);
+        var tentative = qfsReadTentativeDateYmd();
+        var onward = (tentative && tentative >= today) ? tentative : today;
+        qfsSetDateMin('qfsApiDate', today);
+        qfsSetDateField('qfsApiDate', onward);
+        var ret = String($('#qfsApiReturnDate').val() || '');
+        qfsSetDateMin('qfsApiReturnDate', onward);
+        if (!ret || ret < onward) {
+            qfsSetDateField('qfsApiReturnDate', onward === today ? tomorrow : onward);
         }
         qfsSyncPaxFromQuotation();
+        qfsPrefillRouteAirports();
+        qfsAutoSetReturnDate();
+    }
+
+    /** Round trip: return date = onward date + No. of Nights from Guest & Tour details. */
+    function qfsAutoSetReturnDate() {
+        if ($('input[name="qfs_tripType"]:checked').val() !== 'roundtrip') {
+            return;
+        }
+        var onward = String($('#qfsApiDate').val() || '').trim();
+        if (!onward || !moment(onward, 'YYYY-MM-DD', true).isValid()) {
+            return;
+        }
+        var nights = parseInt($('#q_nights').val(), 10);
+        if (isNaN(nights) || nights < 0) {
+            nights = 0;
+        }
+        qfsSetDateMin('qfsApiReturnDate', onward);
+        qfsSetDateField('qfsApiReturnDate', moment(onward, 'YYYY-MM-DD').add(nights, 'days').format('YYYY-MM-DD'));
+        $('#qfsReturnDateHint').text('Onward date + ' + nights + ' night' + (nights === 1 ? '' : 's') + ' (from tour details)');
     }
 
     $(function () {
@@ -1179,18 +1557,26 @@
         $('input[name="qfs_tripType"]').on('change', function () {
             if ($(this).val() === 'roundtrip') {
                 $('#qfsReturnDateContainer').show();
+                qfsAutoSetReturnDate();
             } else {
                 $('#qfsReturnDateContainer').hide();
             }
         });
 
+        qfsInitDateField('qfsApiDate');
+        qfsInitDateField('qfsApiReturnDate');
+
         $('#qfsApiDate').on('change', function () {
             var onwardDate = $(this).val();
             if (onwardDate) {
-                $('#qfsApiReturnDate').attr('min', onwardDate);
-                if ($('#qfsApiReturnDate').val() < onwardDate) {
-                    $('#qfsApiReturnDate').val(onwardDate);
-                }
+                qfsSetDateMin('qfsApiReturnDate', onwardDate);
+                qfsAutoSetReturnDate();
+            }
+        });
+
+        $('#qfsApiReturnDate').on('change', function (e, source) {
+            if (source === 'user') {
+                $('#qfsReturnDateHint').text('Custom return date');
             }
         });
 
@@ -1208,6 +1594,7 @@
             var paxCounts = qfsSyncPaxToQuotation();
             var adults = paxCounts.adults;
             var children = paxCounts.children;
+            var infants = paxCounts.infants;
             var nonStopOnly = $('#qfsNonStop').is(':checked');
             var tType = $('input[name="qfs_tripType"]:checked').val() === 'roundtrip' ? 'ROUNDTRIP' : 'ONEWAY';
             var returnDate = $('#qfsApiReturnDate').val().trim();
@@ -1224,6 +1611,7 @@
                 returnDate: returnDate,
                 adults: adults,
                 children: children,
+                infants: infants,
                 nonStopOnly: nonStopOnly
             };
             qfsSelectedOnward = null;
@@ -1265,6 +1653,7 @@
                     tType: tType,
                     adults: adults,
                     children: children,
+                    infants: infants,
                     nonStopOnly: nonStopOnly
                 });
             }
@@ -1280,8 +1669,8 @@
             }
 
             if (useDualIntlRoundTrip) {
-                var onwardPayload = qfsBuildViaSearchPayload([sectorInfos[0]], false, adults, children);
-                var returnPayload = qfsBuildViaSearchPayload([sectorInfos[1]], false, adults, children);
+                var onwardPayload = qfsBuildViaSearchPayload([sectorInfos[0]], false, adults, children, infants);
+                var returnPayload = qfsBuildViaSearchPayload([sectorInfos[1]], false, adults, children, infants);
 
                 $.when(
                     $.ajax({
@@ -1313,7 +1702,7 @@
                 url: 'ajax/via_search.php',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify(qfsBuildViaSearchPayload(sectorInfos, isDomesticSearch, adults, children)),
+                data: JSON.stringify(qfsBuildViaSearchPayload(sectorInfos, isDomesticSearch, adults, children, infants)),
                 success: function (res) {
                     handleQfsSearchSuccess(res);
                 },
@@ -1348,6 +1737,34 @@
                 $('#qfsFlightsModal').modal('hide');
                 $('#qfsSearchModal').modal('hide');
             }
+        });
+
+        var qfsSearchTimer = null;
+        $(document).on('input', '#qfsResultsSearch', function () {
+            var val = String($(this).val() || '');
+            $('#qfsResultsSearchClear').toggleClass('d-none', val === '');
+            if (qfsSearchTimer) {
+                clearTimeout(qfsSearchTimer);
+            }
+            qfsSearchTimer = setTimeout(function () {
+                qfsSearchTimer = null;
+                qfsResultsState.searchText = val;
+                qfsResultsState.onwardPage = 1;
+                qfsResultsState.returnPage = 1;
+                qfsRefreshVisibleResults();
+            }, 200);
+        });
+
+        $(document).on('keydown', '#qfsResultsSearch', function (e) {
+            if (e.key === 'Escape' && $(this).val()) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('#qfsResultsSearchClear').trigger('click');
+            }
+        });
+
+        $(document).on('click', '#qfsResultsSearchClear', function () {
+            $('#qfsResultsSearch').val('').trigger('input').trigger('focus');
         });
 
         $(document).on('click', '#qfsFlightsModal .qfs-flight-sort-btn', function () {

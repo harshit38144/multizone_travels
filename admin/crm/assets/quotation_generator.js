@@ -8103,6 +8103,7 @@
             no_of_nights: $('#q_nights').val(),
             no_of_adults: $('#q_adults').val(),
             no_of_children: $('#q_children').val(),
+            no_of_infants: $('#q_infants').val(),
             flights_json: JSON.stringify(collectFlights()),
             hotels_json: JSON.stringify(collectHotelCategories()),
             itinerary_json: JSON.stringify(snapshotItinerary()),
@@ -9351,6 +9352,11 @@
                 value = String(Math.max(0, parseInt(value, 10) || 0));
                 setInput($('#q_children'), value);
                 break;
+            case 'no_of_infants':
+                value = String(Math.max(0, parseInt(value, 10) || 0));
+                setInput($('#q_infants'), value);
+                needsPreviewRefresh = true;
+                break;
             case 'inclusion':
                 setEditorFieldValue('#qed_inclusion', value, true);
                 break;
@@ -9972,11 +9978,14 @@
         if (isNaN(adults) || adults < 1) adults = 1;
         var children = parseInt(p.no_of_children, 10);
         if (isNaN(children) || children < 0) children = 0;
+        var infants = parseInt(p.no_of_infants, 10);
+        if (isNaN(infants) || infants < 0) infants = 0;
         var destination = previewVal(p.destination, 'Destination');
         var destTitle = qpFormatDestTitle(destination);
         var logoUrl = absUrl(Q_PREVIEW_META.logo || 'img/MZ_LOGO_1.jpeg');
         var todayLong = formatPreviewLongDate(new Date().toISOString().slice(0, 10));
         var paxChildren = children > 0 ? String(children) : '0';
+        var paxInfants = infants > 0 ? String(infants) : '0';
         var nightsLabel = nights + ' Nights / ' + days + ' Days';
 
         var html = '';
@@ -10034,12 +10043,13 @@
         /* —— 3. Travel Details —— */
         html += '<div class="qp-sec">';
         html += qpSectionHead('fas fa-plane', 'Travel Details', 'DISCOVER • EXPERIENCE • BELONG');
-        html += '<div class="qp-info-card qp-cols-5 qp-travel-details">';
+        html += '<div class="qp-info-card qp-cols-6 qp-travel-details">';
         html += qpInfoCell('Destination', previewEditable(destination.toUpperCase(), 'destination', { cls: 'q-preview-cell-edit' }), 'qp-cell-wide');
         html += qpInfoCell('No Of Nights', previewEditable(nightsLabel, 'no_of_nights', { type: 'nights_label', cls: 'q-preview-cell-edit' }), 'qp-cell-grow');
         html += qpInfoCell('Tentative Date', previewEditable(formatPreviewSlashDate(p.tentative_date), 'tentative_date', { type: 'date', cls: 'q-preview-cell-edit' }), 'qp-cell-date');
         html += qpInfoCell('Adults', previewEditable(String(adults), 'no_of_adults', { type: 'int', cls: 'q-preview-cell-edit' }), 'qp-cell-narrow');
         html += qpInfoCell('Children', previewEditable(paxChildren, 'no_of_children', { type: 'int', cls: 'q-preview-cell-edit' }), 'qp-cell-narrow');
+        html += qpInfoCell('Infants', previewEditable(paxInfants, 'no_of_infants', { type: 'int', cls: 'q-preview-cell-edit' }), 'qp-cell-narrow');
         html += '</div></div>';
 
         /* —— 4. Flight Details —— */
@@ -10662,6 +10672,9 @@
         if (lead.no_of_children != null && lead.no_of_children !== '') {
             $('#q_children').val(Math.max(0, parseInt(lead.no_of_children, 10) || 0));
         }
+        if (lead.no_of_infants != null && lead.no_of_infants !== '') {
+            $('#q_infants').val(Math.max(0, parseInt(lead.no_of_infants, 10) || 0));
+        }
         if (Array.isArray(lead.children_ages)) {
             writeChildrenAges(lead.children_ages);
         }
@@ -10747,6 +10760,7 @@
         $('#q_nights').val(p.no_of_nights || 0);
         $('#q_adults').val(p.no_of_adults || 1);
         $('#q_children').val(p.no_of_children || 0);
+        $('#q_infants').val(p.no_of_infants || 0);
         if (Array.isArray(p.children_ages)) {
             writeChildrenAges(p.children_ages);
         } else if (p.cost_sheet && p.cost_sheet.tour_cost && Array.isArray(p.cost_sheet.tour_cost.children_ages)) {
@@ -10756,6 +10770,20 @@
         }
 
         var draft = loadFormDraftFromStorage();
+        // Never reuse another quotation's session draft when creating a new quote from a lead.
+        if (draft && !p.id) {
+            var draftQid = parseInt(draft.quotation_id, 10) || 0;
+            var draftLid = parseInt(draft.lead_id, 10) || 0;
+            var prefillLid = parseInt(p.lead_id, 10) || 0;
+            if (draftQid > 0 || !prefillLid || draftLid !== prefillLid) {
+                draft = null;
+            }
+        } else if (draft && p.id) {
+            var draftForId = parseInt(draft.quotation_id, 10) || 0;
+            if (draftForId > 0 && draftForId !== (parseInt(p.id, 10) || 0)) {
+                draft = null;
+            }
+        }
         var flights = Array.isArray(p.flights) ? p.flights.slice() : [];
         if ((!flights || !flights.length) && draft && Array.isArray(draft.flights) && draft.flights.length) {
             flights = draft.flights;
@@ -10959,17 +10987,18 @@
     function formDraftCandidateKeys() {
         var ids = wizardIds();
         var keys = [];
+        // Keep drafts scoped to the current quotation / lead only.
+        // Never mix in the shared "new" bucket — that leaked other tours into Create Quotation.
         if (ids.quotationId > 0) {
             keys.push('qWizardState:id:' + ids.quotationId + ':formDraft');
+            return keys;
         }
         if (ids.leadId > 0) {
             keys.push('qWizardState:lead:' + ids.leadId + ':formDraft');
+            return keys;
         }
         keys.push('qWizardState:new:formDraft');
-        keys.push(formDraftStorageKey());
-        return keys.filter(function (key, idx, arr) {
-            return arr.indexOf(key) === idx;
-        });
+        return keys;
     }
 
     function hotelEntryFillScore(h) {
@@ -11062,15 +11091,15 @@
                 flights: flights,
                 itinerary: itinerary,
                 cost_sheet: costSheet,
-                active_option_id: activeOptionId
+                active_option_id: activeOptionId,
+                quotation_id: parseInt($('#q_id').val(), 10) || 0,
+                lead_id: parseInt($('#q_lead_id').val(), 10) || 0
             };
             var raw = JSON.stringify(payload);
-            // Write to all candidate keys so lead/id/new URL switches don't lose hotel draft.
-            formDraftCandidateKeys().forEach(function (key) {
-                try {
-                    sessionStorage.setItem(key, raw);
-                } catch (eKey) {}
-            });
+            // Save only to this page's scoped key (quotation id / lead id / new).
+            try {
+                sessionStorage.setItem(formDraftStorageKey(), raw);
+            } catch (eKey) {}
             if (!qAutoInclusionSyncing) {
                 scheduleSyncReturnAirfareInclusion();
             }
@@ -12923,7 +12952,9 @@
                 '.q-preview-doc .qp-rev-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}' +
                 '.q-preview-doc .qp-info-card.qp-cols-3{grid-template-columns:repeat(3,1fr)!important;}' +
                 '.q-preview-doc .qp-info-card.qp-cols-5{grid-template-columns:repeat(5,1fr)!important;}' +
-                '.q-preview-doc .qp-info-card.qp-cols-5.qp-travel-details{' +
+                '.q-preview-doc .qp-info-card.qp-cols-6{grid-template-columns:repeat(6,1fr)!important;}' +
+                '.q-preview-doc .qp-info-card.qp-cols-5.qp-travel-details,' +
+                '.q-preview-doc .qp-info-card.qp-cols-6.qp-travel-details{' +
                 'display:flex!important;flex-wrap:nowrap!important;align-items:stretch!important;' +
                 'grid-template-columns:none!important;' +
                 '}' +
@@ -13305,12 +13336,48 @@
                 var children = Math.max(0, parseInt(data.no_of_children, 10) || 0);
                 $('#q_children').val(children).trigger('change');
             }
+            if (data.no_of_infants != null && data.no_of_infants !== '') {
+                var infants = Math.max(0, parseInt(data.no_of_infants, 10) || 0);
+                $('#q_infants').val(infants).trigger('change');
+            }
             if (Array.isArray(data.children_ages)) {
                 writeChildrenAges(data.children_ages);
                 renderTourCostRows();
                 recalcCosts();
             }
         });
+
+        // Create Quotation from Leads "+" should start clean (ignore polluted session drafts).
+        (function clearFreshCreateDraft() {
+            var fresh = false;
+            try {
+                var params = new URLSearchParams(window.location.search || '');
+                fresh = params.get('fresh') === '1';
+            } catch (eFresh) {
+                fresh = /[?&]fresh=1(?:&|$)/.test(window.location.search || '');
+            }
+            if (!fresh) {
+                return;
+            }
+            try {
+                clearFormDraftFromStorage();
+                // Also drop the legacy shared bucket that used to leak other tours.
+                sessionStorage.removeItem('qWizardState:new:formDraft');
+            } catch (eClear) {}
+            try {
+                var cleanUrl = window.location.pathname + window.location.search
+                    .replace(/([?&])fresh=1(&|$)/, function (_, sep, end) {
+                        if (end === '&') {
+                            return sep;
+                        }
+                        return sep === '?' ? '' : '';
+                    })
+                    .replace(/\?$/, '');
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, document.title, cleanUrl + (window.location.hash || ''));
+                }
+            } catch (eUrl) {}
+        })();
 
         if (QUOTATION_PREFILL && (QUOTATION_PREFILL.id || QUOTATION_PREFILL.guest_name || QUOTATION_PREFILL.status === 'draft')) {
             applyPrefill(QUOTATION_PREFILL);
@@ -13330,7 +13397,15 @@
                 );
             }
         } else {
+            // Blank generator (no lead/quotation prefill): never pull a random shared draft.
+            try {
+                sessionStorage.removeItem('qWizardState:new:formDraft');
+            } catch (eNew) {}
             var localDraft = loadFormDraftFromStorage();
+            // Only resume a blank-new draft that was saved without a quotation id.
+            if (localDraft && (parseInt(localDraft.quotation_id, 10) || 0) > 0) {
+                localDraft = null;
+            }
             if (localDraft) {
                 if (Array.isArray(localDraft.flights) && localDraft.flights.length) {
                     renderFlightList(localDraft.flights);

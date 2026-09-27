@@ -44,16 +44,19 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                     <div class="col-md-3 form-group qfs-date-field">
                         <label>Onward Date</label>
                         <div class="qfs-date-wrapper">
-                            <input type="date" class="form-control" id="qfsApiDate" value="<?= htmlspecialchars($today) ?>" min="<?= htmlspecialchars($today) ?>">
+                            <input type="text" class="form-control qfs-date-text" id="qfsApiDateText" value="<?= htmlspecialchars(date('d/m/y', strtotime($today))) ?>" placeholder="dd/mm/yy" autocomplete="off" inputmode="numeric">
+                            <input type="hidden" id="qfsApiDate" value="<?= htmlspecialchars($today) ?>" min="<?= htmlspecialchars($today) ?>">
                             <img src="img/calendar.png" class="qfs-calendar-icon" alt="" onclick="qfsOpenDatePicker('qfsApiDate')">
                         </div>
                     </div>
                     <div class="col-md-3 form-group qfs-date-field" id="qfsReturnDateContainer" style="display:none;">
                         <label>Return Date</label>
                         <div class="qfs-date-wrapper">
-                            <input type="date" class="form-control" id="qfsApiReturnDate" value="<?= htmlspecialchars($tomorrow) ?>" min="<?= htmlspecialchars($today) ?>">
+                            <input type="text" class="form-control qfs-date-text" id="qfsApiReturnDateText" value="<?= htmlspecialchars(date('d/m/y', strtotime($tomorrow))) ?>" placeholder="dd/mm/yy" autocomplete="off" inputmode="numeric">
+                            <input type="hidden" id="qfsApiReturnDate" value="<?= htmlspecialchars($tomorrow) ?>" min="<?= htmlspecialchars($today) ?>">
                             <img src="img/calendar.png" class="qfs-calendar-icon" alt="" onclick="qfsOpenDatePicker('qfsApiReturnDate')">
                         </div>
+                        <small class="text-muted d-block mt-1" id="qfsReturnDateHint" style="font-size:11px;"></small>
                     </div>
                     <div class="col-md-6 form-group mb-md-0">
                         <div class="qfs-route-row">
@@ -78,13 +81,17 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                 </div>
 
                 <div class="row">
-                    <div class="col-6 col-md-3 form-group">
+                    <div class="col-4 col-md-2 form-group">
                         <label for="qfsAdults">No. of Adults</label>
                         <input type="number" class="form-control" id="qfsAdults" min="1" max="99" value="1" title="Taken from Guest &amp; Tour details">
                     </div>
-                    <div class="col-6 col-md-3 form-group">
+                    <div class="col-4 col-md-2 form-group">
                         <label for="qfsChildren">No. of Children</label>
                         <input type="number" class="form-control" id="qfsChildren" min="0" max="99" value="0" title="Taken from Guest &amp; Tour details">
+                    </div>
+                    <div class="col-4 col-md-2 form-group">
+                        <label for="qfsInfants">No. of Infants</label>
+                        <input type="number" class="form-control" id="qfsInfants" min="0" max="99" value="0" title="Taken from Guest &amp; Tour details">
                     </div>
                     <div class="col-12 col-md-3 form-group d-flex align-items-end">
                         <div class="form-check qfs-nonstop-check mb-2">

@@ -344,12 +344,16 @@ function crmFormatIntakeGuestSummary($payload)
 {
     $adults = (int) ($payload['tp_adults'] ?? 0);
     $children = (int) ($payload['tp_children'] ?? 0);
+    $infants = (int) ($payload['tp_infants'] ?? 0);
     $parts = [];
     if ($adults > 0) {
         $parts[] = $adults . ' ' . ($adults === 1 ? 'Adult' : 'Adults');
     }
     if ($children > 0) {
         $parts[] = $children . ' ' . ($children === 1 ? 'Child' : 'Children');
+    }
+    if ($infants > 0) {
+        $parts[] = $infants . ' ' . ($infants === 1 ? 'Infant' : 'Infants');
     }
     return $parts ? implode(', ', $parts) : '—';
 }

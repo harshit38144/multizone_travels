@@ -63,6 +63,7 @@ function crmLeadRowToQuotationPrefill(array $row, array $destinationLookup = [])
 
     $adults = max(0, (int) ($payload['tp_adults'] ?? 0));
     $children = max(0, (int) ($payload['tp_children'] ?? 0));
+    $infants = max(0, (int) ($payload['tp_infants'] ?? 0));
     if ($adults < 1) {
         $adults = 1;
     }
@@ -104,10 +105,13 @@ function crmLeadRowToQuotationPrefill(array $row, array $destinationLookup = [])
         'email' => $email,
         'reference_name' => $referredBy,
         'destination' => implode(', ', array_filter($destNames)),
+        'departure_city' => trim((string) ($payload['tp_departure'] ?? '')),
+        'departure_airport_code' => strtoupper(trim((string) ($payload['tp_departure_code'] ?? ''))),
         'tentative_date' => $tentativeDate,
         'no_of_nights' => $nights,
         'no_of_adults' => $adults,
         'no_of_children' => $children,
+        'no_of_infants' => $infants,
         'children_ages' => $childAgesNormalized,
     ];
 }
@@ -430,7 +434,7 @@ function crmLeadFormatDateTime(?string $dateValue): string
  *
  * @param array<int,mixed> $childAges
  */
-function crmLeadFormatTravellerInfo(string $initial, string $guestName, int $adults, int $children, array $childAges = []): string
+function crmLeadFormatTravellerInfo(string $initial, string $guestName, int $adults, int $children, array $childAges = [], int $infants = 0): string
 {
     $initial = trim($initial);
     $guestName = trim($guestName);
@@ -441,7 +445,8 @@ function crmLeadFormatTravellerInfo(string $initial, string $guestName, int $adu
 
     $adults = max(0, $adults);
     $children = max(0, $children);
-    if ($adults < 1 && $children < 1) {
+    $infants = max(0, $infants);
+    if ($adults < 1 && $children < 1 && $infants < 1) {
         $adults = 1;
     }
 
@@ -451,6 +456,9 @@ function crmLeadFormatTravellerInfo(string $initial, string $guestName, int $adu
     }
     if ($children > 0) {
         $paxParts[] = str_pad((string) $children, 2, '0', STR_PAD_LEFT) . ' CHD';
+    }
+    if ($infants > 0) {
+        $paxParts[] = str_pad((string) $infants, 2, '0', STR_PAD_LEFT) . ' INF';
     }
     $paxLabel = implode(' + ', $paxParts);
 
@@ -520,6 +528,7 @@ function crmLeadRowToSidebarPanel(mysqli $conn, array $row, array $destinationLo
 
     $adults = max(0, (int) ($payload['tp_adults'] ?? 0));
     $children = max(0, (int) ($payload['tp_children'] ?? 0));
+    $infants = max(0, (int) ($payload['tp_infants'] ?? 0));
     if ($adults < 1) {
         $adults = 1;
     }
@@ -595,10 +604,11 @@ function crmLeadRowToSidebarPanel(mysqli $conn, array $row, array $destinationLo
             'query_type' => $queryType,
             'service_type' => $serviceType,
             'destination' => !empty($destNames) ? implode(', ', $destNames) : '—',
+            'departure_city' => trim((string) ($payload['tp_departure'] ?? '')),
             'travel_date' => crmLeadFormatDisplayDate((string) ($payload['tp_travel_date'] ?? '')),
             'nights' => $nightsLabel,
             'hotel_star_category' => $hotelStarCategory,
-            'travellers' => crmLeadFormatTravellerInfo($guestInitial, $guestName, $adults, $children, $childAges),
+            'travellers' => crmLeadFormatTravellerInfo($guestInitial, $guestName, $adults, $children, $childAges, $infants),
         ],
         'basic' => [
             'guest_name' => $guestName !== '' ? $guestName : '—',

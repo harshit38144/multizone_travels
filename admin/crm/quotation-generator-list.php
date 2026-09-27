@@ -301,6 +301,81 @@ function qlDestinationLine($destination, $nights)
             margin-bottom: 0.2rem;
         }
 
+        #confirmTourModal .ct-subtitle { font-size: 0.8rem; color: #94a3b8; margin-top: 0.15rem; }
+        #confirmTourModal .ct-modal-header { align-items: flex-start; }
+        #confirmTourModal .ct-primary-card {
+            display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; border-radius: 12px;
+            background: linear-gradient(90deg, #fff1f2 0%, #ffe4e6 55%, #fff 100%);
+            border: 1px solid #fecdd3; margin-bottom: 0.85rem;
+        }
+        #confirmTourModal .ct-primary-avatar {
+            width: 48px; height: 48px; border-radius: 50%; background: #e11d48; color: #fff;
+            display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; flex: 0 0 48px;
+        }
+        #confirmTourModal .ct-primary-body { flex: 1 1 auto; min-width: 0; }
+        #confirmTourModal .ct-primary-badge {
+            display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 700; color: #be123c; margin-bottom: 0.15rem;
+        }
+        #confirmTourModal .ct-primary-name {
+            font-size: 1.05rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.35rem;
+        }
+        #confirmTourModal .ct-primary-check {
+            width: 18px; height: 18px; border-radius: 50%; background: #e11d48; color: #fff;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 0.6rem;
+        }
+        #confirmTourModal .ct-primary-meta {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.55rem; margin-top: 0.2rem; color: #64748b; font-size: 0.82rem;
+        }
+        #confirmTourModal .ct-primary-meta i { color: #e11d48; margin-right: 0.2rem; }
+        #confirmTourModal .ct-primary-sep { color: #cbd5e1; }
+        #confirmTourModal .ct-primary-actions { display: flex; align-items: center; gap: 0.3rem; flex: 0 0 auto; }
+        #confirmTourModal .ct-primary-edit {
+            border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem; margin-bottom: 0.85rem; background: #f8fafc;
+        }
+        #confirmTourModal .ct-pax-section { margin-bottom: 0.85rem; }
+        #confirmTourModal .ct-pax-head {
+            display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.55rem;
+        }
+        #confirmTourModal .ct-pax-title { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
+        #confirmTourModal .ct-pax-sub { font-size: 0.78rem; color: #94a3b8; }
+        #confirmTourModal .ct-add-guest-btn {
+            background: #e11d48; border-color: #e11d48; color: #fff; font-weight: 600; border-radius: 8px; white-space: nowrap;
+        }
+        #confirmTourModal .ct-add-guest-btn:hover { background: #be123c; border-color: #be123c; color: #fff; }
+        #confirmTourModal .ct-pax-table-wrap {
+            border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff;
+        }
+        #confirmTourModal .ct-pax-table { width: 100%; margin: 0; border-collapse: collapse; }
+        #confirmTourModal .ct-pax-table th {
+            font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.02em;
+            padding: 0.65rem 0.75rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc;
+        }
+        #confirmTourModal .ct-pax-table td {
+            padding: 0.7rem 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 0.86rem; color: #334155;
+        }
+        #confirmTourModal .ct-pax-table th,
+        #confirmTourModal .ct-pax-table td { text-align: left !important; }
+        #confirmTourModal .ct-pax-actions { justify-content: flex-start; }
+        #confirmTourModal .ct-pax-table tr:last-child td { border-bottom: 0; }
+        #confirmTourModal .ct-pax-name { font-weight: 700; color: #0f172a; }
+        #confirmTourModal .ct-pax-relation { display: block; margin-top: 0.1rem; font-size: 0.72rem; color: #64748b; }
+        #confirmTourModal .ct-pax-relation.is-primary { color: #e11d48; font-weight: 600; }
+        #confirmTourModal .ct-pax-type {
+            display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700;
+        }
+        #confirmTourModal .ct-pax-type.is-adult { background: #ffe4e6; color: #be123c; }
+        #confirmTourModal .ct-pax-type.is-child { background: #dbeafe; color: #1d4ed8; }
+        #confirmTourModal .ct-pax-type.is-infant { background: #fef3c7; color: #b45309; }
+        #confirmTourModal .ct-pax-passport-no { font-weight: 700; color: #0f172a; }
+        #confirmTourModal .ct-pax-passport-exp { display: block; font-size: 0.72rem; color: #94a3b8; }
+        #confirmTourModal .ct-pax-docs {
+            display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border-radius: 999px;
+            background: #f1f5f9; color: #475569; font-size: 0.75rem; font-weight: 600; border: 0;
+        }
+        #confirmTourModal .ct-pax-actions { display: flex; align-items: center; gap: 0.25rem; }
+        #confirmTourModal .ct-pax-empty td { text-align: center; color: #94a3b8; padding: 1.1rem 0.75rem; }
+        #ctTravellerModal { z-index: 1080; }
+
         #confirmTourModal .ct-section-title {
             font-size: 0.9rem;
             font-weight: 600;
@@ -335,7 +410,7 @@ function qlDestinationLine($destination, $nights)
         #confirmTourModal .ct-detail-head,
         #confirmTourModal .ct-detail-row {
             display: grid;
-            grid-template-columns: 100px 1fr 90px 90px 80px 130px;
+            grid-template-columns: 100px 1fr 90px 90px 80px 168px;
             gap: 0.45rem;
             align-items: end;
         }
@@ -408,9 +483,59 @@ function qlDestinationLine($destination, $nights)
             padding: 0.2rem 0.45rem;
         }
 
+        #confirmTourModal .ct-row-btn {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+            color: #64748b;
+            line-height: 1;
+        }
+
+        #confirmTourModal .ct-row-btn:hover {
+            border-color: #93c5fd;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        #confirmTourModal .ct-row-btn.is-attached {
+            border-color: #86efac;
+            color: #15803d;
+            background: #f0fdf4;
+        }
+
+        #confirmTourModal .ct-row-btn.is-editing {
+            border-color: #93c5fd;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        #confirmTourModal .ct-row-btn.ct-guest-clear:hover,
+        #confirmTourModal .ct-row-btn.ct-remove-row:hover,
+        #confirmTourModal .ct-detail-actions .ct-remove-row:hover {
+            border-color: #fca5a5;
+            color: #dc2626;
+            background: #fef2f2;
+        }
+
         #confirmTourModal .ct-detail-actions .ct-remove-row {
             border: 1px solid #e2e8f0;
             color: #64748b;
+        }
+
+        #confirmTourModal .ct-attach-file {
+            display: none;
+        }
+
+        @media (max-width: 767.98px) {
+            #confirmTourModal .ct-primary-card { flex-wrap: wrap; }
+            #confirmTourModal .ct-pax-table-wrap { overflow-x: auto; }
+            #confirmTourModal .ct-pax-table { min-width: 680px; }
         }
 
         @media (max-width: 991.98px) {
@@ -556,22 +681,85 @@ function qlDestinationLine($destination, $nights)
     <div class="modal fade" id="confirmTourModal" tabindex="-1" role="dialog" aria-labelledby="confirmTourModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
             <div class="modal-content">
-                <div class="modal-header py-2">
-                    <h5 class="modal-title" id="confirmTourModalLabel">Confirm Tour</h5>
+                <div class="modal-header py-2 ct-modal-header">
+                    <div>
+                        <h5 class="modal-title mb-0" id="confirmTourModalLabel">Confirm Tour</h5>
+                        <p class="ct-subtitle mb-0">Review traveller details, supplier services and confirm the tour.</p>
+                    </div>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="ctQuotationId" value="">
-                    <div class="row">
-                        <div class="col-md-6 form-group mb-2">
-                            <label class="ct-label" for="ctGuestName">GuestName</label>
-                            <input type="text" class="form-control" id="ctGuestName" autocomplete="off">
+                    <input type="hidden" id="ctGuestName" value="">
+                    <input type="hidden" id="ctMobileNo" value="">
+                    <input type="hidden" id="ctEmail" value="">
+                    <input type="hidden" id="ctGuestAttachmentName" value="">
+                    <input type="hidden" id="ctGuestAttachmentPath" value="">
+
+                    <div class="ct-primary-card" id="ctPrimaryCard">
+                        <div class="ct-primary-avatar" id="ctPrimaryAvatar">—</div>
+                        <div class="ct-primary-body">
+                            <div class="ct-primary-badge"><i class="fas fa-user"></i> Primary Contact</div>
+                            <div class="ct-primary-name">
+                                <span id="ctPrimaryName">—</span>
+                                <span class="ct-primary-check" title="Primary"><i class="fas fa-check"></i></span>
+                            </div>
+                            <div class="ct-primary-meta">
+                                <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">—</span></span>
+                                <span class="ct-primary-sep">|</span>
+                                <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">—</span></span>
+                            </div>
                         </div>
-                        <div class="col-md-6 form-group mb-2">
-                            <label class="ct-label" for="ctMobileNo">Mobile No</label>
-                            <input type="text" class="form-control" id="ctMobileNo" autocomplete="off">
+                    </div>
+
+                    <div class="ct-primary-edit d-none" id="ctPrimaryEditPanel">
+                        <div class="row">
+                            <div class="col-md-4 form-group mb-2">
+                                <label class="ct-label" for="ctGuestNameEdit">Guest Name</label>
+                                <input type="text" class="form-control" id="ctGuestNameEdit" autocomplete="off">
+                            </div>
+                            <div class="col-md-4 form-group mb-2">
+                                <label class="ct-label" for="ctMobileNoEdit">Mobile No</label>
+                                <input type="text" class="form-control" id="ctMobileNoEdit" autocomplete="off">
+                            </div>
+                            <div class="col-md-4 form-group mb-2">
+                                <label class="ct-label" for="ctEmailEdit">Email</label>
+                                <input type="email" class="form-control" id="ctEmailEdit" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="ctPrimaryEditCancel">Cancel</button>
+                            <button type="button" class="btn btn-sm btn-primary" id="ctPrimaryEditApply">Apply</button>
+                        </div>
+                    </div>
+
+                    <div class="ct-pax-section">
+                        <div class="ct-pax-head">
+                            <div>
+                                <div class="ct-pax-title">Travellers (PAX)</div>
+                                <div class="ct-pax-sub">List of travellers for this tour package.</div>
+                            </div>
+                            <button type="button" class="btn btn-sm ct-add-guest-btn" id="ctAddGuestBtn"><i class="fas fa-plus mr-1"></i> Add Guest</button>
+                        </div>
+                        <div class="ct-pax-table-wrap">
+                            <table class="ct-pax-table" id="ctPaxTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:42px;">#</th>
+                                        <th>Guest Name</th>
+                                        <th style="width:90px;">Type</th>
+                                        <th style="width:70px;">Age</th>
+                                        <th>Passport</th>
+                                        <th style="width:110px;">Documents</th>
+                                        <th style="width:120px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ctPaxRows">
+                                    <tr class="ct-pax-empty"><td colspan="7">No travellers yet. Click Add Guest.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -579,15 +767,18 @@ function qlDestinationLine($destination, $nights)
                     <div class="ct-included" id="ctIncludedChips"></div>
 
                     <div class="ct-section-title">Fill details</div>
-                    <div class="ct-detail-head">
-                        <div></div>
-                        <div>Supplier</div>
-                        <div>Total</div>
-                        <div>Paid</div>
-                        <div>Balance</div>
-                        <div></div>
+                    <div class="ct-svc-table">
+                        <div class="ct-detail-head">
+                            <div>Service</div>
+                            <div>Supplier</div>
+                            <div>Attachments</div>
+                            <div class="text-right">Total (&#8377;)</div>
+                            <div class="text-right">Paid (&#8377;)</div>
+                            <div class="text-right">Balance (&#8377;)</div>
+                            <div class="text-center">Actions</div>
+                        </div>
+                        <div id="ctDetailRows"></div>
                     </div>
-                    <div id="ctDetailRows"></div>
                 </div>
                 <div class="modal-footer py-2">
                     <button type="button" class="btn btn-primary" id="ctSaveBtn">Save</button>
@@ -597,8 +788,112 @@ function qlDestinationLine($destination, $nights)
         </div>
     </div>
 
+        <div class="modal fade" id="ctPaxDocsModal" tabindex="-1" role="dialog" aria-labelledby="ctPaxDocsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <div>
+                            <h5 class="modal-title mb-0" id="ctPaxDocsModalLabel"><i class="fas fa-paperclip mr-1 text-muted"></i> Traveller Attachments</h5>
+                            <div class="small text-muted" id="ctPaxDocsMeta"></div>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="ct-docs-note small text-muted mb-3">
+                            <i class="fas fa-compress-alt mr-1"></i> One file per document, max 4 MB. Files are compressed automatically before saving.
+                        </div>
+                        <div class="row" id="ctDocCards"></div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <div class="modal fade" id="ctTravellerModal" tabindex="-1" role="dialog" aria-labelledby="ctTravellerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="ctTravellerModalLabel">Traveller</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="ctTravellerEditId" value="">
+                    <div class="alert alert-info py-2 px-3 small d-none" id="ctTravellerPrimaryNote">
+                        <i class="fas fa-user-check mr-1"></i> Primary Contact — changes also update the lead and contact profile.
+                    </div>
+                    <div class="form-group d-none" id="ctTravellerSavedWrap">
+                        <label class="ct-label" for="ctTravellerSaved">Select saved family / friend</label>
+                        <select class="form-control" id="ctTravellerSaved"></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-7">
+                            <label class="ct-label" for="ctTravellerName">Guest Name</label>
+                            <input type="text" class="form-control" id="ctTravellerName" autocomplete="off">
+                        </div>
+                        <div class="form-group col-md-5" id="ctTravellerRelationWrap">
+                            <label class="ct-label" for="ctTravellerRelation">Relation</label>
+                            <select class="form-control" id="ctTravellerRelation">
+                                <option value="Spouse">Spouse</option>
+                                <option value="Parent">Parent</option>
+                                <option value="Sibling">Sibling</option>
+                                <option value="Son">Son</option>
+                                <option value="Daughter">Daughter</option>
+                                <option value="Friend">Friend</option>
+                                <option value="Relative" selected>Relative</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label class="ct-label" for="ctTravellerMobile">Mobile</label>
+                            <input type="text" class="form-control" id="ctTravellerMobile" autocomplete="off">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label class="ct-label" for="ctTravellerEmail">Email</label>
+                            <input type="email" class="form-control" id="ctTravellerEmail" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label class="ct-label" for="ctTravellerType">Type</label>
+                            <select class="form-control" id="ctTravellerType">
+                                <option value="adult">Adult</option>
+                                <option value="child">Child</option>
+                                <option value="infant">Infant</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label class="ct-label" for="ctTravellerAge">Age</label>
+                            <input type="number" min="0" max="120" class="form-control" id="ctTravellerAge" placeholder="Years">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label class="ct-label" for="ctTravellerPassport">Passport No</label>
+                            <input type="text" class="form-control" id="ctTravellerPassport" autocomplete="off">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label class="ct-label" for="ctTravellerPassportExpiry">Passport Expiry</label>
+                            <input type="date" class="form-control" id="ctTravellerPassportExpiry">
+                        </div>
+                    </div>
+                    <div class="small text-muted mb-0">
+                        <i class="fas fa-paperclip mr-1"></i> Upload documents with the attachment button in the travellers list.
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="ctTravellerSaveBtn">Save Traveller</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <?php include __DIR__ . '/../includes/footer-links.php'; ?>
-    <script src="crm/assets/quotation_confirm_tour.js?v=6"></script>
+    <script src="crm/assets/quotation_confirm_tour.js?v=27"></script>
 
     <script>
         $(function () {

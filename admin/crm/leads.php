@@ -180,12 +180,16 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
 
     $adults = (int) ($payload['tp_adults'] ?? 0);
     $children = (int) ($payload['tp_children'] ?? 0);
+    $infants = (int) ($payload['tp_infants'] ?? 0);
     $paxParts = [];
     if ($adults > 0) {
         $paxParts[] = $adults . 'A';
     }
     if ($children > 0) {
         $paxParts[] = $children . 'C';
+    }
+    if ($infants > 0) {
+        $paxParts[] = $infants . 'I';
     }
     $paxText = !empty($paxParts) ? implode(' + ', $paxParts) : '—';
 
@@ -1102,6 +1106,7 @@ foreach ($destinationLookup as $destId => $destName) {
             scrollbar-width: thin;
             scrollbar-color: #475569 #e5e7eb;
             -webkit-overflow-scrolling: touch;
+            box-sizing: border-box;
         }
 
         .crm-leads-ui .table-wrap::-webkit-scrollbar {
@@ -1128,14 +1133,15 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui table.crm-leads-table {
-            width: 100%;
-            min-width: 0;
-            max-width: 100%;
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
             table-layout: fixed;
             border-collapse: collapse;
             font-size: calc(0.8125rem + 1px);
             border: 1px solid var(--ld-border);
             background: #fff;
+            box-sizing: border-box;
         }
 
         .crm-leads-ui table.crm-leads-table thead th {
@@ -1293,12 +1299,26 @@ foreach ($destinationLookup as $destId => $destName) {
 
         .crm-leads-ui table.crm-leads-table thead th.col-ld-booking,
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-booking {
-            width: 1%;
-            min-width: 3.25rem !important;
+            width: auto;
+            min-width: 7.5rem !important;
             max-width: none !important;
-            padding-left: 0.3rem;
-            padding-right: 0.3rem;
-            white-space: nowrap !important;
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
+            white-space: normal !important;
+        }
+
+        .crm-leads-ui table.crm-leads-table thead th.col-ld-stage,
+        .crm-leads-ui table.crm-leads-table tbody td.col-ld-stage,
+        .crm-leads-ui table.crm-leads-table tbody td.col-stage {
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
+        }
+
+        .crm-leads-ui .lead-stage-select {
+            width: auto;
+            max-width: 100%;
+            padding-left: 0.55rem;
+            padding-right: 0.55rem;
         }
 
         .crm-leads-ui table.crm-leads-table thead th.col-ld-booking .ld-th-label {
@@ -1311,12 +1331,13 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui table.crm-leads-table thead th.col-actions,
         .crm-leads-ui table.crm-leads-table tbody td.col-actions {
             width: 6.25rem !important;
-            min-width: 6.25rem !important;
-            max-width: 6.75rem !important;
-            padding-left: 0.25rem;
-            padding-right: 0.25rem;
+            min-width: 5.75rem !important;
+            max-width: 6.5rem !important;
+            padding-left: 0.2rem;
+            padding-right: 0.35rem;
             white-space: nowrap;
             text-align: center;
+            box-sizing: border-box;
         }
 
         .crm-leads-ui table.crm-leads-table thead th.col-ld-assign,
@@ -1764,10 +1785,10 @@ foreach ($destinationLookup as $destId => $destName) {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             gap: 0.2rem;
-            max-width: none;
-            white-space: nowrap;
+            max-width: 100%;
+            white-space: normal;
         }
 
         .crm-leads-ui .ld-book-status-empty {
@@ -1813,8 +1834,8 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui table.crm-leads-table tbody td.col-ld-booking {
-            overflow: visible;
-            white-space: nowrap !important;
+            overflow: hidden;
+            white-space: normal !important;
             text-align: center;
             vertical-align: middle;
         }
@@ -3431,6 +3452,271 @@ foreach ($destinationLookup as $destId => $destName) {
             margin-bottom: 0.2rem;
         }
 
+        #confirmTourModal .ct-subtitle {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.15rem;
+        }
+
+        #confirmTourModal .ct-modal-header {
+            align-items: flex-start;
+        }
+
+        #confirmTourModal .ct-primary-card {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #fff1f2 0%, #ffe4e6 55%, #fff 100%);
+            border: 1px solid #fecdd3;
+            margin-bottom: 0.85rem;
+        }
+
+        #confirmTourModal .ct-primary-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #e11d48;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            flex: 0 0 48px;
+        }
+
+        #confirmTourModal .ct-primary-body {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-primary-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #be123c;
+            margin-bottom: 0.15rem;
+        }
+
+        #confirmTourModal .ct-primary-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        #confirmTourModal .ct-primary-check {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #e11d48;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+        }
+
+        #confirmTourModal .ct-primary-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem 0.55rem;
+            margin-top: 0.2rem;
+            color: #64748b;
+            font-size: 0.82rem;
+        }
+
+        #confirmTourModal .ct-primary-meta i {
+            color: #e11d48;
+            margin-right: 0.2rem;
+        }
+
+        #confirmTourModal .ct-primary-sep {
+            color: #cbd5e1;
+        }
+
+        #confirmTourModal .ct-primary-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex: 0 0 auto;
+        }
+
+        #confirmTourModal .ct-primary-edit {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.75rem;
+            margin-bottom: 0.85rem;
+            background: #f8fafc;
+        }
+
+        #confirmTourModal .ct-pax-section {
+            margin-bottom: 0.85rem;
+        }
+
+        #confirmTourModal .ct-pax-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.55rem;
+        }
+
+        #confirmTourModal .ct-pax-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        #confirmTourModal .ct-pax-sub {
+            font-size: 0.78rem;
+            color: #94a3b8;
+        }
+
+        #confirmTourModal .ct-add-guest-btn {
+            background: #e11d48;
+            border-color: #e11d48;
+            color: #fff;
+            font-weight: 600;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        #confirmTourModal .ct-add-guest-btn:hover {
+            background: #be123c;
+            border-color: #be123c;
+            color: #fff;
+        }
+
+        #confirmTourModal .ct-pax-table-wrap {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        #confirmTourModal .ct-pax-table {
+            width: 100%;
+            margin: 0;
+            border-collapse: collapse;
+        }
+
+        #confirmTourModal .ct-pax-table th {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            padding: 0.65rem 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        #confirmTourModal .ct-pax-table th,
+        #confirmTourModal .ct-pax-table td {
+            text-align: left !important;
+        }
+
+        #confirmTourModal .ct-pax-actions {
+            justify-content: flex-start;
+        }
+
+        #confirmTourModal .ct-pax-table td {
+            padding: 0.1rem 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+            font-size: 0.86rem;
+            color: #334155;
+        }
+
+        #confirmTourModal .ct-pax-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        #confirmTourModal .ct-pax-name {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+
+        #confirmTourModal .ct-pax-relation {
+            display: block;
+            margin-top: 0.1rem;
+            font-size: 0.72rem;
+            color: #64748b;
+        }
+
+        #confirmTourModal .ct-pax-relation.is-primary {
+            color: #e11d48;
+            font-weight: 600;
+        }
+
+        #confirmTourModal .ct-pax-type {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        #confirmTourModal .ct-pax-type.is-adult {
+            background: #ffe4e6;
+            color: #be123c;
+        }
+
+        #confirmTourModal .ct-pax-type.is-child {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        #confirmTourModal .ct-pax-type.is-infant {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        #confirmTourModal .ct-pax-passport-no {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        #confirmTourModal .ct-pax-passport-exp {
+            display: block;
+            font-size: 0.72rem;
+            color: #94a3b8;
+        }
+
+        #confirmTourModal .ct-pax-docs {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 0;
+        }
+
+        #confirmTourModal .ct-pax-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        #confirmTourModal .ct-pax-empty td {
+            text-align: center;
+            color: #94a3b8;
+            padding: 1.1rem 0.75rem;
+        }
+
         #confirmTourModal .ct-section-title {
             font-size: 0.9rem;
             font-weight: 600;
@@ -3465,7 +3751,7 @@ foreach ($destinationLookup as $destId => $destName) {
         #confirmTourModal .ct-detail-head,
         #confirmTourModal .ct-detail-row {
             display: grid;
-            grid-template-columns: 100px 1fr 90px 90px 80px 130px;
+            grid-template-columns: 100px 1fr 90px 90px 80px 168px;
             gap: 0.45rem;
             align-items: end;
         }
@@ -3538,9 +3824,71 @@ foreach ($destinationLookup as $destId => $destName) {
             padding: 0.2rem 0.45rem;
         }
 
+        #confirmTourModal .ct-row-btn {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+            color: #64748b;
+            line-height: 1;
+        }
+
+        #confirmTourModal .ct-row-btn:hover {
+            border-color: #93c5fd;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        #confirmTourModal .ct-row-btn.is-attached {
+            border-color: #86efac;
+            color: #15803d;
+            background: #f0fdf4;
+        }
+
+        #confirmTourModal .ct-row-btn.is-editing {
+            border-color: #93c5fd;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        #confirmTourModal .ct-row-btn.ct-guest-clear:hover,
+        #confirmTourModal .ct-row-btn.ct-remove-row:hover,
+        #confirmTourModal .ct-detail-actions .ct-remove-row:hover {
+            border-color: #fca5a5;
+            color: #dc2626;
+            background: #fef2f2;
+        }
+
         #confirmTourModal .ct-detail-actions .ct-remove-row {
             border: 1px solid #e2e8f0;
             color: #64748b;
+        }
+
+        #confirmTourModal .ct-attach-file {
+            display: none;
+        }
+
+        @media (max-width: 767.98px) {
+            #confirmTourModal .ct-primary-card {
+                flex-wrap: wrap;
+            }
+
+            #confirmTourModal .ct-pax-table-wrap {
+                overflow-x: auto;
+            }
+
+            #confirmTourModal .ct-pax-table {
+                min-width: 680px;
+            }
+        }
+
+        #ctTravellerModal {
+            z-index: 1080;
         }
 
         @media (max-width: 991.98px) {
@@ -3905,7 +4253,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                                 </button>
                                                             <?php } ?>
                                                         <?php } else { ?>
-                                                            <a href="crm/quotation_generator.php?lead_id=<?= (int) $lead['id'] ?>"
+                                                            <a href="crm/quotation_generator.php?lead_id=<?= (int) $lead['id'] ?>&fresh=1"
                                                                 class="btn-icon btn-create-quote js-open-quotation-tab"
                                                                 title="Create Quotation">
                                                                 <i class="fas fa-plus"></i>
@@ -4261,22 +4609,87 @@ foreach ($destinationLookup as $destId => $destName) {
         <div class="modal fade" id="confirmTourModal" tabindex="-1" role="dialog" aria-labelledby="confirmTourModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
                 <div class="modal-content">
-                    <div class="modal-header py-2">
-                        <h5 class="modal-title" id="confirmTourModalLabel">Confirm Tour</h5>
+                    <div class="modal-header py-2 ct-modal-header">
+                        <div>
+                            <h5 class="modal-title mb-0" id="confirmTourModalLabel">Confirm Tour</h5>
+                            <p class="ct-subtitle mb-0">Review traveller details, supplier services and confirm the tour.</p>
+                        </div>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
                         <input type="hidden" id="ctQuotationId" value="">
-                        <div class="row">
-                            <div class="col-md-6 form-group mb-2">
-                                <label class="ct-label" for="ctGuestName">GuestName</label>
-                                <input type="text" class="form-control" id="ctGuestName" autocomplete="off">
+                        <input type="hidden" id="ctGuestName" value="">
+                        <input type="hidden" id="ctMobileNo" value="">
+                        <input type="hidden" id="ctEmail" value="">
+                        <input type="hidden" id="ctGuestAttachmentName" value="">
+                        <input type="hidden" id="ctGuestAttachmentPath" value="">
+
+                        <div class="ct-primary-card" id="ctPrimaryCard">
+                            <div class="ct-primary-avatar" id="ctPrimaryAvatar">—</div>
+                            <div class="ct-primary-body">
+                                <div class="ct-primary-badge"><i class="fas fa-user"></i> Primary Contact</div>
+                                <div class="ct-primary-name">
+                                    <span id="ctPrimaryName">—</span>
+                                    <span class="ct-primary-check" title="Primary"><i class="fas fa-check"></i></span>
+                                </div>
+                                <div class="ct-primary-meta">
+                                    <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">—</span></span>
+                                    <span class="ct-primary-sep">|</span>
+                                    <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">—</span></span>
+                                </div>
                             </div>
-                            <div class="col-md-6 form-group mb-2">
-                                <label class="ct-label" for="ctMobileNo">Mobile No</label>
-                                <input type="text" class="form-control" id="ctMobileNo" autocomplete="off">
+                        </div>
+
+                        <div class="ct-primary-edit d-none" id="ctPrimaryEditPanel">
+                            <div class="row">
+                                <div class="col-md-4 form-group mb-2">
+                                    <label class="ct-label" for="ctGuestNameEdit">Guest Name</label>
+                                    <input type="text" class="form-control" id="ctGuestNameEdit" autocomplete="off">
+                                </div>
+                                <div class="col-md-4 form-group mb-2">
+                                    <label class="ct-label" for="ctMobileNoEdit">Mobile No</label>
+                                    <input type="text" class="form-control" id="ctMobileNoEdit" autocomplete="off">
+                                </div>
+                                <div class="col-md-4 form-group mb-2">
+                                    <label class="ct-label" for="ctEmailEdit">Email</label>
+                                    <input type="email" class="form-control" id="ctEmailEdit" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="ctPrimaryEditCancel">Cancel</button>
+                                <button type="button" class="btn btn-sm btn-primary" id="ctPrimaryEditApply">Apply</button>
+                            </div>
+                        </div>
+
+                        <div class="ct-pax-section">
+                            <div class="ct-pax-head">
+                                <div>
+                                    <div class="ct-pax-title">Travellers (PAX)</div>
+                                    <div class="ct-pax-sub">List of travellers for this tour package.</div>
+                                </div>
+                                <button type="button" class="btn btn-sm ct-add-guest-btn" id="ctAddGuestBtn">
+                                    <i class="fas fa-plus mr-1"></i> Add Guest
+                                </button>
+                            </div>
+                            <div class="ct-pax-table-wrap">
+                                <table class="ct-pax-table" id="ctPaxTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:42px;">#</th>
+                                            <th>Guest Name</th>
+                                            <th style="width:90px;">Type</th>
+                                            <th style="width:70px;">Age</th>
+                                            <th>Passport</th>
+                                            <th style="width:110px;">Documents</th>
+                                            <th style="width:120px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ctPaxRows">
+                                        <tr class="ct-pax-empty"><td colspan="7">No travellers yet. Click Add Guest.</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
@@ -4284,19 +4697,128 @@ foreach ($destinationLookup as $destId => $destName) {
                         <div class="ct-included" id="ctIncludedChips"></div>
 
                         <div class="ct-section-title">Fill details</div>
-                        <div class="ct-detail-head">
-                            <div></div>
-                            <div>Supplier</div>
-                            <div>Total</div>
-                            <div>Paid</div>
-                            <div>Balance</div>
-                            <div></div>
+                        <div class="ct-svc-table">
+                            <div class="ct-detail-head">
+                                <div>Service</div>
+                                <div>Supplier</div>
+                                <div>Attachments</div>
+                                <div class="text-right">Total (&#8377;)</div>
+                                <div class="text-right">Paid (&#8377;)</div>
+                                <div class="text-right">Balance (&#8377;)</div>
+                                <div class="text-center">Actions</div>
+                            </div>
+                            <div id="ctDetailRows"></div>
                         </div>
-                        <div id="ctDetailRows"></div>
                     </div>
                     <div class="modal-footer py-2">
                         <button type="button" class="btn btn-primary" id="ctSaveBtn">Save</button>
                         <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Tour — traveller documents -->
+        <div class="modal fade" id="ctPaxDocsModal" tabindex="-1" role="dialog" aria-labelledby="ctPaxDocsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <div>
+                            <h5 class="modal-title mb-0" id="ctPaxDocsModalLabel"><i class="fas fa-paperclip mr-1 text-muted"></i> Traveller Attachments</h5>
+                            <div class="small text-muted" id="ctPaxDocsMeta"></div>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="ct-docs-note small text-muted mb-3">
+                            <i class="fas fa-compress-alt mr-1"></i> One file per document, max 4 MB. Files are compressed automatically before saving.
+                        </div>
+                        <div class="row" id="ctDocCards"></div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Tour — traveller edit -->
+        <div class="modal fade" id="ctTravellerModal" tabindex="-1" role="dialog" aria-labelledby="ctTravellerModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <h5 class="modal-title" id="ctTravellerModalLabel">Traveller</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="ctTravellerEditId" value="">
+                        <div class="alert alert-info py-2 px-3 small d-none" id="ctTravellerPrimaryNote">
+                            <i class="fas fa-user-check mr-1"></i> Primary Contact — changes also update the lead and contact profile.
+                        </div>
+                        <div class="form-group d-none" id="ctTravellerSavedWrap">
+                            <label class="ct-label" for="ctTravellerSaved">Select saved family / friend</label>
+                            <select class="form-control" id="ctTravellerSaved"></select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-7">
+                                <label class="ct-label" for="ctTravellerName">Guest Name</label>
+                                <input type="text" class="form-control" id="ctTravellerName" autocomplete="off">
+                            </div>
+                            <div class="form-group col-md-5" id="ctTravellerRelationWrap">
+                                <label class="ct-label" for="ctTravellerRelation">Relation</label>
+                                <select class="form-control" id="ctTravellerRelation">
+                                    <option value="Spouse">Spouse</option>
+                                    <option value="Parent">Parent</option>
+                                    <option value="Sibling">Sibling</option>
+                                    <option value="Son">Son</option>
+                                    <option value="Daughter">Daughter</option>
+                                    <option value="Friend">Friend</option>
+                                    <option value="Relative" selected>Relative</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label class="ct-label" for="ctTravellerMobile">Mobile</label>
+                                <input type="text" class="form-control" id="ctTravellerMobile" autocomplete="off">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label class="ct-label" for="ctTravellerEmail">Email</label>
+                                <input type="email" class="form-control" id="ctTravellerEmail" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label class="ct-label" for="ctTravellerType">Type</label>
+                                <select class="form-control" id="ctTravellerType">
+                                    <option value="adult">Adult</option>
+                                    <option value="child">Child</option>
+                                    <option value="infant">Infant</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label class="ct-label" for="ctTravellerAge">Age</label>
+                                <input type="number" min="0" max="120" class="form-control" id="ctTravellerAge" placeholder="Years">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label class="ct-label" for="ctTravellerPassport">Passport No</label>
+                                <input type="text" class="form-control" id="ctTravellerPassport" autocomplete="off">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label class="ct-label" for="ctTravellerPassportExpiry">Passport Expiry</label>
+                                <input type="date" class="form-control" id="ctTravellerPassportExpiry">
+                            </div>
+                        </div>
+                        <div class="small text-muted mb-0">
+                            <i class="fas fa-paperclip mr-1"></i> Upload documents with the attachment button in the travellers list.
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="ctTravellerSaveBtn">Save Traveller</button>
                     </div>
                 </div>
             </div>
@@ -4569,7 +5091,8 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     var LEADS_COL_SAVE_URL = 'crm/ajax/save_leads_column_settings.php';
-    var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v1';
+    // v2: Status (booking) needs room for multiple service icons; old v1 caps were ~52–72px.
+    var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v2';
     var LEADS_TABLE_COLUMNS = [
         { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 18, minWidth: 110 },
         { key: 'guest', className: 'col-ld-guest', label: 'Guest', locked: false, weight: 16, minWidth: 120 },
@@ -4578,9 +5101,9 @@ foreach ($destinationLookup as $destId => $destName) {
         { key: 'services', className: 'col-ld-services', label: 'Services', locked: false, weight: 12, minWidth: 100 },
         { key: 'source', className: 'col-ld-source', label: 'Lead Source', locked: false, weight: 12, minWidth: 100 },
         { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 10, minWidth: 100 },
-        { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 9, minWidth: 110 },
-        { key: 'booking', className: 'col-ld-booking', label: 'Status', locked: false, minWidth: 52, weight: 5 },
-        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '6.25rem', minWidth: 90 }
+        { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 5, minWidth: 92, maxWidth: 118 },
+        { key: 'booking', className: 'col-ld-booking', label: 'Status', locked: false, minWidth: 120, maxWidth: 220, weight: 10 },
+        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '6.25rem', minWidth: 92, maxWidth: 104 }
     ];
     var leadsColumnVisibilityState = <?= json_encode($leadsColumnVisibility, JSON_UNESCAPED_UNICODE) ?>;
     var leadsColumnSaveTimer = null;
@@ -4695,13 +5218,22 @@ foreach ($destinationLookup as $destId => $destName) {
         if (!(w > 0)) {
             w = $table.parent().innerWidth() || window.innerWidth || 1000;
         }
-        // Leave a little room so borders don't force overflow.
-        return Math.max(320, Math.floor(w) - 2);
+        // Leave room for vertical scrollbar + borders so the Actions column is never clipped.
+        var scrollbar = 0;
+        if ($wrap.length && $wrap[0].scrollHeight > $wrap[0].clientHeight) {
+            scrollbar = Math.max(0, $wrap[0].offsetWidth - $wrap[0].clientWidth);
+        }
+        return Math.max(320, Math.floor(w) - Math.max(12, scrollbar + 4));
     }
 
-    function leadsApplyFittedColumnWidths($table, state, widthsMap, fitToWrap) {
+    function leadsColIsWidthProtected(col) {
+        return !!(col && (col.fixedWidth || col.key === 'actions' || col.key === 'booking'));
+    }
+
+    function leadsApplyFittedColumnWidths($table, state, widthsMap, fitToWrap, lockKey) {
         var visible = [];
         var total = 0;
+        lockKey = lockKey ? String(lockKey) : '';
         LEADS_TABLE_COLUMNS.forEach(function (col) {
             if (!leadsColumnIsVisible(col, state)) {
                 $table.find('.' + col.className).css({ width: '', maxWidth: '', minWidth: '' });
@@ -4717,8 +5249,17 @@ foreach ($destinationLookup as $destId => $destName) {
             if (!(w > 0)) {
                 w = col.minWidth || 100;
             }
-            // Soft preference only — hard clamp happens after exact page fit.
-            w = Math.max(40, w);
+            w = Math.max(col.minWidth || 40, w);
+            if (col.fixedWidth) {
+                w = Math.max(w, leadsParseFixedWidthPx(col.fixedWidth) || (col.minWidth || 90));
+            }
+            // While dragging a column, do not clamp that column's maxWidth — let the user widen it.
+            if (col.maxWidth && col.key !== lockKey) {
+                w = Math.min(w, col.maxWidth);
+            } else if (col.maxWidth && col.key === lockKey) {
+                // Soft ceiling so a single drag cannot blow past ~1.5× configured max.
+                w = Math.min(w, Math.max(col.maxWidth, Math.round(col.maxWidth * 1.5)));
+            }
             visible.push({ col: col, width: w });
             total += w;
         });
@@ -4728,16 +5269,93 @@ foreach ($destinationLookup as $destId => $destName) {
 
         var wrapW = leadsGetTableWrapWidth($table);
         if (fitToWrap && total > 0 && wrapW > 0) {
-            // Always force exact page width so no horizontal scroll is needed.
-            var used = 0;
-            visible.forEach(function (item, idx) {
-                if (idx === visible.length - 1) {
-                    item.width = Math.max(1, wrapW - used);
-                } else {
-                    item.width = Math.max(1, Math.floor(item.width * (wrapW / total)));
-                    used += item.width;
+            if (total > wrapW) {
+                // Shrink flexible columns only — keep Actions/Status (and the column being dragged) usable.
+                var protectedItems = [];
+                var flexibleItems = [];
+                var reserved = 0;
+                visible.forEach(function (item) {
+                    if (leadsColIsWidthProtected(item.col) || item.col.key === lockKey) {
+                        protectedItems.push(item);
+                        reserved += item.width;
+                    } else {
+                        flexibleItems.push(item);
+                    }
+                });
+                var remain = Math.max(flexibleItems.length * 40, wrapW - reserved);
+                if (flexibleItems.length && remain > 0) {
+                    var flexTotal = 0;
+                    flexibleItems.forEach(function (item) { flexTotal += item.width; });
+                    var usedF = 0;
+                    flexibleItems.forEach(function (item, idx) {
+                        if (idx === flexibleItems.length - 1) {
+                            item.width = Math.max(item.col.minWidth || 40, remain - usedF);
+                        } else {
+                            var next = Math.max(
+                                item.col.minWidth || 40,
+                                Math.floor(remain * (item.width / Math.max(1, flexTotal)))
+                            );
+                            if (item.col.maxWidth) {
+                                next = Math.min(next, item.col.maxWidth);
+                            }
+                            item.width = next;
+                            usedF += item.width;
+                        }
+                    });
+                } else if (!flexibleItems.length && reserved > wrapW) {
+                    // Extreme case: even protected columns overflow — scale them down lightly,
+                    // but never shrink the column currently being dragged.
+                    var usedP = 0;
+                    var scalable = protectedItems.filter(function (item) {
+                        return item.col.key !== lockKey;
+                    });
+                    var lockedItem = null;
+                    protectedItems.forEach(function (item) {
+                        if (item.col.key === lockKey) {
+                            lockedItem = item;
+                        }
+                    });
+                    var lockedW = lockedItem ? lockedItem.width : 0;
+                    var scaleBudget = Math.max(1, wrapW - lockedW);
+                    var scaleFrom = Math.max(1, reserved - lockedW);
+                    scalable.forEach(function (item, idx) {
+                        if (idx === scalable.length - 1) {
+                            item.width = Math.max(1, scaleBudget - usedP);
+                        } else {
+                            item.width = Math.max(1, Math.floor(item.width * (scaleBudget / scaleFrom)));
+                            usedP += item.width;
+                        }
+                    });
                 }
-            });
+            } else if (total < wrapW) {
+                // Grow only non-protected / uncapped columns; keep Actions tight.
+                // Skip the locked drag column — its width is intentional.
+                var growable = [];
+                var growTotal = 0;
+                visible.forEach(function (item) {
+                    if (item.col.key === lockKey) {
+                        return;
+                    }
+                    if (!leadsColIsWidthProtected(item.col) && !item.col.maxWidth) {
+                        growable.push(item);
+                        growTotal += item.width;
+                    }
+                });
+                var extra = wrapW - total;
+                if (growable.length && growTotal > 0 && extra > 0) {
+                    var usedG = 0;
+                    growable.forEach(function (item, idx) {
+                        var add;
+                        if (idx === growable.length - 1) {
+                            add = extra - usedG;
+                        } else {
+                            add = Math.floor(extra * (item.width / growTotal));
+                            usedG += add;
+                        }
+                        item.width += Math.max(0, add);
+                    });
+                }
+            }
             total = wrapW;
         }
 
@@ -4778,7 +5396,11 @@ foreach ($destinationLookup as $destId => $destName) {
                 return;
             }
             if (hasCustom && savedWidths[col.key] > 0) {
-                widthsMap[col.key] = Math.max(col.minWidth || 80, parseInt(savedWidths[col.key], 10) || 0);
+                var savedW = Math.max(col.minWidth || 80, parseInt(savedWidths[col.key], 10) || 0);
+                if (col.maxWidth) {
+                    savedW = Math.min(savedW, col.maxWidth);
+                }
+                widthsMap[col.key] = savedW;
                 return;
             }
             if (col.fixedWidth && !hasCustom) {
@@ -4802,6 +5424,9 @@ foreach ($destinationLookup as $destId => $destName) {
                         w = Math.max(col.minWidth || 80, Math.floor(remain * ((Number(col.weight) || 1) / totalWeight)));
                         used += w;
                     }
+                    if (col.maxWidth) {
+                        w = Math.min(w, col.maxWidth);
+                    }
                     widthsMap[col.key] = w;
                 });
             }
@@ -4817,6 +5442,9 @@ foreach ($destinationLookup as $destId => $destName) {
                 } else {
                     w = Math.max(col.minWidth || 80, Math.floor(remainCustom * ((Number(col.weight) || 1) / totalWeight)));
                     usedC += w;
+                }
+                if (col.maxWidth) {
+                    w = Math.min(w, col.maxWidth);
                 }
                 widthsMap[col.key] = w;
             });
@@ -4836,9 +5464,10 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
         var state = leadsLoadColumnVisibility();
+        // Capture live widths as the drag baseline — do not redistribute first
+        // (that was clamping Status back to maxWidth and undoing the drag).
         var widths = leadsCaptureCurrentColumnWidths($table, state);
         leadsSaveColumnWidths(widths);
-        leadsRedistributeColumnWidths(state);
 
         var startX = e.clientX || (e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[0]
             ? e.originalEvent.touches[0].clientX
@@ -4852,7 +5481,7 @@ foreach ($destinationLookup as $destId => $destName) {
             startX: startX,
             startW: startW,
             minW: meta.minWidth || 80,
-            widths: leadsCaptureCurrentColumnWidths($table, state)
+            widths: widths
         };
         $table.addClass('is-col-resizing');
         $th.find('.ld-col-resizer').addClass('is-active');
@@ -4874,8 +5503,14 @@ foreach ($destinationLookup as $destId => $destName) {
         var nextW = Math.max(leadsColResizeState.minW, Math.round(leadsColResizeState.startW + delta));
         var widths = $.extend({}, leadsColResizeState.widths || leadsLoadColumnWidths());
         widths[leadsColResizeState.key] = nextW;
-        // Keep all columns inside the page by fitting to wrap width while dragging.
-        leadsApplyFittedColumnWidths(leadsColResizeState.$table, leadsLoadColumnVisibility(), widths, true);
+        // Keep all columns inside the page while dragging; lock the active column width.
+        leadsApplyFittedColumnWidths(
+            leadsColResizeState.$table,
+            leadsLoadColumnVisibility(),
+            widths,
+            true,
+            leadsColResizeState.key
+        );
     }
 
     function leadsEndColumnResize() {
@@ -5380,6 +6015,7 @@ foreach ($destinationLookup as $destId => $destName) {
             tp_child_bed_type: 'Child Bed Type',
             tp_adults: 'Adults',
             tp_children: 'Children',
+            tp_infants: 'Infants',
             tp_children_ages: 'Children Ages',
             tp_notes: 'Package Notes',
             itinerary_total_nights: 'Total Nights',
@@ -6420,6 +7056,45 @@ foreach ($destinationLookup as $destId => $destName) {
         window.location.reload();
     });
 
+    $(document).on('crm:lead-guest-updated', function (_e, payload) {
+        payload = payload || {};
+        var leadId = Number(payload.lead_id || 0);
+        if (!leadId) {
+            return;
+        }
+        var name = String(payload.customer_name || '').trim();
+        var phone = String(payload.customer_phone || '').trim();
+        var email = String(payload.customer_email || '').trim();
+        for (var i = 0; i < leadRowsData.length; i++) {
+            if (Number(leadRowsData[i].id) !== leadId) {
+                continue;
+            }
+            if (name) {
+                leadRowsData[i].customer_name = name;
+                leadRowsData[i].customer_display_name = name;
+                var letters = name.replace(/[^A-Za-z]/g, '');
+                leadRowsData[i].customer_name_letters = (letters.charAt(0) + letters.charAt(1)).toUpperCase();
+            }
+            leadRowsData[i].customer_phone = phone;
+            leadRowsData[i].customer_email = email;
+            if (leadRowsData[i].payload && typeof leadRowsData[i].payload === 'object') {
+                leadRowsData[i].payload.customer_name = name || leadRowsData[i].payload.customer_name;
+                leadRowsData[i].payload.customer_phone = phone;
+                leadRowsData[i].payload.customer_email = email;
+            }
+            break;
+        }
+        var $row = $('tr[data-lead-id="' + leadId + '"]');
+        if ($row.length) {
+            if (name) {
+                $row.find('.lead-name-text').text(name)
+                    .attr('title', 'Phone: ' + (phone || '—') + '\nEmail: ' + (email || '—'));
+            }
+            $row.find('[data-lead-email]').attr('data-lead-email', email);
+            $row.find('[data-lead-phone]').attr('data-lead-phone', phone);
+        }
+    });
+
     function crmLeadsListUrl(params) {
         var query = $.extend({
             page: 1,
@@ -6951,7 +7626,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=6"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=27"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {

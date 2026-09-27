@@ -241,10 +241,19 @@ try {
     }
     $stmt->close();
 
+    // Keep crm_leads guest fields aligned so leads.php / contact list stay in sync.
+    lcSyncLeadGuestDetails($conn, $leadId, $firstName, $mobile, $email);
+
     lcJson(true, 'Contact profile saved.', [
         'source' => 'lead',
         'ref_id' => $leadId,
         'profile' => lcGetProfile($conn, $leadId),
+        'lead' => [
+            'id' => $leadId,
+            'customer_name' => $firstName,
+            'customer_phone' => $mobile,
+            'customer_email' => $email,
+        ],
     ]);
 } catch (Throwable $e) {
     lcJson(false, 'Could not save contact: ' . $e->getMessage());

@@ -53,6 +53,7 @@ function crmEnsureQuotationTables(mysqli $conn)
         'version' => 'INT UNSIGNED NOT NULL DEFAULT 1',
         'status' => "VARCHAR(20) NOT NULL DEFAULT 'published'",
         'wizard_step' => 'TINYINT UNSIGNED NOT NULL DEFAULT 1',
+        'no_of_infants' => 'INT DEFAULT 0',
     ];
     foreach ($cols as $col => $ddl) {
         $chk = $conn->query("SHOW COLUMNS FROM `crm_quotations` LIKE '" . $conn->real_escape_string($col) . "'");
@@ -114,6 +115,20 @@ function crmQuotationPaymentLevel($total, $paid)
     return 'minimum';
 }
 
+/**
+ * Stable id of a Confirm Tour service row (vouchers are linked to it). Rows saved before uids
+ * existed get a position-based id, which is persisted on the next save.
+ */
+function crmQuotationServiceUid(array $row, int $index): string
+{
+    $uid = substr((string) preg_replace('/[^A-Za-z0-9_\-]/', '', (string) ($row['uid'] ?? '')), 0, 60);
+    if ($uid !== '') {
+        return $uid;
+    }
+    $key = preg_replace('/[^A-Za-z0-9_\-]/', '', (string) ($row['key'] ?? ''));
+    return 's' . ($index + 1) . '_' . $key;
+}
+
 function crmQuotationNormalizeConfirmPayload($raw)
 {
     $map = crmQuotationConfirmServiceMap();
@@ -131,6 +146,7 @@ function crmQuotationNormalizeConfirmPayload($raw)
             $total = (float) ($row['total'] ?? 0);
             $paid = (float) ($row['paid'] ?? 0);
             $services[] = [
+                'uid' => crmQuotationServiceUid($row, count($services)),
                 'key' => $key,
                 'label' => $map[$key],
                 'supplier' => trim((string) ($row['supplier'] ?? '')),
@@ -141,10 +157,611 @@ function crmQuotationNormalizeConfirmPayload($raw)
         }
     }
 
-    return [
+    $guestAttachmentName = trim((string) ($raw['guest_attachment_name'] ?? ''));
+    $guestAttachmentPath = trim((string) ($raw['guest_attachment_path'] ?? ''));
+    $travellers = crmQuotationNormalizeConfirmTravellers(is_array($raw) ? ($raw['travellers'] ?? []) : []);
+
+    $out = [
         'guest_name' => trim((string) ($raw['guest_name'] ?? '')),
         'mobile_no' => trim((string) ($raw['mobile_no'] ?? '')),
+        'email' => trim((string) ($raw['email'] ?? '')),
+        'travellers' => $travellers,
         'services' => $services,
+    ];
+    if ($guestAttachmentName !== '' || $guestAttachmentPath !== '') {
+        $out['guest_attachment_name'] = $guestAttachmentName;
+        $out['guest_attachment_path'] = $guestAttachmentPath;
+    }
+    return $out;
+}
+
+/**
+ * @param mixed $raw
+ * @return list<array<string, mixed>>
+ */
+function crmQuotationNormalizeConfirmTravellers($raw): array
+{
+    if (!is_array($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach ($raw as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $name = trim((string) ($row['name'] ?? ''));
+        if ($name === '') {
+            continue;
+        }
+        $type = strtolower(trim((string) ($row['type'] ?? 'adult')));
+        if (!in_array($type, ['adult', 'child', 'infant'], true)) {
+            $type = 'adult';
+        }
+        $age = $row['age'] ?? null;
+        $ageVal = ($age === '' || $age === null) ? null : max(0, (int) $age);
+        $docs = [];
+        if (!empty($row['documents']) && is_array($row['documents'])) {
+            foreach ($row['documents'] as $doc) {
+                if (!is_array($doc)) {
+                    continue;
+                }
+                $docName = trim((string) ($doc['name'] ?? ''));
+                $docPath = trim((string) ($doc['path'] ?? ''));
+                if ($docName === '' && $docPath === '') {
+                    continue;
+                }
+                $docs[] = [
+                    'name' => $docName !== '' ? $docName : basename($docPath),
+                    'path' => $docPath,
+                ];
+            }
+        }
+        $id = trim((string) ($row['id'] ?? ''));
+        if ($id === '') {
+            $id = 't_' . substr(sha1($name . '|' . $type . '|' . microtime(true) . '|' . count($out)), 0, 12);
+        }
+        $dob = trim((string) ($row['dob'] ?? ''));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
+            $dob = '';
+        }
+        if ($ageVal === null && $dob !== '') {
+            $ageVal = crmQuotationAgeFromDob($dob);
+        }
+        $gender = ucfirst(strtolower(trim((string) ($row['gender'] ?? ''))));
+        if (!in_array($gender, ['Male', 'Female', 'Other'], true)) {
+            $gender = '';
+        }
+        $out[] = [
+            'id' => $id,
+            'name' => $name,
+            'type' => $type,
+            'age' => $ageVal,
+            'passport_number' => trim((string) ($row['passport_number'] ?? '')),
+            'passport_expiry' => trim((string) ($row['passport_expiry'] ?? '')),
+            'relation' => trim((string) ($row['relation'] ?? '')),
+            'mobile' => trim((string) ($row['mobile'] ?? '')),
+            'email' => trim((string) ($row['email'] ?? '')),
+            'dob' => $dob,
+            'gender' => $gender,
+            'nationality' => mb_substr(trim((string) ($row['nationality'] ?? '')), 0, 80),
+            'id_type' => mb_substr(trim((string) ($row['id_type'] ?? '')), 0, 60),
+            'id_number' => mb_substr(trim((string) ($row['id_number'] ?? '')), 0, 80),
+            'address' => mb_substr(trim((string) ($row['address'] ?? '')), 0, 255),
+            'city' => mb_substr(trim((string) ($row['city'] ?? '')), 0, 120),
+            'state' => mb_substr(trim((string) ($row['state'] ?? '')), 0, 120),
+            'country' => mb_substr(trim((string) ($row['country'] ?? '')), 0, 120),
+            'pincode' => mb_substr(trim((string) ($row['pincode'] ?? '')), 0, 20),
+            'documents' => $docs,
+        ];
+    }
+    return $out;
+}
+
+/** Contact columns ↔ traveller keys for the identity/address details read from documents. */
+function crmQuotationTravellerDetailColumns(): array
+{
+    return [
+        'dob' => 'date_of_birth',
+        'gender' => 'gender',
+        'nationality' => 'nationality',
+        'id_type' => 'id_proof_type',
+        'id_number' => 'id_proof_number',
+        'address' => 'address_line1',
+        'city' => 'city',
+        'state' => 'state',
+        'country' => 'country',
+        'pincode' => 'pincode',
+    ];
+}
+
+function crmQuotationTravellerDetailsFromRow(?array $row): array
+{
+    $out = [];
+    foreach (crmQuotationTravellerDetailColumns() as $key => $col) {
+        $val = is_array($row) ? trim((string) ($row[$col] ?? '')) : '';
+        if ($key === 'dob' && ($val === '0000-00-00' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $val))) {
+            $val = '';
+        }
+        $out[$key] = $val;
+    }
+    return $out;
+}
+
+/**
+ * Update only the non-empty detail fields of a contact row (crm_contact_profiles / crm_contact_family).
+ */
+function crmQuotationUpdateContactDetails(mysqli $conn, string $table, string $whereSql, string $whereTypes, array $whereParams, array $traveller): void
+{
+    if (!in_array($table, ['crm_contact_profiles', 'crm_contact_family'], true)) {
+        return;
+    }
+    $sets = [];
+    $types = '';
+    $params = [];
+    foreach (crmQuotationTravellerDetailColumns() as $key => $col) {
+        $val = trim((string) ($traveller[$key] ?? ''));
+        if ($val === '') {
+            continue;
+        }
+        $sets[] = '`' . $col . '` = ?';
+        $types .= 's';
+        $params[] = $val;
+    }
+    if (!$sets) {
+        return;
+    }
+    $stmt = $conn->prepare('UPDATE `' . $table . '` SET ' . implode(', ', $sets) . ' WHERE ' . $whereSql . ' LIMIT 1');
+    if (!$stmt) {
+        return;
+    }
+    $types .= $whereTypes;
+    $params = array_merge($params, $whereParams);
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function crmQuotationDocKey(string $value): string
+{
+    return strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $value));
+}
+
+/**
+ * Find the lead's primary contact or saved family member matching a scanned document
+ * (document number first, then name).
+ *
+ * @param array{name?: string, passport_number?: string, id_number?: string} $data
+ * @return array{id: string, name: string, relation: string, by: string}|null
+ */
+function crmQuotationFindContactMatch(mysqli $conn, int $leadId, array $data): ?array
+{
+    if ($leadId <= 0) {
+        return null;
+    }
+    $docKeys = array_values(array_filter([
+        crmQuotationDocKey((string) ($data['passport_number'] ?? '')),
+        crmQuotationDocKey((string) ($data['id_number'] ?? '')),
+    ], static function ($k) {
+        return strlen($k) >= 5;
+    }));
+    $nameKey = crmQuotationNameKey((string) ($data['name'] ?? ''));
+
+    $candidates = [];
+    $profile = lcGetProfile($conn, $leadId);
+    if (is_array($profile)) {
+        $candidates[] = [
+            'id' => 'primary_' . $leadId,
+            'name' => trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? '')),
+            'relation' => 'Primary Contact',
+            'row' => $profile,
+        ];
+    }
+    foreach (lcGetFamily($conn, $leadId) as $member) {
+        $candidates[] = [
+            'id' => 'family_' . (int) ($member['id'] ?? 0),
+            'name' => trim(($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? '')),
+            'relation' => trim((string) ($member['relation'] ?? '')),
+            'row' => $member,
+        ];
+    }
+
+    foreach (['doc', 'name'] as $pass) {
+        foreach ($candidates as $c) {
+            if ($pass === 'doc') {
+                $theirs = [
+                    crmQuotationDocKey((string) ($c['row']['passport_number'] ?? '')),
+                    crmQuotationDocKey((string) ($c['row']['id_proof_number'] ?? '')),
+                ];
+                if ($docKeys && array_intersect($docKeys, array_filter($theirs))) {
+                    return ['id' => $c['id'], 'name' => $c['name'], 'relation' => $c['relation'], 'by' => 'document number'];
+                }
+            } elseif ($nameKey !== '' && crmQuotationNameKey($c['name']) === $nameKey) {
+                return ['id' => $c['id'], 'name' => $c['name'], 'relation' => $c['relation'], 'by' => 'name'];
+            }
+        }
+    }
+    return null;
+}
+
+function crmQuotationAgeFromDob(?string $dob): ?int
+{
+    $dob = trim((string) $dob);
+    if ($dob === '' || $dob === '0000-00-00' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
+        return null;
+    }
+    try {
+        $born = new DateTimeImmutable($dob);
+        $now = new DateTimeImmutable('today');
+        return max(0, (int) $born->diff($now)->y);
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+function crmQuotationLoadContactsLib(mysqli $conn): bool
+{
+    $contactsFile = __DIR__ . '/../../includes/lead_contacts_db.php';
+    if (!is_file($contactsFile)) {
+        return false;
+    }
+    require_once $contactsFile;
+    if (function_exists('lcEnsureContactTables')) {
+        lcEnsureContactTables($conn);
+    }
+    return function_exists('lcGetProfile') && function_exists('lcGetFamily');
+}
+
+/** Remove a leading honorific (Mr/Mrs/…) so names stored in contacts don't double up with the title column. */
+function crmQuotationStripNameTitle(string $name, string $title = ''): string
+{
+    $name = trim(preg_replace('/\s+/', ' ', $name));
+    $titles = ['mr', 'mrs', 'ms', 'miss', 'master', 'dr'];
+    $title = strtolower(rtrim(trim($title), '.'));
+    if ($title !== '' && !in_array($title, $titles, true)) {
+        $titles[] = $title;
+    }
+    if (preg_match('/^([A-Za-z]+)\.?\s+(.+)$/', $name, $m) && in_array(strtolower($m[1]), $titles, true)) {
+        return trim($m[2]);
+    }
+    return $name;
+}
+
+function crmQuotationNameKey(string $name): string
+{
+    return strtolower(crmQuotationStripNameTitle($name));
+}
+
+function crmQuotationTravellerTypeFor(?int $age, string $relation = ''): string
+{
+    if ($age !== null) {
+        if ($age < 2) {
+            return 'infant';
+        }
+        return $age < 12 ? 'child' : 'adult';
+    }
+    $relation = strtolower($relation);
+    if ($relation === 'son' || $relation === 'daughter' || strpos($relation, 'child') !== false) {
+        return 'child';
+    }
+    if (strpos($relation, 'infant') !== false || strpos($relation, 'baby') !== false) {
+        return 'infant';
+    }
+    return 'adult';
+}
+
+function crmQuotationDocsFromContactRow(array $row, array $fields): array
+{
+    $docs = [];
+    foreach ($fields as $field) {
+        $path = trim((string) ($row[$field] ?? ''));
+        if ($path !== '') {
+            $docs[] = ['name' => basename($path), 'path' => $path];
+        }
+    }
+    return $docs;
+}
+
+function crmQuotationTravellerFromFamilyRow(array $member): ?array
+{
+    $name = trim(trim((string) ($member['first_name'] ?? '')) . ' ' . trim((string) ($member['last_name'] ?? '')));
+    if ($name === '') {
+        return null;
+    }
+    $age = crmQuotationAgeFromDob((string) ($member['date_of_birth'] ?? ''));
+    $relation = trim((string) ($member['relation'] ?? ''));
+    return array_merge([
+        'id' => 'family_' . (int) ($member['id'] ?? 0),
+        'name' => $name,
+        'type' => crmQuotationTravellerTypeFor($age, $relation),
+        'age' => $age,
+        'passport_number' => trim((string) ($member['passport_number'] ?? '')),
+        'passport_expiry' => trim((string) ($member['passport_expiry'] ?? '')),
+        'relation' => $relation,
+        'mobile' => trim((string) ($member['mobile'] ?? '')),
+        'email' => trim((string) ($member['email'] ?? '')),
+        'documents' => crmQuotationDocsFromContactRow($member, ['photo', 'id_proof_front', 'id_proof_back']),
+    ], crmQuotationTravellerDetailsFromRow($member));
+}
+
+function crmQuotationPrimaryTraveller(mysqli $conn, int $leadId, string $fallbackName = ''): ?array
+{
+    $profile = lcGetProfile($conn, $leadId);
+    $lead = function_exists('lcGetLead') ? lcGetLead($conn, $leadId) : null;
+
+    $name = '';
+    if (is_array($profile)) {
+        $name = trim(trim((string) ($profile['first_name'] ?? '')) . ' ' . trim((string) ($profile['last_name'] ?? '')));
+    }
+    if ($name === '' && is_array($lead)) {
+        $name = trim((string) ($lead['customer_name'] ?? ''));
+    }
+    if ($name === '') {
+        $name = trim($fallbackName);
+    }
+    if ($name === '') {
+        return null;
+    }
+    $age = crmQuotationAgeFromDob(is_array($profile) ? (string) ($profile['date_of_birth'] ?? '') : '');
+    $mobile = is_array($profile) ? trim((string) ($profile['mobile'] ?? '')) : '';
+    $email = is_array($profile) ? trim((string) ($profile['email'] ?? '')) : '';
+    if ($mobile === '' && is_array($lead)) {
+        $mobile = trim((string) ($lead['customer_phone'] ?? ''));
+    }
+    if ($email === '' && is_array($lead)) {
+        $email = trim((string) ($lead['customer_email'] ?? ''));
+    }
+    return array_merge([
+        'id' => 'primary_' . $leadId,
+        'name' => $name,
+        'type' => crmQuotationTravellerTypeFor($age),
+        'age' => $age,
+        'passport_number' => is_array($profile) ? trim((string) ($profile['passport_number'] ?? '')) : '',
+        'passport_expiry' => is_array($profile) ? trim((string) ($profile['passport_expiry'] ?? '')) : '',
+        'relation' => 'Self',
+        'mobile' => $mobile,
+        'email' => $email,
+        'documents' => is_array($profile)
+            ? crmQuotationDocsFromContactRow($profile, ['photo', 'id_proof_front', 'id_proof_back', 'profile_photo'])
+            : [],
+    ], crmQuotationTravellerDetailsFromRow(is_array($profile) ? $profile : null));
+}
+
+/**
+ * Prefill travellers from lead contact profile + family members.
+ *
+ * @return list<array<string, mixed>>
+ */
+function crmQuotationBuildTravellersFromLead(mysqli $conn, int $leadId, string $fallbackName = ''): array
+{
+    if ($leadId <= 0 || !crmQuotationLoadContactsLib($conn)) {
+        return [];
+    }
+    $travellers = [];
+    $primary = crmQuotationPrimaryTraveller($conn, $leadId, $fallbackName);
+    if ($primary) {
+        $travellers[] = $primary;
+    }
+    foreach (lcGetFamily($conn, $leadId) as $member) {
+        $t = is_array($member) ? crmQuotationTravellerFromFamilyRow($member) : null;
+        if ($t) {
+            $travellers[] = $t;
+        }
+    }
+    return crmQuotationNormalizeConfirmTravellers($travellers);
+}
+
+/**
+ * Saved family members / friends of the lead's primary contact (for reuse in Add Guest).
+ *
+ * @return list<array<string, mixed>>
+ */
+function crmQuotationSavedGuestsForLead(mysqli $conn, int $leadId): array
+{
+    if ($leadId <= 0 || !crmQuotationLoadContactsLib($conn)) {
+        return [];
+    }
+    $out = [];
+    foreach (lcGetFamily($conn, $leadId) as $member) {
+        $t = is_array($member) ? crmQuotationTravellerFromFamilyRow($member) : null;
+        if ($t) {
+            $out[] = $t;
+        }
+    }
+    return crmQuotationNormalizeConfirmTravellers($out);
+}
+
+/**
+ * Overlay the latest contact data onto stored travellers so edits made on
+ * lead_contacts.php show up in Confirm Tour. Tour-only fields (documents, type, age) are kept.
+ *
+ * @return list<array<string, mixed>>
+ */
+function crmQuotationRefreshTravellersFromContacts(mysqli $conn, int $leadId, array $travellers): array
+{
+    if ($leadId <= 0 || empty($travellers) || !crmQuotationLoadContactsLib($conn)) {
+        return $travellers;
+    }
+    $familyById = [];
+    foreach (lcGetFamily($conn, $leadId) as $member) {
+        $familyById[(int) ($member['id'] ?? 0)] = $member;
+    }
+    foreach ($travellers as $i => $t) {
+        $fresh = null;
+        if ($i === 0) {
+            $fresh = crmQuotationPrimaryTraveller($conn, $leadId, (string) ($t['name'] ?? ''));
+        } elseif (preg_match('/^family_(\d+)$/', (string) ($t['id'] ?? ''), $m) && isset($familyById[(int) $m[1]])) {
+            $fresh = crmQuotationTravellerFromFamilyRow($familyById[(int) $m[1]]);
+        }
+        if (!$fresh) {
+            continue;
+        }
+        $travellers[$i]['id'] = $fresh['id'];
+        $overlay = array_merge(
+            ['name', 'relation', 'mobile', 'email', 'passport_number', 'passport_expiry'],
+            array_keys(crmQuotationTravellerDetailColumns())
+        );
+        foreach ($overlay as $key) {
+            if ((string) $fresh[$key] !== '') {
+                $travellers[$i][$key] = $fresh[$key];
+            }
+        }
+    }
+    return crmQuotationNormalizeConfirmTravellers($travellers);
+}
+
+/**
+ * Persist PAX list into lead contacts:
+ *  - traveller #1 → primary contact profile + crm_leads (name / mobile / email / passport)
+ *  - others       → crm_contact_family rows of that lead (matched by id, then by name; created if new)
+ * Returns travellers with contact-linked ids (primary_{lead}, family_{id}).
+ *
+ * @return array{travellers: list<array<string, mixed>>, primary: array{name: string, mobile: string, email: string}|null}
+ */
+function crmQuotationSyncTravellersWithContacts(mysqli $conn, int $leadId, array $travellers, string $mobile, string $email): array
+{
+    $travellers = crmQuotationNormalizeConfirmTravellers($travellers);
+    if ($leadId <= 0 || empty($travellers) || !crmQuotationLoadContactsLib($conn)) {
+        return ['travellers' => $travellers, 'primary' => null];
+    }
+
+    $first = $travellers[0];
+    $primaryName = crmQuotationStripNameTitle((string) $first['name']);
+    $primaryMobile = $first['mobile'] !== '' ? $first['mobile'] : trim($mobile);
+    $primaryEmail = $first['email'] !== '' ? $first['email'] : trim($email);
+    lcSyncLeadGuestDetails($conn, $leadId, $primaryName, $primaryMobile, $primaryEmail);
+
+    $passport = (string) $first['passport_number'];
+    $passportExpiry = lcNullableDate($first['passport_expiry']);
+    if ($passport !== '' || $passportExpiry !== null) {
+        $upd = $conn->prepare(
+            'UPDATE `crm_contact_profiles`
+             SET `passport_number` = IF(? = \'\', `passport_number`, ?),
+                 `passport_expiry` = COALESCE(?, `passport_expiry`)
+             WHERE `lead_id` = ? LIMIT 1'
+        );
+        if ($upd) {
+            $upd->bind_param('sssi', $passport, $passport, $passportExpiry, $leadId);
+            $upd->execute();
+            $upd->close();
+        }
+    }
+    crmQuotationUpdateContactDetails($conn, 'crm_contact_profiles', '`lead_id` = ?', 'i', [$leadId], $first);
+    $travellers[0]['id'] = 'primary_' . $leadId;
+    $travellers[0]['name'] = $primaryName;
+    $travellers[0]['relation'] = 'Self';
+    $travellers[0]['mobile'] = $primaryMobile;
+    $travellers[0]['email'] = $primaryEmail;
+
+    $familyById = [];
+    $familyByName = [];
+    $familyByDoc = [];
+    foreach (lcGetFamily($conn, $leadId) as $member) {
+        $mid = (int) ($member['id'] ?? 0);
+        $familyById[$mid] = $member;
+        $key = crmQuotationNameKey(trim(($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? '')));
+        if ($key !== '' && !isset($familyByName[$key])) {
+            $familyByName[$key] = $mid;
+        }
+        foreach (['passport_number', 'id_proof_number'] as $docCol) {
+            $docKey = crmQuotationDocKey((string) ($member[$docCol] ?? ''));
+            if (strlen($docKey) >= 5 && !isset($familyByDoc[$docKey])) {
+                $familyByDoc[$docKey] = $mid;
+            }
+        }
+    }
+
+    $usedIds = [];
+    $count = count($travellers);
+    for ($i = 1; $i < $count; $i++) {
+        $t = $travellers[$i];
+        $name = crmQuotationStripNameTitle((string) $t['name']);
+        $key = crmQuotationNameKey($name);
+
+        $memberId = 0;
+        if (preg_match('/^family_(\d+)$/', (string) $t['id'], $m) && isset($familyById[(int) $m[1]])) {
+            $memberId = (int) $m[1];
+        } else {
+            foreach ([(string) $t['passport_number'], (string) $t['id_number']] as $docVal) {
+                $docKey = crmQuotationDocKey($docVal);
+                if (strlen($docKey) >= 5 && isset($familyByDoc[$docKey]) && !isset($usedIds[$familyByDoc[$docKey]])) {
+                    $memberId = $familyByDoc[$docKey];
+                    break;
+                }
+            }
+            if ($memberId === 0 && $key !== '' && isset($familyByName[$key])) {
+                $memberId = $familyByName[$key];
+            }
+        }
+        if ($memberId > 0 && isset($usedIds[$memberId])) {
+            $memberId = 0;
+        }
+
+        $existing = $memberId > 0 ? $familyById[$memberId] : null;
+        $relation = $t['relation'] !== '' && strcasecmp($t['relation'], 'Self') !== 0
+            ? $t['relation']
+            : (($existing && trim((string) $existing['relation']) !== '') ? (string) $existing['relation'] : 'Relative');
+        $tMobile = (string) $t['mobile'];
+        $tEmail = (string) $t['email'];
+        $tPassport = (string) $t['passport_number'];
+        $tExpiry = lcNullableDate($t['passport_expiry']);
+
+        if ($existing) {
+            $stmt = $conn->prepare(
+                'UPDATE `crm_contact_family`
+                 SET `relation` = ?, `first_name` = ?, `last_name` = \'\',
+                     `mobile` = IF(? = \'\', `mobile`, ?),
+                     `email` = IF(? = \'\', `email`, ?),
+                     `passport_number` = IF(? = \'\', `passport_number`, ?),
+                     `passport_expiry` = COALESCE(?, `passport_expiry`)
+                 WHERE `id` = ? AND `lead_id` = ? AND `contact_id` = 0 LIMIT 1'
+            );
+            if ($stmt) {
+                $stmt->bind_param(
+                    'sssssssssii',
+                    $relation, $name, $tMobile, $tMobile, $tEmail, $tEmail, $tPassport, $tPassport, $tExpiry,
+                    $memberId, $leadId
+                );
+                $stmt->execute();
+                $stmt->close();
+            }
+        } else {
+            $stmt = $conn->prepare(
+                'INSERT INTO `crm_contact_family`
+                    (`lead_id`, `contact_id`, `relation`, `first_name`, `last_name`, `mobile`, `email`, `passport_number`, `passport_expiry`)
+                 VALUES (?, 0, ?, ?, \'\', ?, ?, ?, ?)'
+            );
+            if ($stmt) {
+                $stmt->bind_param('issssss', $leadId, $relation, $name, $tMobile, $tEmail, $tPassport, $tExpiry);
+                if ($stmt->execute()) {
+                    $memberId = (int) $stmt->insert_id;
+                    if ($key !== '') {
+                        $familyByName[$key] = $memberId;
+                    }
+                    foreach ([$tPassport, (string) $t['id_number']] as $docVal) {
+                        $docKey = crmQuotationDocKey($docVal);
+                        if (strlen($docKey) >= 5) {
+                            $familyByDoc[$docKey] = $memberId;
+                        }
+                    }
+                }
+                $stmt->close();
+            }
+        }
+
+        if ($memberId > 0) {
+            $usedIds[$memberId] = true;
+            $travellers[$i]['id'] = 'family_' . $memberId;
+            crmQuotationUpdateContactDetails(
+                $conn, 'crm_contact_family', '`id` = ? AND `lead_id` = ?', 'ii', [$memberId, $leadId], $t
+            );
+        }
+        $travellers[$i]['name'] = $name;
+        $travellers[$i]['relation'] = $relation;
+    }
+
+    return [
+        'travellers' => $travellers,
+        'primary' => ['name' => $primaryName, 'mobile' => $primaryMobile, 'email' => $primaryEmail],
     ];
 }
 
@@ -943,6 +1560,7 @@ function crmQuotationRowToPrefill(array $quotation): array
         'no_of_nights' => (int) ($quotation['no_of_nights'] ?? 0),
         'no_of_adults' => (int) ($quotation['no_of_adults'] ?? 1),
         'no_of_children' => (int) ($quotation['no_of_children'] ?? 0),
+        'no_of_infants' => (int) ($quotation['no_of_infants'] ?? 0),
         'children_ages' => (static function ($raw) {
             $cs = json_decode((string) $raw, true);
             if (!is_array($cs)) {

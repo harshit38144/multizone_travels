@@ -51,6 +51,7 @@ try {
     $nights = max(0, (int) ($_POST['no_of_nights'] ?? 0));
     $adults = max(1, (int) ($_POST['no_of_adults'] ?? 1));
     $children = max(0, (int) ($_POST['no_of_children'] ?? 0));
+    $infants = max(0, (int) ($_POST['no_of_infants'] ?? 0));
 
     function quotationNormalizeJson($raw, $fallback)
     {
@@ -153,7 +154,7 @@ try {
 
         $sql = "UPDATE `crm_quotations` SET
             `guest_name`=?, `reference_name`=?, `mobile_no`=?, `email`=?, `destination`=?, `tentative_date`=?,
-            `no_of_nights`=?, `no_of_adults`=?, `no_of_children`=?,
+            `no_of_nights`=?, `no_of_adults`=?, `no_of_children`=?, `no_of_infants`=?,
             `flights_json`=?, `hotels_json`=?, `itinerary_json`=?,
             `inclusion`=?, `exclusion`=?, `payment_policy`=?, `cancellation_policy`=?, `terms_conditions`=?, `other_details`=?,
             `cost_sheet_json`=?, `total_cost`=?, `profit_type`=?, `profit_value`=?, `package_total`=?,
@@ -165,7 +166,7 @@ try {
             quotationJson(false, 'Could not prepare update. ' . $conn->error);
         }
         $stmt->bind_param(
-            'ssssssiiissssssssssdsddddiiisi',
+            'ssssssiiiissssssssssdsddddiiisi',
             $guestName,
             $referenceName,
             $mobileNo,
@@ -175,6 +176,7 @@ try {
             $nights,
             $adults,
             $children,
+            $infants,
             $flightsJson,
             $hotelsJson,
             $itineraryJson,
@@ -278,13 +280,13 @@ try {
 
     $sql = "INSERT INTO `crm_quotations`
         (`quotation_uid`, `lead_id`, `version`, `status`, `wizard_step`, `guest_name`, `reference_name`, `mobile_no`, `email`, `destination`, `tentative_date`,
-         `no_of_nights`, `no_of_adults`, `no_of_children`,
+         `no_of_nights`, `no_of_adults`, `no_of_children`, `no_of_infants`,
          `flights_json`, `hotels_json`, `itinerary_json`,
          `inclusion`, `exclusion`, `payment_policy`, `cancellation_policy`, `terms_conditions`, `other_details`,
          `cost_sheet_json`, `total_cost`, `profit_type`, `profit_value`, `package_total`,
          `price_per_adult`, `quotation_total`, `without_itinerary`, `hide_gst_note`,
          `created_by_id`, `created_by_name`)
-        VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -292,7 +294,7 @@ try {
     }
     $leadIdInsert = $leadIdPost > 0 ? $leadIdPost : null;
     $stmt->bind_param(
-        'sisissssssiiissssssssssdsddddiiis',
+        'sisissssssiiiissssssssssdsddddiiis',
         $uid,
         $leadIdInsert,
         $newStatus,
@@ -306,6 +308,7 @@ try {
         $nights,
         $adults,
         $children,
+        $infants,
         $flightsJson,
         $hotelsJson,
         $itineraryJson,

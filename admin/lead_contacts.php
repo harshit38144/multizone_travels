@@ -1073,7 +1073,7 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
         </div>
 
         <?php include 'includes/footer-links.php'; ?>
-        <script src="assets/lead_contacts.js?v=27"></script>
+        <script src="assets/lead_contacts.js?v=28"></script>
     </div>
 </body>
 </html>

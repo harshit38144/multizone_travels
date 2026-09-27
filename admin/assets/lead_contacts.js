@@ -166,6 +166,131 @@
         }
     }
 
+    /**
+     * Patch a lead/manual contact table row in-place (no page reload).
+     */
+    function updateLeadContactTableRow(source, refId, name, phone, email) {
+        source = String(source || 'lead');
+        refId = parseInt(refId, 10) || 0;
+        if (!refId) {
+            return false;
+        }
+        name = String(name || '').trim();
+        phone = String(phone || '').trim();
+        email = String(email || '').trim();
+        var $row = $('#contactsTable tbody tr[data-source="' + source + '"][data-ref-id="' + refId + '"]');
+        if (!$row.length) {
+            return false;
+        }
+
+        if (name) {
+            $row.find('.lc-contact-name').text(name);
+            var $avatar = $row.find('.lc-avatar').first();
+            if ($avatar.length && !$avatar.hasClass('has-photo') && !$avatar.is('button')) {
+                $avatar.text(initialsFromName(name));
+            }
+            $row.find('.js-lc-avatar-view').attr('data-name', name);
+        }
+        $row.children('td').eq(3).text(phone || '—');
+        $row.find('.lc-contact-email').text(email || 'No email');
+
+        var idStr = String(refId);
+        while (idStr.length < 5) {
+            idStr = '0' + idStr;
+        }
+        var contactId = 'CT' + idStr;
+        var search = ((name || '') + ' ' + phone + ' ' + email + ' ' + contactId).toLowerCase();
+        $row.attr('data-name', (name || '').toLowerCase());
+        $row.attr('data-search', search);
+
+        $row.find('.js-lc-view, .js-lc-edit, .js-lc-docs, .js-lc-more-edit, .dropdown-item[data-ref-id]')
+            .attr('data-name', name)
+            .attr('data-phone', phone)
+            .attr('data-email', email);
+
+        var waPhone = phone.replace(/\D+/g, '');
+        if (waPhone.length === 10) {
+            waPhone = '91' + waPhone;
+        }
+        var $wa = $row.find('.js-lc-whatsapp');
+        if (waPhone) {
+            if ($wa.length) {
+                $wa.attr('href', 'https://wa.me/' + waPhone).attr('title', 'WhatsApp');
+            } else {
+                var $disabledWa = $row.find('button[title="No mobile"]');
+                if ($disabledWa.length) {
+                    $disabledWa.replaceWith(
+                        '<a class="btn js-lc-whatsapp" title="WhatsApp" href="https://wa.me/' + esc(waPhone) +
+                        '" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i></a>'
+                    );
+                }
+            }
+        }
+
+        if (activeRef && activeRef.source === source && Number(activeRef.refId) === refId) {
+            if (name) activeRef.name = name;
+            activeRef.phone = phone;
+            activeRef.email = email;
+            if (name) {
+                $('#lcFamilyLeadName').text(name);
+            }
+            if (contactCache) {
+                contactCache.customer_name = name || contactCache.customer_name;
+                contactCache.customer_phone = phone;
+                contactCache.customer_email = email;
+            }
+            if (profileCache) {
+                if (name) {
+                    profileCache.first_name = name;
+                    profileCache.last_name = '';
+                }
+                profileCache.mobile = phone;
+                profileCache.email = email;
+            }
+            if ($('#lcFamilyModal').hasClass('show')) {
+                renderPrimaryCard();
+            }
+        }
+
+        renderContactTable();
+        return true;
+    }
+
+    function applyGuestUpdateFromBroadcast(payload) {
+        payload = payload || {};
+        var leadId = parseInt(payload.lead_id, 10) || 0;
+        if (!leadId) {
+            return;
+        }
+        updateLeadContactTableRow(
+            'lead',
+            leadId,
+            payload.customer_name || '',
+            payload.customer_phone || '',
+            payload.customer_email || ''
+        );
+    }
+
+    function readLatestGuestBroadcast() {
+        try {
+            var raw = window.localStorage.getItem('crm_lead_guest_updated');
+            if (!raw) {
+                return null;
+            }
+            var data = JSON.parse(raw);
+            if (!data || !data.ts) {
+                return null;
+            }
+            // Only apply updates from the last 10 minutes.
+            if (Date.now() - Number(data.ts) > 10 * 60 * 1000) {
+                return null;
+            }
+            return data;
+        } catch (err) {
+            return null;
+        }
+    }
+
     function personName(data) {
         data = data || {};
         var n = trimJoin([data.first_name, data.last_name]);
@@ -999,9 +1124,13 @@
                 }
                 var $contactRow = $('tr[data-source="' + activeRef.source + '"][data-ref-id="' + activeRef.refId + '"]');
                 if ($contactRow.length) {
-                    $contactRow.find('.lc-contact-name').text(activeRef.name);
-                    if (activeRef.phone) $contactRow.children('td').eq(3).text(activeRef.phone);
-                    if (activeRef.email) $contactRow.find('.lc-contact-email').text(activeRef.email);
+                    updateLeadContactTableRow(
+                        activeRef.source,
+                        activeRef.refId,
+                        activeRef.name,
+                        activeRef.phone,
+                        activeRef.email
+                    );
                     $contactRow.attr('data-profile', 'complete');
                     $contactRow.find('.lc-profile-status').removeClass('pending').text('Completed');
                 }
@@ -1698,23 +1827,38 @@
                 }
                 var src = res.source || $('#lcProfileSource').val();
                 var rid = res.ref_id || $('#lcProfileRefId').val();
+                var savedName = $.trim($('#lcProfileForm [name=name]').val() || '');
+                var savedMobile = $.trim($('#lcPersonMobile').val() || '');
+                var savedEmail = $.trim($('#lcPersonEmail').val() || '');
+                updateLeadContactTableRow(src, rid, savedName, savedMobile, savedEmail);
+                try {
+                    var guestPayload = {
+                        lead_id: src === 'lead' ? parseInt(rid, 10) || 0 : 0,
+                        customer_name: savedName,
+                        customer_phone: savedMobile,
+                        customer_email: savedEmail,
+                        ts: Date.now()
+                    };
+                    if (guestPayload.lead_id) {
+                        window.localStorage.setItem('crm_lead_guest_updated', JSON.stringify(guestPayload));
+                        if (window.BroadcastChannel) {
+                            var bc = new BroadcastChannel('crm_lead_guest');
+                            bc.postMessage(guestPayload);
+                            bc.close();
+                        }
+                    }
+                } catch (err) {}
                 var $contactRow = $('tr[data-source="' + src + '"][data-ref-id="' + rid + '"]');
                 $contactRow.attr('data-profile', 'complete');
                 $contactRow.find('.lc-profile-status').removeClass('pending').text('Completed');
-                var savedName = $.trim($('#lcProfileForm [name=name]').val() || '');
                 if (savedName) {
-                    $contactRow.find('.lc-contact-name').text(savedName);
                     activeRef.name = savedName;
                     $('#lcFamilyLeadName').text(savedName);
                 }
-                var savedMobile = $.trim($('#lcPersonMobile').val() || '');
                 if (savedMobile) {
-                    $contactRow.children('td').eq(3).text(savedMobile);
                     activeRef.phone = savedMobile;
                 }
-                var savedEmail = $.trim($('#lcPersonEmail').val() || '');
                 if (savedEmail) {
-                    $contactRow.find('.lc-contact-email').text(savedEmail);
                     activeRef.email = savedEmail;
                 }
                 if (res.profile) {
@@ -1899,6 +2043,42 @@
         });
 
         renderContactTable();
+
+        // Live updates from Confirm Tour / leads guest edits (same or other tab).
+        try {
+            if (window.BroadcastChannel) {
+                var guestChannel = new BroadcastChannel('crm_lead_guest');
+                guestChannel.onmessage = function (ev) {
+                    applyGuestUpdateFromBroadcast(ev && ev.data);
+                };
+            }
+        } catch (err) {}
+
+        $(window).on('storage', function (e) {
+            var oe = e.originalEvent || e;
+            if (!oe || oe.key !== 'crm_lead_guest_updated' || !oe.newValue) {
+                return;
+            }
+            try {
+                applyGuestUpdateFromBroadcast(JSON.parse(oe.newValue));
+            } catch (err) {}
+        });
+
+        $(document).on('visibilitychange', function () {
+            if (document.visibilityState !== 'visible') {
+                return;
+            }
+            var latest = readLatestGuestBroadcast();
+            if (latest) {
+                applyGuestUpdateFromBroadcast(latest);
+            }
+        });
+
+        // Apply any edit that happened just before navigating here.
+        var pendingGuest = readLatestGuestBroadcast();
+        if (pendingGuest) {
+            applyGuestUpdateFromBroadcast(pendingGuest);
+        }
     });
 
 })(jQuery);

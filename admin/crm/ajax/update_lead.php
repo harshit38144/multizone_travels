@@ -116,12 +116,13 @@ $stmt->close();
 // Keep linked quotations' guest counts aligned with the lead Guests field
 $tpAdults = max(0, (int) ($_POST['tp_adults'] ?? 0));
 $tpChildren = max(0, (int) ($_POST['tp_children'] ?? 0));
+$tpInfants = max(0, (int) ($_POST['tp_infants'] ?? 0));
 if ($tpAdults < 1) {
     $tpAdults = 1;
 }
-$syncStmt = $conn->prepare('UPDATE `crm_quotations` SET `no_of_adults` = ?, `no_of_children` = ? WHERE `lead_id` = ?');
+$syncStmt = $conn->prepare('UPDATE `crm_quotations` SET `no_of_adults` = ?, `no_of_children` = ?, `no_of_infants` = ? WHERE `lead_id` = ?');
 if ($syncStmt) {
-    $syncStmt->bind_param('iii', $tpAdults, $tpChildren, $leadId);
+    $syncStmt->bind_param('iiii', $tpAdults, $tpChildren, $tpInfants, $leadId);
     $syncStmt->execute();
     $syncStmt->close();
 }
@@ -132,5 +133,6 @@ updateLeadJson(true, 'Lead updated successfully.', [
         'customer_name' => $customerName,
         'no_of_adults' => $tpAdults,
         'no_of_children' => $tpChildren,
+        'no_of_infants' => $tpInfants,
     ],
 ]);

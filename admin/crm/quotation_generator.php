@@ -129,6 +129,9 @@ if (!$quotation && $leadId > 0) {
         if (isset($leadGuestPrefill['no_of_children'])) {
             $prefill['no_of_children'] = max(0, (int) $leadGuestPrefill['no_of_children']);
         }
+        if (isset($leadGuestPrefill['no_of_infants'])) {
+            $prefill['no_of_infants'] = max(0, (int) $leadGuestPrefill['no_of_infants']);
+        }
         if (isset($leadGuestPrefill['children_ages']) && is_array($leadGuestPrefill['children_ages'])) {
             $prefill['children_ages'] = array_values($leadGuestPrefill['children_ages']);
         }
@@ -217,6 +220,8 @@ $pageTitle = $isArchivedView
         : (!empty($prefill['lead_id']) ? 'Create Quotation from Lead' : 'Quotation Generator'));
 
 $showSaveDraft = !$isArchivedView && (!$quotation || crmQuotationIsDraft($quotation));
+// Guest & tour details come from the lead / saved quotation; only Header Text stays editable.
+$qGuestTourLocked = $editId > 0 || (int) ($prefill['lead_id'] ?? ($quotation['lead_id'] ?? 0)) > 0;
 $qPreviewOnly = isset($_GET['preview_only']) && (string) $_GET['preview_only'] === '1';
 if ($qPreviewOnly && !isset($_GET['mz_embed'])) {
     $_GET['mz_embed'] = '1';
@@ -5173,8 +5178,8 @@ $qWizardSteps = [
         }
 
         .qfs-flight-search .qfs-price-col {
-            flex: 0 0 138px;
-            width: 138px;
+            flex: 0 0 196px;
+            width: 196px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -5184,7 +5189,7 @@ $qWizardSteps = [
             border-left: 1px solid #e5e7eb;
             padding-left: 0.65rem;
             margin-left: 0.15rem;
-            gap: 0.2rem;
+            gap: 0.15rem;
         }
 
         .qfs-flight-search .qfs-price-value {
@@ -5193,6 +5198,106 @@ $qWizardSteps = [
             color: #e31b23;
             line-height: 1.2;
             white-space: nowrap;
+        }
+
+        .qfs-flight-search .qfs-price-pax {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .qfs-flight-search .qfs-price-total-label {
+            font-size: 10px;
+            color: #94a3b8;
+            line-height: 1.1;
+            margin-bottom: 0.2rem;
+        }
+
+        .qfs-flight-search .qfs-pax-breakdown {
+            width: 100%;
+            background: #fff;
+            border: 1px solid #eef2f7;
+            border-radius: 6px;
+            padding: 0.25rem 0.4rem;
+        }
+
+        .qfs-flight-search .qfs-pax-line {
+            display: flex;
+            align-items: baseline;
+            gap: 0.3rem;
+            font-size: 10.5px;
+            line-height: 1.55;
+            white-space: nowrap;
+        }
+
+        .qfs-flight-search .qfs-pax-line + .qfs-pax-line {
+            border-top: 1px dashed #eef2f7;
+        }
+
+        .qfs-flight-search .qfs-pax-type {
+            font-weight: 700;
+            color: #334155;
+            min-width: 36px;
+            text-align: left;
+        }
+
+        .qfs-flight-search .qfs-pax-calc {
+            color: #64748b;
+            flex: 1 1 auto;
+            text-align: left;
+        }
+
+        .qfs-flight-search .qfs-pax-calc sup {
+            color: #d97706;
+            font-weight: 700;
+        }
+
+        .qfs-flight-search .qfs-pax-sum {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .qfs-flight-search .qfs-results-search {
+            position: relative;
+            flex: 1 1 260px;
+            max-width: 340px;
+        }
+
+        .qfs-flight-search .qfs-results-search .fa-search {
+            position: absolute;
+            left: 0.65rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .qfs-flight-search .qfs-results-search input {
+            height: 31px;
+            font-size: 13px;
+            padding-left: 1.9rem;
+            padding-right: 1.9rem;
+            border-radius: 6px;
+        }
+
+        .qfs-flight-search .qfs-results-search .qfs-search-clear {
+            position: absolute;
+            right: 0.35rem;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: #94a3b8;
+            padding: 0 0.3rem;
+            line-height: 1;
+            font-size: 16px;
+        }
+
+        .qfs-flight-search .qfs-results-search .qfs-search-clear:hover {
+            color: #475569;
         }
 
         .qfs-flight-search .qfs-baggage-meta {
@@ -6139,6 +6244,27 @@ $qWizardSteps = [
             color: #0f172a;
         }
 
+        .crm-quotation-gen .q-guest-tour-grid.is-locked .q-gt-locked-field {
+            background: #f1f5f9 !important;
+            color: #475569 !important;
+            cursor: not-allowed;
+            box-shadow: none !important;
+        }
+
+        .crm-quotation-gen .q-guest-tour-grid.is-locked .q-gt-locked-wrap {
+            cursor: not-allowed;
+        }
+
+        .crm-quotation-gen .q-guest-tour-grid.is-locked .q-gt-locked-wrap > * {
+            pointer-events: none;
+        }
+
+        .crm-quotation-gen .q-guest-tour-grid.is-locked .q-qty-btn:disabled,
+        .crm-quotation-gen .q-guest-tour-grid.is-locked .q-dest-picker-toggle:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
         .crm-quotation-gen .q-gt-fields {
             display: flex;
             flex-direction: column;
@@ -6151,18 +6277,25 @@ $qWizardSteps = [
             gap: 0.85rem 0.75rem;
         }
 
-        .crm-quotation-gen .q-gt-fields-4 {
+        .crm-quotation-gen .q-gt-fields-4,
+        .crm-quotation-gen .q-gt-fields-5 {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 0.85rem 0.65rem;
             align-items: end;
         }
 
-        .crm-quotation-gen .q-gt-fields-4 .q-qty-stepper {
+        .crm-quotation-gen .q-gt-fields-5 {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
+        .crm-quotation-gen .q-gt-fields-4 .q-qty-stepper,
+        .crm-quotation-gen .q-gt-fields-5 .q-qty-stepper {
             min-width: 0;
         }
 
-        .crm-quotation-gen .q-gt-fields-4 .q-qty-input {
+        .crm-quotation-gen .q-gt-fields-4 .q-qty-input,
+        .crm-quotation-gen .q-gt-fields-5 .q-qty-input {
             min-width: 0;
         }
 
@@ -6419,14 +6552,16 @@ $qWizardSteps = [
         }
 
         @media (max-width: 1199.98px) {
-            .crm-quotation-gen .q-gt-fields-4 {
+            .crm-quotation-gen .q-gt-fields-4,
+            .crm-quotation-gen .q-gt-fields-5 {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
         @media (max-width: 575.98px) {
             .crm-quotation-gen .q-gt-fields-2,
-            .crm-quotation-gen .q-gt-fields-4 {
+            .crm-quotation-gen .q-gt-fields-4,
+            .crm-quotation-gen .q-gt-fields-5 {
                 grid-template-columns: 1fr;
             }
         }
@@ -10666,11 +10801,17 @@ $qWizardSteps = [
             grid-template-columns: repeat(3, 1fr);
         }
 
-        .qp-info-card.qp-cols-5 {
+        .qp-info-card.qp-cols-5,
+        .qp-info-card.qp-cols-6 {
             grid-template-columns: repeat(5, 1fr);
         }
 
-        .qp-info-card.qp-cols-5.qp-travel-details {
+        .qp-info-card.qp-cols-6 {
+            grid-template-columns: repeat(6, 1fr);
+        }
+
+        .qp-info-card.qp-cols-5.qp-travel-details,
+        .qp-info-card.qp-cols-6.qp-travel-details {
             display: flex;
             flex-wrap: nowrap;
             align-items: stretch;
@@ -13240,11 +13381,13 @@ $qWizardSteps = [
             }
 
             body:not(.q-preview-only) .qp-info-card.qp-cols-3,
-            body:not(.q-preview-only) .qp-info-card.qp-cols-5 {
+            body:not(.q-preview-only) .qp-info-card.qp-cols-5,
+            body:not(.q-preview-only) .qp-info-card.qp-cols-6 {
                 grid-template-columns: 1fr;
             }
 
-            body:not(.q-preview-only) .qp-info-card.qp-cols-5.qp-travel-details {
+            body:not(.q-preview-only) .qp-info-card.qp-cols-5.qp-travel-details,
+            body:not(.q-preview-only) .qp-info-card.qp-cols-6.qp-travel-details {
                 display: grid;
                 grid-template-columns: 1fr;
                 flex-wrap: unset;
@@ -14854,7 +14997,7 @@ $qWizardSteps = [
                             </div>
 
                             <div class="q-section-accordion-body" id="qSectionBody1">
-                            <div class="q-guest-tour-grid">
+                            <div class="q-guest-tour-grid<?= $qGuestTourLocked ? ' is-locked' : '' ?>" id="qGuestTourGrid">
                                 <section class="q-gt-panel q-gt-panel-guest" aria-label="Guest Information">
                                     <div class="q-gt-panel-hd">
                                         <span class="q-gt-panel-ico" aria-hidden="true"><i class="fas fa-user"></i></span>
@@ -14922,7 +15065,7 @@ $qWizardSteps = [
                                                        placeholder="e.g. Special Offer / Honeymoon Package" maxlength="120" autocomplete="off">
                                             </div>
                                         </div>
-                                        <div class="q-gt-fields-4">
+                                        <div class="q-gt-fields-5">
                                             <div class="form-group mb-0">
                                                 <label class="q-label label-req">Tentative Date</label>
                                                 <div class="q-field-icon-wrap">
@@ -14952,6 +15095,14 @@ $qWizardSteps = [
                                                     <button type="button" class="q-qty-btn" data-qty-target="q_children" data-qty-dir="-1" aria-label="Decrease children">−</button>
                                                     <input type="number" min="0" name="no_of_children" id="q_children" class="form-control q-qty-input" value="0">
                                                     <button type="button" class="q-qty-btn" data-qty-target="q_children" data-qty-dir="1" aria-label="Increase children">+</button>
+                                                </div>
+                                            </div>
+                                            <div class="form-group mb-0">
+                                                <label class="q-label">No. of Infants</label>
+                                                <div class="q-qty-stepper">
+                                                    <button type="button" class="q-qty-btn" data-qty-target="q_infants" data-qty-dir="-1" aria-label="Decrease infants">−</button>
+                                                    <input type="number" min="0" name="no_of_infants" id="q_infants" class="form-control q-qty-input" value="0">
+                                                    <button type="button" class="q-qty-btn" data-qty-target="q_infants" data-qty-dir="1" aria-label="Increase infants">+</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -15762,6 +15913,25 @@ $qWizardSteps = [
 
     <?php include __DIR__ . '/../includes/footer-links.php'; ?>
 
+    <?php if ($qGuestTourLocked) { ?>
+    <script>
+        jQuery(function ($) {
+            var $grid = $('#qGuestTourGrid');
+            $grid.find('input, select, textarea').not('#q_header_text').each(function () {
+                $(this).prop('readonly', true)
+                    .attr({ tabindex: '-1', 'aria-readonly': 'true', title: 'Locked — edit in the lead' })
+                    .addClass('q-gt-locked-field')
+                    .closest('.form-group').addClass('q-gt-locked-wrap');
+            });
+            $grid.find('.q-qty-btn, .js-q-dest-toggle').prop('disabled', true);
+            $('#q_header_text').closest('.form-group').removeClass('q-gt-locked-wrap');
+            // Datepicker / lookup menus open on focus; locked fields must never take focus.
+            $grid.on('focusin', '.q-gt-locked-field', function () {
+                $(this).blur();
+            });
+        });
+    </script>
+    <?php } ?>
     <script>
         var QUOTATION_PREFILL = <?= json_encode($prefill, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: 'null' ?>;
         var QUOTATION_DESTINATIONS = <?= json_encode($destinations, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
@@ -15779,8 +15949,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=292"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=17"></script>
+    <script src="crm/assets/quotation_generator.js?v=293"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=27"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>

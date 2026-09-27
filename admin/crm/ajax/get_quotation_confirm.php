@@ -22,8 +22,8 @@ if ($id <= 0) {
 }
 
 $stmt = $conn->prepare(
-    'SELECT `id`, `quotation_uid`, `guest_name`, `mobile_no`, `tour_confirmed`, `tour_confirm_json`,
-            `flights_json`, `hotels_json`, `cost_sheet_json`
+    'SELECT `id`, `quotation_uid`, `lead_id`, `guest_name`, `mobile_no`, `email`, `tour_confirmed`, `tour_confirm_json`,
+            `flights_json`, `hotels_json`, `cost_sheet_json`, `no_of_adults`, `no_of_children`, `no_of_infants`
      FROM `crm_quotations` WHERE `id` = ? LIMIT 1'
 );
 if (!$stmt) {
@@ -47,21 +47,86 @@ if ($payload['guest_name'] === '') {
 if ($payload['mobile_no'] === '') {
     $payload['mobile_no'] = (string) $row['mobile_no'];
 }
+if ($payload['email'] === '') {
+    $payload['email'] = (string) ($row['email'] ?? '');
+}
 
 // First-time Book: prefill supplier + totals from quotation details.
 if (empty($payload['services'])) {
     $payload['services'] = crmQuotationBuildConfirmServicesFromQuote($row);
+    foreach ($payload['services'] as $i => $svc) {
+        $payload['services'][$i]['uid'] = crmQuotationServiceUid(is_array($svc) ? $svc : [], $i);
+    }
+}
+require_once __DIR__ . '/../includes/service_vouchers.php';
+svEnsureTable($conn);
+$payload['services'] = svAttachCounts($conn, $id, $payload['services']);
+
+$leadId = (int) ($row['lead_id'] ?? 0);
+if ($leadId <= 0) {
+    $leadId = crmQuotationResolveLeadId($conn, [
+        'lead_id' => 0,
+        'mobile_no' => (string) ($payload['mobile_no'] ?: ($row['mobile_no'] ?? '')),
+        'email' => (string) ($payload['email'] ?: ($row['email'] ?? '')),
+    ]);
+}
+
+if (!empty($payload['travellers']) && $leadId > 0) {
+    $payload['travellers'] = crmQuotationRefreshTravellersFromContacts($conn, $leadId, $payload['travellers']);
+}
+
+// Prefill travellers from lead contacts when none saved yet.
+if (empty($payload['travellers']) && $leadId > 0) {
+    $payload['travellers'] = crmQuotationBuildTravellersFromLead(
+        $conn,
+        $leadId,
+        (string) ($payload['guest_name'] ?: ($row['guest_name'] ?? ''))
+    );
+}
+if (empty($payload['travellers']) && trim((string) ($payload['guest_name'] ?? '')) !== '') {
+    $payload['travellers'] = crmQuotationNormalizeConfirmTravellers([[
+        'id' => 'guest_primary',
+        'name' => (string) $payload['guest_name'],
+        'type' => 'adult',
+        'age' => null,
+        'passport_number' => '',
+        'passport_expiry' => '',
+        'documents' => [],
+    ]]);
+}
+
+require_once __DIR__ . '/../includes/traveller_documents.php';
+tdEnsureTable($conn);
+foreach ($payload['travellers'] as $i => $t) {
+    $payload['travellers'][$i]['documents'] = tdDocumentsSummary($conn, tdTravellerKey($id, (string) $t['id']));
+}
+
+if (!empty($payload['travellers'][0])) {
+    $first = $payload['travellers'][0];
+    $payload['guest_name'] = (string) $first['name'];
+    if ((string) ($first['mobile'] ?? '') !== '') {
+        $payload['mobile_no'] = (string) $first['mobile'];
+    }
+    if ((string) ($first['email'] ?? '') !== '') {
+        $payload['email'] = (string) $first['email'];
+    }
 }
 
 qConfirmJson(true, 'OK', [
     'quotation' => [
         'id' => (int) $row['id'],
         'quotation_uid' => (string) $row['quotation_uid'],
+        'lead_id' => $leadId,
         'guest_name' => (string) $row['guest_name'],
         'mobile_no' => (string) $row['mobile_no'],
+        'email' => (string) ($row['email'] ?? ''),
         'tour_confirmed' => (int) ($row['tour_confirmed'] ?? 0),
+        'no_of_adults' => (int) ($row['no_of_adults'] ?? 0),
+        'no_of_children' => (int) ($row['no_of_children'] ?? 0),
+        'no_of_infants' => (int) ($row['no_of_infants'] ?? 0),
     ],
     'confirm' => $payload,
+    'saved_guests' => crmQuotationSavedGuestsForLead($conn, $leadId),
     'services' => crmQuotationConfirmServiceMap(),
     'autofilled' => !is_array($stored) || empty($stored['services']),
 ]);

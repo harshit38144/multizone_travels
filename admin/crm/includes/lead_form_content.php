@@ -456,6 +456,7 @@ if (empty($leadSourceOptions)) {
                                     </div>
                                     <input type="text" class="form-control js-tp-departure-input" name="tp_departure"
                                         placeholder="Search airports" autocomplete="off">
+                                    <input type="hidden" name="tp_departure_code" class="js-tp-departure-code" value="">
                                     <div class="tp-departure-menu js-tp-departure-menu" style="display:none;" role="listbox"></div>
                                 </div>
                             </div>
@@ -496,6 +497,7 @@ if (empty($leadSourceOptions)) {
                                     </div>
                                     <input type="text" class="form-control js-tp-departure-input" name="tp_departure"
                                         placeholder="Search airports" autocomplete="off">
+                                    <input type="hidden" name="tp_departure_code" class="js-tp-departure-code" value="">
                                     <div class="tp-departure-menu js-tp-departure-menu" style="display:none;" role="listbox"></div>
                                 </div>
                             </div>
@@ -556,7 +558,7 @@ if (empty($leadSourceOptions)) {
                                 </div>
                             </div>
                             <?php } ?>
-                            <?php if (lfIntakeField('tp_adults') || lfIntakeField('tp_children') || lfIntakeField('tp_children_ages')) { ?>
+                            <?php if (lfIntakeField('tp_adults') || lfIntakeField('tp_children') || lfIntakeField('tp_infants') || lfIntakeField('tp_children_ages')) { ?>
                             <div class="form-group <?= $leadFormPublicIntake ? 'col-12 col-md' : 'col-md-3' ?> js-tp-guests-field">
                                 <label class="label-req"><?= $leadFormPublicIntake ? 'Number of Guests' : 'Guests' ?></label>
                                 <div class="tp-rg-picker js-tp-rg-picker" data-picker="guests">
@@ -587,7 +589,7 @@ if (empty($leadSourceOptions)) {
                                                 <div class="tp-rg-row" data-field="children" data-min="0" data-max="10">
                                                     <div class="tp-rg-row-label">
                                                         <strong>Children</strong>
-                                                        <small>0 - 17 Years Old</small>
+                                                        <small>2 - 17 Years Old</small>
                                                     </div>
                                                     <div class="tp-rg-stepper">
                                                         <button type="button" class="tp-rg-step-btn js-tp-rg-step"
@@ -595,6 +597,19 @@ if (empty($leadSourceOptions)) {
                                                         <span class="tp-rg-step-val js-tp-rg-val">0</span>
                                                         <button type="button" class="tp-rg-step-btn js-tp-rg-step"
                                                             data-action="plus" aria-label="Increase children">+</button>
+                                                    </div>
+                                                </div>
+                                                <div class="tp-rg-row" data-field="infants" data-min="0" data-max="10">
+                                                    <div class="tp-rg-row-label">
+                                                        <strong>Infants</strong>
+                                                        <small>Under 2 Years</small>
+                                                    </div>
+                                                    <div class="tp-rg-stepper">
+                                                        <button type="button" class="tp-rg-step-btn js-tp-rg-step"
+                                                            data-action="minus" aria-label="Decrease infants">-</button>
+                                                        <span class="tp-rg-step-val js-tp-rg-val">0</span>
+                                                        <button type="button" class="tp-rg-step-btn js-tp-rg-step"
+                                                            data-action="plus" aria-label="Increase infants">+</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -671,11 +686,12 @@ if (empty($leadSourceOptions)) {
                                 </div>
                             </div>
                             <?php } ?>
-                            <?php if (lfIntakeField('tp_rooms') || lfIntakeField('tp_adults') || lfIntakeField('tp_children')) { ?>
+                            <?php if (lfIntakeField('tp_rooms') || lfIntakeField('tp_adults') || lfIntakeField('tp_children') || lfIntakeField('tp_infants')) { ?>
                             <div class="js-tp-rg-hidden-inputs d-none col-12">
                                 <?php if (lfIntakeField('tp_rooms') && !$leadFormEmbedModal) { ?><input type="hidden" name="tp_rooms" class="js-tp-rg-input-rooms" value="1"><?php } ?>
                                 <?php if (lfIntakeField('tp_adults')) { ?><input type="hidden" name="tp_adults" class="js-tp-rg-input-adults" value="2"><?php } ?>
                                 <?php if (lfIntakeField('tp_children') || lfIntakeField('tp_children_ages')) { ?><input type="hidden" name="tp_children" class="js-tp-rg-input-children" value="0"><?php } ?>
+                                <?php if (lfIntakeField('tp_infants') || lfIntakeField('tp_adults') || lfIntakeField('tp_children')) { ?><input type="hidden" name="tp_infants" class="js-tp-rg-input-infants" value="0"><?php } ?>
                                 <input type="hidden" name="tp_pets" class="js-tp-rg-input-pets" value="0">
                                 <?php if ($leadFormEmbedModal) { ?>
                                 <input type="hidden" name="tp_child_cnb" class="js-tp-cnb-input" value="0">
@@ -1140,7 +1156,7 @@ if (empty($leadSourceOptions)) {
     (function () {
         var itineraryServices = ['tour_package', 'cruise'];
         var intakeServiceFields = {
-            tour_package: ['tp_travel_date', 'tp_departure', 'tp_arrival', 'tp_tour_type', 'tp_destination', 'tp_budget', 'tp_hotel_category', 'tp_rooms', 'tp_adults', 'tp_children', 'tp_children_ages', 'tp_notes', 'vehicle_type'],
+            tour_package: ['tp_travel_date', 'tp_departure', 'tp_arrival', 'tp_tour_type', 'tp_destination', 'tp_budget', 'tp_hotel_category', 'tp_rooms', 'tp_adults', 'tp_children', 'tp_infants', 'tp_children_ages', 'tp_notes', 'vehicle_type'],
             cruise: ['cruise_embark_date', 'cruise_line', 'cruise_cabin', 'cruise_pax', 'cruise_port'],
             visa: ['visa_country', 'visa_type', 'visa_travel_date', 'visa_passport_no', 'visa_passport_exp'],
             passport: ['passport_service', 'passport_urgency', 'passport_expiry', 'passport_notes'],
@@ -2846,6 +2862,7 @@ if (empty($leadSourceOptions)) {
                             .attr('data-airport-code', code)
                             .attr('data-city', city)
                             .attr('data-label', label || (code ? (city + ', ' + code) : city));
+                        $wrap.find('.js-tp-departure-code').val(code);
                         hideMenu($menu);
                         $input.trigger('change');
                         $input.blur();
@@ -2977,6 +2994,7 @@ if (empty($leadSourceOptions)) {
                     rooms: 1,
                     adults: 2,
                     children: 0,
+                    infants: 0,
                     pets: 0,
                     childAges: [],
                     childBedTypes: [],
@@ -2997,6 +3015,7 @@ if (empty($leadSourceOptions)) {
                     if (field === 'rooms') return state.rooms;
                     if (field === 'adults') return state.adults;
                     if (field === 'children') return state.children;
+                    if (field === 'infants') return state.infants;
                     if (field === 'pets') return state.pets;
                     return 0;
                 }
@@ -3005,6 +3024,7 @@ if (empty($leadSourceOptions)) {
                     if (field === 'rooms') state.rooms = value;
                     if (field === 'adults') state.adults = value;
                     if (field === 'children') state.children = value;
+                    if (field === 'infants') state.infants = value;
                     if (field === 'pets') state.pets = value;
                 }
 
@@ -3194,6 +3214,9 @@ if (empty($leadSourceOptions)) {
                     if (state.children > 0) {
                         guestParts.push(state.children + ' ' + pluralize('Child', state.children));
                     }
+                    if (state.infants > 0) {
+                        guestParts.push(state.infants + ' ' + pluralize('Infant', state.infants));
+                    }
                     if (state.petsEnabled && state.pets > 0) {
                         guestParts.push(state.pets + ' ' + pluralize('Pet', state.pets));
                     }
@@ -3202,6 +3225,7 @@ if (empty($leadSourceOptions)) {
                     $hiddenInputs.find('.js-tp-rg-input-rooms').val(state.rooms);
                     $hiddenInputs.find('.js-tp-rg-input-adults').val(state.adults);
                     $hiddenInputs.find('.js-tp-rg-input-children').val(state.children);
+                    $hiddenInputs.find('.js-tp-rg-input-infants').val(state.infants);
                     $hiddenInputs.find('.js-tp-rg-input-pets').val(state.petsEnabled ? state.pets : 0);
 
                     $hiddenInputs.find('input[name="tp_children_ages[]"]').remove();
@@ -3326,7 +3350,7 @@ if (empty($leadSourceOptions)) {
                         refreshPicker();
                     });
 
-                $wrap.off('change.tpChildBed', '.js-tp-child-bed-select')
+                $form.off('change.tpChildBed', '.js-tp-child-bed-select')
                     .on('change.tpChildBed', '.js-tp-child-bed-select', function () {
                         var index = parseInt(jQuery(this).data('index'), 10);
                         if (isNaN(index) || index < 0) {
@@ -3336,6 +3360,31 @@ if (empty($leadSourceOptions)) {
                         syncChildBedCountsFromTypes();
                         updateSummaries();
                     });
+
+                function syncChildBedTypesFromDom() {
+                    var types = [];
+                    $form.find('.js-tp-child-bed-select').each(function () {
+                        var index = parseInt(jQuery(this).data('index'), 10);
+                        if (isNaN(index) || index < 0) {
+                            return;
+                        }
+                        types[index] = jQuery(this).val() === 'cwb' ? 'cwb' : 'cnb';
+                    });
+                    if (!types.length && state.children > 0) {
+                        return;
+                    }
+                    // Fill any holes left by sparse indexes
+                    for (var i = 0; i < state.children; i += 1) {
+                        if (types[i] == null) {
+                            types[i] = state.childBedTypes[i] === 'cwb' ? 'cwb' : 'cnb';
+                        }
+                    }
+                    state.childBedTypes = types.slice(0, state.children);
+                    syncChildBedCountsFromTypes();
+                    updateSummaries();
+                }
+
+                leadPickerApi.syncChildBedTypesFromDom = syncChildBedTypesFromDom;
 
                 $wrap.find('.js-tp-rg-picker[data-picker="guests"] .js-tp-rg-child-age-list')
                     .off('.tpRg')
@@ -3362,6 +3411,7 @@ if (empty($leadSourceOptions)) {
                     if (vals.rooms != null && vals.rooms !== '') state.rooms = Math.max(1, parseInt(vals.rooms, 10) || 1);
                     if (vals.adults != null && vals.adults !== '') state.adults = Math.max(1, parseInt(vals.adults, 10) || 1);
                     if (vals.children != null && vals.children !== '') state.children = Math.max(0, parseInt(vals.children, 10) || 0);
+                    if (vals.infants != null && vals.infants !== '') state.infants = Math.max(0, parseInt(vals.infants, 10) || 0);
                     if (Array.isArray(vals.childAges)) {
                         state.childAges = vals.childAges.map(function (a) { return parseInt(a, 10) || 0; });
                     }
@@ -3369,6 +3419,12 @@ if (empty($leadSourceOptions)) {
                         state.childBedTypes = vals.childBedTypes.map(function (t) {
                             return String(t).toLowerCase() === 'cwb' ? 'cwb' : 'cnb';
                         });
+                    } else if (vals.childBedTypes && typeof vals.childBedTypes === 'object') {
+                        state.childBedTypes = Object.keys(vals.childBedTypes)
+                            .sort(function (a, b) { return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0); })
+                            .map(function (k) {
+                                return String(vals.childBedTypes[k]).toLowerCase() === 'cwb' ? 'cwb' : 'cnb';
+                            });
                     } else if (vals.childCnb != null || vals.childCwb != null) {
                         state.childBedTypes = bedTypesFromCounts(vals.childCnb, vals.childCwb);
                     }
@@ -3802,7 +3858,7 @@ if (empty($leadSourceOptions)) {
                     $form.find('.js-tp-rg-picker[data-picker="rooms"] .js-tp-rg-trigger').prop('disabled', false);
                 }
 
-                if (intakeFieldEnabled('tp_adults') || intakeFieldEnabled('tp_children') || intakeFieldEnabled('tp_children_ages')) {
+                if (intakeFieldEnabled('tp_adults') || intakeFieldEnabled('tp_children') || intakeFieldEnabled('tp_infants') || intakeFieldEnabled('tp_children_ages')) {
                     $form.find('.js-tp-rg-picker[data-picker="guests"] .js-tp-rg-trigger').prop('disabled', false);
                 }
 
@@ -3924,6 +3980,10 @@ if (empty($leadSourceOptions)) {
                 e.preventDefault();
                 resetLeadSaveAlert();
 
+                if (leadPickerApi.syncChildBedTypesFromDom) {
+                    leadPickerApi.syncChildBedTypesFromDom();
+                }
+
                 var selectedServices = $form.find('input.js-service-checkbox:checked').length;
                 if (!selectedServices) {
                     selectedServices = $form.find('input[type="hidden"][name="services[]"]').length;
@@ -4001,11 +4061,17 @@ if (empty($leadSourceOptions)) {
                         var syncedChildren = (response.lead && response.lead.no_of_children != null)
                             ? parseInt(response.lead.no_of_children, 10)
                             : parseInt($form.find('[name="tp_children"]').val(), 10);
+                        var syncedInfants = (response.lead && response.lead.no_of_infants != null)
+                            ? parseInt(response.lead.no_of_infants, 10)
+                            : parseInt($form.find('[name="tp_infants"]').val(), 10);
                         if (isNaN(syncedAdults) || syncedAdults < 1) {
                             syncedAdults = 1;
                         }
                         if (isNaN(syncedChildren) || syncedChildren < 0) {
                             syncedChildren = 0;
+                        }
+                        if (isNaN(syncedInfants) || syncedInfants < 0) {
+                            syncedInfants = 0;
                         }
                         if (syncedLeadId > 0) {
                             var paxMsg = {
@@ -4014,6 +4080,7 @@ if (empty($leadSourceOptions)) {
                                 lead_id: syncedLeadId,
                                 no_of_adults: syncedAdults,
                                 no_of_children: syncedChildren,
+                                no_of_infants: syncedInfants,
                                 at: Date.now()
                             };
                             if (window.parent && window.parent !== window) {
@@ -4050,6 +4117,11 @@ if (empty($leadSourceOptions)) {
                 function toArray(val) {
                     if (val == null) return [];
                     if (Array.isArray(val)) return val;
+                    if (typeof val === 'object') {
+                        return Object.keys(val)
+                            .sort(function (a, b) { return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0); })
+                            .map(function (k) { return val[k]; });
+                    }
                     if (typeof val === 'string') {
                         return val.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s !== ''; });
                     }
@@ -4123,6 +4195,18 @@ if (empty($leadSourceOptions)) {
                     }
                 });
 
+                if (prefill.tp_departure != null && prefill.tp_departure !== '') {
+                    var depCode = String(prefill.tp_departure_code || '').trim();
+                    $form.find('.js-tp-departure-input').each(function () {
+                        var $depInput = jQuery(this);
+                        $depInput.attr('data-city', String(prefill.tp_departure));
+                        if (depCode) {
+                            $depInput.attr('data-airport-code', depCode);
+                            $depInput.closest('.js-tp-departure-wrap').find('.js-tp-departure-code').val(depCode);
+                        }
+                    });
+                }
+
                 if ($tourType.length && prefill.tp_tour_type != null && prefill.tp_tour_type !== '') {
                     $tourType.val(prefill.tp_tour_type);
                 }
@@ -4149,6 +4233,7 @@ if (empty($leadSourceOptions)) {
                         rooms: prefill.tp_rooms,
                         adults: prefill.tp_adults,
                         children: prefill.tp_children,
+                        infants: prefill.tp_infants,
                         childAges: toArray(prefill.tp_children_ages),
                         childBedTypes: toArray(prefill.tp_child_bed_type),
                         childCnb: prefill.tp_child_cnb,
