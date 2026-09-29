@@ -223,6 +223,7 @@
             }
             inputEl.val(fullText ? fullText : code);
             hideSuggest();
+            qfsSyncReturnRoute();
         });
 
         $(document).on('mousedown', function (e) {
@@ -1351,9 +1352,37 @@
                 .val(city ? (city + ' (' + code + ')') : code)
                 .attr('data-code', code)
                 .attr('data-city', city || code);
+        } else {
+            $input.val(city).attr('data-city', city).removeAttr('data-code');
+        }
+        if ($input.is('#qfsApiFrom, #qfsApiTo')) {
+            qfsSyncReturnRoute();
+        }
+    }
+
+    function qfsCopyAirportField($src, $dest) {
+        if (!$src.length || !$dest.length) {
             return;
         }
-        $input.val(city).attr('data-city', city).removeAttr('data-code');
+        $dest.val($src.val() || '');
+        var code = String($src.attr('data-code') || '');
+        var city = String($src.attr('data-city') || '');
+        if (code) {
+            $dest.attr('data-code', code);
+        } else {
+            $dest.removeAttr('data-code');
+        }
+        if (city) {
+            $dest.attr('data-city', city);
+        } else {
+            $dest.removeAttr('data-city');
+        }
+    }
+
+    /** Return From/To always mirror the opposite of the onward route. */
+    function qfsSyncReturnRoute() {
+        qfsCopyAirportField($('#qfsApiTo'), $('#qfsReturnFrom'));
+        qfsCopyAirportField($('#qfsApiFrom'), $('#qfsReturnTo'));
     }
 
     function qfsResolveAirportByCity(city, done) {
@@ -1547,7 +1576,10 @@
             }
 
             $('#qfsApiFromSuggest, #qfsApiToSuggest').hide().empty();
+            qfsSyncReturnRoute();
         });
+
+        $('#qfsApiFrom, #qfsApiTo').on('input change', qfsSyncReturnRoute);
 
         $('#qSearchFlight').on('click', function () {
             prefillQfsSearchFromQuotation();
@@ -1556,10 +1588,11 @@
 
         $('input[name="qfs_tripType"]').on('change', function () {
             if ($(this).val() === 'roundtrip') {
-                $('#qfsReturnDateContainer').show();
+                qfsSyncReturnRoute();
+                $('#qfsReturnRouteRow').show();
                 qfsAutoSetReturnDate();
             } else {
-                $('#qfsReturnDateContainer').hide();
+                $('#qfsReturnRouteRow').hide();
             }
         });
 

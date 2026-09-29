@@ -114,7 +114,7 @@ $stmt->close();
 spAdjustStoredPaid($conn, $quotationId, $serviceUid, $amount);
 
 $saved = spGetPayment($conn, $newId);
-spJson(true, 'Payment of ' . number_format($amount, 2) . ' recorded.', [
+spJson(true, 'Payment of ' . number_format(round($amount), 0) . ' recorded.', [
     'payment' => $saved ? spPublicPayment($saved) : null,
     'amount' => $amount,
     'payments' => spResponseList($conn, $quotationId, $serviceUid),

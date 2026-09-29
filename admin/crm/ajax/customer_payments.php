@@ -19,7 +19,7 @@ if ($quotationId <= 0) {
     cpJson(false, 'Invalid quotation.');
 }
 
-$qStmt = $conn->prepare('SELECT `id`, `lead_id`, `package_total` FROM `crm_quotations` WHERE `id` = ? LIMIT 1');
+$qStmt = $conn->prepare('SELECT `id`, `lead_id`, `package_total`, `quotation_total`, `cost_sheet_json` FROM `crm_quotations` WHERE `id` = ? LIMIT 1');
 $qStmt->bind_param('i', $quotationId);
 $qStmt->execute();
 $qRes = $qStmt->get_result();
@@ -35,7 +35,7 @@ function cpResponse(mysqli $conn, int $quotationId, array $quotation): array
     return [
         'payments' => array_map('spPublicPayment', cpListPayments($conn, $quotationId)),
         'paid_total' => cpPaidTotal($conn, $quotationId),
-        'package_total' => round((float) ($quotation['package_total'] ?? 0), 2),
+        'package_total' => crmQuotationGrandTotal($quotation),
         'methods' => spPaymentMethods(),
     ];
 }
@@ -105,4 +105,4 @@ if (!$stmt->execute()) {
 }
 $stmt->close();
 
-cpJson(true, 'Payment of ' . number_format($amount, 2) . ' received.', cpResponse($conn, $quotationId, $quotation));
+cpJson(true, 'Payment of ' . number_format(round($amount), 0) . ' received.', cpResponse($conn, $quotationId, $quotation));

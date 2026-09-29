@@ -77,6 +77,30 @@ function crmEnsureQuotationTables(mysqli $conn)
 }
 
 /** @return array<string, string> */
+/**
+ * Customer-facing total for Confirm Tour: the pricing Grand Total (package + GST).
+ * Falls back to the saved quotation total, then the package total.
+ */
+function crmQuotationGrandTotal(array $row): float
+{
+    $package = round((float) ($row['package_total'] ?? 0));
+    $quoted = round((float) ($row['quotation_total'] ?? 0));
+    $sheet = $row['cost_sheet_json'] ?? '';
+    if (is_string($sheet) && $sheet !== '') {
+        $decoded = json_decode($sheet, true);
+        if (is_array($decoded) && isset($decoded['tour_cost']) && is_array($decoded['tour_cost'])) {
+            $grand = round((float) ($decoded['tour_cost']['grand_total'] ?? 0));
+            if ($grand > 0) {
+                return (float) $grand;
+            }
+        }
+    }
+    if ($quoted > 0) {
+        return (float) $quoted;
+    }
+    return (float) $package;
+}
+
 function crmQuotationConfirmServiceMap()
 {
     return [

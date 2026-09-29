@@ -8,7 +8,8 @@
     function money(n) {
         n = parseFloat(n);
         if (isNaN(n)) n = 0;
-        return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+        n = Math.round(n);
+        return n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
     }
 
     function esc(str) {
@@ -419,7 +420,6 @@
         var $card = $('<div class="q-flight-journey-card"></div>');
         var headHtml = '' +
             '<div class="q-flight-journey-head">' +
-            '<span class="q-flight-journey-badge">' + esc(summary.label) + '</span>' +
             '<span class="q-flight-journey-route">' + esc(summary.from) + ' → ' + esc(summary.to) + '</span>' +
             '<span class="q-flight-journey-meta">' + esc(summary.stopsLabel) + ' · ' + summary.segments + ' segment' + (summary.segments > 1 ? 's' : '') + '</span>';
         if (summary.fare !== '' && summary.fare != null) {
@@ -4106,7 +4106,7 @@
         }
 
         if (parseFloat(pkg.sale_price) > 0 && getItineraryLandTotal() <= 0 && rawNumber('.q-cost[data-key="land"]') <= 0) {
-            $('.q-cost[data-key="land"]').val(parseFloat(pkg.sale_price).toFixed(2));
+            $('.q-cost[data-key="land"]').val(String(Math.round(parseFloat(pkg.sale_price))));
         }
 
         if (pkg.inclusion && !readSummernoteHtml($('#qed_inclusion')).trim()) {
@@ -5854,7 +5854,7 @@
                 }
                 entries.push({
                     name: name,
-                    rate: hasRate ? rateNum.toFixed(2) : '',
+                    rate: hasRate ? String(Math.round(rateNum)) : '',
                     sourceIndex: idx
                 });
             });
@@ -5871,7 +5871,7 @@
                 }
                 entries.push({
                     name: name,
-                    rate: hasRate ? rateNum.toFixed(2) : '',
+                    rate: hasRate ? String(Math.round(rateNum)) : '',
                     sourceIndex: idx
                 });
             });
@@ -6420,7 +6420,7 @@
             } else if (key === 'land') {
                 fallback = getItineraryLandTotal();
             }
-            $inputs.first().val(fallback > 0 ? (key === 'land' ? String(Math.round(fallback)) : fallback.toFixed(2)) : '');
+            $inputs.first().val(fallback > 0 ? String(Math.round(fallback)) : '');
         } else {
             $inputs.val('');
         }
@@ -6491,7 +6491,7 @@
         if (isNaN(num)) {
             num = 0;
         }
-        return Math.round(num * 100) / 100;
+        return Math.round(num);
     }
 
     function readGuestCounts() {
@@ -6657,20 +6657,19 @@
         }
     }
 
-    /** Split total into `count` shares (2dp) that always sum exactly to total. */
+    /** Split a whole-rupee total into `count` shares that always sum exactly to total. */
     function distributeEqualShares(total, count) {
         total = roundTourMoney(total);
         count = Math.max(0, parseInt(count, 10) || 0);
         if (count <= 0) {
             return [];
         }
-        var cents = Math.round(total * 100);
-        var base = Math.floor(cents / count);
-        var rem = cents - (base * count);
+        var base = Math.floor(total / count);
+        var rem = total - (base * count);
         var out = [];
         var i;
         for (i = 0; i < count; i++) {
-            out.push((base + (i < rem ? 1 : 0)) / 100);
+            out.push(base + (i < rem ? 1 : 0));
         }
         return out;
     }
@@ -6715,12 +6714,7 @@
     }
 
     function formatTourMoney(n) {
-        var num = parseFloat(n);
-        if (isNaN(num)) num = 0;
-        return 'INR ' + num.toLocaleString('en-IN', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
+        return 'INR ' + money(n);
     }
 
     function formatTourRateValue(n) {
@@ -6780,7 +6774,7 @@
             '<span class="q-tour-cost-grand-sub">Total amount to be paid</span>' +
             '</div></div>' +
             '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
-            '<strong class="q-tour-cost-grand-amount q-sheet-tour-grand">INR 0.00</strong>' +
+            '<strong class="q-tour-cost-grand-amount q-sheet-tour-grand">INR 0</strong>' +
             '</div></div>' +
             tourCostOptsHtml(suffix) +
             '</div>';
@@ -6805,7 +6799,7 @@
         var key = opts.key || '';
         var rate = opts.rate != null ? opts.rate : '';
         var qty = opts.qty != null ? opts.qty : '';
-        var amountText = opts.amountText || 'INR 0.00';
+        var amountText = opts.amountText || 'INR 0';
         var editable = opts.editable !== false;
         var rateReadonly = opts.rateReadonly !== false;
         var qtyEditable = !!opts.qtyEditable;
@@ -7001,7 +6995,7 @@
             qtyEditable: true,
             rateReadonly: true,
             editable: true,
-            amountText: 'INR 0.00'
+            amountText: 'INR 0'
         });
         childRows.forEach(function (row, i) {
             html += tourCostRowHtml({
@@ -7015,7 +7009,7 @@
                 qtyEditable: true,
                 rateReadonly: true,
                 editable: true,
-                amountText: 'INR 0.00',
+                amountText: 'INR 0',
                 removable: true,
                 removeIndex: i
             });
@@ -7030,7 +7024,7 @@
                 summary: true,
                 gstEditable: true,
                 gstPct: gstPct,
-                amountText: 'INR 0.00'
+                amountText: 'INR 0'
             });
         }
         return html;
@@ -7392,7 +7386,7 @@
         var counts = readGuestCounts();
         var totalTravelers = Math.max(1, counts.adults + counts.children);
         var $ppa = $sheet.find('.q-sheet-price-per-adult');
-        var perPerson = Math.round((pkgBase / totalTravelers) * 100) / 100;
+        var perPerson = roundTourMoney(roundTourMoney(pkgBase) / totalTravelers);
         if (!$ppa.is(':focus')) {
             $ppa.val(pkgBase > 0 ? perPerson : '').removeAttr('data-user-edited');
         }
@@ -8000,7 +7994,7 @@
             qCalcFlash('No field');
             return;
         }
-        $target.val(n.toFixed(2)).trigger('input');
+        $target.val(String(Math.round(n))).trigger('input');
         if ($target.hasClass('q-cost-synced')) {
             $target.attr('data-user-edited', '1');
         }
@@ -12543,7 +12537,7 @@
             var rate = parseFloat($('#q_usd_rate').val());
             if (isNaN(usd) || isNaN(rate)) { alert('Enter both USD amount and rate.'); return; }
             var inr = usd * rate;
-            var resultText = '₹ ' + money(inr) + ' INR';
+            var resultText = '₹ ' + inr.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' INR';
             $('#qUsdResultText').text(resultText);
             $('#qUsdResult').removeClass('is-empty');
             $('#qUsdCopyResult').show().data('copy', String(inr.toFixed(2)));
@@ -12558,7 +12552,7 @@
                 alert('No cost field available to fill.');
                 return;
             }
-            $target.val(inr.toFixed(2));
+            $target.val(String(Math.round(inr)));
             if ($target.hasClass('q-cost-synced')) {
                 $target.attr('data-user-edited', '1');
             }

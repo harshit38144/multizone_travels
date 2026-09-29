@@ -49,16 +49,7 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                             <img src="img/calendar.png" class="qfs-calendar-icon" alt="" onclick="qfsOpenDatePicker('qfsApiDate')">
                         </div>
                     </div>
-                    <div class="col-md-3 form-group qfs-date-field" id="qfsReturnDateContainer" style="display:none;">
-                        <label>Return Date</label>
-                        <div class="qfs-date-wrapper">
-                            <input type="text" class="form-control qfs-date-text" id="qfsApiReturnDateText" value="<?= htmlspecialchars(date('d/m/y', strtotime($tomorrow))) ?>" placeholder="dd/mm/yy" autocomplete="off" inputmode="numeric">
-                            <input type="hidden" id="qfsApiReturnDate" value="<?= htmlspecialchars($tomorrow) ?>" min="<?= htmlspecialchars($today) ?>">
-                            <img src="img/calendar.png" class="qfs-calendar-icon" alt="" onclick="qfsOpenDatePicker('qfsApiReturnDate')">
-                        </div>
-                        <small class="text-muted d-block mt-1" id="qfsReturnDateHint" style="font-size:11px;"></small>
-                    </div>
-                    <div class="col-md-6 form-group mb-md-0">
+                    <div class="col-md-9 form-group mb-md-0">
                         <div class="qfs-route-row">
                             <div class="qfs-route-field qfs-airport-field">
                                 <label for="qfsApiFrom">From</label>
@@ -75,6 +66,36 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                                 <label for="qfsApiTo">To</label>
                                 <input type="text" class="form-control" id="qfsApiTo" autocomplete="off" placeholder="Start typing a city...">
                                 <div id="qfsApiToSuggest" class="qfs-airport-suggest" style="display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" id="qfsReturnRouteRow" style="display:none;">
+                    <div class="col-md-3 form-group qfs-date-field" id="qfsReturnDateContainer">
+                        <label>Return Date</label>
+                        <div class="qfs-date-wrapper">
+                            <input type="text" class="form-control qfs-date-text" id="qfsApiReturnDateText" value="<?= htmlspecialchars(date('d/m/y', strtotime($tomorrow))) ?>" placeholder="dd/mm/yy" autocomplete="off" inputmode="numeric">
+                            <input type="hidden" id="qfsApiReturnDate" value="<?= htmlspecialchars($tomorrow) ?>" min="<?= htmlspecialchars($today) ?>">
+                            <img src="img/calendar.png" class="qfs-calendar-icon" alt="" onclick="qfsOpenDatePicker('qfsApiReturnDate')">
+                        </div>
+                        <small class="text-muted d-block mt-1" id="qfsReturnDateHint" style="font-size:11px;"></small>
+                    </div>
+                    <div class="col-md-9 form-group mb-md-0">
+                        <div class="qfs-route-row">
+                            <div class="qfs-route-field">
+                                <label for="qfsReturnFrom">From</label>
+                                <input type="text" class="form-control" id="qfsReturnFrom" readonly tabindex="-1" placeholder="Return from" aria-readonly="true">
+                            </div>
+                            <div class="qfs-swap-wrap">
+                                <label>&nbsp;</label>
+                                <span class="btn qfs-swap-btn qfs-swap-btn-static" title="Return route is the reverse of the onward route" aria-hidden="true">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </span>
+                            </div>
+                            <div class="qfs-route-field">
+                                <label for="qfsReturnTo">To</label>
+                                <input type="text" class="form-control" id="qfsReturnTo" readonly tabindex="-1" placeholder="Return to" aria-readonly="true">
                             </div>
                         </div>
                     </div>

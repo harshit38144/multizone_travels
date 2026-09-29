@@ -35,7 +35,7 @@
         if (isNaN(n)) {
             return '0';
         }
-        return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+        return Math.round(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
     }
 
     function parseNum(v) {
@@ -190,7 +190,7 @@
 
     function money2(n) {
         n = parseFloat(n);
-        return (isNaN(n) ? 0 : n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return (isNaN(n) ? 0 : Math.round(n)).toLocaleString('en-IN', { maximumFractionDigits: 0 });
     }
 
     function amountInputValue(v) {
@@ -213,8 +213,8 @@
             m + ' .ct-svc-section-sub{font-size:.8rem;color:#64748b;margin-top:.1rem}' +
             t + '{border:1px solid #e2e8f0;border-radius:12px;overflow-x:auto;background:#fff;margin-top:.25rem}' +
             t + ' .ct-detail-head,' + t + ' .ct-detail-row{display:grid;' +
-            'grid-template-columns:34px 140px minmax(140px,1fr) 110px 100px 96px 108px 108px 186px;' +
-            'gap:.5rem;align-items:center;min-width:1090px;padding:0 1rem;margin:0;border:0;border-radius:0}' +
+            'grid-template-columns:34px 140px minmax(140px,1fr) 110px 100px 96px 108px 108px 120px;' +
+            'gap:.5rem;align-items:center;min-width:1024px;padding:0 1rem;margin:0;border:0;border-radius:0}' +
             t + ' .ct-detail-head{background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:.78rem;font-weight:600;color:#334155;padding-top:.75rem;padding-bottom:.75rem}' +
             t + ' .ct-detail-head>div:nth-child(1){text-align:center}' +
             t + ' #ctDetailRows{counter-reset:ctSvcRow}' +
@@ -223,7 +223,7 @@
             t + ' .ct-detail-row:hover{background:#fafcff}' +
             t + ' .ct-row-no{text-align:center;font-size:.84rem;color:#334155}' +
             t + ' .ct-row-no::before{content:counter(ctSvcRow)}' +
-            t + ' #ctDetailRows:empty{display:block;min-width:1080px;padding:1.1rem;text-align:center;color:#94a3b8;font-size:.82rem}' +
+            t + ' #ctDetailRows:empty{display:block;min-width:1014px;padding:1.1rem;text-align:center;color:#94a3b8;font-size:.82rem}' +
             t + ' #ctDetailRows:empty::after{content:"No services yet. Click a service in What is Included to add it."}' +
             t + ' .ct-detail-label{display:flex;align-items:center;gap:.6rem;font-size:.86rem;font-weight:600;color:#0f172a;padding:0;min-width:0}' +
             t + ' .ct-detail-label>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
@@ -244,8 +244,8 @@
             t + ' .ct-detail-field .form-control::placeholder{color:#94a3b8}' +
             t + ' .ct-num .form-control{text-align:right;font-variant-numeric:tabular-nums}' +
             t + ' .ct-detail-row.has-paid .ct-paid{color:#16a34a;font-weight:500}' +
-            t + ' .ct-balance-wrap{text-align:right;padding:0}' +
-            t + ' .ct-balance-val{display:inline-block;min-width:92px;padding:.34rem .75rem;border-radius:8px;border:0;font-size:.84rem;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;background:#fee2e2;color:#dc2626}' +
+            t + ' .ct-balance-wrap{display:flex;justify-content:flex-end;text-align:right;padding:0}' +
+            t + ' .ct-balance-val{display:block;width:100%;box-sizing:border-box;min-width:0;padding:.34rem .45rem;border-radius:8px;border:0;font-size:.84rem;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;color:#dc2626}' +
             t + ' .ct-detail-actions{display:flex;justify-content:flex-start;gap:.35rem;padding:0}' +
             t + ' .ct-act-btn{position:relative;width:30px;height:30px;padding:0;border:0;border-radius:7px;background:#f1f5f9;color:#475569;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem;transition:filter .12s,transform .12s}' +
             t + ' .ct-act-btn:hover{filter:brightness(.95);transform:translateY(-1px)}' +
@@ -262,6 +262,17 @@
             t + ' .ct-act-btn.ct-svc-voucher-act{background:#f5f3ff;color:#7c3aed}' +
             t + ' .ct-act-btn.ct-svc-voucher-act.is-attached{background:#ecfdf5;color:#15803d}' +
             t + ' .ct-svc-voucher-count{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#16a34a;color:#fff;font-size:.6rem;font-weight:700;line-height:16px;text-align:center;box-shadow:0 0 0 2px #fff}' +
+            t + ' .ct-act-more{position:relative;display:inline-flex}' +
+            t + ' .ct-act-more-btn[aria-expanded="true"]{background:#e2e8f0;color:#0f172a}' +
+            m + ' .ct-act-pop{position:fixed;z-index:2000;display:flex;flex-direction:column;gap:2px;min-width:176px;padding:6px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,.16)}' +
+            m + ' .ct-act-pop[hidden]{display:none !important}' +
+            m + ' .ct-act-pop .ct-act-pop-item{display:flex;align-items:center;gap:.55rem;width:100%;margin:0;padding:.42rem .55rem;border:0;border-radius:7px;background:transparent;color:#334155;font-size:.82rem;font-weight:600;line-height:1.2;text-align:left;cursor:pointer}' +
+            m + ' .ct-act-pop .ct-act-pop-item:hover{background:#f8fafc}' +
+            m + ' .ct-act-pop .ct-act-pop-item>i{width:16px;text-align:center;color:#64748b}' +
+            m + ' .ct-act-pop .ct-act-pop-item.ct-svc-voucher-act.is-attached>i{color:#15803d}' +
+            m + ' .ct-act-pop .ct-act-pop-item.ct-remove-row{color:#dc2626}' +
+            m + ' .ct-act-pop .ct-act-pop-item.ct-remove-row>i{color:#dc2626}' +
+            m + ' .ct-act-pop-count{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#16a34a;color:#fff;font-size:.66rem;font-weight:700;line-height:18px;text-align:center}' +
             t + ' .ct-svc-voucher{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 .35rem;border:0;border-radius:6px;background:transparent;color:#1d4ed8;font-size:.82rem;line-height:1}' +
             t + ' .ct-svc-voucher:hover{background:#eff6ff}' +
             t + ' .ct-svc-voucher .fa-paperclip{color:#475569;font-size:.9rem}' +
@@ -340,10 +351,33 @@
     function voucherActionBtnHtml(count) {
         count = parseInt(count, 10) || 0;
         var title = count ? (count + ' voucher' + (count === 1 ? '' : 's') + ' attached') : 'Attach service vouchers';
-        return '<button type="button" class="ct-act-btn ct-svc-voucher-act' + (count ? ' is-attached' : '') + '"' +
-            ' title="' + title + '" aria-label="' + title + '"><i class="fas fa-paperclip"></i>' +
-            (count ? '<span class="ct-svc-voucher-count">' + count + '</span>' : '') +
+        return '<button type="button" class="ct-act-pop-item ct-svc-voucher-act' + (count ? ' is-attached' : '') + '"' +
+            ' title="' + title + '" aria-label="' + title + '"><i class="fas fa-paperclip"></i><span>Vouchers</span>' +
+            (count ? '<span class="ct-act-pop-count">' + count + '</span>' : '') +
             '</button>';
+    }
+
+    function closeSvcActionMenus() {
+        $('#ctDetailRows .ct-act-pop').attr('hidden', true);
+        $('#ctDetailRows .ct-act-more-btn').attr('aria-expanded', 'false');
+    }
+
+    function positionSvcActionMenu($btn, $pop) {
+        var rect = $btn[0].getBoundingClientRect();
+        var width = $pop.outerWidth() || 176;
+        var height = $pop.outerHeight() || 120;
+        var left = rect.right - width;
+        if (left < 8) {
+            left = 8;
+        }
+        if (left + width > window.innerWidth - 8) {
+            left = Math.max(8, window.innerWidth - width - 8);
+        }
+        var top = rect.bottom + 6;
+        if (top + height > window.innerHeight - 8) {
+            top = Math.max(8, rect.top - height - 6);
+        }
+        $pop.css({ top: top + 'px', left: left + 'px' });
     }
 
     function setRowVoucherCount(uid, count) {
@@ -377,19 +411,22 @@
             'autocomplete="off" spellcheck="false" value="' + esc(row.supplier || '') + '">' +
             '</div>' +
             '<div class="ct-detail-attach">' + voucherBtnHtml(voucherCount) + '</div>' +
-            '<div class="ct-detail-field ct-num"><input type="text" inputmode="decimal" class="form-control ct-total" placeholder="0.00" aria-label="Total" value="' + esc(amountInputValue(total)) + '"></div>' +
-            '<div class="ct-detail-field ct-num"><input type="text" inputmode="decimal" class="form-control ct-paid" placeholder="0.00" aria-label="Paid" value="' + esc(amountInputValue(paid)) + '"></div>' +
+            '<div class="ct-detail-field ct-num"><input type="text" inputmode="numeric" class="form-control ct-total" placeholder="0" aria-label="Total" value="' + esc(amountInputValue(total)) + '"></div>' +
+            '<div class="ct-detail-field ct-num"><input type="text" inputmode="numeric" class="form-control ct-paid" placeholder="0" aria-label="Paid" value="' + esc(amountInputValue(paid)) + '"></div>' +
             '<div class="ct-balance-wrap">' +
             '<span class="ct-balance-val' + (balanceNum <= 0 ? ' is-clear' : '') + '">' + money2(balanceNum) + '</span>' +
             '</div>' +
             '<div class="ct-status-wrap">' + statusPillHtml(parseNum(total), parseNum(paid)) + '</div>' +
             '<div class="ct-detail-actions">' +
             payBtnHtml(balanceNum) +
-            '<button type="button" class="ct-act-btn ct-reminders" title="Reminders" aria-label="Reminders"><i class="far fa-file-alt"></i></button>' +
             '<button type="button" class="ct-act-btn ct-view-row" title="View payment details" aria-label="View payment details"><i class="far fa-eye"></i></button>' +
-            '<button type="button" class="ct-act-btn ct-remove-row" title="Remove" aria-label="Remove"><i class="far fa-trash-alt"></i></button>' +
+            '<div class="ct-act-more">' +
+            '<button type="button" class="ct-act-btn ct-act-more-btn" title="More actions" aria-label="More actions" aria-expanded="false" aria-haspopup="true"><i class="fas fa-ellipsis-v"></i></button>' +
+            '<div class="ct-act-pop" hidden>' +
+            '<button type="button" class="ct-act-pop-item ct-reminders" title="Reminders" aria-label="Reminders"><i class="far fa-file-alt"></i><span>Reminders</span></button>' +
             voucherActionBtnHtml(voucherCount) +
-            '</div>' +
+            '<button type="button" class="ct-act-pop-item ct-remove-row" title="Remove" aria-label="Remove"><i class="far fa-trash-alt"></i><span>Remove</span></button>' +
+            '</div></div></div>' +
             '</div>';
     }
 
@@ -428,6 +465,7 @@
     }
 
     var travellersState = [];
+    var leadPaxCount = 0;
     var travellerDocsDraft = [];
     var savedGuestsState = [];
 
@@ -546,6 +584,57 @@
         };
     }
 
+    function blankTraveller() {
+        var row = normalizeTraveller({ id: uidTraveller(), name: '', type: 'adult', age: null });
+        row.name = '';
+        row.type = '';
+        row.age = null;
+        return row;
+    }
+
+    function namedTravellerCount() {
+        var n = 0;
+        travellersState.forEach(function (t) {
+            if (t && String(t.name || '').trim() !== '') {
+                n += 1;
+            }
+        });
+        return n;
+    }
+
+    function travellersForSave() {
+        return travellersState.filter(function (t) {
+            return t && String(t.name || '').trim() !== '';
+        });
+    }
+
+    function syncTravellersToLeadPax() {
+        if (!(leadPaxCount > 0)) {
+            return;
+        }
+        var named = travellersState.filter(function (t) {
+            return t && String(t.name || '').trim() !== '';
+        });
+        if (named.length > leadPaxCount) {
+            named = named.slice(0, leadPaxCount);
+        }
+        var blanks = travellersState.filter(function (t) {
+            return t && String(t.name || '').trim() === '';
+        });
+        var need = leadPaxCount - named.length;
+        while (blanks.length < need) {
+            blanks.push(blankTraveller());
+        }
+        travellersState = named.concat(blanks.slice(0, need));
+    }
+
+    function assignTravellers(list) {
+        travellersState = (list || []).map(normalizeTraveller).filter(function (t) {
+            return String(t.name || '').trim() !== '';
+        });
+        syncTravellersToLeadPax();
+    }
+
     var TRAVELLER_DETAIL_FIELDS = {
         dob: '#ctTravellerDob',
         gender: '#ctTravellerGender',
@@ -615,7 +704,9 @@
             'box-shadow:0 0 0 2px #fff;cursor:default;user-select:none}' +
             '#confirmTourModal .ct-row-btn-disabled-wrap{display:inline-flex;cursor:not-allowed}' +
             '#confirmTourModal .ct-row-btn.is-disabled,#confirmTourModal .ct-row-btn.is-disabled:hover{' +
-            'opacity:.4;background:#f1f5f9;border-color:#e2e8f0;color:#94a3b8;pointer-events:none;box-shadow:none}'
+            'opacity:.4;background:#f1f5f9;border-color:#e2e8f0;color:#94a3b8;pointer-events:none;box-shadow:none}' +
+            '#confirmTourModal .ct-add-guest-btn:disabled{opacity:.45;cursor:not-allowed}' +
+            '#confirmTourModal .ct-pax-name.is-empty{font-weight:500;color:#94a3b8}'
         ).appendTo('head');
     }
 
@@ -626,10 +717,10 @@
         }
         if (!document.getElementById('ctPrimaryStatsStyles')) {
             $('<style id="ctPrimaryStatsStyles">').text(
-                '#confirmTourModal .ct-primary-card{flex-wrap:wrap}' +
-                '#confirmTourModal .ct-primary-body{flex:1 1 220px}' +
-                '#confirmTourModal .ct-primary-stats{flex:0 1 auto;display:flex;align-items:stretch;background:rgba(255,255,255,.75);' +
-                'border:1px solid #fecdd3;border-radius:10px;padding:.45rem .25rem;margin-left:auto}' +
+                '#confirmTourModal .ct-primary-card{flex-wrap:wrap;align-items:center}' +
+                '#confirmTourModal .ct-primary-body{flex:1 1 auto;min-width:0}' +
+                '#confirmTourModal .ct-primary-stats{flex:1 1 100%;width:100%;max-width:100%;min-width:0;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;row-gap:.45rem;background:rgba(255,255,255,.75);' +
+                'border:1px solid #fecdd3;border-radius:10px;padding:.45rem .25rem}' +
                 '#confirmTourModal .ct-pstat{display:flex;align-items:center;gap:.5rem;padding:0 .8rem;border-left:1px solid #fbcfe8;white-space:nowrap}' +
                 '#confirmTourModal .ct-pstat:first-child{border-left:0}' +
                 '#confirmTourModal .ct-pstat-icon{font-size:1.05rem;color:#be123c;width:20px;text-align:center}' +
@@ -646,7 +737,7 @@
                 '#confirmTourModal .ct-pstat-pay-wrap{display:flex;align-items:center;padding:0 .45rem 0 .6rem;border-left:1px solid #fbcfe8}' +
                 '#confirmTourModal .ct-pstat-pay{width:32px;height:32px;padding:0;border:0;border-radius:8px;background:#16a34a;color:#fff;font-size:.9rem;display:inline-flex;align-items:center;justify-content:center}' +
                 '#confirmTourModal .ct-pstat-pay:hover{filter:brightness(.95)}' +
-                '@media (max-width:991.98px){#confirmTourModal .ct-primary-stats{margin-left:0;width:100%;flex-wrap:wrap;row-gap:.45rem}' +
+                '@media (max-width:991.98px){#confirmTourModal .ct-primary-stats{width:100%;flex-wrap:wrap;row-gap:.45rem}' +
                 '#confirmTourModal .ct-pstat-group{flex:1 1 100%}#confirmTourModal .ct-pstat-group+.ct-pstat-group{border-left:0;margin-left:0;border-top:1px solid #fbcfe8;padding-top:.45rem}' +
                 '#confirmTourModal .ct-pstat{flex:1 1 0}}'
             ).appendTo('head');
@@ -722,9 +813,11 @@
         var $tbody = $('#ctPaxRows').empty();
         if (!travellersState.length) {
             $tbody.append('<tr class="ct-pax-empty"><td colspan="7">No travellers yet. Click Add Guest.</td></tr>');
+            refreshAddGuestButton();
             return;
         }
         travellersState.forEach(function (t, idx) {
+            var isBlank = String(t.name || '').trim() === '';
             var typeLabel = t.type === 'child' ? 'Child' : (t.type === 'infant' ? 'Infant' : 'Adult');
             var typeClass = 'is-' + t.type;
             var passportHtml = t.passport_number
@@ -735,34 +828,56 @@
                 : '<span class="text-muted">—</span>';
             var docCount = (t.documents && t.documents.length) ? t.documents.length : 0;
             var docLabel = docCount === 1 ? '1 file' : (docCount + ' files');
-            var isPrimary = idx === 0;
-            var subLabel = isPrimary ? 'Primary Contact' : (t.relation || '');
-            var badgeLetter = subLabel.charAt(0).toUpperCase();
+            var isPrimary = idx === 0 && !isBlank;
+            var nameHtml = isBlank
+                ? '<span class="ct-pax-name is-empty">—</span>'
+                : '<span class="ct-pax-name">' + esc(t.name) + '</span>';
+            var typeHtml = isBlank
+                ? '<span class="text-muted">—</span>'
+                : '<span class="ct-pax-type ' + typeClass + '">' + esc(typeLabel) + '</span>';
+            var docsHtml = isBlank
+                ? '<span class="text-muted">—</span>'
+                : '<button type="button" class="ct-pax-docs js-ct-pax-docs" title="Documents">' +
+                    '<i class="fas fa-paperclip"></i> ' + esc(docLabel) + '</button>';
             $tbody.append(
                 '<tr data-traveller-id="' + esc(t.id) + '">' +
                 '<td>' + (idx + 1) + '</td>' +
-                '<td><span class="ct-pax-name-wrap"><span class="ct-pax-name">' + esc(t.name) + '</span>' +
-                (badgeLetter
-                    ? '<span class="ct-pax-rel-badge' + (isPrimary ? ' is-primary' : '') + '" title="' + esc(subLabel) + '"' +
-                        ' aria-label="' + esc(subLabel) + '">' + esc(badgeLetter) + '</span>'
+                '<td><span class="ct-pax-name-wrap">' + nameHtml +
+                (isPrimary
+                    ? '<span class="ct-pax-rel-badge is-primary" title="Primary Contact" aria-label="Primary Contact">P</span>'
                     : '') +
                 '</span></td>' +
-                '<td><span class="ct-pax-type ' + typeClass + '">' + esc(typeLabel) + '</span></td>' +
-                '<td>' + (t.age != null ? esc(String(t.age)) : '—') + '</td>' +
+                '<td>' + typeHtml + '</td>' +
+                '<td>' + (isBlank || t.age == null ? '<span class="text-muted">—</span>' : esc(String(t.age))) + '</td>' +
                 '<td>' + passportHtml + '</td>' +
-                '<td><button type="button" class="ct-pax-docs js-ct-pax-docs" title="Documents">' +
-                '<i class="fas fa-paperclip"></i> ' + esc(docLabel) + '</button></td>' +
+                '<td>' + docsHtml + '</td>' +
                 '<td><div class="ct-pax-actions">' +
-                '<button type="button" class="ct-row-btn js-ct-pax-edit" title="Edit"><i class="fas fa-pen"></i></button>' +
-                '<button type="button" class="ct-row-btn js-ct-pax-attach' + (docCount ? ' is-attached' : '') + '" title="Add attachment"><i class="fas fa-paperclip"></i></button>' +
-                (isPrimary
-                    ? '<span class="ct-row-btn-disabled-wrap" title="Primary contact cannot be removed">' +
-                        '<button type="button" class="ct-row-btn is-disabled" disabled aria-disabled="true" tabindex="-1" aria-label="Primary contact cannot be removed">' +
+                '<button type="button" class="ct-row-btn js-ct-pax-edit" title="' + (isBlank ? 'Add traveller' : 'Edit') + '"><i class="fas fa-pen"></i></button>' +
+                (isBlank
+                    ? ''
+                    : '<button type="button" class="ct-row-btn js-ct-pax-attach' + (docCount ? ' is-attached' : '') + '" title="Add attachment"><i class="fas fa-paperclip"></i></button>') +
+                (isPrimary || isBlank
+                    ? '<span class="ct-row-btn-disabled-wrap" title="' + (isBlank ? 'Empty row' : 'Primary contact cannot be removed') + '">' +
+                        '<button type="button" class="ct-row-btn is-disabled" disabled aria-disabled="true" tabindex="-1" aria-label="' + (isBlank ? 'Empty row' : 'Primary contact cannot be removed') + '">' +
                         '<i class="fas fa-trash-alt"></i></button></span>'
                     : '<button type="button" class="ct-row-btn ct-guest-clear js-ct-pax-delete" title="Remove from this tour"><i class="fas fa-trash-alt"></i></button>') +
                 '</div></td></tr>'
             );
         });
+        refreshAddGuestButton();
+    }
+
+    function refreshAddGuestButton() {
+        var capped = leadPaxCount > 0 && namedTravellerCount() >= leadPaxCount;
+        var $btn = $('#ctAddGuestBtn');
+        $btn.prop('disabled', capped);
+        $btn.attr('title', capped ? ('No. of Pax is ' + leadPaxCount) : 'Add Guest');
+        var $sub = $('#confirmTourModal .ct-pax-sub');
+        if (leadPaxCount > 0) {
+            $sub.text(leadPaxCount + (leadPaxCount === 1 ? ' traveller' : ' travellers') + ' from this lead\'s No. of Pax.');
+        } else {
+            $sub.text('List of travellers for this tour package.');
+        }
     }
 
     function fillTravellerForm(traveller, isPrimary) {
@@ -803,7 +918,8 @@
         $('#ctTravellerPrimaryNote').toggleClass('d-none', !isPrimary);
         $('#ctTravellerRelationWrap').toggleClass('d-none', isPrimary);
 
-        var saved = (!traveller && !isPrimary) ? availableSavedGuests() : [];
+        var isExisting = traveller && String(traveller.name || '').trim() !== '';
+        var saved = (!isExisting && !isPrimary) ? availableSavedGuests() : [];
         var $sel = $('#ctTravellerSaved').empty();
         if (saved.length) {
             $sel.append('<option value="">— New guest —</option>');
@@ -813,7 +929,9 @@
         }
         $('#ctTravellerSavedWrap').toggleClass('d-none', !saved.length);
 
-        $('#ctTravellerModalLabel').text(isPrimary && traveller ? 'Edit Primary Contact' : (traveller ? 'Edit Traveller' : 'Add Guest'));
+        $('#ctTravellerModalLabel').text(
+            isPrimary && isExisting ? 'Edit Primary Contact' : (isExisting ? 'Edit Traveller' : 'Add Guest')
+        );
         $('#ctTravellerModal').modal('show');
     }
 
@@ -1389,6 +1507,7 @@
         setGuestAttachment('', '');
         hidePrimaryEditPanel();
         travellersState = [];
+        leadPaxCount = 0;
         savedGuestsState = [];
         renderTravellers();
         clearServiceHighlight();
@@ -1413,15 +1532,14 @@
                     tentative_date: String(q.tentative_date || ''),
                     departure_city: String(q.departure_city || '')
                 };
+                leadPaxCount = Math.max(0, parseInt(q.lead_pax, 10) || 0);
                 setPrimaryContact(
                     confirm.guest_name || q.guest_name || '',
                     confirm.mobile_no || q.mobile_no || '',
                     confirm.email || q.email || ''
                 );
                 setGuestAttachment(confirm.guest_attachment_name || '', confirm.guest_attachment_path || '');
-                travellersState = (confirm.travellers || []).map(normalizeTraveller).filter(function (t) {
-                    return t.name !== '';
-                });
+                assignTravellers(confirm.travellers || []);
                 setSavedGuests(res.saved_guests);
                 renderTravellers();
                 renderRows(confirm.services || []);
@@ -1607,12 +1725,12 @@
             updatePrimaryStats();
         });
 
-        // Amounts show as 9,000.00; while editing they are plain numbers.
+        // Amounts show as whole rupees; while editing they are plain numbers.
         $(document).on('focus', '#ctDetailRows .ct-total, #ctDetailRows .ct-paid', function () {
             var v = String($(this).val() || '').replace(/,/g, '');
             if (v !== '') {
                 var n = parseFloat(v);
-                $(this).val(isNaN(n) ? '' : String(Math.round(n * 100) / 100));
+                $(this).val(isNaN(n) ? '' : String(Math.round(n)));
             }
             var el = this;
             window.setTimeout(function () {
@@ -1622,7 +1740,7 @@
 
         $(document).on('input', '#ctDetailRows .ct-total, #ctDetailRows .ct-paid', function () {
             var v = String($(this).val() || '');
-            var clean = v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+            var clean = v.replace(/[^0-9]/g, '');
             if (clean !== v) {
                 $(this).val(clean);
                 recalcRowBalance($(this).closest('.ct-detail-row'));
@@ -1694,7 +1812,48 @@
             hideSupplierSuggest();
             clearServiceHighlight();
             hidePrimaryEditPanel();
+            closeSvcActionMenus();
         });
+
+        $(document).on('click', '#ctDetailRows .ct-act-more-btn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $btn = $(this);
+            var $pop = $btn.closest('.ct-act-more').find('.ct-act-pop');
+            var willOpen = $pop.is('[hidden]');
+            closeSvcActionMenus();
+            if (willOpen) {
+                $pop.removeAttr('hidden');
+                $btn.attr('aria-expanded', 'true');
+                positionSvcActionMenu($btn, $pop);
+            }
+        });
+
+        $(document).on('click', '#ctDetailRows .ct-act-pop .ct-act-pop-item', function () {
+            closeSvcActionMenus();
+        });
+
+        $(document).on('click', function (e) {
+            if ($(e.target).closest('.ct-act-more').length) {
+                return;
+            }
+            closeSvcActionMenus();
+        });
+
+        $('#confirmTourModal').on('shown.bs.modal', function () {
+            $(this).find('.modal-body, .ct-svc-table').off('scroll.ctAct').on('scroll.ctAct', closeSvcActionMenus);
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') {
+                return;
+            }
+            if (!document.querySelector('#ctDetailRows .ct-act-pop:not([hidden])')) {
+                return;
+            }
+            e.stopPropagation();
+            closeSvcActionMenus();
+        }, true);
 
         $(document).on('click', '.ct-remove-row', function () {
             var $row = $(this).closest('.ct-detail-row');
@@ -1829,9 +1988,7 @@
         function applySavedConfirm(res) {
             var confirm = res.confirm || {};
             if (Array.isArray(confirm.travellers)) {
-                travellersState = confirm.travellers.map(normalizeTraveller).filter(function (t) {
-                    return t.name !== '';
-                });
+                assignTravellers(confirm.travellers);
             }
             if (Array.isArray(res.saved_guests)) {
                 setSavedGuests(res.saved_guests);
@@ -1872,7 +2029,7 @@
                     email: $('#ctEmail').val(),
                     guest_attachment_name: $('#ctGuestAttachmentName').val(),
                     guest_attachment_path: $('#ctGuestAttachmentPath').val(),
-                    travellers_json: JSON.stringify(travellersState)
+                    travellers_json: JSON.stringify(travellersForSave())
                 }
             })
                 .done(function (res) {
@@ -1902,7 +2059,21 @@
         bindTravellerScanEvents();
 
         $('#ctAddGuestBtn').on('click', function () {
+            if (leadPaxCount > 0 && namedTravellerCount() >= leadPaxCount) {
+                alert('This lead allows ' + leadPaxCount + ' traveller' + (leadPaxCount === 1 ? '' : 's') + ' (No. of Pax). You cannot add more.');
+                return;
+            }
+            var blank = null;
+            for (var i = 0; i < travellersState.length; i++) {
+                if (!String(travellersState[i].name || '').trim()) {
+                    blank = travellersState[i];
+                    break;
+                }
+            }
             openTravellerModal(null);
+            if (blank) {
+                $('#ctTravellerEditId').val(blank.id);
+            }
         });
 
         $('#ctTravellerSaved').on('change', function () {
@@ -1942,6 +2113,7 @@
             travellersState = travellersState.filter(function (t) {
                 return String(t.id) !== String(id);
             });
+            syncTravellersToLeadPax();
             renderTravellers();
             persistTravellers();
         });
@@ -3655,7 +3827,7 @@
                 '<input type="text" class="form-control" id="ctSpDateText" placeholder="dd/mm/yyyy"><input type="hidden" id="ctSpDate"></div>' +
                 '<div class="form-group col-6 col-md-4"><label for="ctSpAmount">Amount <span class="text-danger">*</span></label>' +
                 '<div class="input-group"><div class="input-group-prepend"><span class="input-group-text">\u20B9</span></div>' +
-                '<input type="text" inputmode="decimal" class="form-control" id="ctSpAmount" placeholder="0.00"></div>' +
+                '<input type="text" inputmode="numeric" class="form-control" id="ctSpAmount" placeholder="0"></div>' +
                 '<div class="ct-sp-hint js-sp-amount-hint"></div></div>' +
                 '<div class="form-group col-12 col-md-4"><label for="ctSpMethod">Payment Method <span class="text-danger">*</span></label>' +
                 '<select class="form-control" id="ctSpMethod"></select></div>' +
@@ -3891,7 +4063,7 @@
             }
             var f = spRowFigures($row);
             var $err = $('#ctSpError').text('');
-            var amount = Math.round(parseNum($('#ctSpAmount').val()) * 100) / 100;
+            var amount = Math.round(parseNum($('#ctSpAmount').val()));
             var date = spReadDate();
             var method = String($('#ctSpMethod').val() || '');
 
@@ -3937,7 +4109,7 @@
                     quotation_id: quotationId,
                     service_uid: uid,
                     service_key: spState.key,
-                    amount: amount.toFixed(2),
+                    amount: String(amount),
                     payment_date: date,
                     method: method,
                     reference: $.trim(String($('#ctSpReference').val() || '')),
@@ -4091,7 +4263,7 @@
                 '<input type="text" class="form-control" id="ctCpDateText" placeholder="dd/mm/yyyy"></div>' +
                 '<div class="form-group col-6 col-md-4"><label for="ctCpAmount">Amount <span class="text-danger">*</span></label>' +
                 '<div class="input-group"><div class="input-group-prepend"><span class="input-group-text">\u20B9</span></div>' +
-                '<input type="text" inputmode="decimal" class="form-control" id="ctCpAmount" placeholder="0.00"></div>' +
+                '<input type="text" inputmode="numeric" class="form-control" id="ctCpAmount" placeholder="0"></div>' +
                 '<div class="ct-sp-hint js-cp-amount-hint"></div></div>' +
                 '<div class="form-group col-12 col-md-4"><label for="ctCpMethod">Payment Method <span class="text-danger">*</span></label>' +
                 '<select class="form-control" id="ctCpMethod"></select></div>' +
@@ -4283,7 +4455,7 @@
                 return;
             }
             var $err = $('#ctCpError').text('');
-            var amount = Math.round(parseNum($('#ctCpAmount').val()) * 100) / 100;
+            var amount = Math.round(parseNum($('#ctCpAmount').val()));
             var date = cpReadDate();
             var method = String($('#ctCpMethod').val() || '');
             if (!(amount > 0)) {
@@ -4315,7 +4487,7 @@
                 data: {
                     action: 'add',
                     quotation_id: quotationId,
-                    amount: amount.toFixed(2),
+                    amount: String(amount),
                     payment_date: date,
                     method: method,
                     reference: $.trim(String($('#ctCpReference').val() || '')),
@@ -4546,11 +4718,16 @@
             if (scanState.summary && String(traveller.id) === String(scanState.summaryFor)) {
                 traveller.documents = scanState.summary;
             }
+            if (idx < 0 && leadPaxCount > 0 && namedTravellerCount() >= leadPaxCount) {
+                alert('This lead allows ' + leadPaxCount + ' traveller' + (leadPaxCount === 1 ? '' : 's') + ' (No. of Pax). You cannot add more.');
+                return;
+            }
             if (idx >= 0) {
                 travellersState[idx] = traveller;
             } else {
                 travellersState.push(traveller);
             }
+            syncTravellersToLeadPax();
             if (travellersState[0] && travellersState[0].id === traveller.id) {
                 setPrimaryContact(
                     traveller.name,
@@ -4587,7 +4764,7 @@
                     email: $('#ctEmail').val(),
                     guest_attachment_name: $('#ctGuestAttachmentName').val(),
                     guest_attachment_path: $('#ctGuestAttachmentPath').val(),
-                    travellers_json: JSON.stringify(travellersState),
+                    travellers_json: JSON.stringify(travellersForSave()),
                     services_json: JSON.stringify(collectServices())
                 }
             })

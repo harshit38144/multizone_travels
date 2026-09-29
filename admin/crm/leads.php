@@ -1799,7 +1799,7 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui .ld-book-status-icon {
             width: 18px;
             height: 18px;
-            border-radius: 5px;
+            border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1826,7 +1826,8 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui .ld-book-status-icon.is-partial {
-            background: #ea580c;
+            background: #facc15;
+            color: #713f12;
         }
 
         .crm-leads-ui .ld-book-status-icon.is-paid {
@@ -3502,6 +3503,13 @@ foreach ($destinationLookup as $destId => $destName) {
             margin-bottom: 0.15rem;
         }
 
+        #confirmTourModal .ct-primary-line {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.2rem 0.75rem;
+        }
+
         #confirmTourModal .ct-primary-name {
             font-size: 1.05rem;
             font-weight: 700;
@@ -3528,7 +3536,7 @@ foreach ($destinationLookup as $destId => $destName) {
             flex-wrap: wrap;
             align-items: center;
             gap: 0.35rem 0.55rem;
-            margin-top: 0.2rem;
+            margin-top: 0;
             color: #64748b;
             font-size: 0.82rem;
         }
@@ -3793,8 +3801,10 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         #confirmTourModal .ct-balance-wrap {
-            text-align: center;
-            padding-bottom: 0.35rem;
+            display: flex;
+            justify-content: flex-end;
+            text-align: right;
+            padding-bottom: 0;
         }
 
         #confirmTourModal .ct-balance-label {
@@ -3805,10 +3815,13 @@ foreach ($destinationLookup as $destId => $destName) {
 
         #confirmTourModal .ct-balance-val {
             display: block;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: right;
             font-size: 0.85rem;
             font-weight: 600;
             color: #334155;
-            border-bottom: 1px dotted #cbd5e1;
+            border-bottom: 0;
             padding-bottom: 0.15rem;
         }
 
@@ -4630,14 +4643,16 @@ foreach ($destinationLookup as $destId => $destName) {
                             <div class="ct-primary-avatar" id="ctPrimaryAvatar">â€”</div>
                             <div class="ct-primary-body">
                                 <div class="ct-primary-badge"><i class="fas fa-user"></i> Primary Contact</div>
-                                <div class="ct-primary-name">
-                                    <span id="ctPrimaryName">â€”</span>
-                                    <span class="ct-primary-check" title="Primary"><i class="fas fa-check"></i></span>
-                                </div>
-                                <div class="ct-primary-meta">
-                                    <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">â€”</span></span>
-                                    <span class="ct-primary-sep">|</span>
-                                    <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">â€”</span></span>
+                                <div class="ct-primary-line">
+                                    <div class="ct-primary-name">
+                                        <span id="ctPrimaryName">â€”</span>
+                                        <span class="ct-primary-check" title="Primary"><i class="fas fa-check"></i></span>
+                                    </div>
+                                    <div class="ct-primary-meta">
+                                        <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">â€”</span></span>
+                                        <span class="ct-primary-sep">|</span>
+                                        <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">â€”</span></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -7654,7 +7669,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=33"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=39"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {

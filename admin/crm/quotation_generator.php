@@ -3595,19 +3595,6 @@ $qWizardSteps = [
             border-radius: 12px;
         }
 
-        .crm-quotation-gen .q-flight-journey-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.18rem 0.55rem;
-            border-radius: 999px;
-            background: #dbeafe;
-            color: #1d4ed8;
-            font-size: 0.72rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
         .crm-quotation-gen .q-flight-journey-route {
             font-size: 0.84rem;
             font-weight: 700;
@@ -5057,6 +5044,26 @@ $qWizardSteps = [
             background: #eff6ff;
         }
 
+        .qfs-flight-search .qfs-swap-btn-static,
+        .qfs-flight-search .qfs-swap-btn-static:hover {
+            color: #64748b;
+            border-color: #e2e8f0;
+            background: #fff;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .qfs-flight-search #qfsReturnFrom,
+        .qfs-flight-search #qfsReturnTo {
+            background: #f8fafc;
+            cursor: default;
+        }
+
+        [data-theme="dark"] .qfs-flight-search #qfsReturnFrom,
+        [data-theme="dark"] .qfs-flight-search #qfsReturnTo {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+        }
+
         [data-theme="dark"] .qfs-flight-search .qfs-swap-btn {
             background: var(--mz-theme-bg-elevated, #2a2e38) !important;
             border-color: var(--q-border) !important;
@@ -5169,17 +5176,28 @@ $qWizardSteps = [
         }
 
         .qfs-flight-search .qfs-select-flight-card .card-body {
-            gap: 0.75rem;
+            gap: 0.45rem;
+            padding: 0.65rem 0.5rem !important;
         }
 
         .qfs-flight-search .qfs-flight-main {
             min-width: 0;
             flex: 1 1 auto;
+            overflow: hidden;
+        }
+
+        .qfs-flight-search .qfs-flight-main .row > [class*="col-"] {
+            min-width: 0;
+        }
+
+        .qfs-flight-search .qfs-flight-main .row > [class*="col-"] div {
+            overflow-wrap: break-word;
         }
 
         .qfs-flight-search .qfs-price-col {
-            flex: 0 0 196px;
-            width: 196px;
+            flex: 0 0 118px;
+            width: 118px;
+            max-width: 118px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -5187,14 +5205,15 @@ $qWizardSteps = [
             text-align: center;
             align-self: stretch;
             border-left: 1px solid #e5e7eb;
-            padding-left: 0.65rem;
+            padding-left: 0.4rem;
             margin-left: 0.15rem;
             gap: 0.15rem;
+            overflow: hidden;
         }
 
         .qfs-flight-search .qfs-price-value {
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 0.92rem;
             color: #e31b23;
             line-height: 1.2;
             white-space: nowrap;
@@ -5205,7 +5224,7 @@ $qWizardSteps = [
             font-weight: 600;
             color: #64748b;
             line-height: 1.2;
-            white-space: nowrap;
+            white-space: normal;
         }
 
         .qfs-flight-search .qfs-price-total-label {
@@ -5220,16 +5239,18 @@ $qWizardSteps = [
             background: #fff;
             border: 1px solid #eef2f7;
             border-radius: 6px;
-            padding: 0.25rem 0.4rem;
+            padding: 0.2rem 0.3rem;
         }
 
         .qfs-flight-search .qfs-pax-line {
             display: flex;
             align-items: baseline;
-            gap: 0.3rem;
-            font-size: 10.5px;
-            line-height: 1.55;
-            white-space: nowrap;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.1rem 0.25rem;
+            font-size: 10px;
+            line-height: 1.35;
+            white-space: normal;
         }
 
         .qfs-flight-search .qfs-pax-line + .qfs-pax-line {
@@ -5239,13 +5260,14 @@ $qWizardSteps = [
         .qfs-flight-search .qfs-pax-type {
             font-weight: 700;
             color: #334155;
-            min-width: 36px;
+            min-width: 0;
             text-align: left;
         }
 
         .qfs-flight-search .qfs-pax-calc {
             color: #64748b;
             flex: 1 1 auto;
+            min-width: 0;
             text-align: left;
         }
 
@@ -15559,7 +15581,7 @@ $qWizardSteps = [
                                             </div>
                                         </div>
                                         <span class="q-tour-cost-grand-divider" aria-hidden="true"></span>
-                                        <strong class="q-tour-cost-grand-amount" id="qTourCostGrand">INR 0.00</strong>
+                                        <strong class="q-tour-cost-grand-amount" id="qTourCostGrand">INR 0</strong>
                                     </div>
                                 </div>
                             </div>
@@ -15949,8 +15971,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=293"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=27"></script>
+    <script src="crm/assets/quotation_generator.js?v=295"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=28"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>

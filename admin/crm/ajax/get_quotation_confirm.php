@@ -24,7 +24,7 @@ if ($id <= 0) {
 $stmt = $conn->prepare(
     'SELECT `id`, `quotation_uid`, `lead_id`, `guest_name`, `mobile_no`, `email`, `tour_confirmed`, `tour_confirm_json`,
             `flights_json`, `hotels_json`, `cost_sheet_json`, `no_of_adults`, `no_of_children`, `no_of_infants`,
-            `package_total`, `destination`, `tentative_date`
+            `package_total`, `quotation_total`, `cost_sheet_json`, `destination`, `tentative_date`
      FROM `crm_quotations` WHERE `id` = ? LIMIT 1'
 );
 if (!$stmt) {
@@ -78,6 +78,7 @@ if ($leadId <= 0) {
     ]);
 }
 
+$leadPax = 0;
 $departureCity = '';
 if ($leadId > 0) {
     $leadStmt = $conn->prepare('SELECT `payload_json` FROM `crm_leads` WHERE `id` = ? LIMIT 1');
@@ -90,6 +91,9 @@ if ($leadId > 0) {
         $leadPayload = json_decode((string) ($leadRow['payload_json'] ?? ''), true);
         if (is_array($leadPayload)) {
             $departureCity = trim((string) ($leadPayload['tp_departure'] ?? ''));
+            $leadPax = max(0, (int) ($leadPayload['tp_adults'] ?? 0))
+                + max(0, (int) ($leadPayload['tp_children'] ?? 0))
+                + max(0, (int) ($leadPayload['tp_infants'] ?? 0));
         }
     }
 }
@@ -151,11 +155,12 @@ qConfirmJson(true, 'OK', [
         'no_of_adults' => (int) ($row['no_of_adults'] ?? 0),
         'no_of_children' => (int) ($row['no_of_children'] ?? 0),
         'no_of_infants' => (int) ($row['no_of_infants'] ?? 0),
-        'package_total' => round((float) ($row['package_total'] ?? 0), 2),
+        'package_total' => crmQuotationGrandTotal($row),
         'customer_paid' => $customerPaid,
         'destination' => trim((string) ($row['destination'] ?? '')),
         'tentative_date' => $tentativeDate,
         'departure_city' => $departureCity,
+        'lead_pax' => $leadPax,
     ],
     'confirm' => $payload,
     'saved_guests' => crmQuotationSavedGuestsForLead($conn, $leadId),
