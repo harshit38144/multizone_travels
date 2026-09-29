@@ -962,6 +962,154 @@ if ($res && mysqli_num_rows($res) > 0) {
                 }
             </style>
 
+            <!-- AI E-Ticket Auto-Fill -->
+            <style>
+                .et-ai-box {
+                    border: 1px solid #c7d2fe;
+                    background: linear-gradient(135deg, #eef2ff, #f8fafc);
+                    border-radius: 10px;
+                    padding: 12px 14px;
+                    margin-bottom: 18px;
+                }
+
+                .et-ai-title {
+                    font-weight: 700;
+                    font-size: 15px;
+                    color: #312e81;
+                }
+
+                .et-ai-title i {
+                    color: #4f46e5;
+                    margin-right: 5px;
+                }
+
+                .et-ai-sub {
+                    font-size: 12px;
+                    color: #64748b;
+                    line-height: 1.4;
+                    margin-top: 2px;
+                    margin-bottom: 10px;
+                }
+
+                .et-ai-drop {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    border: 1.5px dashed #a5b4fc;
+                    border-radius: 8px;
+                    padding: 11px;
+                    background: #fff;
+                    color: #4338ca;
+                    font-size: 13px;
+                    cursor: pointer;
+                    transition: all .15s;
+                }
+
+                .et-ai-drop:hover,
+                .et-ai-drop:focus,
+                .et-ai-drop.is-drag {
+                    border-color: #4f46e5;
+                    background: #eef2ff;
+                    outline: 0;
+                }
+
+                .et-ai-drop i {
+                    font-size: 17px;
+                }
+
+                .et-ai-drop.is-busy {
+                    pointer-events: none;
+                    opacity: .55;
+                }
+
+                .et-ai-status {
+                    margin-top: 10px;
+                    border-radius: 8px;
+                    padding: 9px 11px;
+                    font-size: 12.5px;
+                    display: flex;
+                    gap: 9px;
+                    align-items: flex-start;
+                    line-height: 1.45;
+                }
+
+                .et-ai-status>i {
+                    margin-top: 2px;
+                }
+
+                .et-ai-status .et-ai-msg {
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .et-ai-status.is-uploading,
+                .et-ai-status.is-processing {
+                    background: #eff6ff;
+                    color: #1e40af;
+                    border: 1px solid #bfdbfe;
+                }
+
+                .et-ai-status.is-success {
+                    background: #f0fdf4;
+                    color: #166534;
+                    border: 1px solid #bbf7d0;
+                }
+
+                .et-ai-status.is-warning {
+                    background: #fffbeb;
+                    color: #92400e;
+                    border: 1px solid #fde68a;
+                }
+
+                .et-ai-status.is-error {
+                    background: #fef2f2;
+                    color: #991b1b;
+                    border: 1px solid #fecaca;
+                }
+
+                .et-ai-progress {
+                    height: 5px;
+                    background: #dbeafe;
+                    border-radius: 4px;
+                    margin-top: 5px;
+                    overflow: hidden;
+                }
+
+                .et-ai-progress>span {
+                    display: block;
+                    height: 100%;
+                    background: #3b82f6;
+                    width: 0;
+                    transition: width .2s;
+                }
+
+                .et-ai-list {
+                    margin-top: 5px;
+                    font-size: 12px;
+                }
+
+                .et-ai-list strong {
+                    font-weight: 700;
+                }
+
+                .et-ai-retry {
+                    border: 0;
+                    background: none;
+                    color: inherit;
+                    text-decoration: underline;
+                    font-weight: 600;
+                    padding: 0;
+                    font-size: 12.5px;
+                }
+
+                .control-panel-wrapper .et-ai-filled {
+                    background: #fefce8;
+                    border-color: #facc15;
+                    box-shadow: 0 0 0 2px rgba(250, 204, 21, .18);
+                }
+            </style>
+
             <section class="content">
                 <div class="container-fluid">
                     <div class="row">
@@ -969,6 +1117,24 @@ if ($res && mysqli_num_rows($res) > 0) {
                             <!-- CONTROL PANEL -->
                             <div class="control-panel-wrapper"
                                 style="background: #f4f6f9; padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; border: 1px solid #ddd; margin-bottom: 30px;">
+
+                                <!-- AI E-Ticket Auto-Fill -->
+                                <div class="et-ai-box" id="etAiBox">
+                                    <div class="et-ai-title"><i class="fas fa-magic"></i>Auto-fill from e-ticket</div>
+                                    <div class="et-ai-sub">Upload an airline e-ticket — JPG, JPEG, PNG, WEBP, screenshot,
+                                        scanned ticket or PDF (max 8 MB). Details are read with AI and filled into the
+                                        form below; review and edit them before printing or saving.</div>
+                                    <div class="et-ai-drop" id="etAiDrop" tabindex="0" role="button"
+                                        aria-label="Upload e-ticket">
+                                        <i class="fas fa-plane-departure"></i><span>Drop e-ticket here or
+                                            <u>browse</u></span>
+                                    </div>
+                                    <input type="file" id="etAiFile" class="d-none"
+                                        accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf">
+                                    <div class="et-ai-status d-none" id="etAiStatus" role="status" aria-live="polite">
+                                    </div>
+                                </div>
+
                                 <div class="row">
                                     <div class="col-md-3">
                                         <div class="row">
@@ -2994,6 +3160,498 @@ if ($res && mysqli_num_rows($res) > 0) {
 
         });
 
+    </script>
+
+    <!-- AI E-Ticket Auto-Fill -->
+    <script>
+        (function ($) {
+            "use strict";
+
+            var etAiXhr = null;
+
+            function esc(v) {
+                return $("<div>").text(v == null ? "" : v).html();
+            }
+
+            function mark(sel) {
+                $(sel).addClass("et-ai-filled");
+            }
+
+            function setStatus(state, html) {
+                var icons = {
+                    uploading: "fas fa-circle-notch fa-spin",
+                    processing: "fas fa-circle-notch fa-spin",
+                    success: "fas fa-check-circle",
+                    warning: "fas fa-exclamation-triangle",
+                    error: "fas fa-times-circle"
+                };
+                var $s = $("#etAiStatus");
+                if (!state) {
+                    $s.addClass("d-none").empty()
+                        .removeClass("is-uploading is-processing is-success is-warning is-error");
+                    return;
+                }
+                $s.removeClass("d-none is-uploading is-processing is-success is-warning is-error")
+                    .addClass("is-" + state)
+                    .html('<i class="' + icons[state] + '"></i><div class="et-ai-msg">' + html + "</div>");
+                $("#etAiDrop").toggleClass("is-busy", state === "uploading" || state === "processing");
+            }
+
+            function placeLabel(city, code) {
+                if (city && code) {
+                    return esc(city) + " (" + esc(code) + ")";
+                }
+                return esc(city || code || "");
+            }
+
+            function segMoment(dateVal, timeVal) {
+                if (!dateVal) {
+                    return null;
+                }
+                var m = moment(dateVal + " " + (timeVal || "00:00"), "YYYY-MM-DD HH:mm", true);
+                return m.isValid() ? m : null;
+            }
+
+            function formatSegDateTime(dateVal, timeVal) {
+                var m = segMoment(dateVal, timeVal);
+                if (!m) {
+                    return "";
+                }
+                return timeVal ? m.format("DD MMM YYYY | hh:mm A") : m.format("DD MMM YYYY");
+            }
+
+            function minutesLabel(mins) {
+                if (!mins || mins <= 0) {
+                    return "";
+                }
+                return Math.floor(mins / 60) + " hrs " + (mins % 60) + " min";
+            }
+
+            // "1h 20m", "2 hrs 40 min", "0:55" -> minutes
+            function parseDurationMinutes(text) {
+                text = String(text || "").toLowerCase();
+                var hm = text.match(/(\d+)\s*(?:h|hr|hrs|hour|hours)\D*(\d+)?/);
+                if (hm) {
+                    return (parseInt(hm[1], 10) * 60) + (parseInt(hm[2] || "0", 10));
+                }
+                var only = text.match(/(\d+)\s*(?:m|min|mins|minutes)/);
+                if (only) {
+                    return parseInt(only[1], 10);
+                }
+                var colon = text.match(/^(\d{1,2}):(\d{2})$/);
+                return colon ? (parseInt(colon[1], 10) * 60) + parseInt(colon[2], 10) : 0;
+            }
+
+            function segDuration(seg) {
+                var dep = segMoment(seg.dep_date, seg.dep_time);
+                var arr = segMoment(seg.arr_date, seg.arr_time);
+                if (dep && arr && arr.isAfter(dep)) {
+                    return esc(minutesLabel(arr.diff(dep, "minutes")));
+                }
+                // Keep the page's own wording instead of whatever the ticket printed.
+                var mins = parseDurationMinutes(seg.duration);
+                return mins > 0 ? esc(minutesLabel(mins)) : esc(seg.duration || "");
+            }
+
+            function baggageText(seg) {
+                var parts = [];
+                if (seg.hand_baggage) {
+                    parts.push("Cabin: " + esc(seg.hand_baggage));
+                }
+                if (seg.checkin_baggage) {
+                    parts.push("Check-in: " + esc(seg.checkin_baggage));
+                }
+                return parts.join(" | ");
+            }
+
+            /** Same markup the flight search produces, so the ticket preview renders identically. */
+            function flightCardsHtml(segments) {
+                var html = "";
+                segments.forEach(function (seg, index) {
+                    var duration = segDuration(seg);
+                    var depTerminal = seg.from_terminal ? "Terminal " + esc(seg.from_terminal) : "";
+                    var arrTerminal = seg.to_terminal ? "Terminal " + esc(seg.to_terminal) : "";
+                    var baggage = baggageText(seg);
+
+                    html += '<div class="flight-card"' + (index > 0 ? ' style="margin-top: 0px;"' : "") + ">" +
+                        '<div class="flight-card-header">' +
+                        '<div class="flight-num">Flight ' + (index + 1) + "</div>" +
+                        '<div class="header-label"><img src="img/flight.png" style="width:10px!important;"> Departing</div>' +
+                        '<div class="header-label"><img src="img/flight1.png" style="width:10px!important;"> Arriving</div>' +
+                        (index === 0
+                            ? '<div style="cursor:pointer;" class="trash-icon-container"><i class="fa fa-trash text-muted"></i></div>'
+                            : '<div style="width: 14px;"></div>') +
+                        "</div>" +
+                        '<div class="flight-card-body">' +
+                        '<div class="flight-info-group airline-info">' +
+                        '<div class="airline-name">' + esc(seg.airline || "") + "</div>" +
+                        '<div class="flight-code">' + esc(seg.flight_number || "") + "</div>" +
+                        "</div>" +
+                        '<div class="flight-info-group location-info">' +
+                        '<div class="d-flex align-items-center">' +
+                        '<div class="city">' + placeLabel(seg.from_city, seg.from_code) + "</div>" +
+                        (depTerminal ? '<div class="terminal" style="font-size:12px; color:#666;">' + depTerminal + "</div>" : "") +
+                        "</div>" +
+                        '<div class="datetime">' + formatSegDateTime(seg.dep_date, seg.dep_time) + "</div>" +
+                        "</div>" +
+                        '<div class="flight-info-group location-info">' +
+                        '<div class="d-flex align-items-center">' +
+                        '<div class="city">' + placeLabel(seg.to_city, seg.to_code) + "</div>" +
+                        (arrTerminal ? '<div class="terminal" style="font-size:12px; color:#666;">' + arrTerminal + "</div>" : "") +
+                        "</div>" +
+                        '<div class="datetime">' + formatSegDateTime(seg.arr_date, seg.arr_time) + "</div>" +
+                        "</div>" +
+                        '<div class="flight-meta-right">' +
+                        '<div class="stops">Non Stop</div>' +
+                        '<div class="duration">' + duration + "</div>" +
+                        "</div>" +
+                        "</div>" +
+                        '<div class="baggage-info" style="display: flex; align-items: center; justify-content: space-between;">' +
+                        '<div style="flex: 1; text-align: left;">' + baggage + "</div>";
+
+                    var next = segments[index + 1];
+                    if (next) {
+                        var arr = segMoment(seg.arr_date, seg.arr_time);
+                        var nextDep = segMoment(next.dep_date, next.dep_time);
+                        if (arr && nextDep) {
+                            var layover = minutesLabel(nextDep.diff(arr, "minutes"));
+                            if (layover) {
+                                html += '<div style="flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: #555;">' +
+                                    '<i class="fa fa-clock-o"></i> Layover: ' + esc(layover) + "</div>" +
+                                    '<div style="flex: 1;"></div>';
+                            }
+                        }
+                    }
+
+                    html += "</div></div>";
+                });
+                return html;
+            }
+
+            function setAirport(sel, city, code) {
+                var $el = $(sel);
+                if (!city && !code) {
+                    return false;
+                }
+                $el.val(city && code ? (city + " (" + code + ")") : (city || code));
+                if (code) {
+                    $el.attr("data-code", code);
+                }
+                if (city) {
+                    $el.attr("data-city", city);
+                }
+                mark(sel);
+                return true;
+            }
+
+            function fillPassengers(passengers) {
+                if (!passengers.length) {
+                    return 0;
+                }
+                $("#paxCount").val(passengers.length);
+                renderPaxForms();
+                mark("#paxCount");
+
+                var filledRows = 0;
+                passengers.forEach(function (p, index) {
+                    var $row = $(".pax-group").eq(index);
+                    if (!$row.length) {
+                        return;
+                    }
+                    var set = function (cls, val) {
+                        if (!val) {
+                            return;
+                        }
+                        var $f = $row.find(cls);
+                        if (cls === ".pax-type" || cls === ".pax-initial") {
+                            var exists = $f.find("option").filter(function () {
+                                return $(this).text().trim() === val || this.value === val;
+                            }).length > 0;
+                            if (!exists) {
+                                return;
+                            }
+                        }
+                        $f.val(val).addClass("et-ai-filled");
+                    };
+                    set(".pax-type", p.type);
+                    set(".pax-initial", p.title);
+                    set(".pax-name", p.name);
+                    set(".pax-meal", p.meal);
+                    set(".pax-seat", p.seat);
+                    set(".pax-ticket", p.ticket);
+                    set(".pax-services", p.services);
+                    filledRows++;
+                });
+                return filledRows;
+            }
+
+            function applyTicket(ticket) {
+                var f = ticket.fields || {};
+                var onward = ticket.onward_segments || [];
+                var back = ticket.return_segments || [];
+                var passengers = ticket.passengers || [];
+                var done = [];
+                var blank = [];
+
+                if (f.pnr) {
+                    $("#pnrInput").val(f.pnr).trigger("input");
+                    mark("#pnrInput");
+                    done.push("PNR");
+                } else {
+                    blank.push("PNR");
+                }
+
+                if (f.booking_date) {
+                    $("#bookingDate").val(f.booking_date);
+                    mark("#bookingDate");
+                    done.push("Booking Date");
+                }
+
+                // Trip type must be set before injecting cards — One way empties the return container.
+                if (f.trip_type === "roundtrip" || back.length) {
+                    $("#roundtrip").prop("checked", true).trigger("change");
+                    done.push("Round Trip");
+                } else if (f.trip_type === "oneway") {
+                    $("#oneway").prop("checked", true).trigger("change");
+                    done.push("One Way");
+                }
+                if (f.journey_type === "international") {
+                    $("#international").prop("checked", true);
+                    done.push("International");
+                } else if (f.journey_type === "domestic") {
+                    $("#domestic").prop("checked", true);
+                    done.push("Domestic");
+                }
+
+                var routeParts = [];
+                if (setAirport("#apiFrom", f.from_city, f.from_code)) {
+                    routeParts.push(f.from_code || f.from_city);
+                }
+                if (setAirport("#apiTo", f.to_city, f.to_code)) {
+                    routeParts.push(f.to_code || f.to_city);
+                    $("#apiTo").trigger("change");
+                }
+                if (routeParts.length) {
+                    done.push("Route (" + routeParts.join(" → ") + ")");
+                } else {
+                    blank.push("From / To");
+                }
+
+                if (f.onward_date) {
+                    $("#apiDate").val(f.onward_date);
+                    mark("#apiDate");
+                    done.push("Onward Date");
+                } else {
+                    blank.push("Onward Date");
+                }
+                if (f.return_date) {
+                    $("#apiReturnDate").val(f.return_date);
+                    mark("#apiReturnDate");
+                    done.push("Return Date");
+                }
+
+                var paxFilled = fillPassengers(passengers);
+                if (paxFilled) {
+                    done.push("Passengers (" + paxFilled + ")");
+                } else {
+                    blank.push("Passenger details");
+                }
+
+                if (onward.length) {
+                    $("#flightDetailsContainer").html(flightCardsHtml(onward));
+                    done.push("Onward flight (" + onward.length + (onward.length === 1 ? " leg)" : " legs)"));
+                } else {
+                    blank.push("Onward flight details");
+                }
+                if (back.length) {
+                    $("#returnFlightDetailsContainer").html(flightCardsHtml(back)).show();
+                    $(".return-flight-title").show();
+                    $("#returnDateContainer").show();
+                    done.push("Return flight (" + back.length + (back.length === 1 ? " leg)" : " legs)"));
+                }
+
+                var carrier = f.carrier_code || (onward[0] && onward[0].carrier_code) || "";
+                if (carrier) {
+                    var logoUrl = "ajax/image_proxy.php?url=" +
+                        encodeURIComponent("https://pics.avs.io/200/100/" + carrier + ".png");
+                    $("#airlineLogo").attr("src", logoUrl);
+                    $("#airlineLogoBox").css("display", "flex");
+                }
+
+                // Values are set without firing input so the tax auto-calc keeps the printed tax.
+                var fareParts = [];
+                if (f.base_fare) {
+                    $("#baseInput").val(f.base_fare);
+                    mark("#baseInput");
+                    fareParts.push("Base");
+                }
+                if (f.tax) {
+                    $("#taxInput").val(f.tax);
+                    mark("#taxInput");
+                    fareParts.push("Taxes");
+                }
+                if (f.total_fare) {
+                    $("#totalInput").val(f.total_fare);
+                    mark("#totalInput");
+                    fareParts.push("Total");
+                }
+                if (fareParts.length) {
+                    done.push("Fare (" + fareParts.join(", ") + ")");
+                } else {
+                    blank.push("Fare details");
+                }
+
+                if (f.mobile) {
+                    $("#mobileInput").val(f.mobile);
+                    $("#contactNo").text(f.mobile);
+                    mark("#mobileInput");
+                    done.push("Mobile No");
+                }
+                if (f.email) {
+                    $("#emailinput").val(f.email);
+                    $("#emailId").text(f.email);
+                    mark("#emailinput");
+                    done.push("Email Id");
+                }
+
+                updateTicketData();
+                return { done: done, blank: blank };
+            }
+
+            function handleResponse(res, fileLabel) {
+                var ticket = res.ticket || {};
+                var filled = Array.isArray(ticket.filled) ? ticket.filled : [];
+
+                if (!ticket.is_eticket || !filled.length) {
+                    setStatus("warning", esc(res.message || "No details could be read from this file.") +
+                        ' <button type="button" class="et-ai-retry js-et-ai-retry">Upload another file</button>');
+                    return;
+                }
+
+                var applied = applyTicket(ticket);
+                var lowConfidence = ticket.confidence === "low";
+                var html = "<strong>E-ticket read from " + esc(fileLabel) + ".</strong> " +
+                    applied.done.length + " detail" + (applied.done.length === 1 ? "" : "s") +
+                    " auto-filled (highlighted). Please review and edit them before printing or saving." +
+                    '<div class="et-ai-list"><strong>Filled:</strong> ' + esc(applied.done.join(", ")) + "</div>";
+                if (applied.blank.length) {
+                    html += '<div class="et-ai-list"><strong>Left blank (not found on the ticket):</strong> ' +
+                        esc(applied.blank.join(", ")) + "</div>";
+                }
+                if (lowConfidence) {
+                    html += '<div class="et-ai-list"><i class="fas fa-exclamation-circle mr-1"></i>' +
+                        "Low read confidence — check every field carefully.</div>";
+                }
+                html += '<div class="et-ai-list"><button type="button" class="et-ai-retry js-et-ai-retry">' +
+                    "Upload another e-ticket</button></div>";
+
+                setStatus(lowConfidence || applied.blank.length ? "warning" : "success", html);
+            }
+
+            function uploadFile(file) {
+                if (!file) {
+                    return;
+                }
+                var ext = String(file.name || "").split(".").pop().toLowerCase();
+                if (["jpg", "jpeg", "png", "webp", "pdf"].indexOf(ext) < 0) {
+                    setStatus("error", "Only JPG, JPEG, PNG, WEBP or PDF e-tickets are allowed.");
+                    return;
+                }
+                if (file.size > 8 * 1024 * 1024) {
+                    setStatus("error", "File size exceeds 8 MB. Please upload a smaller file.");
+                    return;
+                }
+                if (etAiXhr) {
+                    try { etAiXhr.abort(); } catch (e) { /* ignore */ }
+                }
+
+                var fileLabel = file.name || "e-ticket";
+                var fd = new FormData();
+                fd.append("file", file);
+
+                setStatus("uploading", "Uploading <strong>" + esc(fileLabel) + "</strong>… " +
+                    '<span class="js-et-ai-pct">0%</span><div class="et-ai-progress"><span></span></div>');
+
+                var xhr = new XMLHttpRequest();
+                etAiXhr = xhr;
+                xhr.open("POST", "ajax/scan_eticket.php", true);
+                xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+                xhr.upload.onprogress = function (e) {
+                    if (!e.lengthComputable) {
+                        return;
+                    }
+                    var pct = Math.round((e.loaded / e.total) * 100);
+                    $("#etAiStatus .js-et-ai-pct").text(pct + "%");
+                    $("#etAiStatus .et-ai-progress > span").css("width", pct + "%");
+                };
+                xhr.upload.onload = function () {
+                    if (etAiXhr === xhr) {
+                        setStatus("processing", "Reading <strong>" + esc(fileLabel) + "</strong> with AI…" +
+                            '<div class="et-ai-list">This usually takes a few seconds.</div>');
+                    }
+                };
+                xhr.onerror = function () {
+                    if (etAiXhr === xhr) {
+                        etAiXhr = null;
+                        setStatus("error", "Upload failed. Check your connection and " +
+                            '<button type="button" class="et-ai-retry js-et-ai-retry">try again</button>.');
+                    }
+                };
+                xhr.onload = function () {
+                    if (etAiXhr !== xhr) {
+                        return;
+                    }
+                    etAiXhr = null;
+                    var res = null;
+                    try { res = JSON.parse(xhr.responseText); } catch (e) { res = null; }
+                    if (!res || !res.success) {
+                        setStatus("error", esc((res && res.message) ||
+                            ("Could not read the e-ticket (HTTP " + xhr.status + ").")) +
+                            ' <button type="button" class="et-ai-retry js-et-ai-retry">Try again</button>');
+                        return;
+                    }
+                    handleResponse(res, fileLabel);
+                };
+                xhr.send(fd);
+            }
+
+            $(document).on("click keydown", "#etAiDrop", function (e) {
+                if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") {
+                    return;
+                }
+                e.preventDefault();
+                $("#etAiFile").val("").trigger("click");
+            });
+            $(document).on("click", "#etAiStatus .js-et-ai-retry", function () {
+                $("#etAiFile").val("").trigger("click");
+            });
+            $(document).on("change", "#etAiFile", function () {
+                uploadFile(this.files && this.files[0]);
+            });
+            $(document).on("dragover dragenter", "#etAiDrop", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).addClass("is-drag");
+            });
+            $(document).on("dragleave dragend", "#etAiDrop", function (e) {
+                e.preventDefault();
+                $(this).removeClass("is-drag");
+            });
+            $(document).on("drop", "#etAiDrop", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).removeClass("is-drag");
+                var dt = e.originalEvent && e.originalEvent.dataTransfer;
+                if (dt && dt.files && dt.files[0]) {
+                    uploadFile(dt.files[0]);
+                }
+            });
+            $(document).on("input change", ".et-ai-filled", function (e) {
+                if (e.originalEvent) {
+                    $(this).removeClass("et-ai-filled");
+                }
+            });
+        })(jQuery);
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
