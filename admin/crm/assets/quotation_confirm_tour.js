@@ -4,6 +4,22 @@
 
     var serviceMap = {};
     var activeQuotationId = 0;
+    var activePackageTotal = null;
+    var activeCustomerPaid = null;
+    var activeTripInfo = null;
+
+    function tripDateLabel(ymd) {
+        var m = String(ymd || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) {
+            return '';
+        }
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return m[3] + ' ' + (months[parseInt(m[2], 10) - 1] || m[2]) + ' ' + m[1];
+    }
+
+    function customerDue() {
+        return Math.max(0, Math.round(((activePackageTotal || 0) - (activeCustomerPaid || 0)) * 100) / 100);
+    }
     var activeRow = null;
     var supplierSuggestTimer = null;
     var supplierSuggestXhr = null;
@@ -189,42 +205,126 @@
             return;
         }
         var t = '#confirmTourModal .ct-svc-table';
+        var m = '#confirmTourModal';
         $('<style id="ctVoucherBtnStyles">').text(
-            t + '{border:1px solid #e2e8f0;border-radius:10px;overflow-x:auto;background:#fff;margin-top:.5rem}' +
-            t + ' .ct-detail-head,' + t + ' .ct-detail-row{display:grid;grid-template-columns:120px minmax(150px,1fr) 128px 112px 104px 124px 112px;' +
-            'gap:.5rem;align-items:center;min-width:830px;padding:0 .85rem;margin:0;border:0;border-radius:0}' +
-            t + ' .ct-detail-head,' + t + ' .ct-detail-row{grid-template-columns:120px minmax(150px,1fr) 128px 112px 104px 124px 142px}' +
-            t + ' .ct-act-btn.ct-svc-voucher-act{position:relative}' +
-            t + ' .ct-act-btn.ct-svc-voucher-act.is-attached{color:#15803d}' +
-            t + ' .ct-act-btn.ct-svc-voucher-act.is-attached:hover{background:#f0fdf4;color:#166534}' +
-            t + ' .ct-svc-voucher-count{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#16a34a;color:#fff;font-size:.6rem;font-weight:700;line-height:16px;text-align:center;box-shadow:0 0 0 2px #fff}' +
-            t + ' .ct-detail-head{background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:.76rem;font-weight:600;color:#475569;padding-top:.6rem;padding-bottom:.6rem}' +
-            t + ' .ct-detail-row{padding-top:.3rem;padding-bottom:.3rem;border-top:1px solid #eef2f7;background:#fff}' +
+            m + ' .ct-svc-section-head{display:flex;align-items:center;gap:.8rem;margin:1.1rem 0 .7rem}' +
+            m + ' .ct-svc-section-icon{font-size:1.55rem;color:#e11d48;width:32px;text-align:center}' +
+            m + ' .ct-svc-section-title{font-size:1.08rem;font-weight:700;color:#0f172a;line-height:1.2}' +
+            m + ' .ct-svc-section-sub{font-size:.8rem;color:#64748b;margin-top:.1rem}' +
+            t + '{border:1px solid #e2e8f0;border-radius:12px;overflow-x:auto;background:#fff;margin-top:.25rem}' +
+            t + ' .ct-detail-head,' + t + ' .ct-detail-row{display:grid;' +
+            'grid-template-columns:34px 140px minmax(140px,1fr) 110px 100px 96px 108px 108px 186px;' +
+            'gap:.5rem;align-items:center;min-width:1090px;padding:0 1rem;margin:0;border:0;border-radius:0}' +
+            t + ' .ct-detail-head{background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:.78rem;font-weight:600;color:#334155;padding-top:.75rem;padding-bottom:.75rem}' +
+            t + ' .ct-detail-head>div:nth-child(1){text-align:center}' +
+            t + ' #ctDetailRows{counter-reset:ctSvcRow}' +
+            t + ' .ct-detail-row{counter-increment:ctSvcRow;padding-top:.45rem;padding-bottom:.45rem;border-top:1px solid #eef2f7;background:#fff}' +
             t + ' .ct-detail-row:first-child{border-top:0}' +
             t + ' .ct-detail-row:hover{background:#fafcff}' +
-            t + ' #ctDetailRows:empty{display:block;min-width:800px;padding:1rem;text-align:center;color:#94a3b8;font-size:.82rem}' +
+            t + ' .ct-row-no{text-align:center;font-size:.84rem;color:#334155}' +
+            t + ' .ct-row-no::before{content:counter(ctSvcRow)}' +
+            t + ' #ctDetailRows:empty{display:block;min-width:1080px;padding:1.1rem;text-align:center;color:#94a3b8;font-size:.82rem}' +
             t + ' #ctDetailRows:empty::after{content:"No services yet. Click a service in What is Included to add it."}' +
-            t + ' .ct-detail-label{font-size:.84rem;font-weight:500;color:#0f172a;padding:0}' +
+            t + ' .ct-detail-label{display:flex;align-items:center;gap:.6rem;font-size:.86rem;font-weight:600;color:#0f172a;padding:0;min-width:0}' +
+            t + ' .ct-detail-label>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+            t + ' .ct-svc-icon{flex:0 0 32px;width:32px;height:32px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;background:#f1f5f9;color:#475569}' +
+            t + ' .ct-svc-icon.is-hotels{background:#eff6ff;color:#2563eb}' +
+            t + ' .ct-svc-icon.is-flight{background:#eef2ff;color:#4f46e5}' +
+            t + ' .ct-svc-icon.is-land_package{background:#fff7ed;color:#ea580c}' +
+            t + ' .ct-svc-icon.is-visa{background:#f5f3ff;color:#7c3aed}' +
+            t + ' .ct-svc-icon.is-transfers{background:#f0fdfa;color:#0d9488}' +
+            t + ' .ct-svc-icon.is-travel_insurance{background:#f0fdf4;color:#16a34a}' +
+            t + ' .ct-svc-icon.is-forex{background:#fffbeb;color:#d97706}' +
+            t + ' .ct-svc-icon.is-train{background:#f0f9ff;color:#0284c7}' +
+            t + ' .ct-svc-icon.is-tours{background:#fdf2f8;color:#db2777}' +
+            t + ' .ct-svc-icon.is-cruise{background:#ecfeff;color:#0891b2}' +
             t + ' .ct-detail-field .form-control{height:32px;font-size:.84rem;color:#0f172a;padding:.25rem .45rem;border:1px solid transparent;border-radius:6px;background:transparent;box-shadow:none}' +
             t + ' .ct-detail-field .form-control:hover{border-color:#e2e8f0}' +
             t + ' .ct-detail-field .form-control:focus{border-color:#93c5fd;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.12)}' +
             t + ' .ct-detail-field .form-control::placeholder{color:#94a3b8}' +
             t + ' .ct-num .form-control{text-align:right;font-variant-numeric:tabular-nums}' +
+            t + ' .ct-detail-row.has-paid .ct-paid{color:#16a34a;font-weight:500}' +
             t + ' .ct-balance-wrap{text-align:right;padding:0}' +
-            t + ' .ct-balance-val{display:inline-block;min-width:88px;padding:.28rem .7rem;border-radius:999px;border:0;font-size:.82rem;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;background:#fee2e2;color:#dc2626}' +
-            t + ' .ct-balance-val.is-clear{background:#dcfce7;color:#15803d}' +
-            t + ' .ct-detail-actions{display:flex;justify-content:center;gap:.2rem;padding:0}' +
-            t + ' .ct-act-btn{width:30px;height:30px;padding:0;border:0;border-radius:6px;background:transparent;color:#475569;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem}' +
-            t + ' .ct-act-btn:hover{background:#eff6ff;color:#1d4ed8}' +
-            t + ' .ct-act-btn.ct-remove-row{color:#dc2626;border:0}' +
-            t + ' .ct-act-btn.ct-remove-row:hover{background:#fef2f2;color:#b91c1c}' +
-            t + ' .ct-svc-voucher{display:inline-flex;align-items:center;gap:.4rem;height:30px;padding:0 .6rem 0 .65rem;border:1px solid #e2e8f0;border-radius:999px;background:#f1f5f9;color:#334155;font-size:.8rem;line-height:1}' +
-            t + ' .ct-svc-voucher:hover{background:#e2e8f0}' +
-            t + ' .ct-svc-voucher .fa-paperclip{color:#64748b}' +
-            t + ' .ct-svc-voucher .fa-chevron-down{font-size:.62rem;color:#64748b;margin-left:.1rem}' +
-            t + ' .ct-svc-voucher.is-attached{background:#ecfdf5;border-color:#bbf7d0;color:#15803d}' +
-            t + ' .ct-svc-voucher.is-attached .fa-paperclip,' + t + ' .ct-svc-voucher.is-attached .fa-chevron-down{color:#16a34a}'
+            t + ' .ct-balance-val{display:inline-block;min-width:92px;padding:.34rem .75rem;border-radius:8px;border:0;font-size:.84rem;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;background:#fee2e2;color:#dc2626}' +
+            t + ' .ct-detail-actions{display:flex;justify-content:flex-start;gap:.35rem;padding:0}' +
+            t + ' .ct-act-btn{position:relative;width:30px;height:30px;padding:0;border:0;border-radius:7px;background:#f1f5f9;color:#475569;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem;transition:filter .12s,transform .12s}' +
+            t + ' .ct-act-btn:hover{filter:brightness(.95);transform:translateY(-1px)}' +
+            t + ' .ct-act-btn.ct-pay-row{background:#dcfce7;color:#16a34a}' +
+            t + ' .ct-act-btn.ct-reminders{background:#f1f5f9;color:#475569}' +
+            t + ' .ct-act-btn.ct-view-row{background:#eff6ff;color:#2563eb}' +
+            t + ' .ct-status-wrap{padding:0}' +
+            '.ct-status-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .6rem;border-radius:999px;font-size:.74rem;font-weight:600;white-space:nowrap;line-height:1.2}' +
+            '.ct-status-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}' +
+            '.ct-status-pill.is-paid{background:#dcfce7;color:#15803d}' +
+            '.ct-status-pill.is-partial{background:#fef3c7;color:#b45309}' +
+            '.ct-status-pill.is-unpaid{background:#fee2e2;color:#dc2626}' +
+            t + ' .ct-act-btn.ct-remove-row{background:#fef2f2;color:#dc2626}' +
+            t + ' .ct-act-btn.ct-svc-voucher-act{background:#f5f3ff;color:#7c3aed}' +
+            t + ' .ct-act-btn.ct-svc-voucher-act.is-attached{background:#ecfdf5;color:#15803d}' +
+            t + ' .ct-svc-voucher-count{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#16a34a;color:#fff;font-size:.6rem;font-weight:700;line-height:16px;text-align:center;box-shadow:0 0 0 2px #fff}' +
+            t + ' .ct-svc-voucher{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 .35rem;border:0;border-radius:6px;background:transparent;color:#1d4ed8;font-size:.82rem;line-height:1}' +
+            t + ' .ct-svc-voucher:hover{background:#eff6ff}' +
+            t + ' .ct-svc-voucher .fa-paperclip{color:#475569;font-size:.9rem}' +
+            t + ' .ct-svc-voucher .fa-chevron-down{font-size:.62rem;color:#1d4ed8;margin-left:.15rem}' +
+            m + ' .ct-svc-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.9rem;padding:.9rem 1.1rem;border-top:1px solid #e2e8f0;background:#fff}' +
+            m + ' .ct-svc-footer>*{margin:0}' +
+            m + ' .ct-svc-summary{display:flex;flex-wrap:wrap;gap:.75rem;flex:1 1 auto}' +
+            m + ' .ct-sum-card{display:flex;align-items:center;gap:.7rem;min-width:170px;flex:1 1 0;padding:.65rem .85rem;border-radius:10px}' +
+            m + ' .ct-sum-icon{flex:0 0 36px;width:36px;height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:1rem;background:rgba(255,255,255,.75)}' +
+            m + ' .ct-sum-label{display:block;font-size:.72rem;line-height:1.2}' +
+            m + ' .ct-sum-val{display:block;font-size:1.12rem;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap}' +
+            m + ' .ct-sum-card.is-total{background:#eff6ff}' + m + ' .ct-sum-card.is-total .ct-sum-icon,' + m + ' .ct-sum-card.is-total .ct-sum-label{color:#2563eb}' +
+            m + ' .ct-sum-card.is-total .ct-sum-val{color:#0f172a}' +
+            m + ' .ct-sum-card.is-paid{background:#f0fdf4}' + m + ' .ct-sum-card.is-paid .ct-sum-icon,' + m + ' .ct-sum-card.is-paid .ct-sum-label{color:#16a34a}' +
+            m + ' .ct-sum-card.is-paid .ct-sum-val{color:#0f172a}' +
+            m + ' .ct-sum-card.is-due{background:#fef2f2}' + m + ' .ct-sum-card.is-due .ct-sum-icon,' + m + ' .ct-sum-card.is-due .ct-sum-label{color:#dc2626}' +
+            m + ' .ct-sum-card.is-due .ct-sum-val{color:#b91c1c}' +
+            m + ' .ct-sum-card.is-payments{background:#f5f3ff}' + m + ' .ct-sum-card.is-payments .ct-sum-icon,' + m + ' .ct-sum-card.is-payments .ct-sum-label{color:#7c3aed}' +
+            m + ' .ct-sum-card.is-payments .ct-sum-val{color:#0f172a}' +
+            m + ' .ct-svc-footer-actions{display:flex;align-items:center;gap:.6rem;padding-left:.9rem;border-left:1px solid #e2e8f0}' +
+            m + ' .ct-btn-cancel{height:44px;min-width:92px;padding:0 1.2rem;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#1e293b;font-weight:500}' +
+            m + ' .ct-btn-cancel:hover{background:#f8fafc}' +
+            m + ' .ct-btn-save{height:44px;padding:0 1.3rem;border:0;border-radius:10px;background:linear-gradient(135deg,#ef4444,#e11d48);color:#fff;font-weight:600;box-shadow:0 6px 16px rgba(225,29,72,.28)}' +
+            m + ' .ct-btn-save:hover{color:#fff;filter:brightness(.96)}' +
+            m + ' .ct-btn-save:disabled{opacity:.65;box-shadow:none}' +
+            '@media (max-width:991.98px){' + m + ' .ct-svc-footer-actions{border-left:0;padding-left:0;margin-left:auto}' +
+            m + ' .ct-sum-card{min-width:calc(50% - .4rem)}}'
         ).appendTo('head');
+    }
+
+    var SERVICE_ICONS = {
+        hotels: 'fa-hotel',
+        flight: 'fa-plane',
+        land_package: 'fa-umbrella-beach',
+        visa: 'fa-passport',
+        transfers: 'fa-car',
+        travel_insurance: 'fa-shield-alt',
+        forex: 'fa-exchange-alt',
+        train: 'fa-train',
+        tours: 'fa-binoculars',
+        cruise: 'fa-ship'
+    };
+
+    function paymentStatus(total, paid) {
+        if (paid > 0 && paid >= total - 0.005) {
+            return { cls: 'is-paid', text: 'Paid' };
+        }
+        if (paid > 0) {
+            return { cls: 'is-partial', text: 'Partially Paid' };
+        }
+        return { cls: 'is-unpaid', text: 'Unpaid' };
+    }
+
+    function statusPillHtml(total, paid) {
+        var s = paymentStatus(total, paid);
+        return '<span class="ct-status-pill ' + s.cls + '">' + s.text + '</span>';
+    }
+
+    function payBtnHtml(balance) {
+        var clear = balance <= 0;
+        var title = clear ? 'Fully paid — view payments' : 'Add payment';
+        return '<button type="button" class="ct-act-btn ct-pay-row" title="' + title + '" aria-label="' + title + '">' +
+            '<i class="fas ' + (clear ? 'fa-wallet' : 'fa-rupee-sign') + '"></i></button>';
     }
 
     function voucherBtnHtml(count) {
@@ -261,14 +361,17 @@
         var key = row.key || '';
         var uid = row.uid || uidService();
         var voucherCount = parseInt(row.voucher_count, 10) || 0;
+        var paymentCount = parseInt(row.payment_count, 10) || 0;
         var label = row.label || serviceMap[key] || key;
         var total = row.total != null ? row.total : '';
         var paid = row.paid != null ? row.paid : '';
         var balanceNum = Math.max(0, parseNum(total) - parseNum(paid));
 
         return '' +
-            '<div class="ct-detail-row" data-key="' + esc(key) + '" data-uid="' + esc(uid) + '" data-vouchers="' + voucherCount + '">' +
-            '<div class="ct-detail-label">' + esc(label) + '</div>' +
+            '<div class="ct-detail-row' + (parseNum(paid) > 0 ? ' has-paid' : '') + '" data-key="' + esc(key) + '" data-uid="' + esc(uid) + '" data-vouchers="' + voucherCount + '" data-payments="' + paymentCount + '">' +
+            '<div class="ct-row-no" aria-hidden="true"></div>' +
+            '<div class="ct-detail-label"><span class="ct-svc-icon is-' + esc(key) + '"><i class="fas ' + (SERVICE_ICONS[key] || 'fa-concierge-bell') + '"></i></span>' +
+            '<span>' + esc(label) + '</span></div>' +
             '<div class="ct-detail-field ct-supplier-wrap">' +
             '<input type="text" class="form-control ct-supplier" placeholder="Type supplier name" ' +
             'autocomplete="off" spellcheck="false" value="' + esc(row.supplier || '') + '">' +
@@ -279,9 +382,11 @@
             '<div class="ct-balance-wrap">' +
             '<span class="ct-balance-val' + (balanceNum <= 0 ? ' is-clear' : '') + '">' + money2(balanceNum) + '</span>' +
             '</div>' +
+            '<div class="ct-status-wrap">' + statusPillHtml(parseNum(total), parseNum(paid)) + '</div>' +
             '<div class="ct-detail-actions">' +
+            payBtnHtml(balanceNum) +
             '<button type="button" class="ct-act-btn ct-reminders" title="Reminders" aria-label="Reminders"><i class="far fa-file-alt"></i></button>' +
-            '<button type="button" class="ct-act-btn ct-edit-row" title="Edit" aria-label="Edit"><i class="fas fa-pen"></i></button>' +
+            '<button type="button" class="ct-act-btn ct-view-row" title="View payment details" aria-label="View payment details"><i class="far fa-eye"></i></button>' +
             '<button type="button" class="ct-act-btn ct-remove-row" title="Remove" aria-label="Remove"><i class="far fa-trash-alt"></i></button>' +
             voucherActionBtnHtml(voucherCount) +
             '</div>' +
@@ -301,6 +406,9 @@
         var paid = parseNum($row.find('.ct-paid').val());
         var balance = Math.max(0, total - paid);
         $row.find('.ct-balance-val').text(money2(balance)).toggleClass('is-clear', balance <= 0);
+        $row.toggleClass('has-paid', paid > 0);
+        $row.find('.ct-pay-row').replaceWith(payBtnHtml(balance));
+        $row.find('.ct-status-wrap').html(statusPillHtml(total, paid));
     }
 
     function collectServices() {
@@ -529,9 +637,15 @@
                 '#confirmTourModal .ct-pstat-val{display:block;font-size:.92rem;font-weight:700;color:#0f172a;line-height:1.25}' +
                 '#confirmTourModal .ct-pstat-group{display:flex}' +
                 '#confirmTourModal .ct-pstat-group+.ct-pstat-group{border-left:2px solid #fda4af;margin-left:.1rem}' +
+                '#confirmTourModal .ct-pstat.is-destination .ct-pstat-val,#confirmTourModal .ct-pstat.is-departure .ct-pstat-val{max-width:150px;overflow:hidden;text-overflow:ellipsis}' +
                 '#confirmTourModal .ct-pstat.is-paid .ct-pstat-val{color:#15803d}' +
                 '#confirmTourModal .ct-pstat.is-due .ct-pstat-val{color:#dc2626}' +
                 '#confirmTourModal .ct-pstat.is-due.is-clear .ct-pstat-val{color:#15803d}' +
+                '#confirmTourModal .ct-pstat.is-paid,#confirmTourModal .ct-pstat.is-due{cursor:pointer;border-radius:6px;transition:background .12s}' +
+                '#confirmTourModal .ct-pstat.is-paid:hover,#confirmTourModal .ct-pstat.is-due:hover{background:rgba(255,241,242,.9)}' +
+                '#confirmTourModal .ct-pstat-pay-wrap{display:flex;align-items:center;padding:0 .45rem 0 .6rem;border-left:1px solid #fbcfe8}' +
+                '#confirmTourModal .ct-pstat-pay{width:32px;height:32px;padding:0;border:0;border-radius:8px;background:#16a34a;color:#fff;font-size:.9rem;display:inline-flex;align-items:center;justify-content:center}' +
+                '#confirmTourModal .ct-pstat-pay:hover{filter:brightness(.95)}' +
                 '@media (max-width:991.98px){#confirmTourModal .ct-primary-stats{margin-left:0;width:100%;flex-wrap:wrap;row-gap:.45rem}' +
                 '#confirmTourModal .ct-pstat-group{flex:1 1 100%}#confirmTourModal .ct-pstat-group+.ct-pstat-group{border-left:0;margin-left:0;border-top:1px solid #fbcfe8;padding-top:.45rem}' +
                 '#confirmTourModal .ct-pstat{flex:1 1 0}}'
@@ -545,47 +659,61 @@
             '<div class="ct-primary-stats" aria-label="Tour summary">' +
             '<div class="ct-pstat-group">' +
             stat('is-guests', 'fa-users', 'Guests') +
-            stat('is-services', 'fa-suitcase', 'Services') +
-            stat('is-suppliers', 'fa-database', 'Suppliers') +
+            stat('is-destination', 'fa-map-marker-alt', 'Destination') +
+            stat('is-travel-date', 'fa-calendar-alt', 'Date of Travel') +
+            stat('is-departure', 'fa-plane-departure', 'Departure City') +
             '</div><div class="ct-pstat-group">' +
-            stat('is-total', 'fa-rupee-sign', 'Total') +
+            stat('is-total', 'fa-rupee-sign', 'Package Total') +
             stat('is-paid', 'fa-check-circle', 'Paid') +
             stat('is-due', 'fa-hourglass-half', 'Due') +
+            '<div class="ct-pstat-pay-wrap"><button type="button" class="ct-pstat-pay js-cust-pay-add" title="Receive Payment" aria-label="Receive Payment">' +
+            '<i class="far fa-eye"></i></button></div>' +
             '</div></div>'
         );
     }
 
     function updatePrimaryStats() {
         ensurePrimaryStats();
-        var suppliers = {};
-        var services = 0;
         var total = 0;
         var paid = 0;
         var due = 0;
+        var payments = 0;
         $('#ctDetailRows .ct-detail-row').each(function () {
             var $row = $(this);
             var t = parseNum($row.find('.ct-total').val());
             var p = parseNum($row.find('.ct-paid').val());
-            var supplier = $.trim(String($row.find('.ct-supplier').val() || '')).toLowerCase();
-            services++;
             total += t;
             paid += p;
             due += Math.max(0, t - p);
-            if (supplier) {
-                suppliers[supplier] = true;
-            }
+            payments += Math.max(parseInt($row.attr('data-payments'), 10) || 0, p > 0 ? 1 : 0);
         });
         var $stats = $('#ctPrimaryCard .ct-primary-stats');
         var set = function (cls, text) {
             $stats.find('.ct-pstat.' + cls + ' .js-pstat-val').text(text);
         };
         set('is-guests', String(travellersState.length));
-        set('is-services', String(services));
-        set('is-suppliers', String(Object.keys(suppliers).length));
-        set('is-total', '\u20B9' + money(total));
-        set('is-paid', '\u20B9' + money(paid));
-        set('is-due', '\u20B9' + money(due));
-        $stats.find('.ct-pstat.is-due').toggleClass('is-clear', due <= 0);
+        var trip = activeTripInfo || {};
+        var tripVal = function (cls, text) {
+            $stats.find('.ct-pstat.' + cls + ' .js-pstat-val').text(text || '—').attr('title', text || '');
+        };
+        tripVal('is-destination', trip.destination);
+        tripVal('is-travel-date', tripDateLabel(trip.tentative_date));
+        tripVal('is-departure', trip.departure_city);
+        var loaded = activePackageTotal !== null && activeCustomerPaid !== null;
+        var custDue = customerDue();
+        set('is-total', activePackageTotal === null ? '—' : '\u20B9' + money(activePackageTotal));
+        set('is-paid', activeCustomerPaid === null ? '—' : '\u20B9' + money(activeCustomerPaid));
+        set('is-due', loaded ? '\u20B9' + money(custDue) : '—');
+        $stats.find('.ct-pstat.is-due').toggleClass('is-clear', loaded && custDue <= 0);
+        $stats.find('.ct-pstat.is-paid, .ct-pstat.is-due').attr('title', 'View customer payments');
+
+        var $sum = $('#ctSvcSummary');
+        if ($sum.length) {
+            $sum.find('.js-sum-total').text('\u20B9 ' + money2(total));
+            $sum.find('.js-sum-paid').text('\u20B9 ' + money2(paid));
+            $sum.find('.js-sum-due').text('\u20B9 ' + money2(due));
+            $sum.find('.js-sum-payments').text(String(payments));
+        }
     }
 
     function renderTravellers() {
@@ -1252,6 +1380,9 @@
 
     function openModal(quotationId, $triggerRow, highlightKey) {
         activeQuotationId = quotationId;
+        activePackageTotal = null;
+        activeCustomerPaid = null;
+        activeTripInfo = null;
         activeRow = $triggerRow;
         $('#ctQuotationId').val(quotationId);
         setPrimaryContact('', '', '');
@@ -1273,6 +1404,15 @@
                 serviceMap = res.services || {};
                 var q = res.quotation || {};
                 var confirm = res.confirm || {};
+                var pkg = parseFloat(q.package_total);
+                activePackageTotal = isNaN(pkg) ? 0 : pkg;
+                var custPaid = parseFloat(q.customer_paid);
+                activeCustomerPaid = isNaN(custPaid) ? 0 : custPaid;
+                activeTripInfo = {
+                    destination: String(q.destination || ''),
+                    tentative_date: String(q.tentative_date || ''),
+                    departure_city: String(q.departure_city || '')
+                };
                 setPrimaryContact(
                     confirm.guest_name || q.guest_name || '',
                     confirm.mobile_no || q.mobile_no || '',
@@ -1493,13 +1633,6 @@
             $(this).val(amountInputValue($.trim(String($(this).val() || ''))));
         });
 
-        $(document).on('click', '#ctDetailRows .ct-edit-row', function () {
-            var $input = $(this).closest('.ct-detail-row').find('.ct-supplier');
-            $input.trigger('focus');
-            var len = String($input.val() || '').length;
-            try { $input[0].setSelectionRange(len, len); } catch (err) {}
-        });
-
         $(document).on('focus input', '#confirmTourModal .ct-supplier', function () {
             scheduleSupplierSuggest($(this));
         });
@@ -1572,16 +1705,24 @@
                 updatePrimaryStats();
             };
             var vouchers = parseInt($row.attr('data-vouchers'), 10) || 0;
-            if (!vouchers) {
+            var payments = parseInt($row.attr('data-payments'), 10) || 0;
+            if (!vouchers && !payments) {
                 removeRow();
                 return;
             }
             var label = $.trim($row.find('.ct-detail-label').text()) || 'this service';
+            var parts = [];
+            if (vouchers) {
+                parts.push('<strong>' + vouchers + ' voucher file' + (vouchers === 1 ? '' : 's') + '</strong>');
+            }
+            if (payments) {
+                parts.push('<strong>' + payments + ' payment record' + (payments === 1 ? '' : 's') + '</strong>');
+            }
             showConfirmDialog({
                 variant: 'danger',
                 icon: 'fa-trash-alt',
                 title: 'Remove ' + label + '?',
-                message: 'This service has <strong>' + vouchers + ' voucher file' + (vouchers === 1 ? '' : 's') + '</strong> attached. ' +
+                message: 'This service has ' + parts.join(' and ') + '. ' +
                     'They will be permanently deleted when you click Save.',
                 confirmText: 'Remove Service',
                 onConfirm: removeRow
@@ -3358,6 +3499,954 @@
 
         $(document).on('click', '#ctDetailRows .ct-svc-voucher, #ctDetailRows .ct-svc-voucher-act', function () {
             openVoucherModal($(this).closest('.ct-detail-row'));
+        });
+
+        var SP_DEFAULT_METHODS = ['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Card', 'Other'];
+        var spState = { uid: '', key: '', quotationId: 0, payments: [], methods: SP_DEFAULT_METHODS.slice(), loaded: false, busy: false };
+        var spSeq = 0;
+        var spUseUiDate = false;
+
+        function spTodayYmd() {
+            var d = new Date();
+            return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+        }
+
+        function spFormatDate(ymd) {
+            var m = String(ymd || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) {
+                return '—';
+            }
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return m[3] + ' ' + (months[parseInt(m[2], 10) - 1] || m[2]) + ' ' + m[1];
+        }
+
+        function spFindRow(uid) {
+            return $('#ctDetailRows .ct-detail-row').filter(function () {
+                return String($(this).attr('data-uid')) === String(uid);
+            }).first();
+        }
+
+        function spRowFigures($row) {
+            var total = parseNum($row.find('.ct-total').val());
+            var paid = parseNum($row.find('.ct-paid').val());
+            return {
+                label: $.trim($row.find('.ct-detail-label').text()) || spState.key,
+                supplier: $.trim(String($row.find('.ct-supplier').val() || '')),
+                total: total,
+                paid: paid,
+                balance: Math.max(0, total - paid),
+                vouchers: parseInt($row.attr('data-vouchers'), 10) || 0
+            };
+        }
+
+        function ensurePayModalStyles() {
+            if (document.getElementById('ctSvcPayStyles')) {
+                return;
+            }
+            var p = '.ct-pay-modal';
+            $('<style id="ctSvcPayStyles">').text(
+                p + '{z-index:1080}' +
+                p + ' .modal-content{border:0;border-radius:14px;overflow:hidden}' +
+                p + ' .modal-header{align-items:center;border-bottom:1px solid #e2e8f0;padding:.9rem 1.2rem}' +
+                p + ' .modal-body{background:#f8fafc;padding:1.1rem 1.2rem}' +
+                p + ' .ct-sp-head{display:flex;align-items:center;gap:.8rem;min-width:0}' +
+                p + ' .ct-sp-head .ct-svc-icon{flex:0 0 42px;width:42px;height:42px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;background:#f1f5f9;color:#475569}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-hotels{background:#eff6ff;color:#2563eb}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-flight{background:#eef2ff;color:#4f46e5}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-land_package{background:#fff7ed;color:#ea580c}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-visa{background:#f5f3ff;color:#7c3aed}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-transfers{background:#f0fdfa;color:#0d9488}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-travel_insurance{background:#f0fdf4;color:#16a34a}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-forex{background:#fffbeb;color:#d97706}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-train{background:#f0f9ff;color:#0284c7}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-tours{background:#fdf2f8;color:#db2777}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-cruise{background:#ecfeff;color:#0891b2}' +
+                p + ' .modal-title{font-size:1.05rem;font-weight:700;color:#0f172a;line-height:1.2}' +
+                p + ' .ct-sp-sub{font-size:.8rem;color:#64748b;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+                p + ' .ct-sp-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem}' +
+                p + ' .ct-sp-card{border-radius:10px;padding:.65rem .8rem;background:#fff;border:1px solid #e2e8f0}' +
+                p + ' .ct-sp-card-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em}' +
+                p + ' .ct-sp-card-val{font-size:1.08rem;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;margin-top:.15rem;white-space:nowrap}' +
+                p + ' .ct-sp-card.is-total{background:#eff6ff;border-color:#dbeafe}' + p + ' .ct-sp-card.is-total .ct-sp-card-label{color:#2563eb}' +
+                p + ' .ct-sp-card.is-paid{background:#f0fdf4;border-color:#dcfce7}' + p + ' .ct-sp-card.is-paid .ct-sp-card-label{color:#16a34a}' +
+                p + ' .ct-sp-card.is-due{background:#fef2f2;border-color:#fee2e2}' + p + ' .ct-sp-card.is-due .ct-sp-card-label{color:#dc2626}' +
+                p + ' .ct-sp-card.is-due .ct-sp-card-val{color:#b91c1c}' +
+                p + ' .ct-sp-card.is-status .ct-sp-card-label{color:#64748b}' +
+                p + ' .ct-sp-card.is-status .ct-sp-card-val{font-size:.9rem;padding-top:.15rem}' +
+                p + ' .ct-sp-progress{display:flex;align-items:center;gap:.7rem;margin:.8rem 0 0}' +
+                p + ' .ct-sp-progress .progress{flex:1 1 auto;height:.5rem;border-radius:999px;background:#e2e8f0}' +
+                p + ' .ct-sp-progress .progress-bar{background:#16a34a;border-radius:999px;transition:width .3s}' +
+                p + ' .ct-sp-progress span{font-size:.76rem;font-weight:600;color:#475569;white-space:nowrap}' +
+                p + ' .ct-sp-section{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-top:.9rem}' +
+                p + ' .ct-sp-section-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.7rem .9rem;border-bottom:1px solid #eef2f7}' +
+                p + ' .ct-sp-section-title{font-size:.8rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.03em}' +
+                p + ' .ct-sp-details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem 1rem;padding:.8rem .9rem}' +
+                p + ' .ct-sp-details dt{font-size:.72rem;font-weight:500;color:#64748b;margin:0}' +
+                p + ' .ct-sp-details dd{font-size:.86rem;font-weight:600;color:#0f172a;margin:.1rem 0 0;word-break:break-word}' +
+                p + ' .ct-sp-add-btn{height:32px;padding:0 .8rem;border:0;border-radius:8px;background:#16a34a;color:#fff;font-size:.8rem;font-weight:600}' +
+                p + ' .ct-sp-add-btn:hover{filter:brightness(.95)}' +
+                p + ' .ct-sp-add-btn:disabled{opacity:.55}' +
+                p + ' .ct-sp-form{padding:.85rem .9rem;background:#f0fdf4;border-bottom:1px solid #dcfce7}' +
+                p + ' .ct-sp-form label{font-size:.74rem;font-weight:600;color:#334155;margin-bottom:.2rem}' +
+                p + ' .ct-sp-form .form-control{height:36px;font-size:.85rem;border-radius:8px}' +
+                p + ' .ct-sp-form textarea.form-control{height:auto;min-height:56px}' +
+                p + ' .ct-sp-form .input-group-text{font-size:.85rem;border-radius:8px 0 0 8px;background:#fff}' +
+                p + ' .ct-sp-form .ct-sp-hint{font-size:.72rem;color:#64748b;margin-top:.2rem}' +
+                p + ' .ct-sp-form .ct-sp-error{font-size:.78rem;color:#dc2626;margin-right:auto}' +
+                p + ' .ct-sp-form-actions{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap}' +
+                p + ' .ct-sp-form-actions .btn{height:36px;border-radius:8px;font-size:.84rem;font-weight:600;padding:0 1rem}' +
+                p + ' .ct-sp-table{margin:0;font-size:.84rem}' +
+                p + ' .ct-sp-table th{font-size:.72rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.03em;background:#f8fafc;border-top:0;border-bottom:1px solid #e2e8f0;white-space:nowrap;padding:.55rem .75rem}' +
+                p + ' .ct-sp-table td{vertical-align:middle;padding:.55rem .75rem;border-top:1px solid #eef2f7;color:#0f172a}' +
+                p + ' .ct-sp-table .ct-sp-amt{text-align:right;font-weight:600;color:#16a34a;font-variant-numeric:tabular-nums;white-space:nowrap}' +
+                p + ' .ct-sp-table .ct-sp-date{white-space:nowrap}' +
+                p + ' .ct-sp-table .ct-sp-by{display:block;font-size:.7rem;color:#94a3b8}' +
+                p + ' .ct-sp-table .ct-sp-notes{max-width:220px;color:#475569;white-space:pre-line;word-break:break-word}' +
+                p + ' .ct-sp-table .ct-sp-muted{color:#94a3b8}' +
+                p + ' .ct-sp-table tr.is-legacy td{background:#fffbeb;color:#92400e;font-style:italic}' +
+                p + ' .ct-sp-method{display:inline-block;padding:.15rem .5rem;border-radius:6px;background:#eef2ff;color:#4338ca;font-size:.74rem;font-weight:600;white-space:nowrap}' +
+                p + ' .ct-sp-del{width:28px;height:28px;padding:0;border:0;border-radius:7px;background:#fef2f2;color:#dc2626;font-size:.8rem}' +
+                p + ' .ct-sp-del:hover{filter:brightness(.95)}' +
+                p + ' .ct-sp-empty{text-align:center;color:#94a3b8;font-size:.85rem;padding:1.3rem .5rem}' +
+                p + ' .ct-sp-history.is-loading{opacity:.55;pointer-events:none}' +
+                p + ' .ct-sp-card.is-over{background:#fffbeb;border-color:#fde68a}' + p + ' .ct-sp-card.is-over .ct-sp-card-label{color:#b45309}' +
+                p + ' .ct-sp-head .ct-svc-icon.is-customer{background:#fff1f2;color:#e11d48}' +
+                '@media (max-width:767.98px){' + p + ' .ct-sp-cards{grid-template-columns:repeat(2,minmax(0,1fr))}' + p + ' .ct-sp-details{grid-template-columns:repeat(2,minmax(0,1fr))}}'
+            ).appendTo('head');
+        }
+
+        function ensurePaymentModal() {
+            if ($('#ctSvcPayModal').length) {
+                return;
+            }
+            ensurePayModalStyles();
+            $('body').append(
+                '<div class="modal fade ct-pay-modal" id="ctSvcPayModal" tabindex="-1" role="dialog" aria-labelledby="ctSvcPayTitle" aria-hidden="true">' +
+                '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document"><div class="modal-content">' +
+                '<div class="modal-header"><div class="ct-sp-head">' +
+                '<span class="ct-svc-icon" id="ctSvcPayIcon"><i class="fas fa-concierge-bell"></i></span>' +
+                '<div style="min-width:0"><h5 class="modal-title" id="ctSvcPayTitle">Service</h5><div class="ct-sp-sub" id="ctSvcPaySub"></div></div></div>' +
+                '<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>' +
+                '<div class="modal-body">' +
+                '<div class="ct-sp-cards">' +
+                '<div class="ct-sp-card is-total"><div class="ct-sp-card-label">Total Amount</div><div class="ct-sp-card-val js-sp-total">—</div></div>' +
+                '<div class="ct-sp-card is-paid"><div class="ct-sp-card-label">Total Paid</div><div class="ct-sp-card-val js-sp-paid">—</div></div>' +
+                '<div class="ct-sp-card is-due"><div class="ct-sp-card-label">Balance</div><div class="ct-sp-card-val js-sp-balance">—</div></div>' +
+                '<div class="ct-sp-card is-status"><div class="ct-sp-card-label">Payment Status</div><div class="ct-sp-card-val js-sp-status"></div></div>' +
+                '</div>' +
+                '<div class="ct-sp-progress"><div class="progress"><div class="progress-bar js-sp-bar" role="progressbar" style="width:0%"></div></div><span class="js-sp-pct">0% paid</span></div>' +
+
+                '<div class="ct-sp-section"><div class="ct-sp-section-head"><span class="ct-sp-section-title">Payment Details</span></div>' +
+                '<dl class="ct-sp-details">' +
+                '<div><dt>Service</dt><dd class="js-sp-d-service"></dd></div>' +
+                '<div><dt>Supplier</dt><dd class="js-sp-d-supplier"></dd></div>' +
+                '<div><dt>Payments Recorded</dt><dd class="js-sp-d-count"></dd></div>' +
+                '<div><dt>Last Payment</dt><dd class="js-sp-d-last"></dd></div>' +
+                '<div><dt>Last Payment Method</dt><dd class="js-sp-d-method"></dd></div>' +
+                '<div><dt>Vouchers Attached</dt><dd class="js-sp-d-vouchers"></dd></div>' +
+                '</dl></div>' +
+
+                '<div class="ct-sp-section">' +
+                '<div class="ct-sp-section-head"><span class="ct-sp-section-title">Payment History</span>' +
+                '<button type="button" class="ct-sp-add-btn" id="ctSpAddToggle"><i class="fas fa-plus mr-1"></i>Add Payment</button></div>' +
+                '<form class="ct-sp-form d-none" id="ctSpForm" novalidate autocomplete="off">' +
+                '<div class="form-row">' +
+                '<div class="form-group col-6 col-md-4"><label for="ctSpDateText">Payment Date <span class="text-danger">*</span></label>' +
+                '<input type="text" class="form-control" id="ctSpDateText" placeholder="dd/mm/yyyy"><input type="hidden" id="ctSpDate"></div>' +
+                '<div class="form-group col-6 col-md-4"><label for="ctSpAmount">Amount <span class="text-danger">*</span></label>' +
+                '<div class="input-group"><div class="input-group-prepend"><span class="input-group-text">\u20B9</span></div>' +
+                '<input type="text" inputmode="decimal" class="form-control" id="ctSpAmount" placeholder="0.00"></div>' +
+                '<div class="ct-sp-hint js-sp-amount-hint"></div></div>' +
+                '<div class="form-group col-12 col-md-4"><label for="ctSpMethod">Payment Method <span class="text-danger">*</span></label>' +
+                '<select class="form-control" id="ctSpMethod"></select></div>' +
+                '<div class="form-group col-12 col-md-4"><label for="ctSpReference">Reference / Transaction No.</label>' +
+                '<input type="text" class="form-control" id="ctSpReference" maxlength="120" placeholder="Optional"></div>' +
+                '<div class="form-group col-12 col-md-8"><label for="ctSpNotes">Notes</label>' +
+                '<textarea class="form-control" id="ctSpNotes" rows="2" maxlength="500" placeholder="Optional"></textarea></div>' +
+                '</div>' +
+                '<div class="ct-sp-form-actions"><span class="ct-sp-error" id="ctSpError"></span>' +
+                '<button type="button" class="btn btn-light" id="ctSpCancel">Cancel</button>' +
+                '<button type="submit" class="btn btn-success" id="ctSpSave"><i class="fas fa-check mr-1"></i>Save Payment</button></div>' +
+                '</form>' +
+                '<div class="ct-sp-history" id="ctSpHistory"></div>' +
+                '</div>' +
+                '</div>' +
+                '<div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Close</button></div>' +
+                '</div></div></div>'
+            );
+
+            spUseUiDate = !!($.datepicker && $.fn.datepicker);
+            if (spUseUiDate) {
+                $('#ctSpDateText').datepicker({
+                    dateFormat: 'dd/mm/yy',
+                    altField: '#ctSpDate',
+                    altFormat: 'yy-mm-dd',
+                    maxDate: 0,
+                    beforeShow: function () {
+                        window.setTimeout(function () { $('#ui-datepicker-div').css('z-index', 2200); }, 0);
+                    }
+                });
+            } else {
+                $('#ctSpDateText').attr({ type: 'date', placeholder: '' });
+            }
+            bindPaymentEvents();
+        }
+
+        function spReadDate() {
+            if (!spUseUiDate) {
+                return String($('#ctSpDateText').val() || '');
+            }
+            var text = $.trim(String($('#ctSpDateText').val() || ''));
+            if (!text) {
+                return '';
+            }
+            try {
+                var d = $.datepicker.parseDate('dd/mm/yy', text);
+                return d ? $.datepicker.formatDate('yy-mm-dd', d) : '';
+            } catch (err) {
+                return '';
+            }
+        }
+
+        function spSetDate(ymd) {
+            if (spUseUiDate) {
+                var m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                $('#ctSpDateText').datepicker('setDate', m ? new Date(+m[1], +m[2] - 1, +m[3]) : null);
+            } else {
+                $('#ctSpDateText').val(ymd).attr('max', spTodayYmd());
+            }
+        }
+
+        function spFillMethods() {
+            var $sel = $('#ctSpMethod');
+            var current = $sel.val();
+            $sel.html(spState.methods.map(function (m) {
+                return '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+            }).join(''));
+            if (current && spState.methods.indexOf(current) >= 0) {
+                $sel.val(current);
+            }
+        }
+
+        function renderPaymentModal() {
+            var $row = spFindRow(spState.uid);
+            if (!$row.length) {
+                return;
+            }
+            var f = spRowFigures($row);
+            var status = paymentStatus(f.total, f.paid);
+            var pct = f.total > 0 ? Math.min(100, Math.round((f.paid / f.total) * 100)) : (f.paid > 0 ? 100 : 0);
+
+            $('#ctSvcPayIcon').attr('class', 'ct-svc-icon is-' + spState.key)
+                .html('<i class="fas ' + (SERVICE_ICONS[spState.key] || 'fa-concierge-bell') + '"></i>');
+            $('#ctSvcPayTitle').text(f.label);
+            $('#ctSvcPaySub').text(f.supplier ? 'Supplier: ' + f.supplier : 'No supplier set');
+
+            var $m = $('#ctSvcPayModal');
+            $m.find('.js-sp-total').text('\u20B9 ' + money2(f.total));
+            $m.find('.js-sp-paid').text('\u20B9 ' + money2(f.paid));
+            $m.find('.js-sp-balance').text('\u20B9 ' + money2(f.balance));
+            $m.find('.js-sp-status').html(statusPillHtml(f.total, f.paid));
+            $m.find('.js-sp-bar').css('width', pct + '%').attr('aria-valuenow', pct);
+            $m.find('.js-sp-pct').text(pct + '% paid');
+
+            var list = spState.payments;
+            var last = list[0] || null;
+            $m.find('.js-sp-d-service').text(f.label);
+            $m.find('.js-sp-d-supplier').text(f.supplier || '—');
+            $m.find('.js-sp-d-count').text(spState.loaded ? String(list.length) : '…');
+            $m.find('.js-sp-d-last').text(last ? spFormatDate(last.payment_date) + ' · \u20B9 ' + money2(last.amount) : '—');
+            $m.find('.js-sp-d-method').text(last ? last.method : '—');
+            $m.find('.js-sp-d-vouchers').text(String(f.vouchers));
+
+            $('#ctSpAddToggle').prop('disabled', spState.busy);
+            $m.find('.js-sp-amount-hint').text(f.total > 0 ? 'Balance due: \u20B9 ' + money2(f.balance) : 'Set the service Total first.');
+            renderPaymentHistory(f);
+        }
+
+        function renderPaymentHistory(f) {
+            var $wrap = $('#ctSpHistory');
+            if (!spState.loaded) {
+                $wrap.html('<div class="ct-sp-empty"><i class="fas fa-spinner fa-spin mr-1"></i>Loading payments…</div>');
+                return;
+            }
+            var list = spState.payments;
+            var recorded = list.reduce(function (sum, p) { return sum + (parseFloat(p.amount) || 0); }, 0);
+            var legacy = Math.round((f.paid - recorded) * 100) / 100;
+            if (!list.length && legacy <= 0) {
+                $wrap.html('<div class="ct-sp-empty"><i class="far fa-credit-card mr-1"></i>No payments recorded yet. Click <strong>Add Payment</strong> to record one.</div>');
+                return;
+            }
+            var rows = list.map(function (p) {
+                return '<tr data-id="' + p.id + '">' +
+                    '<td class="ct-sp-date">' + esc(spFormatDate(p.payment_date)) +
+                    (p.created_by ? '<span class="ct-sp-by">by ' + esc(p.created_by) + '</span>' : '') + '</td>' +
+                    '<td class="ct-sp-amt">\u20B9 ' + money2(p.amount) + '</td>' +
+                    '<td><span class="ct-sp-method">' + esc(p.method || '—') + '</span></td>' +
+                    '<td>' + (p.reference ? esc(p.reference) : '<span class="ct-sp-muted">—</span>') + '</td>' +
+                    '<td class="ct-sp-notes">' + (p.notes ? esc(p.notes) : '<span class="ct-sp-muted">—</span>') + '</td>' +
+                    '<td class="text-right"><button type="button" class="ct-sp-del js-sp-del" title="Delete payment" aria-label="Delete payment"><i class="far fa-trash-alt"></i></button></td>' +
+                    '</tr>';
+            }).join('');
+            if (legacy > 0.005) {
+                rows += '<tr class="is-legacy"><td class="ct-sp-date">—</td>' +
+                    '<td class="ct-sp-amt">\u20B9 ' + money2(legacy) + '</td>' +
+                    '<td colspan="4">Paid amount entered earlier without payment details</td></tr>';
+            }
+            $wrap.html(
+                '<div class="table-responsive"><table class="table ct-sp-table"><thead><tr>' +
+                '<th>Date</th><th class="text-right">Amount</th><th>Method</th><th>Reference / Txn No.</th><th>Notes</th><th></th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+            );
+        }
+
+        function spShowForm(show) {
+            var $form = $('#ctSpForm');
+            $('#ctSpError').text('');
+            if (!show) {
+                $form.addClass('d-none');
+                $('#ctSpAddToggle').removeClass('d-none');
+                return;
+            }
+            var $row = spFindRow(spState.uid);
+            var f = $row.length ? spRowFigures($row) : { balance: 0 };
+            spFillMethods();
+            spSetDate(spTodayYmd());
+            $('#ctSpAmount').val(f.balance > 0 ? money2(f.balance) : '');
+            $('#ctSpReference, #ctSpNotes').val('');
+            $form.removeClass('d-none');
+            $('#ctSpAddToggle').addClass('d-none');
+            window.setTimeout(function () { $('#ctSpAmount').trigger('focus').trigger('select'); }, 50);
+        }
+
+        function spApplyPaidDelta(uid, delta, payments) {
+            var $row = spFindRow(uid);
+            if (!$row.length) {
+                return;
+            }
+            var paid = Math.max(0, Math.round((parseNum($row.find('.ct-paid').val()) + delta) * 100) / 100);
+            $row.find('.ct-paid').val(amountInputValue(paid));
+            $row.attr('data-payments', String(payments.length));
+            recalcRowBalance($row);
+            updatePrimaryStats();
+        }
+
+        function openPaymentModal($row, withForm) {
+            if (!activeQuotationId || !$row.length) {
+                return;
+            }
+            ensurePaymentModal();
+            spSeq++;
+            var seq = spSeq;
+            spState.uid = String($row.attr('data-uid') || '');
+            spState.key = String($row.attr('data-key') || '');
+            spState.quotationId = activeQuotationId;
+            spState.payments = [];
+            spState.loaded = false;
+            spState.busy = false;
+            spShowForm(false);
+            renderPaymentModal();
+            $('#ctSvcPayModal').modal('show');
+            if (withForm) {
+                spShowForm(true);
+            }
+
+            $.getJSON('crm/ajax/service_payments.php', {
+                action: 'list',
+                quotation_id: spState.quotationId,
+                service_uid: spState.uid
+            })
+                .done(function (res) {
+                    if (seq !== spSeq) {
+                        return;
+                    }
+                    if (!res || !res.success) {
+                        showToast((res && res.message) || 'Could not load payments.', 'error');
+                        return;
+                    }
+                    spState.payments = res.payments || [];
+                    if (res.methods && res.methods.length) {
+                        spState.methods = res.methods;
+                        spFillMethods();
+                    }
+                    spState.loaded = true;
+                    spFindRow(spState.uid).attr('data-payments', String(spState.payments.length));
+                    updatePrimaryStats();
+                    renderPaymentModal();
+                })
+                .fail(function () {
+                    if (seq === spSeq) {
+                        $('#ctSpHistory').html('<div class="ct-sp-empty text-danger"><i class="fas fa-exclamation-circle mr-1"></i>Could not load payments. Close and try again.</div>');
+                    }
+                });
+        }
+
+        function submitPayment() {
+            if (spState.busy) {
+                return;
+            }
+            var $row = spFindRow(spState.uid);
+            if (!$row.length) {
+                return;
+            }
+            var f = spRowFigures($row);
+            var $err = $('#ctSpError').text('');
+            var amount = Math.round(parseNum($('#ctSpAmount').val()) * 100) / 100;
+            var date = spReadDate();
+            var method = String($('#ctSpMethod').val() || '');
+
+            if (f.total <= 0) {
+                $err.text('Enter the Total amount for this service in the table first.');
+                return;
+            }
+            if (!(amount > 0)) {
+                $err.text('Enter a payment amount greater than 0.');
+                $('#ctSpAmount').trigger('focus');
+                return;
+            }
+            if (amount > f.balance + 0.005) {
+                $err.text('Amount is more than the balance due (\u20B9 ' + money2(f.balance) + ').');
+                $('#ctSpAmount').trigger('focus');
+                return;
+            }
+            if (!date) {
+                $err.text('Enter a valid payment date.');
+                $('#ctSpDateText').trigger('focus');
+                return;
+            }
+            if (date > spTodayYmd()) {
+                $err.text('Payment date cannot be in the future.');
+                return;
+            }
+            if (!method) {
+                $err.text('Choose a payment method.');
+                return;
+            }
+
+            var uid = spState.uid;
+            var quotationId = spState.quotationId;
+            var $btn = $('#ctSpSave').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving…');
+            spState.busy = true;
+            $.ajax({
+                url: 'crm/ajax/service_payments.php',
+                type: 'POST',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: {
+                    action: 'add',
+                    quotation_id: quotationId,
+                    service_uid: uid,
+                    service_key: spState.key,
+                    amount: amount.toFixed(2),
+                    payment_date: date,
+                    method: method,
+                    reference: $.trim(String($('#ctSpReference').val() || '')),
+                    notes: $.trim(String($('#ctSpNotes').val() || ''))
+                }
+            })
+                .done(function (res) {
+                    if (!res || !res.success) {
+                        $err.text((res && res.message) || 'Could not save payment.');
+                        return;
+                    }
+                    if (quotationId === activeQuotationId) {
+                        spApplyPaidDelta(uid, parseFloat(res.amount) || amount, res.payments || []);
+                    }
+                    if (uid === spState.uid) {
+                        spState.payments = res.payments || [];
+                        spState.loaded = true;
+                        spShowForm(false);
+                        renderPaymentModal();
+                    }
+                    showToast(res.message || 'Payment recorded.', 'success');
+                })
+                .fail(function (xhr) {
+                    $err.text((xhr && xhr.responseJSON && xhr.responseJSON.message) || 'Could not save payment. Please try again.');
+                })
+                .always(function () {
+                    spState.busy = false;
+                    $btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i>Save Payment');
+                    $('#ctSpAddToggle').prop('disabled', false);
+                });
+        }
+
+        function deletePayment(p) {
+            var uid = spState.uid;
+            var quotationId = spState.quotationId;
+            var $btn = $('#ctSpHistory tr[data-id="' + p.id + '"] .js-sp-del').prop('disabled', true);
+            $.ajax({
+                url: 'crm/ajax/service_payments.php',
+                type: 'POST',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: { action: 'delete', quotation_id: quotationId, service_uid: uid, payment_id: p.id }
+            })
+                .done(function (res) {
+                    if (!res || !res.success) {
+                        showToast((res && res.message) || 'Could not delete payment.', 'error');
+                        $btn.prop('disabled', false);
+                        return;
+                    }
+                    if (quotationId === activeQuotationId) {
+                        spApplyPaidDelta(uid, -(parseFloat(res.amount) || 0), res.payments || []);
+                    }
+                    if (uid === spState.uid) {
+                        spState.payments = res.payments || [];
+                        renderPaymentModal();
+                    }
+                    showToast('Payment deleted.', 'success');
+                })
+                .fail(function () {
+                    showToast('Could not delete payment. Please try again.', 'error');
+                    $btn.prop('disabled', false);
+                });
+        }
+
+        function bindPaymentEvents() {
+            var $modal = $('#ctSvcPayModal');
+            $modal.on('shown.bs.modal', function () {
+                $('.modal-backdrop').last().css('z-index', 1075);
+            });
+            $modal.on('hidden.bs.modal', function () {
+                spSeq++;
+                spState.uid = '';
+                if (spUseUiDate) {
+                    $('#ctSpDateText').datepicker('hide');
+                }
+                if ($('#confirmTourModal').hasClass('show')) {
+                    $('body').addClass('modal-open');
+                }
+            });
+            $('#ctSpAddToggle').on('click', function () {
+                spShowForm(true);
+            });
+            $('#ctSpCancel').on('click', function () {
+                spShowForm(false);
+            });
+            $('#ctSpForm').on('submit', function (e) {
+                e.preventDefault();
+                submitPayment();
+            });
+            $('#ctSpAmount').on('blur', function () {
+                var v = $.trim(String($(this).val() || ''));
+                $(this).val(v === '' ? '' : money2(parseNum(v)));
+            });
+            $modal.on('click', '.js-sp-del', function () {
+                var id = String($(this).closest('tr').attr('data-id'));
+                var p = null;
+                for (var i = 0; i < spState.payments.length; i++) {
+                    if (String(spState.payments[i].id) === id) {
+                        p = spState.payments[i];
+                        break;
+                    }
+                }
+                if (!p) {
+                    return;
+                }
+                showConfirmDialog({
+                    variant: 'danger',
+                    icon: 'fa-trash-alt',
+                    title: 'Delete payment?',
+                    message: 'The payment of <strong>\u20B9 ' + money2(p.amount) + '</strong> on ' + esc(spFormatDate(p.payment_date)) +
+                        ' will be removed and the Paid amount reduced. This cannot be undone.',
+                    confirmText: 'Yes, Delete',
+                    onConfirm: function () {
+                        deletePayment(p);
+                    }
+                });
+            });
+        }
+
+        var cpState = { quotationId: 0, payments: [], methods: SP_DEFAULT_METHODS.slice(), loaded: false, busy: false };
+        var cpSeq = 0;
+        var cpUseUiDate = false;
+
+        function ensureCustomerPayModal() {
+            if ($('#ctCustPayModal').length) {
+                return;
+            }
+            ensurePayModalStyles();
+            $('body').append(
+                '<div class="modal fade ct-pay-modal" id="ctCustPayModal" tabindex="-1" role="dialog" aria-labelledby="ctCustPayTitle" aria-hidden="true">' +
+                '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document"><div class="modal-content">' +
+                '<div class="modal-header"><div class="ct-sp-head">' +
+                '<span class="ct-svc-icon is-customer"><i class="fas fa-user"></i></span>' +
+                '<div style="min-width:0"><h5 class="modal-title" id="ctCustPayTitle">Customer Payments</h5><div class="ct-sp-sub" id="ctCustPaySub"></div></div></div>' +
+                '<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>' +
+                '<div class="modal-body">' +
+                '<div class="ct-sp-cards">' +
+                '<div class="ct-sp-card is-total"><div class="ct-sp-card-label">Total Amount</div><div class="ct-sp-card-val js-cp-total">—</div></div>' +
+                '<div class="ct-sp-card is-paid"><div class="ct-sp-card-label">Paid Amount</div><div class="ct-sp-card-val js-cp-paid">—</div></div>' +
+                '<div class="ct-sp-card is-due"><div class="ct-sp-card-label">Due Amount</div><div class="ct-sp-card-val js-cp-due">—</div></div>' +
+                '<div class="ct-sp-card is-status"><div class="ct-sp-card-label">Payment Status</div><div class="ct-sp-card-val js-cp-status"></div></div>' +
+                '</div>' +
+                '<div class="ct-sp-progress"><div class="progress"><div class="progress-bar js-cp-bar" role="progressbar" style="width:0%"></div></div><span class="js-cp-pct">0% paid</span></div>' +
+                '<div class="alert alert-warning py-2 px-3 mt-2 mb-0 small d-none js-cp-over"></div>' +
+                '<div class="ct-sp-section">' +
+                '<div class="ct-sp-section-head"><span class="ct-sp-section-title">Payments Received</span>' +
+                '<button type="button" class="ct-sp-add-btn" id="ctCpAddToggle"><i class="fas fa-plus mr-1"></i>Add Payment</button></div>' +
+                '<form class="ct-sp-form d-none" id="ctCpForm" novalidate autocomplete="off">' +
+                '<div class="form-row">' +
+                '<div class="form-group col-6 col-md-4"><label for="ctCpDateText">Payment Date <span class="text-danger">*</span></label>' +
+                '<input type="text" class="form-control" id="ctCpDateText" placeholder="dd/mm/yyyy"></div>' +
+                '<div class="form-group col-6 col-md-4"><label for="ctCpAmount">Amount <span class="text-danger">*</span></label>' +
+                '<div class="input-group"><div class="input-group-prepend"><span class="input-group-text">\u20B9</span></div>' +
+                '<input type="text" inputmode="decimal" class="form-control" id="ctCpAmount" placeholder="0.00"></div>' +
+                '<div class="ct-sp-hint js-cp-amount-hint"></div></div>' +
+                '<div class="form-group col-12 col-md-4"><label for="ctCpMethod">Payment Method <span class="text-danger">*</span></label>' +
+                '<select class="form-control" id="ctCpMethod"></select></div>' +
+                '<div class="form-group col-12 col-md-4"><label for="ctCpReference">Reference / Transaction No.</label>' +
+                '<input type="text" class="form-control" id="ctCpReference" maxlength="120" placeholder="Optional"></div>' +
+                '<div class="form-group col-12 col-md-8"><label for="ctCpNotes">Notes</label>' +
+                '<textarea class="form-control" id="ctCpNotes" rows="2" maxlength="500" placeholder="Optional"></textarea></div>' +
+                '</div>' +
+                '<div class="ct-sp-form-actions"><span class="ct-sp-error" id="ctCpError"></span>' +
+                '<button type="button" class="btn btn-light" id="ctCpCancel">Cancel</button>' +
+                '<button type="submit" class="btn btn-success" id="ctCpSave"><i class="fas fa-check mr-1"></i>Save Payment</button></div>' +
+                '</form>' +
+                '<div class="ct-sp-history" id="ctCpHistory"></div>' +
+                '</div>' +
+                '</div>' +
+                '<div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Close</button></div>' +
+                '</div></div></div>'
+            );
+
+            cpUseUiDate = !!($.datepicker && $.fn.datepicker);
+            if (cpUseUiDate) {
+                $('#ctCpDateText').datepicker({
+                    dateFormat: 'dd/mm/yy',
+                    maxDate: 0,
+                    beforeShow: function () {
+                        window.setTimeout(function () { $('#ui-datepicker-div').css('z-index', 2200); }, 0);
+                    }
+                });
+            } else {
+                $('#ctCpDateText').attr({ type: 'date', placeholder: '' });
+            }
+            bindCustomerPayEvents();
+        }
+
+        function cpReadDate() {
+            var raw = $.trim(String($('#ctCpDateText').val() || ''));
+            if (!cpUseUiDate || !raw) {
+                return raw;
+            }
+            try {
+                var d = $.datepicker.parseDate('dd/mm/yy', raw);
+                return d ? $.datepicker.formatDate('yy-mm-dd', d) : '';
+            } catch (err) {
+                return '';
+            }
+        }
+
+        function cpSetDate(ymd) {
+            if (cpUseUiDate) {
+                var m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                $('#ctCpDateText').datepicker('setDate', m ? new Date(+m[1], +m[2] - 1, +m[3]) : null);
+            } else {
+                $('#ctCpDateText').val(ymd).attr('max', spTodayYmd());
+            }
+        }
+
+        function cpFillMethods() {
+            var $sel = $('#ctCpMethod');
+            var current = $sel.val();
+            $sel.html(cpState.methods.map(function (m) {
+                return '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+            }).join(''));
+            if (current && cpState.methods.indexOf(current) >= 0) {
+                $sel.val(current);
+            }
+        }
+
+        function cpApplyTotals(res) {
+            var paid = parseFloat(res && res.paid_total);
+            var pkg = parseFloat(res && res.package_total);
+            if (!isNaN(paid)) {
+                activeCustomerPaid = paid;
+            }
+            if (!isNaN(pkg)) {
+                activePackageTotal = pkg;
+            }
+            updatePrimaryStats();
+        }
+
+        function renderCustomerPayModal() {
+            var total = activePackageTotal || 0;
+            var paid = activeCustomerPaid || 0;
+            var due = customerDue();
+            var excess = Math.round((paid - total) * 100) / 100;
+            var pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : (paid > 0 ? 100 : 0);
+            var guest = $.trim(String($('#ctGuestName').val() || ''));
+            var $m = $('#ctCustPayModal');
+
+            $('#ctCustPaySub').text(guest ? 'Primary Contact: ' + guest : 'Primary Contact');
+            $m.find('.js-cp-total').text('\u20B9 ' + money2(total));
+            $m.find('.js-cp-paid').text('\u20B9 ' + money2(paid));
+            $m.find('.js-cp-due').text('\u20B9 ' + money2(due));
+            $m.find('.js-cp-status').html(statusPillHtml(total, paid));
+            $m.find('.js-cp-bar').css('width', pct + '%').attr('aria-valuenow', pct);
+            $m.find('.js-cp-pct').text(pct + '% paid');
+            $m.find('.js-cp-over').toggleClass('d-none', !(excess > 0.005))
+                .html(excess > 0.005 ? '<i class="fas fa-info-circle mr-1"></i>Received <strong>\u20B9 ' + money2(excess) + '</strong> more than the Total Amount.' : '');
+            $m.find('.js-cp-amount-hint').text('Due amount: \u20B9 ' + money2(due));
+            $('#ctCpAddToggle').prop('disabled', cpState.busy);
+
+            var $wrap = $('#ctCpHistory');
+            if (!cpState.loaded) {
+                $wrap.html('<div class="ct-sp-empty"><i class="fas fa-spinner fa-spin mr-1"></i>Loading payments…</div>');
+                return;
+            }
+            if (!cpState.payments.length) {
+                $wrap.html('<div class="ct-sp-empty"><i class="far fa-credit-card mr-1"></i>No payments received yet. Click <strong>Add Payment</strong> to record one.</div>');
+                return;
+            }
+            var rows = cpState.payments.map(function (p) {
+                return '<tr data-id="' + p.id + '">' +
+                    '<td class="ct-sp-date">' + esc(spFormatDate(p.payment_date)) +
+                    (p.created_by ? '<span class="ct-sp-by">by ' + esc(p.created_by) + '</span>' : '') + '</td>' +
+                    '<td class="ct-sp-amt">\u20B9 ' + money2(p.amount) + '</td>' +
+                    '<td><span class="ct-sp-method">' + esc(p.method || '—') + '</span></td>' +
+                    '<td>' + (p.reference ? esc(p.reference) : '<span class="ct-sp-muted">—</span>') + '</td>' +
+                    '<td class="ct-sp-notes">' + (p.notes ? esc(p.notes) : '<span class="ct-sp-muted">—</span>') + '</td>' +
+                    '<td class="text-right"><button type="button" class="ct-sp-del js-cp-del" title="Delete payment" aria-label="Delete payment"><i class="far fa-trash-alt"></i></button></td>' +
+                    '</tr>';
+            }).join('');
+            $wrap.html(
+                '<div class="table-responsive"><table class="table ct-sp-table"><thead><tr>' +
+                '<th>Date</th><th class="text-right">Amount</th><th>Method</th><th>Reference / Txn No.</th><th>Notes</th><th></th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+            );
+        }
+
+        function cpShowForm(show) {
+            $('#ctCpError').text('');
+            if (!show) {
+                $('#ctCpForm').addClass('d-none');
+                $('#ctCpAddToggle').removeClass('d-none');
+                return;
+            }
+            var due = customerDue();
+            cpFillMethods();
+            cpSetDate(spTodayYmd());
+            $('#ctCpAmount').val(due > 0 ? money2(due) : '');
+            $('#ctCpReference, #ctCpNotes').val('');
+            $('#ctCpForm').removeClass('d-none');
+            $('#ctCpAddToggle').addClass('d-none');
+            window.setTimeout(function () { $('#ctCpAmount').trigger('focus').trigger('select'); }, 50);
+        }
+
+        function openCustomerPayModal(withForm) {
+            if (!activeQuotationId) {
+                return;
+            }
+            ensureCustomerPayModal();
+            cpSeq++;
+            var seq = cpSeq;
+            cpState.quotationId = activeQuotationId;
+            cpState.payments = [];
+            cpState.loaded = false;
+            cpState.busy = false;
+            cpShowForm(false);
+            renderCustomerPayModal();
+            $('#ctCustPayModal').modal('show');
+            if (withForm) {
+                cpShowForm(true);
+            }
+            $.getJSON('crm/ajax/customer_payments.php', { action: 'list', quotation_id: cpState.quotationId })
+                .done(function (res) {
+                    if (seq !== cpSeq) {
+                        return;
+                    }
+                    if (!res || !res.success) {
+                        showToast((res && res.message) || 'Could not load payments.', 'error');
+                        return;
+                    }
+                    cpState.payments = res.payments || [];
+                    if (res.methods && res.methods.length) {
+                        cpState.methods = res.methods;
+                        cpFillMethods();
+                    }
+                    cpState.loaded = true;
+                    cpApplyTotals(res);
+                    renderCustomerPayModal();
+                })
+                .fail(function () {
+                    if (seq === cpSeq) {
+                        $('#ctCpHistory').html('<div class="ct-sp-empty text-danger"><i class="fas fa-exclamation-circle mr-1"></i>Could not load payments. Close and try again.</div>');
+                    }
+                });
+        }
+
+        function submitCustomerPayment() {
+            if (cpState.busy) {
+                return;
+            }
+            var $err = $('#ctCpError').text('');
+            var amount = Math.round(parseNum($('#ctCpAmount').val()) * 100) / 100;
+            var date = cpReadDate();
+            var method = String($('#ctCpMethod').val() || '');
+            if (!(amount > 0)) {
+                $err.text('Enter a payment amount greater than 0.');
+                $('#ctCpAmount').trigger('focus');
+                return;
+            }
+            if (!date) {
+                $err.text('Enter a valid payment date.');
+                $('#ctCpDateText').trigger('focus');
+                return;
+            }
+            if (date > spTodayYmd()) {
+                $err.text('Payment date cannot be in the future.');
+                return;
+            }
+            if (!method) {
+                $err.text('Choose a payment method.');
+                return;
+            }
+            var quotationId = cpState.quotationId;
+            var $btn = $('#ctCpSave').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving…');
+            cpState.busy = true;
+            $.ajax({
+                url: 'crm/ajax/customer_payments.php',
+                type: 'POST',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: {
+                    action: 'add',
+                    quotation_id: quotationId,
+                    amount: amount.toFixed(2),
+                    payment_date: date,
+                    method: method,
+                    reference: $.trim(String($('#ctCpReference').val() || '')),
+                    notes: $.trim(String($('#ctCpNotes').val() || ''))
+                }
+            })
+                .done(function (res) {
+                    if (!res || !res.success) {
+                        $err.text((res && res.message) || 'Could not save payment.');
+                        return;
+                    }
+                    if (quotationId !== activeQuotationId) {
+                        return;
+                    }
+                    cpState.payments = res.payments || [];
+                    cpState.loaded = true;
+                    cpApplyTotals(res);
+                    cpShowForm(false);
+                    renderCustomerPayModal();
+                    showToast(res.message || 'Payment received.', 'success');
+                })
+                .fail(function (xhr) {
+                    $err.text((xhr && xhr.responseJSON && xhr.responseJSON.message) || 'Could not save payment. Please try again.');
+                })
+                .always(function () {
+                    cpState.busy = false;
+                    $btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i>Save Payment');
+                    $('#ctCpAddToggle').prop('disabled', false);
+                });
+        }
+
+        function deleteCustomerPayment(p) {
+            var quotationId = cpState.quotationId;
+            var $btn = $('#ctCpHistory tr[data-id="' + p.id + '"] .js-cp-del').prop('disabled', true);
+            $.ajax({
+                url: 'crm/ajax/customer_payments.php',
+                type: 'POST',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: { action: 'delete', quotation_id: quotationId, payment_id: p.id }
+            })
+                .done(function (res) {
+                    if (!res || !res.success) {
+                        showToast((res && res.message) || 'Could not delete payment.', 'error');
+                        $btn.prop('disabled', false);
+                        return;
+                    }
+                    if (quotationId !== activeQuotationId) {
+                        return;
+                    }
+                    cpState.payments = res.payments || [];
+                    cpApplyTotals(res);
+                    renderCustomerPayModal();
+                    showToast('Payment deleted.', 'success');
+                })
+                .fail(function () {
+                    showToast('Could not delete payment. Please try again.', 'error');
+                    $btn.prop('disabled', false);
+                });
+        }
+
+        function bindCustomerPayEvents() {
+            var $modal = $('#ctCustPayModal');
+            $modal.on('shown.bs.modal', function () {
+                $('.modal-backdrop').last().css('z-index', 1075);
+            });
+            $modal.on('hidden.bs.modal', function () {
+                cpSeq++;
+                if (cpUseUiDate) {
+                    $('#ctCpDateText').datepicker('hide');
+                }
+                if ($('#confirmTourModal').hasClass('show')) {
+                    $('body').addClass('modal-open');
+                }
+            });
+            $('#ctCpAddToggle').on('click', function () {
+                cpShowForm(true);
+            });
+            $('#ctCpCancel').on('click', function () {
+                cpShowForm(false);
+            });
+            $('#ctCpForm').on('submit', function (e) {
+                e.preventDefault();
+                submitCustomerPayment();
+            });
+            $('#ctCpAmount').on('blur', function () {
+                var v = $.trim(String($(this).val() || ''));
+                $(this).val(v === '' ? '' : money2(parseNum(v)));
+            });
+            $modal.on('click', '.js-cp-del', function () {
+                var id = String($(this).closest('tr').attr('data-id'));
+                var p = null;
+                for (var i = 0; i < cpState.payments.length; i++) {
+                    if (String(cpState.payments[i].id) === id) {
+                        p = cpState.payments[i];
+                        break;
+                    }
+                }
+                if (!p) {
+                    return;
+                }
+                showConfirmDialog({
+                    variant: 'danger',
+                    icon: 'fa-trash-alt',
+                    title: 'Delete payment?',
+                    message: 'The customer payment of <strong>\u20B9 ' + money2(p.amount) + '</strong> on ' + esc(spFormatDate(p.payment_date)) +
+                        ' will be removed and the Paid Amount reduced. This cannot be undone.',
+                    confirmText: 'Yes, Delete',
+                    onConfirm: function () {
+                        deleteCustomerPayment(p);
+                    }
+                });
+            });
+        }
+
+        $(document).on('click', '#ctPrimaryCard .js-cust-pay-add', function (e) {
+            e.stopPropagation();
+            openCustomerPayModal(true);
+        });
+
+        $(document).on('click', '#ctPrimaryCard .ct-pstat.is-paid, #ctPrimaryCard .ct-pstat.is-due', function () {
+            openCustomerPayModal(false);
+        });
+
+        $(document).on('click', '#ctDetailRows .ct-view-row', function () {
+            openPaymentModal($(this).closest('.ct-detail-row'), false);
+        });
+
+        $(document).on('click', '#ctDetailRows .ct-pay-row', function () {
+            var $row = $(this).closest('.ct-detail-row');
+            openPaymentModal($row, spRowFigures($row).balance > 0);
         });
 
         $('#ctTravellerAttachBtn').on('click', function () {

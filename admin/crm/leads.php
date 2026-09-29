@@ -191,7 +191,7 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
     if ($infants > 0) {
         $paxParts[] = $infants . 'I';
     }
-    $paxText = !empty($paxParts) ? implode(' + ', $paxParts) : '—';
+    $paxText = !empty($paxParts) ? implode(' + ', $paxParts) : 'â€”';
 
     $customerInitial = crmCustomerInitialFromPayload($payload);
     $customerName = (string) ($row['customer_name'] ?? '');
@@ -199,7 +199,7 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
     $customerNameLetters = crmCustomerNameLetters($customerName !== '' ? $customerName : $customerDisplayName);
     $leadSource = trim((string) ($row['lead_source'] ?? ''));
     $referredBy = trim((string) ($row['referred_by'] ?? ''));
-    $leadSourceText = ($leadSource !== '' ? $leadSource : '—') . ' | ' . ($referredBy !== '' ? $referredBy : '—');
+    $leadSourceText = ($leadSource !== '' ? $leadSource : 'â€”') . ' | ' . ($referredBy !== '' ? $referredBy : 'â€”');
 
     return [
         'id' => (int) ($row['id'] ?? 0),
@@ -479,7 +479,7 @@ if ($usersTableCheck && $usersTableCheck->num_rows > 0) {
 function crmLeadsResolveAssignee(string $assignTo, array $lookup): ?array
 {
     $assignTo = trim($assignTo);
-    if ($assignTo === '' || $assignTo === '—') {
+    if ($assignTo === '' || $assignTo === 'â€”') {
         return null;
     }
     $key = strtolower($assignTo);
@@ -1380,7 +1380,7 @@ foreach ($destinationLookup as $destId => $destName) {
         @media (max-width: 575.98px) {
             .crm-leads-ui table.crm-leads-table thead th.col-actions,
             .crm-leads-ui table.crm-leads-table tbody td.col-actions {
-                /* Width controlled by JS fit — keep content from forcing scroll */
+                /* Width controlled by JS fit â€” keep content from forcing scroll */
                 max-width: none;
             }
         }
@@ -4028,11 +4028,11 @@ foreach ($destinationLookup as $destId => $destName) {
                                                     $createdText = date('d ', $ts) . strtoupper(date('M', $ts)) . date(', h:i A', $ts);
                                                 }
                                             }
-                                            $leadHoverInfo = "Phone: " . ((string) ($lead['customer_phone'] !== '' ? $lead['customer_phone'] : '—')) . "\n"
-                                                . "Email: " . ((string) ($lead['customer_email'] !== '' ? $lead['customer_email'] : '—'));
+                                            $leadHoverInfo = "Phone: " . ((string) ($lead['customer_phone'] !== '' ? $lead['customer_phone'] : 'â€”')) . "\n"
+                                                . "Email: " . ((string) ($lead['customer_email'] !== '' ? $lead['customer_email'] : 'â€”'));
                                             $leadSourceHover = trim((string) ($lead['lead_source_text'] ?? ''));
                                             if ($leadSourceHover === '') {
-                                                $leadSourceHover = '—';
+                                                $leadSourceHover = 'â€”';
                                             }
                                             $leadIdSourceTitle = 'Lead Source: ' . $leadSourceHover;
                                             $rowStage = (string) ($lead['stage'] ?? 'new_lead');
@@ -4060,7 +4060,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                         <span class="lead-name-text" title="<?= htmlspecialchars($leadHoverInfo, ENT_QUOTES, 'UTF-8') ?>" style="cursor:help;">
                                                             <?= htmlspecialchars((string) ($lead['customer_display_name'] ?? $lead['customer_name']), ENT_QUOTES, 'UTF-8') ?>
                                                         </span>
-                                                        <?php if ((string) $lead['pax_text'] !== '—') { ?>
+                                                        <?php if ((string) $lead['pax_text'] !== 'â€”') { ?>
                                                             <span class="badge-trav badge-trav-pax ml-1"><?= htmlspecialchars((string) $lead['pax_text'], ENT_QUOTES, 'UTF-8') ?></span>
                                                         <?php } ?>
                                                     </div>
@@ -4084,7 +4084,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                                 <?php } ?>
                                                             </div>
                                                         <?php } else { ?>
-                                                            <span class="text-muted">—</span>
+                                                            <span class="text-muted">â€”</span>
                                                         <?php } ?>
                                                     </div>
                                                 </td>
@@ -4092,7 +4092,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                     <?php if ((string) ($lead['travel_date_text'] ?? '') !== '') { ?>
                                                         <span class="badge-trav badge-trav-date"><i class="far fa-calendar"></i> <?= htmlspecialchars((string) $lead['travel_date_text'], ENT_QUOTES, 'UTF-8') ?></span>
                                                     <?php } else { ?>
-                                                        <span class="text-muted">—</span>
+                                                        <span class="text-muted">â€”</span>
                                                     <?php } ?>
                                                 </td>
                                                 <td class="col-services col-ld-services">
@@ -4107,7 +4107,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                         }
                                                     }
                                                     if (empty($leadServices)) { ?>
-                                                        <span class="text-muted">—</span>
+                                                        <span class="text-muted">â€”</span>
                                                     <?php } else {
                                                         $firstService = $leadServices[0];
                                                         $extraServices = array_slice($leadServices, 1);
@@ -4135,10 +4135,10 @@ foreach ($destinationLookup as $destId => $destName) {
                                                     <?php
                                                     $leadSourceMain = trim((string) ($lead['lead_source'] ?? ''));
                                                     $leadSourceRef = trim((string) ($lead['referred_by'] ?? ''));
-                                                    $leadSourceDisplay = ($leadSourceMain !== '' ? $leadSourceMain : '—') . ' | ' . ($leadSourceRef !== '' ? $leadSourceRef : '—');
+                                                    $leadSourceDisplay = ($leadSourceMain !== '' ? $leadSourceMain : 'â€”') . ' | ' . ($leadSourceRef !== '' ? $leadSourceRef : 'â€”');
                                                     ?>
                                                     <span class="cell-lead-source" title="<?= htmlspecialchars($leadSourceDisplay, ENT_QUOTES, 'UTF-8') ?>">
-                                                        <?= htmlspecialchars($leadSourceMain !== '' ? $leadSourceMain : '—', ENT_QUOTES, 'UTF-8') ?><span class="cell-lead-source-sep"> | </span><?= htmlspecialchars($leadSourceRef !== '' ? $leadSourceRef : '—', ENT_QUOTES, 'UTF-8') ?>
+                                                        <?= htmlspecialchars($leadSourceMain !== '' ? $leadSourceMain : 'â€”', ENT_QUOTES, 'UTF-8') ?><span class="cell-lead-source-sep"> | </span><?= htmlspecialchars($leadSourceRef !== '' ? $leadSourceRef : 'â€”', ENT_QUOTES, 'UTF-8') ?>
                                                     </span>
                                                 </td>
                                                 <td class="col-ld-assign">
@@ -4147,7 +4147,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                     $assignee = crmLeadsResolveAssignee($assignRaw, $assignUserLookup);
                                                     if ($assignee === null) {
                                                         ?>
-                                                        <span class="cell-assign is-empty">—</span>
+                                                        <span class="cell-assign is-empty">â€”</span>
                                                         <?php
                                                     } else {
                                                         $assignLabel = (string) $assignee['label'];
@@ -4195,7 +4195,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                                     </select>
                                                 </td>
                                                 <td class="col-ld-booking js-booking-status"<?= ((int) ($lead['latest_quotation_id'] ?? 0) > 0) ? ' data-id="' . (int) $lead['latest_quotation_id'] . '"' : '' ?>>
-                                                    <?= $lead['booking_status_html'] ?? '<span class="ld-book-status-empty">—</span>' ?>
+                                                    <?= $lead['booking_status_html'] ?? '<span class="ld-book-status-empty">â€”</span>' ?>
                                                 </td>
                                                 <td class="col-actions">
                                                     <div class="action-btns">
@@ -4318,7 +4318,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         <div class="pagination-bar">
                             <div class="page-summary">
                                 <?php if ($totalLeads > 0) { ?>
-                                    Showing <?= number_format($offset + 1) ?>–<?= number_format(min($offset + $perPage, $totalLeads)) ?> of <?= number_format($totalLeads) ?> leads
+                                    Showing <?= number_format($offset + 1) ?>â€“<?= number_format(min($offset + $perPage, $totalLeads)) ?> of <?= number_format($totalLeads) ?> leads
                                 <?php } else { ?>
                                     No leads to display
                                 <?php } ?>
@@ -4375,7 +4375,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     </div>
                     <div class="send-link-bd">
                         <div id="sendLinkLoading" class="send-link-loading">
-                            <i class="fas fa-spinner fa-spin mr-1"></i> Generating link…
+                            <i class="fas fa-spinner fa-spin mr-1"></i> Generating linkâ€¦
                         </div>
                         <div id="sendLinkError" class="alert alert-danger small send-link-error d-none mb-0"></div>
 
@@ -4507,7 +4507,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     <div class="modal-body lead-form-bd" id="leadFormModalBody">
                         <div class="lead-form-loading">
                             <div><i class="fas fa-spinner fa-spin d-block"></i></div>
-                            Loading form…
+                            Loading formâ€¦
                         </div>
                     </div>
                 </div>
@@ -4557,7 +4557,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         </div>
                         <div class="lead-attachments-list">
                             <div class="lead-attachments-loading" id="leadAttachmentsLoading">
-                                <i class="fas fa-spinner fa-spin mr-1"></i> Loading attachments…
+                                <i class="fas fa-spinner fa-spin mr-1"></i> Loading attachmentsâ€¦
                             </div>
                             <div class="lead-attachments-empty d-none" id="leadAttachmentsEmpty">No attachments yet.</div>
                             <div id="leadAttachmentsList"></div>
@@ -4590,7 +4590,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         <div class="sms-tpl-list" id="smsTplList"></div>
                         <div class="sms-tpl-custom-wrap" id="smsTplCustomWrap">
                             <label for="smsTplCustomText">Custom message</label>
-                            <textarea id="smsTplCustomText" placeholder="Write your message…"></textarea>
+                            <textarea id="smsTplCustomText" placeholder="Write your messageâ€¦"></textarea>
                         </div>
                     </div>
                     <div class="sms-tpl-ft">
@@ -4627,17 +4627,17 @@ foreach ($destinationLookup as $destId => $destName) {
                         <input type="hidden" id="ctGuestAttachmentPath" value="">
 
                         <div class="ct-primary-card" id="ctPrimaryCard">
-                            <div class="ct-primary-avatar" id="ctPrimaryAvatar">—</div>
+                            <div class="ct-primary-avatar" id="ctPrimaryAvatar">â€”</div>
                             <div class="ct-primary-body">
                                 <div class="ct-primary-badge"><i class="fas fa-user"></i> Primary Contact</div>
                                 <div class="ct-primary-name">
-                                    <span id="ctPrimaryName">—</span>
+                                    <span id="ctPrimaryName">â€”</span>
                                     <span class="ct-primary-check" title="Primary"><i class="fas fa-check"></i></span>
                                 </div>
                                 <div class="ct-primary-meta">
-                                    <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">—</span></span>
+                                    <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">â€”</span></span>
                                     <span class="ct-primary-sep">|</span>
-                                    <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">—</span></span>
+                                    <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">â€”</span></span>
                                 </div>
                             </div>
                         </div>
@@ -4696,29 +4696,57 @@ foreach ($destinationLookup as $destId => $destName) {
                         <div class="ct-section-title">What is Included</div>
                         <div class="ct-included" id="ctIncludedChips"></div>
 
-                        <div class="ct-section-title">Fill details</div>
+                        <div class="ct-svc-section-head">
+                            <span class="ct-svc-section-icon"><i class="fas fa-database"></i></span>
+                            <div>
+                                <div class="ct-svc-section-title">Supplier &amp; Services</div>
+                                <div class="ct-svc-section-sub">Manage suppliers, costs and documents for each service.</div>
+                            </div>
+                        </div>
                         <div class="ct-svc-table">
                             <div class="ct-detail-head">
+                                <div>#</div>
                                 <div>Service</div>
                                 <div>Supplier</div>
                                 <div>Attachments</div>
                                 <div class="text-right">Total (&#8377;)</div>
                                 <div class="text-right">Paid (&#8377;)</div>
                                 <div class="text-right">Balance (&#8377;)</div>
+                                <div>Status</div>
                                 <div class="text-center">Actions</div>
                             </div>
                             <div id="ctDetailRows"></div>
                         </div>
                     </div>
-                    <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-primary" id="ctSaveBtn">Save</button>
-                        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    <div class="modal-footer ct-svc-footer">
+                        <div class="ct-svc-summary" id="ctSvcSummary">
+                            <div class="ct-sum-card is-total">
+                                <span class="ct-sum-icon"><i class="fas fa-calculator"></i></span>
+                                <div><span class="ct-sum-label">Total Package Cost</span><span class="ct-sum-val js-sum-total">&#8377; 0.00</span></div>
+                            </div>
+                            <div class="ct-sum-card is-paid">
+                                <span class="ct-sum-icon"><i class="fas fa-wallet"></i></span>
+                                <div><span class="ct-sum-label">Total Paid</span><span class="ct-sum-val js-sum-paid">&#8377; 0.00</span></div>
+                            </div>
+                            <div class="ct-sum-card is-due">
+                                <span class="ct-sum-icon"><i class="fas fa-chart-pie"></i></span>
+                                <div><span class="ct-sum-label">Outstanding Balance</span><span class="ct-sum-val js-sum-due">&#8377; 0.00</span></div>
+                            </div>
+                            <div class="ct-sum-card is-payments">
+                                <span class="ct-sum-icon"><i class="fas fa-file-invoice"></i></span>
+                                <div><span class="ct-sum-label">Payments Recorded</span><span class="ct-sum-val js-sum-payments">0</span></div>
+                            </div>
+                        </div>
+                        <div class="ct-svc-footer-actions">
+                            <button type="button" class="btn ct-btn-cancel" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn ct-btn-save" id="ctSaveBtn"><i class="fas fa-suitcase mr-2"></i>Save Tour</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Confirm Tour — traveller documents -->
+        <!-- Confirm Tour â€” traveller documents -->
         <div class="modal fade" id="ctPaxDocsModal" tabindex="-1" role="dialog" aria-labelledby="ctPaxDocsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
                 <div class="modal-content">
@@ -4742,7 +4770,7 @@ foreach ($destinationLookup as $destId => $destName) {
             </div>
         </div>
 
-        <!-- Confirm Tour — traveller edit -->
+        <!-- Confirm Tour â€” traveller edit -->
         <div class="modal fade" id="ctTravellerModal" tabindex="-1" role="dialog" aria-labelledby="ctTravellerModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
@@ -4753,7 +4781,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     <div class="modal-body">
                         <input type="hidden" id="ctTravellerEditId" value="">
                         <div class="alert alert-info py-2 px-3 small d-none" id="ctTravellerPrimaryNote">
-                            <i class="fas fa-user-check mr-1"></i> Primary Contact — changes also update the lead and contact profile.
+                            <i class="fas fa-user-check mr-1"></i> Primary Contact â€” changes also update the lead and contact profile.
                         </div>
                         <div class="form-group d-none" id="ctTravellerSavedWrap">
                             <label class="ct-label" for="ctTravellerSaved">Select saved family / friend</label>
@@ -4834,7 +4862,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     </div>
                     <div class="modal-body py-3">
                         <div class="deleted-leads-toolbar">
-                            <div class="text-muted small" id="deletedLeadsSummary">Loading…</div>
+                            <div class="text-muted small" id="deletedLeadsSummary">Loadingâ€¦</div>
                             <div class="d-flex flex-wrap align-items-center" style="gap:0.35rem;">
                                 <button type="button" class="btn btn-outline-success btn-sm" id="btnDeletedLeadsBulkRestore" disabled>
                                     <i class="fas fa-undo mr-1"></i> Restore selected
@@ -4846,7 +4874,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         </div>
                         <div class="deleted-leads-table-wrap">
                             <div class="deleted-leads-loading" id="deletedLeadsLoading">
-                                <i class="fas fa-spinner fa-spin mr-1"></i> Loading deleted leads…
+                                <i class="fas fa-spinner fa-spin mr-1"></i> Loading deleted leadsâ€¦
                             </div>
                             <table class="table table-sm deleted-leads-table mb-0 d-none" id="deletedLeadsTable">
                                 <thead>
@@ -4899,7 +4927,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     </div>
                     <div class="modal-body">
                         <div class="lead-q-preview-loading" id="leadQPreviewLoading">
-                            <i class="fas fa-spinner fa-spin"></i> Loading preview…
+                            <i class="fas fa-spinner fa-spin"></i> Loading previewâ€¦
                         </div>
                         <iframe class="lead-q-preview-frame d-none" id="leadQPreviewFrame"
                             title="Quotation Preview" src="about:blank"></iframe>
@@ -4985,7 +5013,7 @@ foreach ($destinationLookup as $destId => $destName) {
     function showLeadFormLoading() {
         $body.html(
             '<div class="lead-form-loading">' +
-            '<div><i class="fas fa-spinner fa-spin d-block"></i></div>Loading form…</div>'
+            '<div><i class="fas fa-spinner fa-spin d-block"></i></div>Loading formâ€¦</div>'
         );
     }
 
@@ -5091,7 +5119,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     var LEADS_COL_SAVE_URL = 'crm/ajax/save_leads_column_settings.php';
-    // v2: Status (booking) needs room for multiple service icons; old v1 caps were ~52–72px.
+    // v2: Status (booking) needs room for multiple service icons; old v1 caps were ~52â€“72px.
     var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v2';
     var LEADS_TABLE_COLUMNS = [
         { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 18, minWidth: 110 },
@@ -5253,11 +5281,11 @@ foreach ($destinationLookup as $destId => $destName) {
             if (col.fixedWidth) {
                 w = Math.max(w, leadsParseFixedWidthPx(col.fixedWidth) || (col.minWidth || 90));
             }
-            // While dragging a column, do not clamp that column's maxWidth — let the user widen it.
+            // While dragging a column, do not clamp that column's maxWidth â€” let the user widen it.
             if (col.maxWidth && col.key !== lockKey) {
                 w = Math.min(w, col.maxWidth);
             } else if (col.maxWidth && col.key === lockKey) {
-                // Soft ceiling so a single drag cannot blow past ~1.5× configured max.
+                // Soft ceiling so a single drag cannot blow past ~1.5Ã— configured max.
                 w = Math.min(w, Math.max(col.maxWidth, Math.round(col.maxWidth * 1.5)));
             }
             visible.push({ col: col, width: w });
@@ -5270,7 +5298,7 @@ foreach ($destinationLookup as $destId => $destName) {
         var wrapW = leadsGetTableWrapWidth($table);
         if (fitToWrap && total > 0 && wrapW > 0) {
             if (total > wrapW) {
-                // Shrink flexible columns only — keep Actions/Status (and the column being dragged) usable.
+                // Shrink flexible columns only â€” keep Actions/Status (and the column being dragged) usable.
                 var protectedItems = [];
                 var flexibleItems = [];
                 var reserved = 0;
@@ -5303,7 +5331,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         }
                     });
                 } else if (!flexibleItems.length && reserved > wrapW) {
-                    // Extreme case: even protected columns overflow — scale them down lightly,
+                    // Extreme case: even protected columns overflow â€” scale them down lightly,
                     // but never shrink the column currently being dragged.
                     var usedP = 0;
                     var scalable = protectedItems.filter(function (item) {
@@ -5329,7 +5357,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 }
             } else if (total < wrapW) {
                 // Grow only non-protected / uncapped columns; keep Actions tight.
-                // Skip the locked drag column — its width is intentional.
+                // Skip the locked drag column â€” its width is intentional.
                 var growable = [];
                 var growTotal = 0;
                 visible.forEach(function (item) {
@@ -5464,7 +5492,7 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
         var state = leadsLoadColumnVisibility();
-        // Capture live widths as the drag baseline — do not redistribute first
+        // Capture live widths as the drag baseline â€” do not redistribute first
         // (that was clamping Status back to maxWidth and undoing the drag).
         var widths = leadsCaptureCurrentColumnWidths($table, state);
         leadsSaveColumnWidths(widths);
@@ -5972,20 +6000,20 @@ foreach ($destinationLookup as $destId => $destName) {
     }
 
     function formatLeadValue(value) {
-        if (value === null || value === undefined) return '—';
+        if (value === null || value === undefined) return 'â€”';
         if (Array.isArray(value)) {
-            if (!value.length) return '—';
+            if (!value.length) return 'â€”';
             return value.map(function (v) { return formatLeadValue(v); }).join(', ');
         }
         if (typeof value === 'object') {
             var keys = Object.keys(value);
-            if (!keys.length) return '—';
+            if (!keys.length) return 'â€”';
             return keys.map(function (k) {
                 return k + ': ' + formatLeadValue(value[k]);
             }).join(' | ');
         }
         var str = String(value).trim();
-        return str === '' ? '—' : str;
+        return str === '' ? 'â€”' : str;
     }
 
     function normalizePayloadKey(key) {
@@ -6064,7 +6092,7 @@ foreach ($destinationLookup as $destId => $destName) {
             passport: 'Passport',
             forex: 'Forex'
         };
-        var servicesText = '—';
+        var servicesText = 'â€”';
         if (Array.isArray(lead.services) && lead.services.length) {
             servicesText = lead.services.map(function (s) {
                 return serviceLabels[s] || s;
@@ -6072,7 +6100,7 @@ foreach ($destinationLookup as $destId => $destName) {
         }
         var destText = lead.travel_destination_text
             || [lead.travel_dest_display, lead.travel_departure_display].filter(Boolean).join(' | ')
-            || '—';
+            || 'â€”';
 
         var infoItems = [
             { label: 'Lead UID', value: lead.lead_uid },
@@ -6115,7 +6143,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 if (id === '') return;
                 names.push(destinationLookup[id] ? destinationLookup[id] : id);
             });
-            return names.length ? names.join(', ') : '—';
+            return names.length ? names.join(', ') : 'â€”';
         }
         var seenSignature = {};
         payloadKeys.sort();
@@ -6130,7 +6158,7 @@ foreach ($destinationLookup as $destId => $destName) {
             } else {
                 formatted = formatLeadValue(payload[key]);
             }
-            if (formatted === '—') {
+            if (formatted === 'â€”') {
                 return;
             }
             var signature = normalizedKey + '::' + formatted;
@@ -6602,7 +6630,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 {
                     id: 'wa_callback',
                     title: 'Callback Request',
-                    body: 'Hi {guest},\nWe tried calling you regarding your trip planning. Please reply or call {agent} when free.\n— {company}'
+                    body: 'Hi {guest},\nWe tried calling you regarding your trip planning. Please reply or call {agent} when free.\nâ€” {company}'
                 }
             ],
             email: [
@@ -6615,7 +6643,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 {
                     id: 'email_callback',
                     title: "Couldn't Reach You",
-                    subject: 'Missed call regarding your trip — {company}',
+                    subject: 'Missed call regarding your trip â€” {company}',
                     body: 'Dear {guest},\n\nWe tried to reach you for your trip planning but couldn\'t connect. Please reply to this email or call {agent}.\n\nThanks,\n{company}'
                 }
             ]
@@ -6716,9 +6744,9 @@ foreach ($destinationLookup as $destId => $destName) {
         smsTplState.agentName = smsTplAgentName || 'Team';
 
         $('#smsTplLeadMeta').text(
-            (lead.lead_uid ? lead.lead_uid + ' · ' : '') +
+            (lead.lead_uid ? lead.lead_uid + ' Â· ' : '') +
             (smsTplState.guestName || 'Guest') +
-            (smsTplState.guestPhone ? ' · ' + smsTplState.guestPhone : '')
+            (smsTplState.guestPhone ? ' Â· ' + smsTplState.guestPhone : '')
         );
         $('#smsTemplatesModal .sms-tpl-tab').removeClass('is-active');
         $('#smsTemplatesModal .sms-tpl-tab[data-sms-tab="default"]').addClass('is-active');
@@ -6855,7 +6883,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 + '<div class="lead-attachment-item">'
                 + '  <div class="lead-attachment-info">'
                 + '    <div class="lead-attachment-name">' + escAttachmentHtml(item.original_name || 'Attachment') + '</div>'
-                + '    <div class="lead-attachment-meta">' + escAttachmentHtml(meta.join(' · ')) + '</div>'
+                + '    <div class="lead-attachment-meta">' + escAttachmentHtml(meta.join(' Â· ')) + '</div>'
                 + '  </div>'
                 + '  <div class="lead-attachment-actions">'
                 + '    <a class="btn btn-outline-primary btn-xs btn-sm" href="' + fileUrl + '" target="_blank" rel="noopener">Open</a>'
@@ -6882,7 +6910,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     return;
                 }
                 var lead = response.lead || {};
-                var label = (lead.lead_uid || 'Lead') + (lead.customer_name ? (' · ' + lead.customer_name) : '');
+                var label = (lead.lead_uid || 'Lead') + (lead.customer_name ? (' Â· ' + lead.customer_name) : '');
                 $('#leadAttachmentsLeadMeta').text(label);
                 renderLeadAttachmentsList(response.data || []);
             })
@@ -7088,7 +7116,7 @@ foreach ($destinationLookup as $destId => $destName) {
         if ($row.length) {
             if (name) {
                 $row.find('.lead-name-text').text(name)
-                    .attr('title', 'Phone: ' + (phone || '—') + '\nEmail: ' + (email || '—'));
+                    .attr('title', 'Phone: ' + (phone || 'â€”') + '\nEmail: ' + (email || 'â€”'));
             }
             $row.find('[data-lead-email]').attr('data-lead-email', email);
             $row.find('[data-lead-phone]').attr('data-lead-phone', phone);
@@ -7337,7 +7365,7 @@ foreach ($destinationLookup as $destId => $destName) {
 
         $bar.addClass('is-visible');
         $summary.text(
-            'Showing ' + deletedLeadsPagination.from + '–' + deletedLeadsPagination.to
+            'Showing ' + deletedLeadsPagination.from + 'â€“' + deletedLeadsPagination.to
             + ' of ' + deletedLeadsPagination.total + ' deleted leads'
         );
 
@@ -7400,16 +7428,16 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         deletedLeadsCache.forEach(function (lead) {
-            var deletedMeta = lead.deleted_at_text || lead.deleted_at || '—';
+            var deletedMeta = lead.deleted_at_text || lead.deleted_at || 'â€”';
             if (lead.deleted_by_name) {
-                deletedMeta += ' · ' + lead.deleted_by_name;
+                deletedMeta += ' Â· ' + lead.deleted_by_name;
             }
             $body.append(
                 '<tr>'
                 + '<td><input type="checkbox" class="js-deleted-lead-check" value="' + escDeletedHtml(lead.id) + '" aria-label="Select lead"></td>'
                 + '<td><strong>' + escDeletedHtml(lead.lead_uid) + '</strong></td>'
                 + '<td>' + escDeletedHtml(lead.customer_display_name || lead.customer_name) + '</td>'
-                + '<td>' + escDeletedHtml(lead.assign_to || '—') + '</td>'
+                + '<td>' + escDeletedHtml(lead.assign_to || 'â€”') + '</td>'
                 + '<td class="text-muted">' + escDeletedHtml(deletedMeta) + '</td>'
                 + '<td>'
                 + '<button type="button" class="btn btn-outline-success btn-xs btn-sm mr-1 js-deleted-lead-restore-one" data-lead-id="' + escDeletedHtml(lead.id) + '">Restore</button>'
@@ -7428,11 +7456,11 @@ foreach ($destinationLookup as $destId => $destName) {
             deletedLeadsPage = Math.max(1, Number(page) || 1);
         }
 
-        $('#deletedLeadsLoading').removeClass('d-none').html('<i class="fas fa-spinner fa-spin mr-1"></i> Loading deleted leads…');
+        $('#deletedLeadsLoading').removeClass('d-none').html('<i class="fas fa-spinner fa-spin mr-1"></i> Loading deleted leadsâ€¦');
         $('#deletedLeadsTable').addClass('d-none');
         $('#deletedLeadsEmpty').addClass('d-none');
         $('#deletedLeadsTableBody').empty();
-        $('#deletedLeadsSummary').text('Loading…');
+        $('#deletedLeadsSummary').text('Loadingâ€¦');
         $('#deletedLeadsPagination').removeClass('is-visible');
         $('#deletedLeadsPaginationList').empty();
         $('#btnDeletedLeadsBulkDelete').prop('disabled', true);
@@ -7626,7 +7654,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=27"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=33"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {

@@ -16,10 +16,10 @@ if ($res) {
 function qlListDate($value)
 {
     if (empty($value) || $value === '0000-00-00 00:00:00') {
-        return '—';
+        return 'â€”';
     }
     $ts = strtotime((string) $value);
-    return $ts ? date('d-m-Y', $ts) : '—';
+    return $ts ? date('d-m-Y', $ts) : 'â€”';
 }
 
 function qlTravelDate($value)
@@ -36,7 +36,7 @@ function qlDestinationLine($destination, $nights)
     $destination = trim((string) $destination);
     $nights = (int) $nights;
     if ($destination === '') {
-        return '—';
+        return 'â€”';
     }
     if ($nights > 0) {
         return $destination . ' ' . $nights . 'N | ' . ($nights + 1) . 'D';
@@ -616,7 +616,7 @@ function qlDestinationLine($destination, $nights)
                                                 : crmQuotationRenderStatusBadges($q['tour_confirm_json'] ?? '');
                                             $guestDisplay = trim((string) ($q['guest_name'] ?? ''));
                                             if ($guestDisplay === '') {
-                                                $guestDisplay = $isDraft ? '(Untitled draft)' : '—';
+                                                $guestDisplay = $isDraft ? '(Untitled draft)' : 'â€”';
                                             }
                                             ?>
                                             <tr data-id="<?= $id ?>"<?= $isDraft ? ' class="is-draft"' : '' ?>>
@@ -640,7 +640,7 @@ function qlDestinationLine($destination, $nights)
                                                 <td class="js-q-status"><?= $statusHtml ?></td>
                                                 <td class="text-center">
                                                     <?php if ($isDraft) { ?>
-                                                        <span class="text-muted" style="font-size:0.75rem;">—</span>
+                                                        <span class="text-muted" style="font-size:0.75rem;">â€”</span>
                                                     <?php } else { ?>
                                                     <button type="button"
                                                         class="btn btn-sm js-q-book <?= $tourConfirmed ? 'btn-confirmed' : 'btn-book' ?>"
@@ -699,17 +699,17 @@ function qlDestinationLine($destination, $nights)
                     <input type="hidden" id="ctGuestAttachmentPath" value="">
 
                     <div class="ct-primary-card" id="ctPrimaryCard">
-                        <div class="ct-primary-avatar" id="ctPrimaryAvatar">—</div>
+                        <div class="ct-primary-avatar" id="ctPrimaryAvatar">â€”</div>
                         <div class="ct-primary-body">
                             <div class="ct-primary-badge"><i class="fas fa-user"></i> Primary Contact</div>
                             <div class="ct-primary-name">
-                                <span id="ctPrimaryName">—</span>
+                                <span id="ctPrimaryName">â€”</span>
                                 <span class="ct-primary-check" title="Primary"><i class="fas fa-check"></i></span>
                             </div>
                             <div class="ct-primary-meta">
-                                <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">—</span></span>
+                                <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">â€”</span></span>
                                 <span class="ct-primary-sep">|</span>
-                                <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">—</span></span>
+                                <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">â€”</span></span>
                             </div>
                         </div>
                     </div>
@@ -769,12 +769,14 @@ function qlDestinationLine($destination, $nights)
                     <div class="ct-section-title">Fill details</div>
                     <div class="ct-svc-table">
                         <div class="ct-detail-head">
+                            <div>#</div>
                             <div>Service</div>
                             <div>Supplier</div>
                             <div>Attachments</div>
                             <div class="text-right">Total (&#8377;)</div>
                             <div class="text-right">Paid (&#8377;)</div>
                             <div class="text-right">Balance (&#8377;)</div>
+                            <div>Status</div>
                             <div class="text-center">Actions</div>
                         </div>
                         <div id="ctDetailRows"></div>
@@ -821,7 +823,7 @@ function qlDestinationLine($destination, $nights)
                 <div class="modal-body">
                     <input type="hidden" id="ctTravellerEditId" value="">
                     <div class="alert alert-info py-2 px-3 small d-none" id="ctTravellerPrimaryNote">
-                        <i class="fas fa-user-check mr-1"></i> Primary Contact — changes also update the lead and contact profile.
+                        <i class="fas fa-user-check mr-1"></i> Primary Contact â€” changes also update the lead and contact profile.
                     </div>
                     <div class="form-group d-none" id="ctTravellerSavedWrap">
                         <label class="ct-label" for="ctTravellerSaved">Select saved family / friend</label>
@@ -893,7 +895,7 @@ function qlDestinationLine($destination, $nights)
     </div>
 
     <?php include __DIR__ . '/../includes/footer-links.php'; ?>
-    <script src="crm/assets/quotation_confirm_tour.js?v=27"></script>
+    <script src="crm/assets/quotation_confirm_tour.js?v=33"></script>
 
     <script>
         $(function () {

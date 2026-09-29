@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/lead_db.php';
 require_once __DIR__ . '/../../includes/lead_contacts_db.php';
 require_once __DIR__ . '/../includes/traveller_documents.php';
 require_once __DIR__ . '/../includes/service_vouchers.php';
+require_once __DIR__ . '/../includes/service_payments.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -154,10 +155,13 @@ if ($leadId > 0) {
 }
 
 svEnsureTable($conn);
+spEnsureTable($conn);
 if (!$travellersOnly) {
     svDeleteOrphans($conn, $id, array_column($payload['services'], 'uid'));
+    spDeleteOrphans($conn, $id, array_column($payload['services'], 'uid'));
 }
 $payload['services'] = svAttachCounts($conn, $id, $payload['services']);
+$payload['services'] = spAttachCounts($conn, $id, $payload['services']);
 
 qConfirmSaveJson(true, 'Tour confirmation saved.', [
     'id' => $id,
