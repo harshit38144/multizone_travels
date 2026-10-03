@@ -69,6 +69,49 @@
         }
     }
 
+    /* jQuery UI anchors the popup with document offset. Inside the scrolled
+       quotation page that lands the calendar far below the Search Flight field. */
+    function qfsPlaceDatepicker(input) {
+        var dp = document.getElementById('ui-datepicker-div');
+        if (!dp || !input || dp.style.display === 'none') {
+            return;
+        }
+        var rect = input.getBoundingClientRect();
+        if (!rect.width && !rect.height) {
+            return;
+        }
+        var gap = 4;
+        var dpH = dp.offsetHeight || 280;
+        var dpW = dp.offsetWidth || 240;
+        var top = rect.bottom + gap;
+        if (top + dpH > window.innerHeight - 8 && rect.top - dpH - gap > 8) {
+            top = rect.top - dpH - gap;
+        }
+        var left = rect.left;
+        if (left + dpW > window.innerWidth - 8) {
+            left = window.innerWidth - dpW - 8;
+        }
+        if (left < 8) {
+            left = 8;
+        }
+        dp.style.position = 'fixed';
+        dp.style.top = Math.round(top) + 'px';
+        dp.style.left = Math.round(left) + 'px';
+        dp.style.right = 'auto';
+        dp.style.bottom = 'auto';
+        dp.style.zIndex = '2200';
+    }
+
+    function qfsFollowDatepicker(input) {
+        var follow = function () {
+            qfsPlaceDatepicker(input);
+        };
+        $(window).off('scroll.qfsDp resize.qfsDp').on('scroll.qfsDp resize.qfsDp', follow);
+        $('#qfsSearchModal').off('scroll.qfsDp').on('scroll.qfsDp', follow);
+        setTimeout(follow, 0);
+        setTimeout(follow, 60);
+    }
+
     function qfsInitDateField(id) {
         var $hidden = $('#' + id);
         var $text = $('#' + id + 'Text');
@@ -86,12 +129,17 @@
                 minDate: qfsYmdToDate(String($hidden.attr('min') || '')),
                 beforeShow: function (input, inst) {
                     inst.dpDiv.addClass('crm-q-datepicker');
-                    setTimeout(function () {
-                        inst.dpDiv.css({ zIndex: 2200 });
-                    }, 0);
+                    qfsFollowDatepicker(input);
+                },
+                onChangeMonthYear: function () {
+                    qfsFollowDatepicker($text[0]);
                 },
                 onSelect: function () {
                     $text.trigger('change');
+                },
+                onClose: function () {
+                    $(window).off('scroll.qfsDp resize.qfsDp');
+                    $('#qfsSearchModal').off('scroll.qfsDp');
                 }
             });
         }
@@ -272,16 +320,22 @@
         }
         if (typeof val === 'object') {
             var weight = val.weight || val.wt || val.amount || val.value || val.qty || val.quantity || '';
-            var unit = String(val.unit || val.weightUnit || val.wu || 'kg').trim();
+            var unitRaw = String(val.unit || val.weightUnit || val.wu || '').trim().toLowerCase();
+            var desc = String(val.text || val.label || val.desc || val.description || '').trim();
+            var isPiece = /^(pc|pcs|piece|pieces)$/.test(unitRaw) || /\bpcs?\b|\bpiece/i.test(desc);
             if (weight !== '' && weight != null) {
                 var wStr = String(weight).trim();
-                if (/^\d+(\.\d+)?$/.test(wStr) && unit) {
-                    return wStr + ' ' + unit.toLowerCase().replace(/kgs?/i, 'kg');
+                if (/^\d+(\.\d+)?$/.test(wStr)) {
+                    if (isPiece) {
+                        return String(parseFloat(wStr)) + ' pc';
+                    }
+                    var unit = unitRaw === 'kgs' || unitRaw === 'kg' || unitRaw === '' ? 'kg' : unitRaw;
+                    return String(parseFloat(wStr)) + ' ' + unit;
                 }
                 return wStr;
             }
-            if (val.text || val.label || val.desc || val.description) {
-                return String(val.text || val.label || val.desc || val.description).trim();
+            if (desc) {
+                return desc;
             }
             return '';
         }
@@ -333,6 +387,31 @@
         return out;
     }
 
+    function qfsPaxBagPiece(piece) {
+        if (piece == null || piece === '') {
+            return '';
+        }
+        if (typeof piece !== 'object') {
+            return qfsNormalizeBaggageValue(piece);
+        }
+        var pax = piece.adt || piece.chd || piece.inf || piece;
+        if (pax && typeof pax === 'object' && pax !== piece && (pax.qty != null || pax.desc || pax.weight)) {
+            return qfsNormalizeBaggageValue(pax);
+        }
+        return qfsNormalizeBaggageValue(piece);
+    }
+
+    function qfsReadAmenitiesBaggage(node) {
+        var bag = node && node.amenities && node.amenities.baggage;
+        if (!bag || typeof bag !== 'object') {
+            return { hand: '', checkin: '' };
+        }
+        return {
+            hand: qfsPaxBagPiece(bag.cabin || bag.hand || bag.cabinBaggage),
+            checkin: qfsPaxBagPiece(bag.checkin || bag.checkIn || bag.checked)
+        };
+    }
+
     function qfsExtractBaggage(sources) {
         var handKeys = [
             'hand_baggage', 'handBaggage', 'handBag', 'cabinBaggage', 'cabin_baggage',
@@ -365,6 +444,13 @@
             }
             if (typeof node !== 'object') {
                 return;
+            }
+            var amenityBag = qfsReadAmenitiesBaggage(node);
+            if (!hand && amenityBag.hand) {
+                hand = amenityBag.hand;
+            }
+            if (!checkin && amenityBag.checkin) {
+                checkin = amenityBag.checkin;
             }
             if (!hand) {
                 hand = qfsPickFirstBaggage(node, handKeys);
@@ -426,14 +512,9 @@
             fares.fare,
             item
         ]);
-        // Via search often omits baggage; keep domestic defaults so UI always shows details.
-        if (!bag.hand_baggage) {
-            bag.hand_baggage = '7 kg';
+        if (bag.hand_baggage || bag.checkin_baggage) {
+            bag.baggage = 'Cabin: ' + (bag.hand_baggage || '—') + ' | Check-in: ' + (bag.checkin_baggage || '—');
         }
-        if (!bag.checkin_baggage) {
-            bag.checkin_baggage = '15 kg';
-        }
-        bag.baggage = 'Cabin: ' + bag.hand_baggage + ' | Check-in: ' + bag.checkin_baggage;
         return bag;
     }
 
@@ -648,8 +729,8 @@
                 '<div style="font-weight:700; font-size:12px; color:#333;">' + duration + '</div>' +
                 '<div class="text-muted" style="font-size:11px;">' + legStopsStr + '</div>' +
                 '<div class="qfs-card-baggage">' +
-                '<span title="Hand baggage"><i class="fas fa-briefcase"></i> ' + $('<div>').text(legBag.hand_baggage || '7 kg').html() + '</span>' +
-                '<span title="Check-in baggage"><i class="fas fa-suitcase"></i> ' + $('<div>').text(legBag.checkin_baggage || '15 kg').html() + '</span>' +
+                '<span title="Hand baggage"><i class="fas fa-briefcase"></i> ' + $('<div>').text(legBag.hand_baggage || '—').html() + '</span>' +
+                '<span title="Check-in baggage"><i class="fas fa-suitcase"></i> ' + $('<div>').text(legBag.checkin_baggage || '—').html() + '</span>' +
                 '</div>' +
                 '</div></div>';
 

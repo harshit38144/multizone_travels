@@ -3667,6 +3667,14 @@ $qWizardSteps = [
             min-width: 980px;
         }
 
+        .crm-quotation-gen .q-flight-segment-row.is-no-segment-delete {
+            grid-template-columns:
+                minmax(120px, 1.05fr) 40px minmax(120px, 1.05fr)
+                minmax(168px, 1.35fr)
+                minmax(150px, 1.15fr) minmax(150px, 1.15fr)
+                minmax(100px, 0.85fr) minmax(110px, 0.95fr);
+        }
+
         .crm-quotation-gen .q-ft-col {
             min-width: 0;
             display: flex;
@@ -6297,6 +6305,66 @@ $qWizardSteps = [
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.85rem 0.75rem;
+        }
+
+        .crm-quotation-gen .q-header-ai-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0.45rem;
+        }
+
+        .crm-quotation-gen .q-header-ai-row .form-control {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-header-ai-btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            border-radius: 8px;
+            border: 1.5px solid #e11d2e;
+            background: #fff;
+            color: #e11d2e;
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 0.35rem 0.7rem;
+            line-height: 1.3;
+        }
+
+        .crm-quotation-gen .q-header-ai-btn:hover:not(:disabled) {
+            background: #fff1f2;
+            color: #be123c;
+        }
+
+        .crm-quotation-gen .q-header-ai-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        #qHeaderAiModal .q-header-ai-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        #qHeaderAiModal .q-header-ai-item:last-child {
+            border-bottom: 0;
+        }
+
+        #qHeaderAiModal .q-header-ai-item-text {
+            color: #0f172a;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        #qHeaderAiModal .q-header-ai-use {
+            flex: 0 0 auto;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.78rem;
         }
 
         .crm-quotation-gen .q-gt-fields-4,
@@ -11293,202 +11361,285 @@ $qWizardSteps = [
 
         /* —— Inclusions —— */
         .qp-sec-incl {
-            --qp-incl-red: #d92027;
+            --qp-incl-red: #e10600;
             --qp-incl-ink: #1a1d23;
-            --qp-incl-muted: #8b93a0;
             font-family: inherit;
             margin-bottom: 16px;
         }
 
         .qp-incl-card {
-            border: 1px solid #e8ecf1;
-            border-radius: 14px;
+            border: 0;
+            border-radius: 16px;
             overflow: hidden;
-            background: #fff;
-            box-shadow: 0 4px 16px rgba(17, 24, 39, 0.06);
-            padding: 18px 20px 16px;
+            background: #f6f7f9;
+            box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+            padding: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-incl-head {
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
-            margin: 0 0 16px;
-            padding: 0 0 14px;
-            border-bottom: 1px solid #eef2f7;
-        }
-
-        .qp-incl-head-left {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            min-width: 0;
-        }
-
-        .qp-incl-vbar {
-            width: 4px;
-            min-height: 36px;
-            align-self: stretch;
-            background: var(--qp-incl-red);
-            border-radius: 999px;
-            flex-shrink: 0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .qp-incl-icon {
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            background: #fde8ea;
-            color: var(--qp-incl-red);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 15px;
-            flex-shrink: 0;
+            gap: 24px;
+            margin: 0;
+            padding: 10px 13px 10px;
+            border: 0;
+            color: #fff;
+            background:
+                linear-gradient(90deg, rgba(92, 8, 14, 0.92) 0%, rgba(142, 16, 22, 0.78) 42%, rgba(90, 8, 14, 0.28) 100%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 280' preserveAspectRatio='xMidYMid slice'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238a1018'/%3E%3Cstop offset='1' stop-color='%2340060c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1200' height='280' fill='url(%23s)'/%3E%3Cpath fill='%235c0c12' d='M520 170l70-78 48 46 62-92 54 70 80-110 46 58 70-48 50 64 90-86 70 78 40-30V280H520z'/%3E%3Cpath fill='%2338060c' d='M560 210l90-70 40 36 70-84 60 50 90-100 70 64 80-46 50 40 90-60V280H560z'/%3E%3Cpath fill='%23240408' opacity='.85' d='M640 240l80-48 36 28 64-56 48 40 72-64 56 48 64-36 80 52V280H640z'/%3E%3C/svg%3E") right center / cover no-repeat,
+                #8d1218;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .qp-incl-head-copy {
             min-width: 0;
+            position: relative;
+            z-index: 1;
         }
 
-        .qp-incl-title {
-            font-size: 15px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
+        .qp-incl-kicker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.22em;
             text-transform: uppercase;
-            color: var(--qp-incl-ink);
-            line-height: 1.2;
-        }
-
-        .qp-incl-sub {
-            margin-top: 3px;
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--qp-incl-muted);
-            line-height: 1.3;
-        }
-
-        .qp-incl-slogan {
-            font-size: 8px;
-            font-weight: 600;
-            letter-spacing: 0.12em;
-            color: #a0a8b4;
+            color: #fff;
             line-height: 1;
-            text-align: right;
-            text-transform: uppercase;
-            white-space: nowrap;
-            flex-shrink: 0;
         }
 
-        .qp-incl-slogan-dot {
-            color: var(--qp-incl-red);
-            margin: 0 1px;
-        }
-
-        .qp-incl-body {
-            min-width: 0;
-        }
-
-        @media screen and (max-width: 640px) {
-            body:not(.q-preview-only) .qp-incl-card {
-                padding: 14px 14px 12px;
-            }
-
-            body:not(.q-preview-only) .qp-incl-head {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            body:not(.q-preview-only) .qp-incl-slogan {
-                text-align: left;
-                white-space: normal;
-            }
-        }
-
-        /* Categorized AI inclusions inside preview */
-        .qp-incl-edit .q-ai-incl-doc {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-
-        .qp-incl-edit .q-ai-incl-sec {
-            margin: 0;
-            padding: 0;
-            background: transparent;
-            border: 0;
-        }
-
-        .qp-incl-edit .q-ai-incl-sec-title,
-        .qp-incl-edit .q-ai-incl-doc .q-ai-incl-sec-title,
-        .q-preview-rich .q-ai-incl-doc .q-ai-incl-sec-title {
-            margin: 0 0 8px;
-            padding: 0;
-            font-size: 12.5px;
-            font-weight: 800;
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-            color: var(--qp-incl-ink, #1a1d23);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: transparent;
-            border: 0;
-        }
-
-        .qp-incl-edit .q-ai-incl-sec-title i,
-        .qp-incl-edit .q-ai-incl-doc .q-ai-incl-sec-title i {
-            width: 26px;
-            height: 26px;
-            border-radius: 7px;
-            background: #fde8ea;
-            color: var(--qp-incl-red, #d92027) !important;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
+        .qp-incl-kicker-bar {
+            width: 22px;
+            height: 3px;
+            border-radius: 2px;
+            background: #ff2a2a;
             flex-shrink: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-incl-edit .q-ai-incl-sec-title strong {
+        .qp-incl-title {
+            margin: 0;
+            font-size: 42px;
             font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #fff;
+            line-height: 0.95;
+        }
+
+        .qp-incl-sub {
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.88);
+            line-height: 1.3;
+        }
+
+        .qp-incl-slogan {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
+            margin: 0;
+            padding: 2px 0 8px 16px;
+            border-left: 1px solid rgba(255, 255, 255, 0.72);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #fff;
+            line-height: 1.25;
+            flex-shrink: 0;
+        }
+
+        .qp-incl-slogan::after {
+            content: "";
+            position: absolute;
+            left: 16px;
+            bottom: 0;
+            width: 28px;
+            height: 3px;
+            border-radius: 2px;
+            background: #ff2a2a;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-body {
+            min-width: 0;
+            padding: 4px;
+            background: #f6f7f9;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        @media screen and (max-width: 720px) {
+            body:not(.q-preview-only) .qp-incl-head {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 20px 18px 18px;
+            }
+
+            body:not(.q-preview-only) .qp-incl-title {
+                font-size: 32px;
+            }
+
+            body:not(.q-preview-only) .qp-incl-slogan {
+                border-left: 0;
+                padding-left: 0;
+            }
+        }
+
+        /* Categorized inclusions inside preview */
+        .qp-incl-edit .q-ai-incl-doc {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec {
+            position: relative;
+            margin: 0;
+            padding: 6px 10px 6px 101px;
+            background: #fff;
+            border: 0;
+            border-radius: 18px;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec-title,
+        .qp-incl-edit .q-ai-incl-doc .q-ai-incl-sec-title,
+        .q-preview-rich .q-ai-incl-doc .q-ai-incl-sec-title {
+            display: block;
+            margin: 0 0 0px;
+            padding: 0;
+            background: transparent;
+            border: 0;
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: inherit;
+            color: inherit;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec-title i,
+        .qp-incl-edit .q-ai-incl-doc .q-ai-incl-sec-title i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 74px;
+            height: 74px;
+            border-radius: 50%;
+            background-color: #fdecee;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 34px 34px;
+            color: transparent !important;
+            font-size: 0;
+            display: block;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec[data-sec="accommodation"] .q-ai-incl-sec-title i,
+        .qp-incl-edit .q-ai-incl-sec:not([data-sec]) .q-ai-incl-sec-title i {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M14 8.2l.7 1.5 1.6.2-1.2 1.1.3 1.6-1.4-.8-1.4.8.3-1.6-1.2-1.1 1.6-.2zM24 6.5l.9 1.8 2 .2-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.2zM34 8.2l.7 1.5 1.6.2-1.2 1.1.3 1.6-1.4-.8-1.4.8.3-1.6-1.2-1.1 1.6-.2z' fill='%23e10600' stroke='none'/%3E%3Cpath d='M12 42V18h24v24'/%3E%3Cpath d='M8 42h32'/%3E%3Cpath d='M20 42v-8h8v8'/%3E%3Cpath d='M17 23h3M23 23h3M29 23h3M17 29h3M23 29h3M29 29h3M17 35h3M29 35h3'/%3E%3C/svg%3E");
+        }
+
+        .qp-incl-edit .q-ai-incl-sec[data-sec="meals"] .q-ai-incl-sec-title i {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M16 8v14a6 6 0 0 0 12 0V8'/%3E%3Cpath d='M22 28v12M16 8v6M22 8v6M28 8v6M34 8v20c0 2-1 4-3 4h-1'/%3E%3C/svg%3E");
+        }
+
+        .qp-incl-edit .q-ai-incl-sec[data-sec="transfers"] .q-ai-incl-sec-title i {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M10 30V18l6-8h16l6 8v12'/%3E%3Cpath d='M8 30h32v6H8z'/%3E%3Ccircle cx='16' cy='36' r='3' fill='%23e10600' stroke='none'/%3E%3Ccircle cx='32' cy='36' r='3' fill='%23e10600' stroke='none'/%3E%3Cpath d='M18 22h12'/%3E%3C/svg%3E");
+        }
+
+        .qp-incl-edit .q-ai-incl-sec[data-sec="sightseeing"] .q-ai-incl-sec-title i {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M6 36l12-16 8 10 6-8 10 14'/%3E%3Cpath d='M4 36h40'/%3E%3Ccircle cx='34' cy='12' r='4'/%3E%3C/svg%3E");
+        }
+
+        .qp-incl-edit .q-ai-incl-sec[data-sec="airfare"] .q-ai-incl-sec-title i {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M8 28l32-10-6 8 8 2-4 4-10-2-6 8-4-2 4-8-14 0z'/%3E%3C/svg%3E");
+        }
+
+        .qp-incl-edit .q-ai-incl-sec[data-sec="other"] .q-ai-incl-sec-title i {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M14 10h20v28H14z'/%3E%3Cpath d='M18 18h12M18 24h12M18 30h8'/%3E%3C/svg%3E");
+        }
+
+        .qp-incl-edit .q-ai-incl-sec-title strong {
+            position: relative;
+            display: inline-block;
+            margin: 2px 0 10px;
+            padding-bottom: 7px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0;
+            text-transform: none;
+            color: #1a1d23;
+            line-height: 1.2;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec-title strong::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 28px;
+            height: 3px;
+            border-radius: 2px;
+            background: #e10600;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .qp-incl-edit.q-preview-rich ul,
         .qp-incl-edit .q-ai-incl-sec ul {
             display: flex;
             flex-direction: column;
-            gap: 7px;
+            gap: 0px;
             list-style: none;
             margin: 0;
             padding: 0;
         }
 
+        .qp-incl-edit .q-ai-incl-sec[data-sec="sightseeing"] ul {
+            display: block;
+            columns: 2;
+            column-gap: 28px;
+        }
+
+        .qp-incl-edit .q-ai-incl-sec[data-sec="sightseeing"] ul li {
+            break-inside: avoid;
+            margin-bottom: 8px;
+        }
+
         .qp-incl-edit.q-preview-rich ul li,
         .qp-incl-edit .q-ai-incl-sec ul li {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            background: #f8fafc;
-            border: 1px solid #e8ecf1;
-            border-radius: 8px;
-            padding: 9px 12px;
+            display: block;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 0 0 0 24px;
             position: relative;
             box-shadow: none;
-            font-size: 12.5px;
+            font-size: 14px;
             line-height: 1.45;
-            color: #334155;
+            color: #1f2937;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -11498,32 +11649,39 @@ $qWizardSteps = [
             content: "\f00c";
             font-family: "Font Awesome 5 Free";
             font-weight: 900;
-            position: static;
-            left: auto;
-            top: auto;
-            width: 22px;
-            height: 22px;
-            border-radius: 6px;
-            background: #e8f8ef;
-            color: #15803d;
+            position: absolute;
+            left: 0;
+            top: 2px;
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            border-radius: 50%;
+            background: #e10600;
+            color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
-            font-size: 10px;
-            line-height: 22px;
+            font-size: 8px;
+            line-height: 16px;
             text-align: center;
-            margin-top: 1px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
+        .qp-incl-edit.q-preview-rich > ul {
+            background: #fff;
+            border-radius: 18px;
+            padding: 18px 20px;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+        }
+
         .qp-incl-edit.q-preview-rich > *:not(ul):not(.q-ai-incl-doc) {
-            background: #f8fafc;
-            border: 1px solid #e8ecf1;
-            border-radius: 8px;
-            padding: 10px 12px;
-            margin-bottom: 8px;
+            background: #fff;
+            border: 0;
+            border-radius: 18px;
+            padding: 16px 18px;
+            margin: 0 0 12px;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
         }
 
         /* —— Terms —— */
@@ -12931,7 +13089,7 @@ $qWizardSteps = [
             margin: 0 -10mm !important;
             width: calc(100% + 20mm);
             max-width: none;
-            padding: 14px 0 4px;
+            padding: 14px calc(10mm + 22px) 4px;
             font-family: inherit;
             background: #fff;
             border-top: 0;
@@ -15083,8 +15241,13 @@ $qWizardSteps = [
                                             </div>
                                             <div class="form-group mb-0 q-gt-header-text">
                                                 <label class="q-label">Header Text <span class="text-muted font-weight-normal">(above destination in preview)</span></label>
-                                                <input type="text" name="header_text" id="q_header_text" class="form-control"
-                                                       placeholder="e.g. Special Offer / Honeymoon Package" maxlength="120" autocomplete="off">
+                                                <div class="q-header-ai-row">
+                                                    <input type="text" name="header_text" id="q_header_text" class="form-control"
+                                                           placeholder="e.g. Special Offer / Honeymoon Package" maxlength="120" autocomplete="off">
+                                                    <button type="button" class="btn q-header-ai-btn" id="qHeaderAiBtn">
+                                                        <i class="fas fa-magic mr-1"></i>AI Suggestion
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="q-gt-fields-5">
@@ -15933,6 +16096,24 @@ $qWizardSteps = [
         </div>
     </div>
 
+    <div class="modal fade" id="qHeaderAiModal" tabindex="-1" role="dialog" aria-labelledby="qHeaderAiModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="qHeaderAiModalLabel">Header suggestions</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-2 js-q-header-ai-dest"></p>
+                    <div class="js-q-header-ai-status"></div>
+                    <div class="js-q-header-ai-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <?php include __DIR__ . '/../includes/footer-links.php'; ?>
 
     <?php if ($qGuestTourLocked) { ?>
@@ -15971,8 +16152,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=295"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=28"></script>
+    <script src="crm/assets/quotation_generator.js?v=299"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=31"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>

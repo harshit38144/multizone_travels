@@ -439,7 +439,7 @@
                     row.journey_label = opts.label;
                 }
             }
-            $body.append(flightRowHtml(row));
+            $body.append(flightRowHtml(row, { hideRemove: true }));
         });
         $card.append($body);
         $('#qFlightRows').append($card);
@@ -1455,8 +1455,15 @@
         syncConnectingSegmentFareSupplier();
     }
 
-    function flightRowHtml(data) {
+    function flightRowHtml(data, opts) {
         var d = normalizeFlightData(data);
+        opts = opts || {};
+        var actionCol = opts.hideRemove ? '' : (
+            '<div class="q-ft-col q-ft-col-action">' +
+            '<span class="q-ft-label">&nbsp;</span>' +
+            '<button type="button" class="btn q-flight-remove q-remove" data-remove=".q-flight-row" title="Remove segment"><i class="fas fa-trash-alt"></i></button>' +
+            '</div>'
+        );
 
         return '' +
             '<div class="q-flight-row">' +
@@ -1465,7 +1472,7 @@
             '<input type="hidden" class="f-journey-start" value="' + (d.journey_start ? '1' : '0') + '">' +
             '<input type="hidden" class="f-journey-label" value="' + esc(d.journey_label) + '">' +
             '<div class="q-flight-segment-card">' +
-            '<div class="q-flight-segment-row">' +
+            '<div class="q-flight-segment-row' + (opts.hideRemove ? ' is-no-segment-delete' : '') + '">' +
             '<div class="q-ft-col q-ft-col-from">' +
             '<span class="q-ft-label">From</span>' +
             '<div class="q-flight-place">' +
@@ -1510,10 +1517,7 @@
             flightSupplierOptionsHtml(d.supplier_id, d.supplier) +
             '</select>' +
             '</div>' +
-            '<div class="q-ft-col q-ft-col-action">' +
-            '<span class="q-ft-label">&nbsp;</span>' +
-            '<button type="button" class="btn q-flight-remove q-remove" data-remove=".q-flight-row" title="Remove segment"><i class="fas fa-trash-alt"></i></button>' +
-            '</div>' +
+            actionCol +
             '</div>' +
             '<input type="hidden" class="f-hand-bag" value="' + esc(d.hand_baggage) + '">' +
             '<input type="hidden" class="f-checkin-bag" value="' + esc(d.checkin_baggage) + '">' +
@@ -10379,18 +10383,16 @@
             html += '<div class="qp-sec qp-sec-incl">';
             html += '<div class="qp-incl-card">';
             html += '<div class="qp-incl-head">' +
-                '<div class="qp-incl-head-left">' +
-                '<span class="qp-incl-vbar" aria-hidden="true"></span>' +
-                '<span class="qp-incl-icon" aria-hidden="true"><i class="fas fa-check-circle"></i></span>' +
                 '<div class="qp-incl-head-copy">' +
-                '<div class="qp-incl-title">INCLUSIONS</div>' +
-                '<div class="qp-incl-sub">WHAT\'S INCLUDED IN YOUR JOURNEY</div>' +
-                '</div>' +
+                '<div class="qp-incl-kicker"><span class="qp-incl-kicker-bar" aria-hidden="true"></span>Travel Quotation</div>' +
+                '<div class="qp-incl-title">Inclusions</div>' +
+                '<div class="qp-incl-sub">What\'s included in your journey</div>' +
                 '</div>' +
                 '<div class="qp-incl-slogan">' +
-                'JOURNEYS <span class="qp-incl-slogan-dot">•</span> ' +
-                'CARE <span class="qp-incl-slogan-dot">•</span> ' +
-                'MEMORIES' +
+                '<span>Journeys</span>' +
+                '<span>That Create</span>' +
+                '<span>Lasting</span>' +
+                '<span>Memories</span>' +
                 '</div>' +
                 '</div>';
             html += '<div class="qp-incl-body">';
@@ -11777,8 +11779,8 @@
         function addFlightSegment(data, opts) {
             opts = opts || {};
             var rowData = data || {};
-            var $row = $(flightRowHtml(rowData));
             var $target = $('#qFlightRows');
+            var $row = $(flightRowHtml(rowData));
             // "Add Another Segment" continues a journey only when the last card is already a multi-leg connection.
             if (opts.continueJourney) {
                 var $lastJourney = $('#qFlightRows .q-flight-journey-card').last();
@@ -13532,6 +13534,93 @@
                     }
                 } catch (err) { /* ignore */ }
             }, previewOnly ? 150 : 350);
+        })();
+
+        (function initHeaderAiSuggest() {
+            var $btn = $('#qHeaderAiBtn');
+            var $modal = $('#qHeaderAiModal');
+            if (!$btn.length || !$modal.length) {
+                return;
+            }
+
+            var request = null;
+
+            function showStatus(html) {
+                $modal.find('.js-q-header-ai-status').html(html);
+            }
+
+            function openModal() {
+                if ($modal.parent()[0] !== document.body) {
+                    $modal.appendTo(document.body);
+                }
+                $modal.modal('show');
+            }
+
+            $modal.on('click', '.js-q-header-ai-use', function () {
+                var text = String($(this).attr('data-header') || '');
+                if (!text) {
+                    return;
+                }
+                $('#q_header_text').val(text).trigger('input').trigger('change');
+                $modal.modal('hide');
+            });
+
+            $btn.on('click', function () {
+                var destination = $.trim(String($('#qDestinationInput').val() || ''));
+                $modal.find('.js-q-header-ai-list').empty();
+                $modal.find('.js-q-header-ai-dest').text(destination ? ('Destination: ' + destination) : '');
+                openModal();
+
+                if (!destination) {
+                    showStatus('<div class="alert alert-warning mb-0">Please select a destination first.</div>');
+                    return;
+                }
+
+                if (request && request.abort) {
+                    request.abort();
+                }
+
+                $btn.prop('disabled', true);
+                showStatus('<div class="text-muted py-2"><i class="fas fa-spinner fa-spin mr-2"></i>Generating suggestions…</div>');
+
+                request = $.ajax({
+                    url: absUrl('crm/ajax/ai_suggest_header.php'),
+                    method: 'POST',
+                    dataType: 'json',
+                    data: { destination: destination }
+                }).done(function (res) {
+                    var items = res && Array.isArray(res.suggestions) ? res.suggestions : [];
+                    if (!res || !res.success || !items.length) {
+                        showStatus('<div class="alert alert-danger mb-0">' + esc((res && res.message) || 'Could not generate suggestions. Please try again.') + '</div>');
+                        return;
+                    }
+                    showStatus('');
+                    var html = '';
+                    items.forEach(function (line) {
+                        line = $.trim(String(line || ''));
+                        if (!line) {
+                            return;
+                        }
+                        html += '<div class="q-header-ai-item">'
+                            + '<div class="q-header-ai-item-text">' + esc(line) + '</div>'
+                            + '<button type="button" class="btn btn-outline-danger btn-sm q-header-ai-use js-q-header-ai-use" data-header="' + esc(line).replace(/"/g, '&quot;') + '">Use</button>'
+                            + '</div>';
+                    });
+                    $modal.find('.js-q-header-ai-list').html(html);
+                }).fail(function (xhr, status) {
+                    if (status === 'abort') {
+                        return;
+                    }
+                    var message = 'Could not generate suggestions. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = String(xhr.responseJSON.message);
+                    }
+                    showStatus('<div class="alert alert-danger mb-0">' + esc(message) + '</div>');
+                }).always(function () {
+                    $btn.prop('disabled', false);
+                    request = null;
+                });
+            });
         })();
     });
 
