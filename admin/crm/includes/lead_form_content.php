@@ -44,7 +44,7 @@ if (!isset($conn)) {
 
 $leadDestinations = [];
 $nextDestOrder = 1;
-if (isset($conn) && $conn instanceof mysqli) {
+if (!$leadFormPublicIntake && isset($conn) && $conn instanceof mysqli) {
     $hasTourTypeCol = false;
     $checkTourTypeCol = $conn->query("SHOW COLUMNS FROM `destinations` LIKE 'tour_type'");
     if ($checkTourTypeCol && $checkTourTypeCol->num_rows > 0) {
@@ -137,6 +137,7 @@ if (empty($leadSourceOptions)) {
     class="crm-lead-create-form" onsubmit="return false;" autocomplete="off"
     data-lead-destinations="<?= htmlspecialchars(json_encode($leadDestinations), ENT_QUOTES, 'UTF-8') ?>"
     data-destination-save-url="<?= $leadFormPublicIntake ? '' : 'crm/ajax/save_destination.php' ?>"
+    data-destination-search-url="<?= $leadFormPublicIntake && function_exists('crmBuildIntakeDestinationSearchUrl') ? htmlspecialchars(crmBuildIntakeDestinationSearchUrl(), ENT_QUOTES, 'UTF-8') : '' ?>"
     data-departure-search-url="<?= $leadFormPublicIntake ? '' : 'ajax/mmt_autosuggest.php' ?>"
     data-save-url="<?= $leadFormPublicIntake ? htmlspecialchars((string) ($leadFormIntakeSubmitUrl ?? 'ajax/submit_lead_intake.php'), ENT_QUOTES, 'UTF-8') : 'crm/ajax/save_lead.php' ?>"
     data-next-dest-order="<?= (int) ($nextDestOrder ?? 1) ?>"
@@ -235,7 +236,8 @@ if (empty($leadSourceOptions)) {
                             <?php } else { ?>
                             <div class="lead-field-icon">
                                 <i class="fas fa-phone lead-field-icon-glyph" aria-hidden="true"></i>
-                                <input type="text" class="form-control" name="customer_phone" placeholder="Enter your phone number" required
+                                <input type="tel" class="form-control js-intake-phone" name="customer_phone" placeholder="Enter your phone number" required
+                                    inputmode="numeric" maxlength="10" pattern="[0-9]{10}" title="Enter a 10-digit mobile number" autocomplete="tel"
                                     value="<?= htmlspecialchars($intakePrefillPhone, ENT_QUOTES, 'UTF-8') ?>">
                             </div>
                             <?php } ?>
@@ -259,7 +261,9 @@ if (empty($leadSourceOptions)) {
                                     <div class="lead-contact-menu js-lead-contact-menu" style="display:none;"></div>
                                 </div>
                                 <?php } else { ?>
-                                <input type="email" class="form-control" name="customer_email" placeholder="Enter your email address" required
+                                <input type="email" class="form-control js-intake-email" name="customer_email" placeholder="Enter your email address" required
+                                    maxlength="100" inputmode="email" autocomplete="email"
+                                    pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}" title="Enter a valid email address"
                                     value="<?= htmlspecialchars($intakePrefillEmail, ENT_QUOTES, 'UTF-8') ?>">
                                 <?php } ?>
                             </div>
@@ -1468,8 +1472,19 @@ if (empty($leadSourceOptions)) {
                 $tpDestinationMenu.hide().empty();
             }
 
+            function tpDestinationPlaceholder() {
+                if (tpSelectedDestinations.length) {
+                    return '';
+                }
+                return 'Type to search destination';
+            }
+
             function setTpDestinationEnabled(enabled, placeholder) {
-                $tpDestinationInput.prop('disabled', !enabled).attr('placeholder', placeholder || 'Type to search destination');
+                var text = placeholder || 'Type to search destination';
+                if (enabled && tpSelectedDestinations.length) {
+                    text = '';
+                }
+                $tpDestinationInput.prop('disabled', !enabled).attr('placeholder', text);
                 $tpDestinationField.toggleClass('is-disabled', !enabled);
                 if (!enabled) {
                     hideTpDestinationMenu();
@@ -1499,6 +1514,9 @@ if (empty($leadSourceOptions)) {
                     );
                     $tpDestinationTags.append($tag);
                 });
+                if (!$tpDestinationInput.prop('disabled')) {
+                    $tpDestinationInput.attr('placeholder', tpDestinationPlaceholder());
+                }
             }
 
             function syncTpDestinationHiddenInputs() {
@@ -1989,7 +2007,7 @@ if (empty($leadSourceOptions)) {
                 } else {
                     filtered.forEach(function (dest) {
                         $tpDestinationMenu.append(
-                            jQuery('<button type="button" class="tp-destination-item"></button>')
+                            jQuery('<button type="button" class="tp-destination-item" tabindex="-1"></button>')
                                 .attr('data-id', dest.id)
                                 .text(dest.name)
                         );
@@ -2022,6 +2040,92 @@ if (empty($leadSourceOptions)) {
                 syncItinerary(true);
                 $tpDestinationInput.val('');
                 hideTpDestinationMenu();
+                focusTpNightsField();
+            }
+
+            var intakeDestSearchUrl = jQuery.trim(String($form.attr('data-destination-search-url') || ''));
+            var intakeDestSeq = 0;
+            var intakeDestTimer = null;
+
+            function renderIntakeDestinationResults(items, query) {
+                tpDestinationOptions = items;
+                $tpDestinationMenu.empty();
+                if (!items.length) {
+                    $tpDestinationMenu.append(
+                        '<div class="tp-destination-empty">No destinations found' +
+                        (query ? (' for "' + escapeHtml(query) + '"') : '') +
+                        '</div>'
+                    );
+                } else {
+                    items.forEach(function (dest) {
+                        var country = String(dest.country || '').trim();
+                        var showCountry = country && country.toLowerCase() !== String(dest.name || '').toLowerCase();
+                        $tpDestinationMenu.append(
+                            jQuery('<button type="button" class="tp-destination-item" tabindex="-1"></button>')
+                                .attr('data-id', dest.id)
+                                .html(
+                                    '<span>' + escapeHtml(dest.name) + '</span>' +
+                                    (showCountry ? ('<small class="tp-destination-item-meta">' + escapeHtml(country) + '</small>') : '')
+                                )
+                        );
+                    });
+                }
+                $tpDestinationMenu.show();
+            }
+
+            function fetchIntakeDestinations(query) {
+                var q = jQuery.trim(String(query || ''));
+                window.clearTimeout(intakeDestTimer);
+                if (!intakeDestSearchUrl) {
+                    $tpDestinationMenu.empty().append('<div class="tp-destination-empty">Destination search is unavailable</div>').show();
+                    return;
+                }
+                if (q.length < 2) {
+                    tpDestinationOptions = [];
+                    $tpDestinationMenu.empty().append('<div class="tp-destination-empty">Type at least 2 letters</div>').show();
+                    return;
+                }
+                $tpDestinationMenu.empty().append('<div class="tp-destination-empty">Searching...</div>').show();
+                var seq = ++intakeDestSeq;
+                intakeDestTimer = window.setTimeout(function () {
+                    jQuery.ajax({
+                        url: intakeDestSearchUrl,
+                        method: 'GET',
+                        dataType: 'json',
+                        cache: false,
+                        data: {
+                            q: q,
+                            tour_type: $tourType.length ? ($tourType.val() || 'domestic') : 'domestic'
+                        }
+                    }).done(function (res) {
+                        if (seq !== intakeDestSeq) {
+                            return;
+                        }
+                        var raw = (res && Array.isArray(res.data)) ? res.data : [];
+                        var items = [];
+                        raw.forEach(function (item) {
+                            var name = String((item && item.name) || '').trim();
+                            var country = String((item && item.country_name) || '').trim();
+                            if (!name) {
+                                return;
+                            }
+                            var label = country && country.toLowerCase() !== name.toLowerCase()
+                                ? (name + ', ' + country)
+                                : name;
+                            if (isTpDestinationSelected(label) || isTpDestinationSelected(name)) {
+                                return;
+                            }
+                            items.push({ id: label, name: name, country: country });
+                        });
+                        renderIntakeDestinationResults(items, q);
+                    }).fail(function () {
+                        if (seq !== intakeDestSeq) {
+                            return;
+                        }
+                        tpDestinationOptions = [];
+                        $tpDestinationMenu.empty().append('<div class="tp-destination-empty">Could not load destinations</div>').show();
+                    });
+                }, 250);
             }
 
             function removeTpDestination(id) {
@@ -2031,6 +2135,10 @@ if (empty($leadSourceOptions)) {
                 renderTpDestinationTags();
                 syncTpDestinationHiddenInputs();
                 syncItinerary(true);
+                if (isIntake) {
+                    fetchIntakeDestinations($tpDestinationInput.val());
+                    return;
+                }
                 renderTpDestinationMenu($tpDestinationInput.val());
             }
 
@@ -2076,6 +2184,15 @@ if (empty($leadSourceOptions)) {
 
                 if ($tourType.length && !tourType) {
                     setTpDestinationEnabled(false, 'Select Tour Type first');
+                    syncItinerary(true);
+                    return;
+                }
+
+                if (isIntake) {
+                    setTpDestinationEnabled(true, 'Type to search destination');
+                    tpSelectedDestinations = previousSelected;
+                    renderTpDestinationTags();
+                    syncTpDestinationHiddenInputs();
                     syncItinerary(true);
                     return;
                 }
@@ -2565,18 +2682,44 @@ if (empty($leadSourceOptions)) {
                 updateItineraryDestDayPreviews(dayPlan);
             }
 
+            function focusTpNightsField() {
+                window.setTimeout(function () {
+                    var nights = $form.find('.js-tp-total-nights').get(0);
+                    if (!nights) {
+                        return;
+                    }
+                    nights.focus();
+                }, 0);
+            }
+
             if ($tpWrap.length) {
-                $tpDestinationField.off('click.leadDest mousedown.leadDest').on('click.leadDest mousedown.leadDest', function (e) {
+                $tpDestinationField.off('click.leadDest mousedown.leadDest').on('mousedown.leadDest', function (e) {
                     if (jQuery(e.target).closest('.tp-destination-tag-remove').length) {
                         return;
                     }
                     if ($tpDestinationInput.prop('disabled')) {
                         return;
                     }
+                    // Cancelling mousedown on the search box itself stops it taking
+                    // focus, and the caret jumps to the next field (Nights).
+                    if (jQuery(e.target).is($tpDestinationInput)) {
+                        return;
+                    }
                     e.preventDefault();
                     $tpDestinationInput.prop('disabled', false);
                     $tpDestinationField.removeClass('is-disabled');
-                    $tpDestinationInput.focus();
+                    $tpDestinationInput.trigger('focus');
+                }).on('click.leadDest', function (e) {
+                    if (jQuery(e.target).closest('.tp-destination-tag-remove').length) {
+                        return;
+                    }
+                    if ($tpDestinationInput.prop('disabled')) {
+                        return;
+                    }
+                    if (isIntake) {
+                        fetchIntakeDestinations($tpDestinationInput.val());
+                        return;
+                    }
                     renderTpDestinationMenu($tpDestinationInput.val());
                 });
 
@@ -2584,14 +2727,25 @@ if (empty($leadSourceOptions)) {
                     if ($tpDestinationInput.prop('disabled')) {
                         return;
                     }
+                    if (isIntake) {
+                        fetchIntakeDestinations($tpDestinationInput.val());
+                        return;
+                    }
                     renderTpDestinationMenu($tpDestinationInput.val());
                 }).on('input.leadDest', function () {
                     if ($tpDestinationInput.prop('disabled')) {
                         return;
                     }
+                    if (isIntake) {
+                        fetchIntakeDestinations($tpDestinationInput.val());
+                        return;
+                    }
                     renderTpDestinationMenu($tpDestinationInput.val());
                 }).on('blur.leadDest', function () {
                     window.setTimeout(function () {
+                        if ($tpDestinationInput.is(':focus')) {
+                            return;
+                        }
                         hideTpDestinationMenu();
                         $tpDestinationInput.val('');
                     }, 150);
@@ -2600,17 +2754,19 @@ if (empty($leadSourceOptions)) {
                 $tpDestinationTags.off('.leadDest').on('click.leadDest', '.tp-destination-tag-remove', function (e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    removeTpDestination(jQuery(this).data('id'));
+                    removeTpDestination(jQuery(this).attr('data-id'));
                 });
 
                 $tpDestinationMenu.off('.leadDest').on('mousedown.leadDest', '.tp-destination-item', function (e) {
                     e.preventDefault();
-                    var id = jQuery(this).data('id');
+                    var id = jQuery(this).attr('data-id');
                     var dest = tpDestinationOptions.find(function (item) {
                         return String(item.id) === String(id);
                     });
                     if (dest) {
                         addTpDestination(dest);
+                    } else {
+                        focusTpNightsField();
                     }
                 }).on('mousedown.leadDest', '.tp-destination-item-create', function (e) {
                     e.preventDefault();
@@ -3976,6 +4132,15 @@ if (empty($leadSourceOptions)) {
                 }, 3000);
             }
 
+            if (isIntake) {
+                $form.find('.js-intake-phone').off('input.intakePhone').on('input.intakePhone', function () {
+                    var digits = String(jQuery(this).val() || '').replace(/\D/g, '').slice(0, 10);
+                    if (jQuery(this).val() !== digits) {
+                        jQuery(this).val(digits);
+                    }
+                });
+            }
+
             $form.off('submit.leadSave').on('submit.leadSave', function (e) {
                 e.preventDefault();
                 resetLeadSaveAlert();
@@ -4006,9 +4171,30 @@ if (empty($leadSourceOptions)) {
                     }
                 }
                 if (isIntake && intakeFieldEnabled('customer_phone')) {
-                    var cPhone = ($form.find('[name="customer_phone"]').val() || '').toString().trim();
+                    var cPhone = ($form.find('[name="customer_phone"]').val() || '').toString().replace(/\D/g, '');
+                    $form.find('[name="customer_phone"]').val(cPhone);
                     if (!cPhone) {
                         showLeadSaveAlert('error', 'Please enter your phone number.');
+                        $form.find('[name="customer_phone"]').trigger('focus');
+                        return;
+                    }
+                    if (!/^[0-9]{10}$/.test(cPhone)) {
+                        showLeadSaveAlert('error', 'Phone number must be 10 digits.');
+                        $form.find('[name="customer_phone"]').trigger('focus');
+                        return;
+                    }
+                }
+                if (isIntake && intakeFieldEnabled('customer_email')) {
+                    var cEmail = ($form.find('[name="customer_email"]').val() || '').toString().trim();
+                    $form.find('[name="customer_email"]').val(cEmail);
+                    if (!cEmail) {
+                        showLeadSaveAlert('error', 'Please enter your email address.');
+                        $form.find('[name="customer_email"]').trigger('focus');
+                        return;
+                    }
+                    if (!/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(cEmail)) {
+                        showLeadSaveAlert('error', 'Please enter a valid email address.');
+                        $form.find('[name="customer_email"]').trigger('focus');
                         return;
                     }
                 }

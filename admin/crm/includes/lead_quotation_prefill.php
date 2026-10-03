@@ -37,10 +37,18 @@ function crmLeadRowToQuotationPrefill(array $row, array $destinationLookup = [])
         $destIds = $destIds !== '' ? [$destIds] : [];
     }
     foreach ($destIds as $destId) {
-        $destId = (int) $destId;
-        if ($destId > 0 && isset($destinationLookup[$destId])) {
-            $destNames[] = $destinationLookup[$destId];
+        $label = trim((string) $destId);
+        if ($label === '') {
+            continue;
         }
+        if (ctype_digit($label)) {
+            $id = (int) $label;
+            if ($id > 0 && isset($destinationLookup[$id])) {
+                $destNames[] = $destinationLookup[$id];
+            }
+            continue;
+        }
+        $destNames[] = $label;
     }
     if (empty($destNames) && !empty($payload['tp_arrival'])) {
         $destNames[] = trim((string) $payload['tp_arrival']);
@@ -368,10 +376,18 @@ function crmSupplierQuoteMailFromContext(?array $row, array $destinationLookup =
         $destIds = $destIds !== '' ? [$destIds] : [];
     }
     foreach ($destIds as $destId) {
-        $destId = (int) $destId;
-        if ($destId > 0 && isset($destinationLookup[$destId])) {
-            $destinations[] = $destinationLookup[$destId];
+        $label = trim((string) $destId);
+        if ($label === '') {
+            continue;
         }
+        if (ctype_digit($label)) {
+            $id = (int) $label;
+            if ($id > 0 && isset($destinationLookup[$id])) {
+                $destinations[] = $destinationLookup[$id];
+            }
+            continue;
+        }
+        $destinations[] = $label;
     }
     if (empty($destinations) && !empty($payload['tp_arrival'])) {
         $destinations[] = trim((string) $payload['tp_arrival']);
@@ -510,10 +526,18 @@ function crmLeadRowToSidebarPanel(mysqli $conn, array $row, array $destinationLo
         $destIds = $destIds !== '' ? [$destIds] : [];
     }
     foreach ($destIds as $destId) {
-        $destId = (int) $destId;
-        if ($destId > 0 && isset($destinationLookup[$destId])) {
-            $destNames[] = $destinationLookup[$destId];
+        $label = trim((string) $destId);
+        if ($label === '') {
+            continue;
         }
+        if (ctype_digit($label)) {
+            $id = (int) $label;
+            if ($id > 0 && isset($destinationLookup[$id])) {
+                $destNames[] = $destinationLookup[$id];
+            }
+            continue;
+        }
+        $destNames[] = $label;
     }
     if (empty($destNames) && !empty($payload['tp_arrival'])) {
         $destNames[] = trim((string) $payload['tp_arrival']);

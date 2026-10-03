@@ -314,6 +314,11 @@ function crmBuildIntakeSubmitUrl()
     return $scheme . '://' . $host . $ajaxPath;
 }
 
+function crmBuildIntakeDestinationSearchUrl()
+{
+    return preg_replace('/submit_lead_intake\.php$/', 'search_intake_destinations.php', crmBuildIntakeSubmitUrl());
+}
+
 function crmFormatIntakeInquiryId($submissionId, $createdAt = '')
 {
     $id = max(0, (int) $submissionId);
@@ -365,27 +370,34 @@ function crmResolveIntakeDestinationNames(mysqli $conn, $payload)
         $raw = $raw !== '' && $raw !== null ? [$raw] : [];
     }
     $ids = [];
+    $names = [];
     foreach ($raw as $item) {
-        $id = (int) $item;
-        if ($id > 0) {
-            $ids[] = $id;
+        $label = trim((string) $item);
+        if ($label === '') {
+            continue;
         }
+        if (ctype_digit($label)) {
+            $id = (int) $label;
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+            continue;
+        }
+        $names[] = $label;
     }
     $ids = array_values(array_unique($ids));
-    if (!$ids) {
-        return '—';
-    }
-    $in = implode(',', $ids);
-    $names = [];
-    $res = $conn->query("SELECT `id`, `name` FROM `destinations` WHERE `id` IN ({$in})");
-    if ($res) {
-        $map = [];
-        while ($row = $res->fetch_assoc()) {
-            $map[(int) $row['id']] = trim((string) ($row['name'] ?? ''));
-        }
-        foreach ($ids as $id) {
-            if (!empty($map[$id])) {
-                $names[] = $map[$id];
+    if ($ids) {
+        $in = implode(',', $ids);
+        $res = $conn->query("SELECT `id`, `name` FROM `destinations` WHERE `id` IN ({$in})");
+        if ($res) {
+            $map = [];
+            while ($row = $res->fetch_assoc()) {
+                $map[(int) $row['id']] = trim((string) ($row['name'] ?? ''));
+            }
+            foreach ($ids as $id) {
+                if (!empty($map[$id])) {
+                    $names[] = $map[$id];
+                }
             }
         }
     }

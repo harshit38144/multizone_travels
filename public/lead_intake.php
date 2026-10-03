@@ -213,58 +213,6 @@ if ($request) {
             font-weight: 500;
         }
 
-        .crm-lead-intake-trust {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.75rem;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
-            padding: 1rem 0.85rem;
-            margin-bottom: 1.15rem;
-        }
-
-        .crm-lead-intake-trust-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.55rem;
-            min-width: 0;
-            padding: 0 0.35rem;
-        }
-
-        .crm-lead-intake-trust-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 36px;
-            font-size: 0.85rem;
-            color: #fff;
-        }
-
-        .crm-lead-intake-trust-icon.tone-red { background: #e11d2e; }
-        .crm-lead-intake-trust-icon.tone-blue { background: #2563eb; }
-        .crm-lead-intake-trust-icon.tone-green { background: #16a34a; }
-        .crm-lead-intake-trust-icon.tone-purple { background: #7c3aed; }
-
-        .crm-lead-intake-trust-title {
-            margin: 0 0 0.1rem;
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #0f172a;
-            line-height: 1.25;
-        }
-
-        .crm-lead-intake-trust-text {
-            margin: 0;
-            font-size: 0.7rem;
-            color: #64748b;
-            line-height: 1.3;
-        }
-
         .crm-lead-intake-note {
             display: flex;
             gap: 0.65rem;
@@ -745,22 +693,6 @@ if ($request) {
             font-weight: 500;
         }
 
-        @media (max-width: 991px) {
-            .crm-lead-intake-trust {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 0.65rem;
-                padding: 0.85rem 0.7rem;
-            }
-
-            .crm-lead-intake-trust-title {
-                font-size: 0.72rem;
-            }
-
-            .crm-lead-intake-trust-text {
-                font-size: 0.65rem;
-            }
-        }
-
         @media (max-width: 767.98px) {
             .crm-lead-intake-page {
                 padding: 0.75rem 0.55rem 1.35rem;
@@ -800,23 +732,6 @@ if ($request) {
                 line-height: 1.4;
                 max-width: 34rem;
                 padding: 0 0.25rem;
-            }
-
-            .crm-lead-intake-trust {
-                margin-bottom: 0.85rem;
-                border-radius: 12px;
-            }
-
-            .crm-lead-intake-trust-icon {
-                width: 30px;
-                height: 30px;
-                flex-basis: 30px;
-                font-size: 0.72rem;
-            }
-
-            .crm-lead-intake-trust-item {
-                gap: 0.4rem;
-                padding: 0.1rem 0.15rem;
             }
 
             .crm-lead-intake-note {
@@ -976,28 +891,6 @@ if ($request) {
                 font-size: 0.72rem;
             }
 
-            .crm-lead-intake-trust {
-                grid-template-columns: 1fr 1fr;
-                gap: 0.5rem 0.35rem;
-                padding: 0.65rem 0.5rem;
-            }
-
-            .crm-lead-intake-trust-title {
-                font-size: 0.66rem;
-            }
-
-            .crm-lead-intake-trust-text {
-                font-size: 0.6rem;
-                line-height: 1.25;
-            }
-
-            .crm-lead-intake-trust-icon {
-                width: 26px;
-                height: 26px;
-                flex-basis: 26px;
-                font-size: 0.65rem;
-            }
-
             .crm-lead-intake-public .crm-card-hd-title {
                 font-size: 0.86rem;
             }
@@ -1068,39 +961,6 @@ if ($request) {
         <div class="crm-lead-intake-accent" aria-hidden="true"></div>
         <p class="crm-lead-intake-subhead"><?= htmlspecialchars($intakeFormSubtitle, ENT_QUOTES, 'UTF-8') ?></p>
     </div>
-
-    <?php if (!$error && !$success) { ?>
-    <div class="crm-lead-intake-trust">
-        <div class="crm-lead-intake-trust-item">
-            <span class="crm-lead-intake-trust-icon tone-red"><i class="fas fa-check"></i></span>
-            <div>
-                <p class="crm-lead-intake-trust-title">Best Price Guarantee</p>
-                <p class="crm-lead-intake-trust-text">We ensure the best prices for you</p>
-            </div>
-        </div>
-        <div class="crm-lead-intake-trust-item">
-            <span class="crm-lead-intake-trust-icon tone-blue"><i class="fas fa-check"></i></span>
-            <div>
-                <p class="crm-lead-intake-trust-title">Expert Travel Planners</p>
-                <p class="crm-lead-intake-trust-text">Personalized itineraries by travel experts</p>
-            </div>
-        </div>
-        <div class="crm-lead-intake-trust-item">
-            <span class="crm-lead-intake-trust-icon tone-green"><i class="fas fa-headset"></i></span>
-            <div>
-                <p class="crm-lead-intake-trust-title">24/7 Customer Support</p>
-                <p class="crm-lead-intake-trust-text">We're here to assist you anytime</p>
-            </div>
-        </div>
-        <div class="crm-lead-intake-trust-item">
-            <span class="crm-lead-intake-trust-icon tone-purple"><i class="fas fa-shield-alt"></i></span>
-            <div>
-                <p class="crm-lead-intake-trust-title">Safe &amp; Secure</p>
-                <p class="crm-lead-intake-trust-text">Your information is 100% secure</p>
-            </div>
-        </div>
-    </div>
-    <?php } ?>
 
     <?php if ($error) { ?>
         <div class="alert alert-danger crm-lead-intake-status mb-0"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>

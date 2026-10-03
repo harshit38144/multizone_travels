@@ -52,13 +52,28 @@ if (!is_array($enabled)) {
 }
 
 $customerName = trim($_POST['customer_name'] ?? '');
-$customerPhone = trim($_POST['customer_phone'] ?? '');
+$customerPhone = preg_replace('/\D+/', '', trim($_POST['customer_phone'] ?? ''));
+$customerEmail = trim($_POST['customer_email'] ?? '');
+$_POST['customer_phone'] = $customerPhone;
 
 if (crmLeadIntakeFieldEnabled($enabled, 'customer_name') && $customerName === '') {
     intakeJson(false, 'Please enter your name.');
 }
-if (crmLeadIntakeFieldEnabled($enabled, 'customer_phone') && $customerPhone === '') {
-    intakeJson(false, 'Please enter your phone number.');
+if (crmLeadIntakeFieldEnabled($enabled, 'customer_phone')) {
+    if ($customerPhone === '') {
+        intakeJson(false, 'Please enter your phone number.');
+    }
+    if (!preg_match('/^[0-9]{10}$/', $customerPhone)) {
+        intakeJson(false, 'Phone number must be 10 digits.');
+    }
+}
+if (crmLeadIntakeFieldEnabled($enabled, 'customer_email')) {
+    if ($customerEmail === '') {
+        intakeJson(false, 'Please enter your email address.');
+    }
+    if (!filter_var($customerEmail, FILTER_VALIDATE_EMAIL) || !preg_match('/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/', $customerEmail)) {
+        intakeJson(false, 'Please enter a valid email address.');
+    }
 }
 
 $services = crmInferPayloadServices($_POST);

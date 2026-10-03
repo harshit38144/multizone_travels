@@ -50,13 +50,21 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         $destIds = $destIds !== '' ? [$destIds] : [];
     }
 
-    // Normalize destination IDs while preserving order.
+    // Keep admin destination ids and API place names, in the submitted order.
     $normalizedDestIds = [];
     foreach ($destIds as $destId) {
-        $destId = (int) $destId;
-        if ($destId > 0) {
-            $normalizedDestIds[] = $destId;
+        $label = trim((string) $destId);
+        if ($label === '') {
+            continue;
         }
+        if (ctype_digit($label)) {
+            $destIdNum = (int) $label;
+            if ($destIdNum > 0) {
+                $normalizedDestIds[] = $destIdNum;
+            }
+            continue;
+        }
+        $normalizedDestIds[] = $label;
     }
     $destIds = $normalizedDestIds;
 
@@ -64,16 +72,22 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
     $destNightMapIsList = $destNightMap !== [] && array_keys($destNightMap) === range(0, count($destNightMap) - 1);
 
     foreach ($destIds as $destOrder => $destId) {
-        if (!isset($destinationLookup[$destId])) {
-            continue;
+        $destName = '';
+        $nightKey = $destId;
+        if (is_int($destId)) {
+            if (!isset($destinationLookup[$destId])) {
+                continue;
+            }
+            $destName = $destinationLookup[$destId];
+        } else {
+            $destName = (string) $destId;
         }
-        $destName = $destinationLookup[$destId];
         $destNames[] = $destName;
         $nightsVal = 0;
-        if (isset($destNightMap[$destId])) {
-            $nightsVal = max(0, (int) $destNightMap[$destId]);
-        } elseif (isset($destNightMap[(string) $destId])) {
-            $nightsVal = max(0, (int) $destNightMap[(string) $destId]);
+        if (isset($destNightMap[$nightKey])) {
+            $nightsVal = max(0, (int) $destNightMap[$nightKey]);
+        } elseif (isset($destNightMap[(string) $nightKey])) {
+            $nightsVal = max(0, (int) $destNightMap[(string) $nightKey]);
         } elseif ($destNightMapIsList && isset($destNightMap[$destOrder])) {
             $nightsVal = max(0, (int) $destNightMap[$destOrder]);
         }

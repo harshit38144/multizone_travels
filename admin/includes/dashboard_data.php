@@ -91,10 +91,18 @@ function dashLeadDestinationName(array $payload, array $destLookup)
         $destIds = $destIds !== '' ? [$destIds] : [];
     }
     foreach ($destIds as $destId) {
-        $destId = (int) $destId;
-        if ($destId > 0 && isset($destLookup[$destId]) && $destLookup[$destId] !== '') {
-            return $destLookup[$destId];
+        $label = trim((string) $destId);
+        if ($label === '') {
+            continue;
         }
+        if (ctype_digit($label)) {
+            $id = (int) $label;
+            if ($id > 0 && isset($destLookup[$id]) && $destLookup[$id] !== '') {
+                return $destLookup[$id];
+            }
+            continue;
+        }
+        return $label;
     }
     if (!empty($payload['tp_arrival'])) {
         return trim((string) $payload['tp_arrival']);

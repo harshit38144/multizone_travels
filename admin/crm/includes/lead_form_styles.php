@@ -974,6 +974,13 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
     background: #f1f3f5;
     outline: none;
 }
+<?= $scope ?> .tp-destination-item-meta {
+    display: block;
+    margin-top: 0.1rem;
+    color: #6c757d;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
 <?= $scope ?> .tp-destination-empty {
     padding: 0.65rem 0.75rem;
     color: #6c757d;
