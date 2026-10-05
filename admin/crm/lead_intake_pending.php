@@ -460,7 +460,8 @@ if ($usersTbl && $usersTbl->num_rows > 0) {
             border-color: #c8e6c9;
         }
 
-        .crm-intake-pending-ui .action-btn-edit {
+        .crm-intake-pending-ui .action-btn-edit,
+        .crm-intake-pending-ui .action-btn-view {
             background: #fff;
             color: #2e7d32 !important;
             border-color: #c8e6c9;
@@ -654,6 +655,54 @@ if ($usersTbl && $usersTbl->num_rows > 0) {
                 padding: 0.95rem;
             }
         }
+
+        #leadFormModal .js-tp-child-bed-field {
+            display: none !important;
+        }
+        #leadFormModal .crm-lead-form-embed .tp-destination-tag,
+        #leadFormModal .tp-destination-tag {
+            font-size: 1.05rem !important;
+            font-weight: 600 !important;
+            padding: 0.22rem 0.7rem !important;
+        }
+        #leadFormModal .tp-rg-child-ages-popup {
+            min-width: 460px;
+            max-width: 520px;
+        }
+        #leadFormModal .tp-rg-child-age-row {
+            align-items: center;
+            gap: 0.45rem;
+        }
+        #leadFormModal .tp-rg-child-age-row label {
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+        #leadFormModal .tp-rg-child-age-controls {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.4rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+        #leadFormModal .tp-rg-child-age-controls .tp-rg-child-age-select {
+            width: auto;
+            min-width: 84px;
+            flex: 0 0 auto;
+        }
+        #leadFormModal .tp-rg-child-bed-select {
+            width: auto;
+            min-width: 132px;
+            border: 1px solid #d1d5db;
+            border-radius: 999px;
+            padding: 0.32rem 0.65rem;
+            background: #fff;
+            color: #111827;
+            font-weight: 600;
+            font-size: 0.82rem;
+        }
     </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
@@ -736,13 +785,9 @@ if ($usersTbl && $usersTbl->num_rows > 0) {
                                         </td>
                                         <td>
                                             <div class="ip-actions">
-                                                <a href="javascript:void(0)" class="action-btn action-btn-approve js-intake-approve"
-                                                    data-id="<?= (int) $item['submission_id'] ?>" title="Verify / Approve">
-                                                    <i class="fas fa-check"></i>
-                                                </a>
-                                                <a href="javascript:void(0)" class="action-btn action-btn-edit js-intake-edit"
-                                                    data-id="<?= (int) $item['submission_id'] ?>" title="Edit">
-                                                    <i class="fas fa-pen"></i>
+                                                <a href="javascript:void(0)" class="action-btn action-btn-view js-intake-view"
+                                                    data-id="<?= (int) $item['submission_id'] ?>" title="View submission">
+                                                    <i class="fas fa-eye"></i>
                                                 </a>
                                                 <a href="javascript:void(0)" class="action-btn action-btn-delete js-intake-delete"
                                                     data-id="<?= (int) $item['submission_id'] ?>" title="Delete">
@@ -754,13 +799,6 @@ if ($usersTbl && $usersTbl->num_rows > 0) {
                                                         <i class="fas fa-ellipsis-v"></i>
                                                     </a>
                                                     <div class="dropdown-menu dropdown-menu-right">
-                                                        <a href="javascript:void(0)" class="dropdown-item js-intake-approve" data-id="<?= (int) $item['submission_id'] ?>">
-                                                            <i class="fas fa-check mr-2 text-success"></i> Approve
-                                                        </a>
-                                                        <a href="javascript:void(0)" class="dropdown-item js-intake-edit" data-id="<?= (int) $item['submission_id'] ?>">
-                                                            <i class="fas fa-pen mr-2 text-success"></i> Edit
-                                                        </a>
-                                                        <div class="dropdown-divider"></div>
                                                         <a href="javascript:void(0)" class="dropdown-item text-danger js-intake-delete" data-id="<?= (int) $item['submission_id'] ?>">
                                                             <i class="fas fa-trash mr-2"></i> Delete
                                                         </a>
@@ -783,15 +821,15 @@ if ($usersTbl && $usersTbl->num_rows > 0) {
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="intakeApproveModalLabel"><i class="fas fa-check-circle text-success mr-1"></i> Approve submission?</h5>
+                    <h5 class="modal-title" id="intakeApproveModalLabel"><i class="fas fa-check-circle text-success mr-1"></i> Approve Submission?</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-2 text-muted">Assign this lead to:</p>
+                    <label class="d-block mb-2 font-weight-bold" for="intakeAssignSearch">Assign This Lead</label>
                     <div class="intake-assign-combobox js-intake-assign-combobox">
                         <div class="intake-assign-field js-intake-assign-field">
-                            <input type="text" class="intake-assign-search js-intake-assign-search"
-                                placeholder="Type to search assignee…" autocomplete="off" aria-label="Assign to">
+                            <input type="text" id="intakeAssignSearch" class="intake-assign-search js-intake-assign-search"
+                                placeholder="Type to search assignee…" autocomplete="off" aria-label="Assign This Lead" required>
                         </div>
                         <div class="intake-assign-menu js-intake-assign-menu" style="display:none;"></div>
                         <input type="hidden" class="js-intake-assign-value" value="">
@@ -800,7 +838,7 @@ if ($usersTbl && $usersTbl->num_rows > 0) {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-success js-intake-approve-confirm"><i class="fas fa-check mr-1"></i> Approve</button>
+                    <button type="button" class="btn btn-success js-intake-approve-confirm"><i class="fas fa-check mr-1"></i> Approve Submission</button>
                 </div>
             </div>
         </div>
@@ -1088,13 +1126,72 @@ $(function () {
         $approveModal.modal('hide');
     });
 
+    function showApprovedLeadInList(leadId) {
+        leadId = parseInt(leadId, 10) || 0;
+        var topWin = window.top;
+        var frame = null;
+        try {
+            frame = topWin.document.querySelector('iframe.mz-tab-frame[data-tab-id="crm/leads.php"]');
+        } catch (err) {
+            frame = null;
+        }
+        var hadLeadsTab = !!(frame && frame.contentDocument && frame.contentDocument.querySelector('table.crm-leads-table'));
+        if (topWin.MZTabWorkspace && typeof topWin.MZTabWorkspace.open === 'function') {
+            topWin.MZTabWorkspace.open('crm/leads.php', 'Leads');
+        } else {
+            window.location.href = 'crm/leads.php';
+            return;
+        }
+        if (!hadLeadsTab || !leadId) {
+            return;
+        }
+        $.getJSON('crm/leads.php', { ajax_row: leadId }, function (res) {
+            if (!res || !res.success || !res.html) {
+                return;
+            }
+            var doc = frame.contentDocument;
+            if (!doc) {
+                return;
+            }
+            var $doc = $(doc);
+            var $tbody = $doc.find('table.crm-leads-table tbody').first();
+            if (!$tbody.length || $tbody.find('tr[data-lead-id="' + leadId + '"]').length) {
+                return;
+            }
+            $tbody.find('td[colspan]').closest('tr').remove();
+            var $row = $(res.html);
+            $tbody.prepend($row);
+            var perPage = parseInt($doc.find('.leads-per-page-select').val(), 10) || 25;
+            var $rows = $tbody.children('tr[data-lead-id]');
+            if ($rows.length > perPage) {
+                $rows.slice(perPage).remove();
+            }
+            var total = Number(res.total || 0);
+            var visible = $tbody.children('tr[data-lead-id]').length;
+            var $summary = $doc.find('.pagination-bar .page-summary').first();
+            if ($summary.length && total > 0) {
+                var activePage = parseInt($doc.find('.pagination .page-item.active .page-link').first().text(), 10) || 1;
+                if (activePage === 1) {
+                    $summary.text('Showing ' + (visible ? '1' : '0') + '–' + String(visible) + ' of ' + total.toLocaleString() + ' leads');
+                } else {
+                    var summaryText = $.trim($summary.text());
+                    $summary.text(summaryText.replace(/of\s+[\d,]+\s+leads/i, 'of ' + total.toLocaleString() + ' leads'));
+                }
+            }
+            $row.css('background-color', '#d1fae5');
+            window.setTimeout(function () {
+                $row.css('background-color', '');
+            }, 2200);
+        });
+    }
+    window.crmShowApprovedLeadInList = showApprovedLeadInList;
+
     function postIntake(url, submissionId, extra, $row, successMessage) {
         var data = { submission_id: submissionId };
         if (extra) $.extend(data, extra);
         $.post(url, data, function (res) {
             if (res && res.success) {
                 if (successMessage) {
-                    var leadUrl = 'crm/leads.php';
                     Swal.fire({
                         icon: 'success',
                         title: 'Success',
@@ -1105,9 +1202,20 @@ $(function () {
                         cancelButtonText: 'Stay here',
                         cancelButtonColor: '#6c757d'
                     }).then(function (swalResult) {
-                        if (intakeSwalConfirmed(swalResult)) {
-                            window.location.href = leadUrl;
+                        if (!intakeSwalConfirmed(swalResult)) {
+                            return;
                         }
+                        var newLeadId = res && res.lead ? parseInt(res.lead.id, 10) || 0 : 0;
+                        if (newLeadId) {
+                            showApprovedLeadInList(newLeadId);
+                            return;
+                        }
+                        var topWin = window.top;
+                        if (topWin.MZTabWorkspace && typeof topWin.MZTabWorkspace.open === 'function') {
+                            topWin.MZTabWorkspace.open('crm/leads.php', 'Leads');
+                            return;
+                        }
+                        window.location.href = 'crm/leads.php';
                     });
                 }
                 if (intakeTable) {
@@ -1133,17 +1241,7 @@ $(function () {
         e.preventDefault();
         var id = $(this).data('id');
         var $row = $(this).closest('tr[data-submission-id]');
-        showApproveDialog(id).then(function (result) {
-            if (result.dismiss) {
-                return;
-            }
-            var assignTo = (result.value || '').toString().trim();
-            if (!assignTo) {
-                showIntakeAlert('error', 'Required', 'Please select assignee.');
-                return;
-            }
-            postIntake('crm/ajax/approve_intake.php', id, { assign_to: assignTo }, $row, 'Lead approved and added to CRM Leads.');
-        });
+        beginIntakeApproval(id, $row);
     });
 
     $(document).on('click', '.js-intake-delete', function (e) {
@@ -1200,6 +1298,8 @@ $(function () {
 
             // Reconfigure the form for "edit submission" mode.
             $form.attr('data-save-url', 'crm/ajax/update_intake.php');
+            $form.attr('data-intake-approve-flow', '1');
+            $form.attr('data-inline-child-bed', '1');
             $form.find('input[name="submission_id"]').remove();
             $form.prepend('<input type="hidden" name="submission_id" value="' + submissionId + '">');
             $form.attr('data-lead-prefill', JSON.stringify(prefill));
@@ -1208,18 +1308,47 @@ $(function () {
             if (typeof window.initLeadCreateForm === 'function') {
                 window.initLeadCreateForm($form[0]);
             }
-            $form.find('.js-lead-submit-btn').text('Save Changes');
+            $form.find('.js-lead-submit-btn').html('<i class="fas fa-check mr-1"></i>Save &amp; Approve');
         });
     }
 
-    $(document).on('click', '.js-intake-edit', function (e) {
+    function beginIntakeApproval(submissionId, $row) {
+        showApproveDialog(submissionId).then(function (result) {
+            if (result.dismiss) {
+                return;
+            }
+            var assignTo = (result.value || '').toString().trim();
+            if (!assignTo) {
+                showIntakeAlert('error', 'Required', 'Please select assignee.');
+                return;
+            }
+            postIntake('crm/ajax/approve_intake.php', submissionId, { assign_to: assignTo }, $row, 'Lead approved and added to CRM Leads.');
+        });
+    }
+
+    $(document).on('click', '.js-intake-view', function (e) {
         e.preventDefault();
         openEditForm($(this).data('id'));
     });
 
-    // The form triggers crm:lead-created on a successful save; reload to refresh the queue.
+    // Save & Approve saves first. Approval happens only after Assign This Lead is confirmed.
     $(document).on('crm:lead-created', function () {
-        setTimeout(function () { location.reload(); }, 600);
+        var $form = $editBody.find('form.crm-lead-create-form[data-intake-approve-flow="1"]').first();
+        if (!$form.length) {
+            setTimeout(function () { location.reload(); }, 600);
+            return;
+        }
+        var submissionId = parseInt($form.find('input[name="submission_id"]').val(), 10) || 0;
+        var $row = $('tr[data-submission-id="' + submissionId + '"]').first();
+        var savedAssign = ($form.find('[name="assign_to"]').val() || '').toString().trim();
+        if (intakeEditData[submissionId] && savedAssign) {
+            intakeEditData[submissionId].assign_to = savedAssign;
+        }
+        $editModal.one('hidden.bs.modal', function () {
+            window.setTimeout(function () {
+                beginIntakeApproval(submissionId, $row);
+            }, 200);
+        });
     });
 });
 </script>

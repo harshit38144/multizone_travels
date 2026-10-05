@@ -1275,7 +1275,7 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
 
 .crm-lead-datepicker.ui-datepicker {
     z-index: 2000 !important;
-    width: 292px;
+    width: 320px;
     padding: 0.85rem 0.9rem 0.75rem;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
@@ -1291,7 +1291,7 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
 }
 .crm-lead-datepicker .ui-datepicker-header {
     display: grid;
-    grid-template-columns: 34px minmax(72px, 1fr) minmax(82px, 1fr) 34px;
+    grid-template-columns: 34px minmax(0, 1fr) minmax(104px, 1.05fr) 34px;
     align-items: center;
     column-gap: 0.5rem;
     background: #fff;
@@ -1362,8 +1362,11 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
 .crm-lead-datepicker .ui-datepicker-title select,
 .crm-lead-datepicker select.ui-datepicker-month,
 .crm-lead-datepicker select.ui-datepicker-year {
-    appearance: auto;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     width: 100%;
+    max-width: none;
     font-size: 0.92rem;
     font-weight: 600;
     color: #111827;
@@ -1371,7 +1374,11 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
     padding: 0.42rem 1.65rem 0.42rem 0.7rem;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
-    background: #fff;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 L6 6.5 L11 1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.55rem center;
+    background-size: 10px 7px;
     min-height: 34px;
     line-height: 1.2;
     box-shadow: none;
@@ -1383,6 +1390,7 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
 }
 .crm-lead-datepicker select.ui-datepicker-year {
     grid-column: 3;
+    min-width: 104px;
 }
 .crm-lead-datepicker .ui-datepicker-title select:focus,
 .crm-lead-datepicker select.ui-datepicker-month:focus,

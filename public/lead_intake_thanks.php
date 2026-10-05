@@ -8,13 +8,12 @@ crmEnsureLeadIntakeTables($conn);
 
 $token = trim($_GET['token'] ?? '');
 $error = '';
-$summary = null;
 
 $companyName = 'Multi Zone Travels';
 $companyTagline = 'Explore the World with Us';
 $logoUrl = crmResolveIntakeLogoUrl('img/web-logo.png');
-$supportPhone = '+91 98765 43210';
-$supportEmail = 'support@multizonetravels.com';
+$supportPhone = '+91 97094 00140';
+$supportEmail = 'info@multizonetravels.com';
 $homeUrl = function_exists('crmBuildIntakeWebsiteHomeUrl')
     ? crmBuildIntakeWebsiteHomeUrl()
     : 'https://multizonetravels.com/';
@@ -47,20 +46,6 @@ if ($token === '') {
     $row = crmFetchLatestIntakeSubmissionByToken($conn, $token);
     if (!$row) {
         $error = 'We could not find your inquiry details.';
-    } else {
-        $payload = [];
-        if (!empty($row['payload_json'])) {
-            $decoded = json_decode((string) $row['payload_json'], true);
-            if (is_array($decoded)) {
-                $payload = $decoded;
-            }
-        }
-        $summary = crmBuildIntakeThanksSummary(
-            $conn,
-            $payload,
-            (int) ($row['submission_id'] ?? 0),
-            (string) ($row['submitted_at'] ?? '')
-        );
     }
 }
 
@@ -650,71 +635,6 @@ $emailHref = $supportEmail;
         <h1 class="intake-thanks-title">Thank You!</h1>
         <p class="intake-thanks-sub">Your Inquiry has been submitted</p>
 
-        <div class="intake-thanks-card">
-            <div class="intake-thanks-card-hd">
-                <span class="intake-thanks-card-hd-icon"><i class="fas fa-file-alt"></i></span>
-                <h2 class="intake-thanks-card-hd-title">Inquiry Summary</h2>
-            </div>
-            <div class="intake-thanks-grid">
-                <div class="intake-thanks-item">
-                    <span class="intake-thanks-item-icon tone-red"><i class="fas fa-file-alt"></i></span>
-                    <div class="intake-thanks-item-body">
-                        <span class="intake-thanks-item-label">Inquiry ID</span>
-                        <span class="intake-thanks-item-value is-id"><?= htmlspecialchars($summary['inquiry_id'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                </div>
-                <div class="intake-thanks-item">
-                    <span class="intake-thanks-item-icon tone-green"><i class="far fa-calendar-alt"></i></span>
-                    <div class="intake-thanks-item-body">
-                        <span class="intake-thanks-item-label">Date &amp; Time</span>
-                        <span class="intake-thanks-item-value"><?= htmlspecialchars($summary['submitted_at_display'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                </div>
-                <div class="intake-thanks-item">
-                    <span class="intake-thanks-item-icon tone-orange"><i class="fas fa-map-marker-alt"></i></span>
-                    <div class="intake-thanks-item-body">
-                        <span class="intake-thanks-item-label">Destination</span>
-                        <span class="intake-thanks-item-value"><?= htmlspecialchars($summary['destination'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                </div>
-                <div class="intake-thanks-item">
-                    <span class="intake-thanks-item-icon tone-purple"><i class="fas fa-gift"></i></span>
-                    <div class="intake-thanks-item-body">
-                        <span class="intake-thanks-item-label">Package</span>
-                        <span class="intake-thanks-item-value"><?= htmlspecialchars($summary['package'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                </div>
-                <div class="intake-thanks-item">
-                    <span class="intake-thanks-item-icon tone-blue"><i class="fas fa-user"></i></span>
-                    <div class="intake-thanks-item-body">
-                        <span class="intake-thanks-item-label">Name</span>
-                        <span class="intake-thanks-item-value"><?= htmlspecialchars($summary['name'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                </div>
-                <div class="intake-thanks-item">
-                    <span class="intake-thanks-item-icon tone-purple"><i class="fas fa-envelope"></i></span>
-                    <div class="intake-thanks-item-body">
-                        <span class="intake-thanks-item-label">Email</span>
-                        <span class="intake-thanks-item-value"><?= htmlspecialchars($summary['email'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                </div>
-                <div class="intake-thanks-item">
-                    <span class="intake-thanks-item-icon tone-green"><i class="fas fa-phone"></i></span>
-                    <div class="intake-thanks-item-body">
-                        <span class="intake-thanks-item-label">Phone</span>
-                        <span class="intake-thanks-item-value"><?= htmlspecialchars($summary['phone'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                </div>
-                <div class="intake-thanks-item">
-                    <span class="intake-thanks-item-icon tone-red"><i class="fas fa-users"></i></span>
-                    <div class="intake-thanks-item-body">
-                        <span class="intake-thanks-item-label">Guests</span>
-                        <span class="intake-thanks-item-value"><?= htmlspecialchars($summary['guests'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="intake-thanks-next">
             <h2 class="intake-thanks-next-title">What Happens Next?</h2>
             <div class="intake-thanks-next-accent" aria-hidden="true"></div>
@@ -748,10 +668,10 @@ $emailHref = $supportEmail;
                 </div>
             </div>
 
-            <div class="intake-thanks-info">
+            <!-- <div class="intake-thanks-info">
                 <i class="fas fa-info-circle"></i>
                 <span>You will receive an email confirmation shortly with your inquiry details.</span>
-            </div>
+            </div> -->
 
             <div class="intake-thanks-help">
                 <span class="intake-thanks-help-icon"><i class="fas fa-headset"></i></span>

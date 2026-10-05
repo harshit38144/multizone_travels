@@ -1518,6 +1518,10 @@ $qWizardSteps = [
             min-height: 140px;
         }
 
+        .crm-quotation-gen .q-inclusions-section #qbody_inclusion .note-editing-area .note-editable {
+            min-height: 450px;
+        }
+
         .crm-quotation-gen .q-day-card {
             border: 1px solid #e8ecf1;
             border-radius: 14px;
@@ -9500,7 +9504,7 @@ $qWizardSteps = [
             max-width: 100%;
             min-height: var(--qp-page-h);
             margin: 0 auto;
-            padding: 8mm 3mm 0;
+            padding: 8mm 12mm 0;
             background: #fff;
             border: 1.5px solid var(--qp-red);
             border-radius: 0;
@@ -11364,7 +11368,7 @@ $qWizardSteps = [
             --qp-incl-red: #e10600;
             --qp-incl-ink: #1a1d23;
             font-family: inherit;
-            margin-bottom: 16px;
+            margin-bottom: 0px;
         }
 
         .qp-incl-card {
@@ -11685,11 +11689,16 @@ $qWizardSteps = [
         }
 
         /* —— Terms —— */
-        .qp-sec-terms {
+        .qp-sec-terms,
+        .qp-sec-excl {
             --qp-terms-red: #d92027;
             --qp-terms-ink: #1a1d23;
             --qp-terms-muted: #8b93a0;
             font-family: inherit;
+        }
+
+        .qp-sec-excl {
+            margin: 16px 0;
         }
 
         .qp-terms-card {
@@ -11975,77 +11984,7 @@ $qWizardSteps = [
             font-size: 11px;
         }
 
-        /* —— Exclusions —— */
-        .qp-excl-head {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .qp-excl-head .qp-bar {
-            width: 4px;
-            height: 22px;
-            background: var(--qp-red);
-            border-radius: 2px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .qp-excl-head h3 {
-            margin: 0;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .qp-excl-head h3 i {
-            color: var(--qp-red);
-        }
-
-        .qp-excl-edit.q-preview-rich ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .qp-excl-edit.q-preview-rich ul li {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            background: #fff;
-            border: 1px solid #f3d0d4;
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 12.5px;
-        }
-
-        .qp-excl-edit.q-preview-rich ul li::before {
-            content: "\f05e";
-            font-family: "Font Awesome 5 Free";
-            font-weight: 900;
-            background: #fde8ea;
-            color: var(--qp-red);
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 12px;
-            line-height: 28px;
-            text-align: center;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
+        /* Exclusions reuse the terms card (.qp-terms-card). */
 
         /* —— Tour Cost + Notes (side by side) —— */
         .qp-cost-notes-row {
@@ -12347,7 +12286,7 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 0;
+            padding: 4px 0;
             border-bottom: 1px solid #eceff3;
         }
 
@@ -13086,10 +13025,10 @@ $qWizardSteps = [
 
         /* —— Memberships / accreditations strip —— */
         .qp-sec-memberships {
-            margin: 0 -10mm !important;
-            width: calc(100% + 20mm);
+            margin: 0 -12mm !important;
+            width: calc(100% + 24mm);
             max-width: none;
-            padding: 14px calc(10mm + 22px) 4px;
+            padding: 14px calc(12mm + 22px) 4px;
             font-family: inherit;
             background: #fff;
             border-top: 0;
@@ -13223,8 +13162,8 @@ $qWizardSteps = [
 
         /* —— Support footer (HTML/CSS) —— */
         .qp-sec-support {
-            margin: 0 -10mm 0;
-            width: calc(100% + 20mm);
+            margin: 0 -12mm 0;
+            width: calc(100% + 24mm);
             max-width: none;
             padding: 0;
             font-family: inherit;
@@ -13257,7 +13196,7 @@ $qWizardSteps = [
             gap: 12px;
             min-width: 0;
             padding: 0 14px;
-            justify-content: flex-start;
+            justify-content: center;
         }
 
         .qp-support-cell + .qp-support-cell {
@@ -13722,9 +13661,9 @@ $qWizardSteps = [
 
             .qp-print-last-page .qp-sec-memberships,
             .qp-print-last-page .qp-sec-support {
-                margin-left: -6mm !important;
-                margin-right: -6mm !important;
-                width: calc(100% + 12mm) !important;
+                margin-left: -12mm !important;
+                margin-right: -12mm !important;
+                width: calc(100% + 24mm) !important;
                 max-width: none !important;
             }
         }
@@ -13770,7 +13709,7 @@ $qWizardSteps = [
                 max-width: none !important;
                 min-height: 0 !important;
                 margin: 0 !important;
-                padding: 5mm 5mm 0 !important;
+                padding: 5mm 12mm 0 !important;
                 box-sizing: border-box !important;
                 background: #fff !important;
                 border: 0 !important;
@@ -13805,7 +13744,8 @@ $qWizardSteps = [
                 print-color-adjust: exact !important;
             }
 
-            /* Keep cards intact across page breaks — move whole card to next page */
+            /* Keep smaller cards intact. The inclusions card is often taller than a page,
+               so it may continue; its inner blocks stay together and nothing is clipped. */
             .q-preview-day,
             .qp-day,
             .qp-rev-card,
@@ -13824,11 +13764,44 @@ $qWizardSteps = [
             .qp-notes-card,
             .qp-cost-notes-row,
             .qp-terms-card,
-            .qp-incl-card,
-            .qp-meal-legend {
+            .qp-meal-legend,
+            .qp-incl-edit .q-ai-incl-sec,
+            .qp-incl-edit.q-preview-rich > ul,
+            .qp-policy-block {
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
                 -webkit-column-break-inside: avoid !important;
+            }
+
+            #qPreviewPrintArea .qp-incl-card,
+            #qPreviewPrintArea .qp-sec-incl,
+            #qPreviewPrintArea .qp-incl-body,
+            #qPreviewPrintArea .qp-incl-edit {
+                break-inside: auto !important;
+                page-break-inside: auto !important;
+                overflow: visible !important;
+                -webkit-box-decoration-break: clone !important;
+                box-decoration-break: clone !important;
+            }
+
+            #qPreviewPrintArea .qp-day,
+            #qPreviewPrintArea .q-preview-day,
+            #qPreviewPrintArea .qp-terms-card,
+            #qPreviewPrintArea .qp-tour-card,
+            #qPreviewPrintArea .qp-notes-card {
+                overflow: visible !important;
+            }
+
+            #qPreviewPrintArea .qp-itin-head {
+                break-after: avoid !important;
+                page-break-after: avoid !important;
+            }
+
+            #qPreviewPrintArea .qp-incl-edit .q-ai-incl-sec[data-sec="sightseeing"] ul {
+                columns: auto !important;
+                column-count: 1 !important;
+                display: flex !important;
+                flex-direction: column !important;
             }
 
             .q-preview-day,
@@ -14009,9 +13982,9 @@ $qWizardSteps = [
 
             #qPreviewPrintArea .qp-sec-memberships,
             #qPreviewPrintArea .qp-sec-support {
-                margin-left: -6mm !important;
-                margin-right: -6mm !important;
-                width: calc(100% + 12mm) !important;
+                margin-left: -12mm !important;
+                margin-right: -12mm !important;
+                width: calc(100% + 24mm) !important;
                 max-width: none !important;
             }
 
@@ -16152,7 +16125,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=299"></script>
+    <script src="crm/assets/quotation_generator.js?v=305"></script>
     <script src="crm/assets/quotation_flight_search.js?v=31"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

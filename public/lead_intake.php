@@ -365,6 +365,12 @@ if ($request) {
             box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12) !important;
         }
 
+        .crm-lead-intake-public .tp-destination-tag {
+            font-size: 1.05rem;
+            font-weight: 600;
+            padding: 0.22rem 0.7rem;
+        }
+
         .crm-lead-intake-public .lead-field-icon > .form-control,
         .crm-lead-intake-public .lead-field-icon > select.form-control {
             padding-left: 2.35rem;
@@ -462,6 +468,57 @@ if ($request) {
             min-width: 0 !important;
             max-width: 100% !important;
             box-sizing: border-box;
+        }
+        .crm-lead-intake-public .js-tp-child-bed-field {
+            display: none !important;
+        }
+        .crm-lead-intake-public .tp-rg-child-ages-popup {
+            min-width: 0;
+            width: 300px;
+            max-width: 300px;
+            box-sizing: border-box;
+        }
+        .crm-lead-intake-public .tp-rg-child-ages-popup-bd {
+            padding: 0.7rem 0.75rem;
+        }
+        .crm-lead-intake-public .tp-rg-child-age-row {
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .crm-lead-intake-public .tp-rg-child-age-row label {
+            flex: 0 0 auto;
+            font-size: 0.82rem;
+        }
+        .crm-lead-intake-public .tp-rg-child-age-controls {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.35rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+        .crm-lead-intake-public .tp-rg-child-age-controls .tp-rg-child-age-select {
+            width: auto;
+            min-width: 76px;
+            flex: 0 0 auto;
+            padding: 0.28rem 0.5rem;
+            box-sizing: border-box;
+        }
+        .crm-lead-intake-public .tp-rg-child-bed-select {
+            width: auto;
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: 132px;
+            box-sizing: border-box;
+            border: 1px solid #d1d5db;
+            border-radius: 999px;
+            padding: 0.28rem 0.4rem;
+            color: #111827;
+            font-weight: 600;
+            font-size: 0.72rem;
+            background: #fff;
         }
         .crm-lead-intake-public .js-tp-guests-field .tp-rg-row {
             align-items: center;

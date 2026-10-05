@@ -205,7 +205,7 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
     if ($infants > 0) {
         $paxParts[] = $infants . 'I';
     }
-    $paxText = !empty($paxParts) ? implode(' + ', $paxParts) : 'â€”';
+    $paxText = !empty($paxParts) ? implode(' + ', $paxParts) : '—';
 
     $customerInitial = crmCustomerInitialFromPayload($payload);
     $customerName = (string) ($row['customer_name'] ?? '');
@@ -213,7 +213,7 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
     $customerNameLetters = crmCustomerNameLetters($customerName !== '' ? $customerName : $customerDisplayName);
     $leadSource = trim((string) ($row['lead_source'] ?? ''));
     $referredBy = trim((string) ($row['referred_by'] ?? ''));
-    $leadSourceText = ($leadSource !== '' ? $leadSource : 'â€”') . ' | ' . ($referredBy !== '' ? $referredBy : 'â€”');
+    $leadSourceText = ($leadSource !== '' ? $leadSource : '—') . ' | ' . ($referredBy !== '' ? $referredBy : '—');
 
     return [
         'id' => (int) ($row['id'] ?? 0),
@@ -493,7 +493,7 @@ if ($usersTableCheck && $usersTableCheck->num_rows > 0) {
 function crmLeadsResolveAssignee(string $assignTo, array $lookup): ?array
 {
     $assignTo = trim($assignTo);
-    if ($assignTo === '' || $assignTo === 'â€”') {
+    if ($assignTo === '' || $assignTo === '—') {
         return null;
     }
     $key = strtolower($assignTo);
@@ -519,10 +519,59 @@ function crmLeadsResolveAssignee(string $assignTo, array $lookup): ?array
     ];
 }
 
+/**
+ * One leads-table row as JSON, so an already-open Leads tab can insert it without reloading.
+ */
+function crmLeadsEmitAjaxRow(mysqli $conn, int $leadId, array $destinationLookup, array $assignUserLookup, array $leadStageOptions): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $leadRows = [];
+    if ($leadId > 0) {
+        $res = $conn->query('SELECT * FROM crm_leads WHERE `id` = ' . $leadId . ' AND ' . crmLeadActiveWhereSql() . ' LIMIT 1');
+        if ($res && ($row = $res->fetch_assoc())) {
+            $leadRows[] = crmLeadsFormatRow($row, $destinationLookup);
+        }
+    }
+    if ($leadRows !== []) {
+        crmLeadsAttachQuotationLines($conn, $leadRows);
+        crmLeadsEnrichDisplayFromQuotations($conn, $leadRows);
+        crmLeadsResolveMissingQuotationActions($conn, $leadRows);
+        crmLeadsAttachBookingStatus($conn, $leadRows);
+        crmLeadsSyncFeatureStages($conn, $leadRows);
+    }
+
+    $html = '';
+    if ($leadRows !== []) {
+        $lead = $leadRows[0];
+        ob_start();
+        include __DIR__ . '/includes/lead_list_row.php';
+        $html = (string) ob_get_clean();
+    }
+
+    $total = 0;
+    $countRes = $conn->query('SELECT COUNT(*) AS c FROM crm_leads WHERE ' . crmLeadActiveWhereSql());
+    if ($countRes) {
+        $total = (int) ($countRes->fetch_assoc()['c'] ?? 0);
+    }
+
+    echo json_encode([
+        'success' => $html !== '',
+        'html' => $html,
+        'total' => $total,
+        'lead_id' => $leadId,
+    ]);
+    exit;
+}
+
 $hasLeadsTable = false;
 $tableCheck = $conn->query("SHOW TABLES LIKE 'crm_leads'");
 if ($tableCheck && $tableCheck->num_rows > 0) {
     $hasLeadsTable = true;
+}
+
+$ajaxLeadRowId = (int) ($_GET['ajax_row'] ?? 0);
+if ($ajaxLeadRowId > 0 && $hasLeadsTable) {
+    crmLeadsEmitAjaxRow($conn, $ajaxLeadRowId, $destinationLookup, $assignUserLookup, $leadStageOptions);
 }
 
 if ($hasLeadsTable) {
@@ -1394,7 +1443,7 @@ foreach ($destinationLookup as $destId => $destName) {
         @media (max-width: 575.98px) {
             .crm-leads-ui table.crm-leads-table thead th.col-actions,
             .crm-leads-ui table.crm-leads-table tbody td.col-actions {
-                /* Width controlled by JS fit â€” keep content from forcing scroll */
+                /* Width controlled by JS fit — keep content from forcing scroll */
                 max-width: none;
             }
         }
@@ -4036,307 +4085,9 @@ foreach ($destinationLookup as $destId => $destName) {
                                             <td colspan="10" class="text-center text-muted">No leads found.</td>
                                         </tr>
                                     <?php } else { ?>
-                                        <?php foreach ($leadRows as $rowIndex => $lead) {
-                                            $serviceIcons = [
-                                                'tour_package' => ['fas fa-suitcase-rolling', 'Tour Package'],
-                                                'cruise' => ['fas fa-ship', 'Cruise'],
-                                                'flight' => ['fas fa-plane', 'Flight'],
-                                                'hotel' => ['fas fa-hotel', 'Hotel'],
-                                                'vehicle' => ['fas fa-car', 'Vehicle'],
-                                                'sightseeing' => ['fas fa-binoculars', 'Sightseeing'],
-                                                'visa' => ['fas fa-stamp', 'Visa'],
-                                                'passport' => ['fas fa-passport', 'Passport'],
-                                                'forex' => ['fas fa-exchange-alt', 'Forex'],
-                                            ];
-                                            $createdText = '';
-                                            if (!empty($lead['created_at'])) {
-                                                $ts = strtotime((string) $lead['created_at']);
-                                                if ($ts !== false) {
-                                                    $createdText = date('d ', $ts) . strtoupper(date('M', $ts)) . date(', h:i A', $ts);
-                                                }
-                                            }
-                                            $leadHoverInfo = "Phone: " . ((string) ($lead['customer_phone'] !== '' ? $lead['customer_phone'] : 'â€”')) . "\n"
-                                                . "Email: " . ((string) ($lead['customer_email'] !== '' ? $lead['customer_email'] : 'â€”'));
-                                            $leadSourceHover = trim((string) ($lead['lead_source_text'] ?? ''));
-                                            if ($leadSourceHover === '') {
-                                                $leadSourceHover = 'â€”';
-                                            }
-                                            $leadIdSourceTitle = 'Lead Source: ' . $leadSourceHover;
-                                            $rowStage = (string) ($lead['stage'] ?? 'new_lead');
-                                            $rowTourConfirmed = ($rowStage === 'confirmed')
-                                                || !empty($lead['latest_is_tour_confirmed'])
-                                                || !empty($lead['is_tour_confirmed']);
-                                        ?>
-                                            <tr data-lead-id="<?= (int) $lead['id'] ?>"<?= $rowTourConfirmed ? ' class="is-tour-confirmed"' : '' ?>>
-                                                <td class="col-ld-lead">
-                                                    <button type="button" class="lead-id-cell js-lead-row-expand"
-                                                        data-lead-id="<?= (int) $lead['id'] ?>"
-                                                        title="<?= htmlspecialchars($leadIdSourceTitle, ENT_QUOTES, 'UTF-8') ?>"
-                                                        aria-label="Expand lead details">
-                                                        <span class="lead-id-uid"><?= htmlspecialchars((string) $lead['lead_uid'], ENT_QUOTES, 'UTF-8') ?></span><?php if ($createdText !== '') { ?><span class="lead-id-meta"> | <?= htmlspecialchars($createdText, ENT_QUOTES, 'UTF-8') ?></span><?php } ?>
-                                                    </button>
-                                                </td>
-                                                <td class="col-ld-guest">
-                                                    <div class="lead-name">
-                                                        <?php
-                                                        $guestLetters = trim((string) ($lead['customer_name_letters'] ?? ''));
-                                                        if ($guestLetters !== '') {
-                                                        ?>
-                                                            <span class="lead-guest-initials" aria-hidden="true"><?= htmlspecialchars($guestLetters, ENT_QUOTES, 'UTF-8') ?></span>
-                                                        <?php } ?>
-                                                        <span class="lead-name-text" title="<?= htmlspecialchars($leadHoverInfo, ENT_QUOTES, 'UTF-8') ?>" style="cursor:help;">
-                                                            <?= htmlspecialchars((string) ($lead['customer_display_name'] ?? $lead['customer_name']), ENT_QUOTES, 'UTF-8') ?>
-                                                        </span>
-                                                        <?php if ((string) $lead['pax_text'] !== 'â€”') { ?>
-                                                            <span class="badge-trav badge-trav-pax ml-1"><?= htmlspecialchars((string) $lead['pax_text'], ENT_QUOTES, 'UTF-8') ?></span>
-                                                        <?php } ?>
-                                                    </div>
-                                                </td>
-                                                <td class="col-ld-dest">
-                                                    <div class="cell-travelers-info">
-                                                        <?php
-                                                        $travelDestDisplay = trim((string) ($lead['travel_dest_display'] ?? ''));
-                                                        $travelExDisplay = trim((string) ($lead['travel_departure_display'] ?? ''));
-                                                        if ($travelDestDisplay !== '' || $travelExDisplay !== '') {
-                                                        ?>
-                                                            <div class="travel-route-text" title="<?= htmlspecialchars((string) ($lead['travel_destination_text'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
-                                                                <?php if ($travelDestDisplay !== '') { ?>
-                                                                    <span class="travel-dest-name"><?= htmlspecialchars($travelDestDisplay, ENT_QUOTES, 'UTF-8') ?></span>
-                                                                <?php } ?>
-                                                                <?php if ($travelDestDisplay !== '' && $travelExDisplay !== '') { ?>
-                                                                    <span class="travel-dest-sep"> | </span>
-                                                                <?php } ?>
-                                                                <?php if ($travelExDisplay !== '') { ?>
-                                                                    <span class="travel-ex-city"><?= htmlspecialchars($travelExDisplay, ENT_QUOTES, 'UTF-8') ?></span>
-                                                                <?php } ?>
-                                                            </div>
-                                                        <?php } else { ?>
-                                                            <span class="text-muted">â€”</span>
-                                                        <?php } ?>
-                                                    </div>
-                                                </td>
-                                                <td class="cell-travel-date col-ld-date">
-                                                    <?php if ((string) ($lead['travel_date_text'] ?? '') !== '') { ?>
-                                                        <span class="badge-trav badge-trav-date"><i class="far fa-calendar"></i> <?= htmlspecialchars((string) $lead['travel_date_text'], ENT_QUOTES, 'UTF-8') ?></span>
-                                                    <?php } else { ?>
-                                                        <span class="text-muted">â€”</span>
-                                                    <?php } ?>
-                                                </td>
-                                                <td class="col-services col-ld-services">
-                                                    <?php
-                                                    $leadServices = [];
-                                                    if (!empty($lead['services'])) {
-                                                        foreach ($lead['services'] as $svcItem) {
-                                                            $svcItem = (string) $svcItem;
-                                                            if (isset($serviceIcons[$svcItem])) {
-                                                                $leadServices[] = $svcItem;
-                                                            }
-                                                        }
-                                                    }
-                                                    if (empty($leadServices)) { ?>
-                                                        <span class="text-muted">â€”</span>
-                                                    <?php } else {
-                                                        $firstService = $leadServices[0];
-                                                        $extraServices = array_slice($leadServices, 1);
-                                                        $hasExtraServices = count($extraServices) > 0;
-                                                    ?>
-                                                        <div class="svc-pills<?= $hasExtraServices ? ' svc-pills-collapsible' : '' ?>"<?= $hasExtraServices ? ' title="' . count($extraServices) . ' more service' . (count($extraServices) === 1 ? '' : 's') . '"' : '' ?>>
-                                                            <span class="svc-pill svc-pill-<?= htmlspecialchars($firstService, ENT_QUOTES, 'UTF-8') ?>">
-                                                                <i class="<?= htmlspecialchars($serviceIcons[$firstService][0], ENT_QUOTES, 'UTF-8') ?>"></i>
-                                                                <?= htmlspecialchars($serviceIcons[$firstService][1], ENT_QUOTES, 'UTF-8') ?>
-                                                            </span>
-                                                            <?php if ($hasExtraServices) { ?>
-                                                                <div class="svc-pills-popup">
-                                                                    <?php foreach ($extraServices as $svc) { ?>
-                                                                        <span class="svc-pill svc-pill-<?= htmlspecialchars($svc, ENT_QUOTES, 'UTF-8') ?>">
-                                                                            <i class="<?= htmlspecialchars($serviceIcons[$svc][0], ENT_QUOTES, 'UTF-8') ?>"></i>
-                                                                            <?= htmlspecialchars($serviceIcons[$svc][1], ENT_QUOTES, 'UTF-8') ?>
-                                                                        </span>
-                                                                    <?php } ?>
-                                                                </div>
-                                                            <?php } ?>
-                                                        </div>
-                                                    <?php } ?>
-                                                </td>
-                                                <td class="col-ld-source">
-                                                    <?php
-                                                    $leadSourceMain = trim((string) ($lead['lead_source'] ?? ''));
-                                                    $leadSourceRef = trim((string) ($lead['referred_by'] ?? ''));
-                                                    $leadSourceDisplay = ($leadSourceMain !== '' ? $leadSourceMain : 'â€”') . ' | ' . ($leadSourceRef !== '' ? $leadSourceRef : 'â€”');
-                                                    ?>
-                                                    <span class="cell-lead-source" title="<?= htmlspecialchars($leadSourceDisplay, ENT_QUOTES, 'UTF-8') ?>">
-                                                        <?= htmlspecialchars($leadSourceMain !== '' ? $leadSourceMain : 'â€”', ENT_QUOTES, 'UTF-8') ?><span class="cell-lead-source-sep"> | </span><?= htmlspecialchars($leadSourceRef !== '' ? $leadSourceRef : 'â€”', ENT_QUOTES, 'UTF-8') ?>
-                                                    </span>
-                                                </td>
-                                                <td class="col-ld-assign">
-                                                    <?php
-                                                    $assignRaw = trim((string) ($lead['assign_to'] ?? ''));
-                                                    $assignee = crmLeadsResolveAssignee($assignRaw, $assignUserLookup);
-                                                    if ($assignee === null) {
-                                                        ?>
-                                                        <span class="cell-assign is-empty">â€”</span>
-                                                        <?php
-                                                    } else {
-                                                        $assignLabel = (string) $assignee['label'];
-                                                        $assignImage = (string) $assignee['image'];
-                                                        $assignInitial = (string) $assignee['initial'];
-                                                        $assignTone = (string) $assignee['tone_key'];
-                                                        $assignColor = (string) $assignee['tone_color'];
-                                                        ?>
-                                                        <span class="cell-assign" title="<?= htmlspecialchars($assignLabel, ENT_QUOTES, 'UTF-8') ?>">
-                                                            <?php if ($assignImage !== '') { ?>
-                                                                <img class="cell-assign-avatar" src="<?= htmlspecialchars('uploads/users/' . $assignImage, ENT_QUOTES, 'UTF-8') ?>" alt="">
-                                                            <?php } else { ?>
-                                                                <span class="cell-assign-initial tone-<?= htmlspecialchars($assignTone, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($assignInitial, ENT_QUOTES, 'UTF-8') ?></span>
-                                                            <?php } ?>
-                                                            <span class="cell-assign-name" style="color: <?= htmlspecialchars($assignColor, ENT_QUOTES, 'UTF-8') ?>;">
-                                                                <?= htmlspecialchars($assignLabel, ENT_QUOTES, 'UTF-8') ?>
-                                                            </span>
-                                                        </span>
-                                                        <?php
-                                                    }
-                                                    ?>
-                                                </td>
-                                                <td class="col-stage col-ld-stage">
-                                                    <?php
-                                                    $leadStage = (string) ($lead['stage'] ?? 'new_lead');
-                                                    $leadStageClass = (string) ($lead['stage_class'] ?? 'stage-new_lead');
-                                                    $leadStageAuto = !empty($lead['stage_is_auto']);
-                                                    $stageSelectTitle = $leadStageAuto
-                                                        ? 'Stage updates automatically from quotation activity. You can mark as Lost.'
-                                                        : 'Lead stage';
-                                                    ?>
-                                                    <select class="lead-stage-select js-lead-stage-select <?= htmlspecialchars($leadStageClass, ENT_QUOTES, 'UTF-8') ?>"
-                                                        data-lead-id="<?= (int) $lead['id'] ?>"
-                                                        data-stage="<?= htmlspecialchars($leadStage, ENT_QUOTES, 'UTF-8') ?>"
-                                                        data-stage-auto="<?= $leadStageAuto ? '1' : '0' ?>"
-                                                        title="<?= htmlspecialchars($stageSelectTitle, ENT_QUOTES, 'UTF-8') ?>"
-                                                        aria-label="Lead stage">
-                                                        <?php foreach ($leadStageOptions as $stageKey => $stageLabel) {
-                                                            $optionDisabled = ($leadStage !== 'lost' && $stageKey !== 'lost');
-                                                            ?>
-                                                            <option value="<?= htmlspecialchars($stageKey, ENT_QUOTES, 'UTF-8') ?>"<?= $leadStage === $stageKey ? ' selected' : '' ?><?= $optionDisabled ? ' disabled' : '' ?>>
-                                                                <?= htmlspecialchars($stageLabel, ENT_QUOTES, 'UTF-8') ?>
-                                                            </option>
-                                                        <?php } ?>
-                                                    </select>
-                                                </td>
-                                                <td class="col-ld-booking js-booking-status"<?= ((int) ($lead['latest_quotation_id'] ?? 0) > 0) ? ' data-id="' . (int) $lead['latest_quotation_id'] . '"' : '' ?>>
-                                                    <?= $lead['booking_status_html'] ?? '<span class="ld-book-status-empty">â€”</span>' ?>
-                                                </td>
-                                                <td class="col-actions">
-                                                    <div class="action-btns">
-                                                        <?php
-                                                            $latestQuotationHref = trim((string) ($lead['latest_quotation_href'] ?? ''));
-                                                            $latestQuotationId = (int) ($lead['latest_quotation_id'] ?? 0);
-                                                            if ($latestQuotationHref === '' && $latestQuotationId > 0) {
-                                                                $latestQuotationHref = 'crm/quotation_generator.php?id=' . $latestQuotationId;
-                                                            }
-                                                            if ($latestQuotationHref === '' && !empty($lead['quotation_groups'][0]['current_href'])) {
-                                                                $latestQuotationHref = (string) $lead['quotation_groups'][0]['current_href'];
-                                                                $latestQuotationId = (int) ($lead['quotation_groups'][0]['quotation_id'] ?? $latestQuotationId);
-                                                            }
-                                                            $hasQuotationAction = ($latestQuotationHref !== '')
-                                                                || $latestQuotationId > 0
-                                                                || !empty($lead['has_quotation'])
-                                                                || in_array($leadStage, ['quoted', 'confirmed'], true);
-                                                        ?>
-                                                        <?php if ($hasQuotationAction && $latestQuotationHref !== '') {
-                                                            $latestIsDraft = (($lead['latest_quotation_status'] ?? '') === 'draft');
-                                                            $latestTourConfirmed = !empty($lead['latest_is_tour_confirmed'])
-                                                                || !empty($lead['is_tour_confirmed'])
-                                                                || ($leadStage === 'confirmed');
-                                                            $viewOpensPreview = (in_array($leadStage, ['quoted', 'confirmed'], true) && !$latestIsDraft && $latestQuotationId > 0);
-                                                            $viewTitle = $viewOpensPreview ? 'Preview Quotation' : 'View Quotation';
-                                                            ?>
-                                                            <?php if ($viewOpensPreview) { ?>
-                                                            <button type="button"
-                                                                class="btn-icon btn-view js-lead-q-preview"
-                                                                data-quotation-id="<?= $latestQuotationId ?>"
-                                                                data-edit-href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>"
-                                                                title="<?= htmlspecialchars($viewTitle, ENT_QUOTES, 'UTF-8') ?>"
-                                                                aria-label="<?= htmlspecialchars($viewTitle, ENT_QUOTES, 'UTF-8') ?>">
-                                                                <i class="far fa-eye"></i>
-                                                            </button>
-                                                            <?php } else { ?>
-                                                            <a href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>"
-                                                                class="btn-icon btn-view"
-                                                                title="<?= htmlspecialchars($viewTitle, ENT_QUOTES, 'UTF-8') ?>"
-                                                                aria-label="<?= htmlspecialchars($viewTitle, ENT_QUOTES, 'UTF-8') ?>">
-                                                                <i class="far fa-eye"></i>
-                                                            </a>
-                                                            <?php } ?>
-                                                            <?php if ($latestQuotationId > 0 && !$latestIsDraft) { ?>
-                                                                <button type="button"
-                                                                    class="btn-icon js-q-book <?= $latestTourConfirmed ? 'btn-confirmed' : 'btn-book' ?>"
-                                                                    data-id="<?= $latestQuotationId ?>"
-                                                                    title="<?= $latestTourConfirmed ? 'Tour Confirmed' : 'Book' ?>"
-                                                                    aria-label="<?= $latestTourConfirmed ? 'Tour Confirmed' : 'Book quotation' ?>">
-                                                                    <?php if ($latestTourConfirmed) { ?>
-                                                                        <i class="fas fa-check"></i>
-                                                                    <?php } else { ?>
-                                                                        <img src="img/booking.png" alt="" class="btn-book-img" width="16" height="16">
-                                                                    <?php } ?>
-                                                                </button>
-                                                            <?php } ?>
-                                                        <?php } else { ?>
-                                                            <a href="crm/quotation_generator.php?lead_id=<?= (int) $lead['id'] ?>&fresh=1"
-                                                                class="btn-icon btn-create-quote js-open-quotation-tab"
-                                                                title="Create Quotation">
-                                                                <i class="fas fa-plus"></i>
-                                                            </a>
-                                                        <?php } ?>
-                                                        <div class="dropdown lead-actions-more"
-                                                            data-lead-id="<?= (int) $lead['id'] ?>"
-                                                            data-lead-email="<?= htmlspecialchars((string) ($lead['customer_email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
-                                                            data-lead-phone="<?= htmlspecialchars((string) ($lead['customer_phone'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
-                                                            <button type="button"
-                                                                class="btn-icon btn-more js-lead-actions-toggle"
-                                                                aria-haspopup="true"
-                                                                aria-expanded="false"
-                                                                title="More actions">
-                                                                <i class="fas fa-ellipsis-v"></i>
-                                                            </button>
-                                                            <div class="dropdown-menu dropdown-menu-right lead-actions-menu">
-                                                                <button type="button"
-                                                                    class="dropdown-item js-lead-action-message"
-                                                                    data-lead-id="<?= (int) $lead['id'] ?>">
-                                                                    <i class="far fa-comment-dots mr-2 text-primary"></i> Message
-                                                                </button>
-                                                                <button type="button" class="dropdown-item js-lead-action-preview" data-lead-id="<?= (int) $lead['id'] ?>">
-                                                                    <i class="far fa-eye mr-2 text-muted"></i> Preview Lead
-                                                                </button>
-                                                                <?php if ($latestQuotationHref !== '') { ?>
-                                                                    <a class="dropdown-item js-open-quotation-tab" href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>">
-                                                                        <i class="fas fa-edit mr-2 text-muted"></i> Edit Quotation
-                                                                    </a>
-                                                                    <?php if (in_array(($leadStage ?? ''), ['quoted', 'confirmed'], true)
-                                                                        && (($lead['latest_quotation_status'] ?? '') !== 'draft')
-                                                                        && $latestQuotationId > 0) { ?>
-                                                                    <button type="button"
-                                                                        class="dropdown-item js-lead-q-preview"
-                                                                        data-quotation-id="<?= $latestQuotationId ?>"
-                                                                        data-edit-href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>">
-                                                                        <i class="far fa-file-alt mr-2 text-muted"></i> Preview Quotation
-                                                                    </button>
-                                                                    <?php } ?>
-                                                                <?php } ?>
-                                                                <button type="button" class="dropdown-item js-lead-action-duplicate" data-lead-id="<?= (int) $lead['id'] ?>">
-                                                                    <i class="far fa-copy mr-2 text-muted"></i> Duplicate
-                                                                </button>
-                                                                <button type="button" class="dropdown-item js-lead-action-attachment" data-lead-id="<?= (int) $lead['id'] ?>">
-                                                                    <i class="fas fa-paperclip mr-2 text-muted"></i> Attachment
-                                                                </button>
-                                                                <div class="dropdown-divider"></div>
-                                                                <button type="button" class="dropdown-item text-danger js-lead-delete-btn" data-lead-id="<?= (int) $lead['id'] ?>">
-                                                                    <i class="fas fa-trash-alt mr-2"></i> Delete
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php } ?>
+                                        <?php foreach ($leadRows as $lead) {
+                                            include __DIR__ . '/includes/lead_list_row.php';
+                                        } ?>
                                     <?php } ?>
                                 </tbody>
                             </table>
@@ -4345,7 +4096,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         <div class="pagination-bar">
                             <div class="page-summary">
                                 <?php if ($totalLeads > 0) { ?>
-                                    Showing <?= number_format($offset + 1) ?>â€“<?= number_format(min($offset + $perPage, $totalLeads)) ?> of <?= number_format($totalLeads) ?> leads
+                                    Showing <?= number_format($offset + 1) ?>–<?= number_format(min($offset + $perPage, $totalLeads)) ?> of <?= number_format($totalLeads) ?> leads
                                 <?php } else { ?>
                                     No leads to display
                                 <?php } ?>
@@ -4402,7 +4153,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     </div>
                     <div class="send-link-bd">
                         <div id="sendLinkLoading" class="send-link-loading">
-                            <i class="fas fa-spinner fa-spin mr-1"></i> Generating linkâ€¦
+                            <i class="fas fa-spinner fa-spin mr-1"></i> Generating link…
                         </div>
                         <div id="sendLinkError" class="alert alert-danger small send-link-error d-none mb-0"></div>
 
@@ -4534,7 +4285,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     <div class="modal-body lead-form-bd" id="leadFormModalBody">
                         <div class="lead-form-loading">
                             <div><i class="fas fa-spinner fa-spin d-block"></i></div>
-                            Loading formâ€¦
+                            Loading form…
                         </div>
                     </div>
                 </div>
@@ -4584,7 +4335,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         </div>
                         <div class="lead-attachments-list">
                             <div class="lead-attachments-loading" id="leadAttachmentsLoading">
-                                <i class="fas fa-spinner fa-spin mr-1"></i> Loading attachmentsâ€¦
+                                <i class="fas fa-spinner fa-spin mr-1"></i> Loading attachments…
                             </div>
                             <div class="lead-attachments-empty d-none" id="leadAttachmentsEmpty">No attachments yet.</div>
                             <div id="leadAttachmentsList"></div>
@@ -4617,7 +4368,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         <div class="sms-tpl-list" id="smsTplList"></div>
                         <div class="sms-tpl-custom-wrap" id="smsTplCustomWrap">
                             <label for="smsTplCustomText">Custom message</label>
-                            <textarea id="smsTplCustomText" placeholder="Write your messageâ€¦"></textarea>
+                            <textarea id="smsTplCustomText" placeholder="Write your message…"></textarea>
                         </div>
                     </div>
                     <div class="sms-tpl-ft">
@@ -4654,18 +4405,18 @@ foreach ($destinationLookup as $destId => $destName) {
                         <input type="hidden" id="ctGuestAttachmentPath" value="">
 
                         <div class="ct-primary-card" id="ctPrimaryCard">
-                            <div class="ct-primary-avatar" id="ctPrimaryAvatar">â€”</div>
+                            <div class="ct-primary-avatar" id="ctPrimaryAvatar">—</div>
                             <div class="ct-primary-body">
                                 <div class="ct-primary-badge"><i class="fas fa-user"></i> Primary Contact</div>
                                 <div class="ct-primary-line">
                                     <div class="ct-primary-name">
-                                        <span id="ctPrimaryName">â€”</span>
+                                        <span id="ctPrimaryName">—</span>
                                         <span class="ct-primary-check" title="Primary"><i class="fas fa-check"></i></span>
                                     </div>
                                     <div class="ct-primary-meta">
-                                        <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">â€”</span></span>
+                                        <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">—</span></span>
                                         <span class="ct-primary-sep">|</span>
-                                        <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">â€”</span></span>
+                                        <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">—</span></span>
                                     </div>
                                 </div>
                             </div>
@@ -4775,7 +4526,7 @@ foreach ($destinationLookup as $destId => $destName) {
             </div>
         </div>
 
-        <!-- Confirm Tour â€” traveller documents -->
+        <!-- Confirm Tour — traveller documents -->
         <div class="modal fade" id="ctPaxDocsModal" tabindex="-1" role="dialog" aria-labelledby="ctPaxDocsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
                 <div class="modal-content">
@@ -4799,7 +4550,7 @@ foreach ($destinationLookup as $destId => $destName) {
             </div>
         </div>
 
-        <!-- Confirm Tour â€” traveller edit -->
+        <!-- Confirm Tour — traveller edit -->
         <div class="modal fade" id="ctTravellerModal" tabindex="-1" role="dialog" aria-labelledby="ctTravellerModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
@@ -4810,7 +4561,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     <div class="modal-body">
                         <input type="hidden" id="ctTravellerEditId" value="">
                         <div class="alert alert-info py-2 px-3 small d-none" id="ctTravellerPrimaryNote">
-                            <i class="fas fa-user-check mr-1"></i> Primary Contact â€” changes also update the lead and contact profile.
+                            <i class="fas fa-user-check mr-1"></i> Primary Contact — changes also update the lead and contact profile.
                         </div>
                         <div class="form-group d-none" id="ctTravellerSavedWrap">
                             <label class="ct-label" for="ctTravellerSaved">Select saved family / friend</label>
@@ -4891,7 +4642,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     </div>
                     <div class="modal-body py-3">
                         <div class="deleted-leads-toolbar">
-                            <div class="text-muted small" id="deletedLeadsSummary">Loadingâ€¦</div>
+                            <div class="text-muted small" id="deletedLeadsSummary">Loading…</div>
                             <div class="d-flex flex-wrap align-items-center" style="gap:0.35rem;">
                                 <button type="button" class="btn btn-outline-success btn-sm" id="btnDeletedLeadsBulkRestore" disabled>
                                     <i class="fas fa-undo mr-1"></i> Restore selected
@@ -4903,7 +4654,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         </div>
                         <div class="deleted-leads-table-wrap">
                             <div class="deleted-leads-loading" id="deletedLeadsLoading">
-                                <i class="fas fa-spinner fa-spin mr-1"></i> Loading deleted leadsâ€¦
+                                <i class="fas fa-spinner fa-spin mr-1"></i> Loading deleted leads…
                             </div>
                             <table class="table table-sm deleted-leads-table mb-0 d-none" id="deletedLeadsTable">
                                 <thead>
@@ -4956,7 +4707,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     </div>
                     <div class="modal-body">
                         <div class="lead-q-preview-loading" id="leadQPreviewLoading">
-                            <i class="fas fa-spinner fa-spin"></i> Loading previewâ€¦
+                            <i class="fas fa-spinner fa-spin"></i> Loading preview…
                         </div>
                         <iframe class="lead-q-preview-frame d-none" id="leadQPreviewFrame"
                             title="Quotation Preview" src="about:blank"></iframe>
@@ -5042,7 +4793,7 @@ foreach ($destinationLookup as $destId => $destName) {
     function showLeadFormLoading() {
         $body.html(
             '<div class="lead-form-loading">' +
-            '<div><i class="fas fa-spinner fa-spin d-block"></i></div>Loading formâ€¦</div>'
+            '<div><i class="fas fa-spinner fa-spin d-block"></i></div>Loading form…</div>'
         );
     }
 
@@ -5148,7 +4899,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     var LEADS_COL_SAVE_URL = 'crm/ajax/save_leads_column_settings.php';
-    // v2: Status (booking) needs room for multiple service icons; old v1 caps were ~52â€“72px.
+    // v2: Status (booking) needs room for multiple service icons; old v1 caps were ~52–72px.
     var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v2';
     var LEADS_TABLE_COLUMNS = [
         { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 18, minWidth: 110 },
@@ -5310,7 +5061,7 @@ foreach ($destinationLookup as $destId => $destName) {
             if (col.fixedWidth) {
                 w = Math.max(w, leadsParseFixedWidthPx(col.fixedWidth) || (col.minWidth || 90));
             }
-            // While dragging a column, do not clamp that column's maxWidth â€” let the user widen it.
+            // While dragging a column, do not clamp that column's maxWidth — let the user widen it.
             if (col.maxWidth && col.key !== lockKey) {
                 w = Math.min(w, col.maxWidth);
             } else if (col.maxWidth && col.key === lockKey) {
@@ -5327,7 +5078,7 @@ foreach ($destinationLookup as $destId => $destName) {
         var wrapW = leadsGetTableWrapWidth($table);
         if (fitToWrap && total > 0 && wrapW > 0) {
             if (total > wrapW) {
-                // Shrink flexible columns only â€” keep Actions/Status (and the column being dragged) usable.
+                // Shrink flexible columns only — keep Actions/Status (and the column being dragged) usable.
                 var protectedItems = [];
                 var flexibleItems = [];
                 var reserved = 0;
@@ -5360,7 +5111,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         }
                     });
                 } else if (!flexibleItems.length && reserved > wrapW) {
-                    // Extreme case: even protected columns overflow â€” scale them down lightly,
+                    // Extreme case: even protected columns overflow — scale them down lightly,
                     // but never shrink the column currently being dragged.
                     var usedP = 0;
                     var scalable = protectedItems.filter(function (item) {
@@ -5386,7 +5137,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 }
             } else if (total < wrapW) {
                 // Grow only non-protected / uncapped columns; keep Actions tight.
-                // Skip the locked drag column â€” its width is intentional.
+                // Skip the locked drag column — its width is intentional.
                 var growable = [];
                 var growTotal = 0;
                 visible.forEach(function (item) {
@@ -5521,7 +5272,7 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
         var state = leadsLoadColumnVisibility();
-        // Capture live widths as the drag baseline â€” do not redistribute first
+        // Capture live widths as the drag baseline — do not redistribute first
         // (that was clamping Status back to maxWidth and undoing the drag).
         var widths = leadsCaptureCurrentColumnWidths($table, state);
         leadsSaveColumnWidths(widths);
@@ -6029,20 +5780,20 @@ foreach ($destinationLookup as $destId => $destName) {
     }
 
     function formatLeadValue(value) {
-        if (value === null || value === undefined) return 'â€”';
+        if (value === null || value === undefined) return '—';
         if (Array.isArray(value)) {
-            if (!value.length) return 'â€”';
+            if (!value.length) return '—';
             return value.map(function (v) { return formatLeadValue(v); }).join(', ');
         }
         if (typeof value === 'object') {
             var keys = Object.keys(value);
-            if (!keys.length) return 'â€”';
+            if (!keys.length) return '—';
             return keys.map(function (k) {
                 return k + ': ' + formatLeadValue(value[k]);
             }).join(' | ');
         }
         var str = String(value).trim();
-        return str === '' ? 'â€”' : str;
+        return str === '' ? '—' : str;
     }
 
     function normalizePayloadKey(key) {
@@ -6121,7 +5872,7 @@ foreach ($destinationLookup as $destId => $destName) {
             passport: 'Passport',
             forex: 'Forex'
         };
-        var servicesText = 'â€”';
+        var servicesText = '—';
         if (Array.isArray(lead.services) && lead.services.length) {
             servicesText = lead.services.map(function (s) {
                 return serviceLabels[s] || s;
@@ -6129,7 +5880,7 @@ foreach ($destinationLookup as $destId => $destName) {
         }
         var destText = lead.travel_destination_text
             || [lead.travel_dest_display, lead.travel_departure_display].filter(Boolean).join(' | ')
-            || 'â€”';
+            || '—';
 
         var infoItems = [
             { label: 'Lead UID', value: lead.lead_uid },
@@ -6172,7 +5923,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 if (id === '') return;
                 names.push(destinationLookup[id] ? destinationLookup[id] : id);
             });
-            return names.length ? names.join(', ') : 'â€”';
+            return names.length ? names.join(', ') : '—';
         }
         var seenSignature = {};
         payloadKeys.sort();
@@ -6187,7 +5938,7 @@ foreach ($destinationLookup as $destId => $destName) {
             } else {
                 formatted = formatLeadValue(payload[key]);
             }
-            if (formatted === 'â€”') {
+            if (formatted === '—') {
                 return;
             }
             var signature = normalizedKey + '::' + formatted;
@@ -6659,7 +6410,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 {
                     id: 'wa_callback',
                     title: 'Callback Request',
-                    body: 'Hi {guest},\nWe tried calling you regarding your trip planning. Please reply or call {agent} when free.\nâ€” {company}'
+                    body: 'Hi {guest},\nWe tried calling you regarding your trip planning. Please reply or call {agent} when free.\n— {company}'
                 }
             ],
             email: [
@@ -6672,7 +6423,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 {
                     id: 'email_callback',
                     title: "Couldn't Reach You",
-                    subject: 'Missed call regarding your trip â€” {company}',
+                    subject: 'Missed call regarding your trip — {company}',
                     body: 'Dear {guest},\n\nWe tried to reach you for your trip planning but couldn\'t connect. Please reply to this email or call {agent}.\n\nThanks,\n{company}'
                 }
             ]
@@ -7145,7 +6896,7 @@ foreach ($destinationLookup as $destId => $destName) {
         if ($row.length) {
             if (name) {
                 $row.find('.lead-name-text').text(name)
-                    .attr('title', 'Phone: ' + (phone || 'â€”') + '\nEmail: ' + (email || 'â€”'));
+                    .attr('title', 'Phone: ' + (phone || '—') + '\nEmail: ' + (email || '—'));
             }
             $row.find('[data-lead-email]').attr('data-lead-email', email);
             $row.find('[data-lead-phone]').attr('data-lead-phone', phone);
@@ -7394,7 +7145,7 @@ foreach ($destinationLookup as $destId => $destName) {
 
         $bar.addClass('is-visible');
         $summary.text(
-            'Showing ' + deletedLeadsPagination.from + 'â€“' + deletedLeadsPagination.to
+            'Showing ' + deletedLeadsPagination.from + '–' + deletedLeadsPagination.to
             + ' of ' + deletedLeadsPagination.total + ' deleted leads'
         );
 
@@ -7457,7 +7208,7 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         deletedLeadsCache.forEach(function (lead) {
-            var deletedMeta = lead.deleted_at_text || lead.deleted_at || 'â€”';
+            var deletedMeta = lead.deleted_at_text || lead.deleted_at || '—';
             if (lead.deleted_by_name) {
                 deletedMeta += ' Â· ' + lead.deleted_by_name;
             }
@@ -7466,7 +7217,7 @@ foreach ($destinationLookup as $destId => $destName) {
                 + '<td><input type="checkbox" class="js-deleted-lead-check" value="' + escDeletedHtml(lead.id) + '" aria-label="Select lead"></td>'
                 + '<td><strong>' + escDeletedHtml(lead.lead_uid) + '</strong></td>'
                 + '<td>' + escDeletedHtml(lead.customer_display_name || lead.customer_name) + '</td>'
-                + '<td>' + escDeletedHtml(lead.assign_to || 'â€”') + '</td>'
+                + '<td>' + escDeletedHtml(lead.assign_to || '—') + '</td>'
                 + '<td class="text-muted">' + escDeletedHtml(deletedMeta) + '</td>'
                 + '<td>'
                 + '<button type="button" class="btn btn-outline-success btn-xs btn-sm mr-1 js-deleted-lead-restore-one" data-lead-id="' + escDeletedHtml(lead.id) + '">Restore</button>'
@@ -7485,11 +7236,11 @@ foreach ($destinationLookup as $destId => $destName) {
             deletedLeadsPage = Math.max(1, Number(page) || 1);
         }
 
-        $('#deletedLeadsLoading').removeClass('d-none').html('<i class="fas fa-spinner fa-spin mr-1"></i> Loading deleted leadsâ€¦');
+        $('#deletedLeadsLoading').removeClass('d-none').html('<i class="fas fa-spinner fa-spin mr-1"></i> Loading deleted leads…');
         $('#deletedLeadsTable').addClass('d-none');
         $('#deletedLeadsEmpty').addClass('d-none');
         $('#deletedLeadsTableBody').empty();
-        $('#deletedLeadsSummary').text('Loadingâ€¦');
+        $('#deletedLeadsSummary').text('Loading…');
         $('#deletedLeadsPagination').removeClass('is-visible');
         $('#deletedLeadsPaginationList').empty();
         $('#btnDeletedLeadsBulkDelete').prop('disabled', true);

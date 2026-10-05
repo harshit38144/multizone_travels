@@ -1472,6 +1472,10 @@ if (empty($leadSourceOptions)) {
                 $tpDestinationMenu.hide().empty();
             }
 
+            function hideDestinationRemove() {
+                return isIntake || $form.attr('data-intake-approve-flow') === '1';
+            }
+
             function tpDestinationPlaceholder() {
                 if (tpSelectedDestinations.length) {
                     return '';
@@ -1508,10 +1512,12 @@ if (empty($leadSourceOptions)) {
                 tpSelectedDestinations.forEach(function (dest) {
                     var $tag = jQuery('<span class="tp-destination-tag"></span>');
                     $tag.append(jQuery('<span class="tp-destination-tag-text"></span>').text(dest.name));
-                    $tag.append(
-                        jQuery('<button type="button" class="tp-destination-tag-remove" aria-label="Remove destination">&times;</button>')
-                            .attr('data-id', dest.id)
-                    );
+                    if (!hideDestinationRemove()) {
+                        $tag.append(
+                            jQuery('<button type="button" class="tp-destination-tag-remove" aria-label="Remove destination">&times;</button>')
+                                .attr('data-id', dest.id)
+                        );
+                    }
                     $tpDestinationTags.append($tag);
                 });
                 if (!$tpDestinationInput.prop('disabled')) {
@@ -2215,10 +2221,13 @@ if (empty($leadSourceOptions)) {
 
                 // Keep already-selected destinations editable even if tour-type filter would hide them.
                 tpSelectedDestinations = previousSelected.filter(function (dest) {
-                    var stillExists = leadDestinations.some(function (option) {
-                        return String(option.id) === String(dest.id);
+                    var id = String(dest.id);
+                    if (!/^\d+$/.test(id)) {
+                        return true;
+                    }
+                    return leadDestinations.some(function (option) {
+                        return String(option.id) === id;
                     });
-                    return stillExists;
                 });
                 tpSelectedDestinations.forEach(function (dest) {
                     if (!tpDestinationOptions.some(function (option) {
@@ -2749,6 +2758,17 @@ if (empty($leadSourceOptions)) {
                         hideTpDestinationMenu();
                         $tpDestinationInput.val('');
                     }, 150);
+                }).on('keydown.leadDest', function (e) {
+                    if (!hideDestinationRemove() || (e.key !== 'Backspace' && e.key !== 'Delete')) {
+                        return;
+                    }
+                    if (String($tpDestinationInput.val() || '') !== '' || !tpSelectedDestinations.length) {
+                        return;
+                    }
+                    e.preventDefault();
+                    var last = tpSelectedDestinations[tpSelectedDestinations.length - 1];
+                    removeTpDestination(last.id);
+                    $tpDestinationInput.trigger('focus');
                 });
 
                 $tpDestinationTags.off('.leadDest').on('click.leadDest', '.tp-destination-tag-remove', function (e) {
@@ -3291,12 +3311,19 @@ if (empty($leadSourceOptions)) {
                     });
                 }
 
+                function childBedSelectHtml(index, bedType) {
+                    return jQuery('<select class="tp-rg-child-bed-select js-tp-child-bed-select"></select>')
+                        .attr('data-index', index)
+                        .html(
+                            '<option value="cnb">Child No Bed</option>' +
+                            '<option value="cwb">Child With Bed</option>'
+                        )
+                        .val(bedType === 'cwb' ? 'cwb' : 'cnb');
+                }
+
                 function syncChildBedFields() {
                     var $block = $form.find('.js-tp-child-bed-field').first();
-                    var $list = $block;
-                    if (!$block.length) {
-                        return;
-                    }
+                    var isPublicIntake = isIntake || $form.attr('data-inline-child-bed') === '1' || $form.closest('.crm-lead-intake-public').length > 0;
 
                     while (state.childBedTypes.length < state.children) {
                         state.childBedTypes.push('cnb');
@@ -3304,18 +3331,48 @@ if (empty($leadSourceOptions)) {
                     state.childBedTypes = state.childBedTypes.slice(0, state.children);
 
                     if (state.children === 0) {
-                        $block.hide();
-                        $list.empty();
                         state.childBedTypes = [];
                         state.childCnb = 0;
                         state.childCwb = 0;
-                        $block.find('select').prop('disabled', true);
+                        if ($block.length) {
+                            $block.hide().empty();
+                            $block.find('select').prop('disabled', true);
+                        }
+                        return;
+                    }
+
+                    if (isPublicIntake) {
+                        if ($block.length) {
+                            $block.hide().empty();
+                        }
+                        $form.find('.js-tp-rg-child-age-list .tp-rg-child-age-row').each(function (index) {
+                            var $row = jQuery(this);
+                            var bedType = state.childBedTypes[index] === 'cwb' ? 'cwb' : 'cnb';
+                            var $controls = $row.children('.tp-rg-child-age-controls');
+                            if (!$controls.length) {
+                                $controls = jQuery('<div class="tp-rg-child-age-controls"></div>');
+                                $row.find('.js-tp-rg-child-age-select').appendTo($controls);
+                                $row.append($controls);
+                            }
+                            var $select = $controls.children('.js-tp-child-bed-select');
+                            if (!$select.length) {
+                                $controls.append(childBedSelectHtml(index, bedType));
+                            } else {
+                                $select.attr('data-index', index).val(bedType);
+                            }
+                        });
+                        syncChildBedCountsFromTypes();
+                        return;
+                    }
+
+                    if (!$block.length) {
+                        syncChildBedCountsFromTypes();
                         return;
                     }
 
                     $block.show();
                     $block.find('select').prop('disabled', false);
-                    $list.empty();
+                    $block.empty();
 
                     state.childBedTypes.forEach(function (type, index) {
                         var bedType = type === 'cwb' ? 'cwb' : 'cnb';
@@ -3324,18 +3381,10 @@ if (empty($leadSourceOptions)) {
                         var ageLabel = (ageVal != null && ageVal !== '' && !isNaN(ageNum))
                             ? (ageNum + ' Yr')
                             : '—';
-                        var isPublicIntake = $form.closest('.crm-lead-intake-public').length > 0;
-                        var $row = jQuery('<div class="form-group ' + (isPublicIntake ? 'col-12 col-md' : 'col-md-3 col-sm-6') + ' tp-child-bed-row mb-2"></div>');
+                        var $row = jQuery('<div class="form-group col-md-3 col-sm-6 tp-child-bed-row mb-2"></div>');
                         $row.append('<label class="tp-child-bed-row-lbl">' + ageLabel + '</label>');
-                        var $select = jQuery('<select class="form-control js-tp-child-bed-select"></select>')
-                            .attr('data-index', index)
-                            .html(
-                                '<option value="cnb">Child No Bed</option>' +
-                                '<option value="cwb">Child With Bed</option>'
-                            )
-                            .val(bedType);
-                        $row.append($select);
-                        $list.append($row);
+                        $row.append(childBedSelectHtml(index, bedType).addClass('form-control'));
+                        $block.append($row);
                     });
 
                     syncChildBedCountsFromTypes();
@@ -3515,6 +3564,9 @@ if (empty($leadSourceOptions)) {
                         state.childBedTypes[index] = jQuery(this).val() === 'cwb' ? 'cwb' : 'cnb';
                         syncChildBedCountsFromTypes();
                         updateSummaries();
+                        if (isIntake && state.children > 0 && index === state.children - 1) {
+                            closeAllPanels();
+                        }
                     });
 
                 function syncChildBedTypesFromDom() {
@@ -3549,8 +3601,9 @@ if (empty($leadSourceOptions)) {
                         state.childAges[index] = parseInt(jQuery(this).val(), 10) || 0;
                         syncChildBedFields();
                         updateSummaries();
-                        // Close guests + age popups after the last child's age is chosen
-                        if (state.children > 0 && index === state.children - 1) {
+                        // Keep the age panel open while the bed type sits beside the age.
+                        var inlineChildBed = isIntake || $form.attr('data-inline-child-bed') === '1';
+                        if (!inlineChildBed && state.children > 0 && index === state.children - 1) {
                             closeAllPanels();
                         }
                     });
@@ -4228,7 +4281,10 @@ if (empty($leadSourceOptions)) {
                         return;
                     }
 
-                    showLeadSaveAlert('success', response.message || 'Lead saved successfully.');
+                    var intakeApproveFlow = $form.attr('data-intake-approve-flow') === '1';
+                    if (!intakeApproveFlow) {
+                        showLeadSaveAlert('success', response.message || 'Lead saved successfully.');
+                    }
 
                     jQuery(document).trigger('crm:lead-created', [response]);
 
@@ -4280,7 +4336,7 @@ if (empty($leadSourceOptions)) {
                     if ($form.is('#leadCreateFormModal')) {
                         window.setTimeout(function () {
                             jQuery('#leadFormModal').modal('hide');
-                        }, 500);
+                        }, $form.attr('data-intake-approve-flow') === '1' ? 0 : 500);
                     }
                 }).fail(function (xhr) {
                     var msg = isIntake ? 'Could not submit. Please try again.' : 'Could not save lead. Please try again.';
@@ -4398,14 +4454,57 @@ if (empty($leadSourceOptions)) {
                 }
                 syncTourPackageDestinations();
 
-                toArray(prefill.tp_destination).forEach(function (id) {
-                    var match = leadDestinations.filter(function (d) { return String(d.id) === String(id); })[0];
-                    if (!match) {
-                        match = leadDestinations.filter(function (d) { return String(d.name) === String(id); })[0];
+                function findCatalogDestination(label) {
+                    var text = String(label == null ? '' : label).trim();
+                    if (!text) {
+                        return null;
                     }
+                    var byId = leadDestinations.filter(function (d) {
+                        return String(d.id) === text;
+                    })[0];
+                    if (byId) {
+                        return byId;
+                    }
+                    var lower = text.toLowerCase();
+                    var byName = leadDestinations.filter(function (d) {
+                        return String(d.name || '').trim().toLowerCase() === lower;
+                    })[0];
+                    if (byName) {
+                        return byName;
+                    }
+                    var shortName = text.split(',')[0].trim().toLowerCase();
+                    if (!shortName) {
+                        return null;
+                    }
+                    return leadDestinations.filter(function (d) {
+                        return String(d.name || '').trim().toLowerCase() === shortName;
+                    })[0] || null;
+                }
+
+                function destinationPrefillList(val) {
+                    if (val == null || val === '') {
+                        return [];
+                    }
+                    if (Array.isArray(val)) {
+                        return val.map(function (item) { return String(item == null ? '' : item).trim(); }).filter(Boolean);
+                    }
+                    if (typeof val === 'object') {
+                        return Object.keys(val)
+                            .sort(function (a, b) { return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0); })
+                            .map(function (k) { return String(val[k] == null ? '' : val[k]).trim(); })
+                            .filter(Boolean);
+                    }
+                    return [String(val).trim()].filter(Boolean);
+                }
+
+                destinationPrefillList(prefill.tp_destination).forEach(function (label) {
+                    var match = findCatalogDestination(label);
                     if (match) {
                         addTpDestination({ id: match.id, name: match.name });
+                        return;
                     }
+                    var display = String(label).split(',')[0].trim() || String(label);
+                    addTpDestination({ id: label, name: display });
                 });
 
                 if (leadPickerApi.setHotelCategories) {

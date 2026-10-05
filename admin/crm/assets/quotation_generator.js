@@ -148,7 +148,7 @@
             return;
         }
         $body.find('textarea.q-editor').each(function () {
-            initQuotationSummernote($(this), 160);
+            initQuotationSummernote($(this), quotationEditorHeight($(this)));
         });
     }
 
@@ -3148,6 +3148,10 @@
             ['para', ['ul', 'ol']],
             ['insert', ['link', 'picture']]
         ];
+    }
+
+    function quotationEditorHeight($ta) {
+        return ($ta && $ta.attr('id') === 'qed_inclusion') ? 320 : 160;
     }
 
     function initQuotationSummernote($ta, height, toolbar) {
@@ -8061,7 +8065,7 @@
             var $ta = $('#qed_' + field);
             var $section = $('#qbody_' + field);
             if ($section.is(':visible')) {
-                initQuotationSummernote($ta, 160);
+                initQuotationSummernote($ta, quotationEditorHeight($ta));
             }
         });
     }
@@ -8186,6 +8190,17 @@
             '</li>';
     }
 
+    function qpPushChecklistLines(items, inner) {
+        String(inner || '').split(/<br\b[^>]*>/i).forEach(function (chunk) {
+            var $chunk = $('<div>').html(chunk);
+            var text = String($chunk.text() || '').replace(/\u00a0/g, ' ').trim();
+            if (text === '' && !$chunk.find('img').length) {
+                return;
+            }
+            items.push(chunk);
+        });
+    }
+
     function qpFormatTermsChecklistHtml(html) {
         var raw = String(html || '').trim();
         if (!raw) {
@@ -8206,7 +8221,7 @@
             if (String($clone.text() || '').replace(/\u00a0/g, ' ').trim() === '' && !$clone.find('img').length) {
                 return;
             }
-            items.push(inner);
+            qpPushChecklistLines(items, inner);
         });
 
         if (!items.length) {
@@ -8219,12 +8234,12 @@
                 if (String($el.text() || '').replace(/\u00a0/g, ' ').trim() === '' && !$el.find('img').length) {
                     return;
                 }
-                items.push(inner);
+                qpPushChecklistLines(items, inner);
             });
         }
 
         if (!items.length) {
-            var chunks = String($wrap.html() || '').split(/<br\s*\/?>/i);
+            var chunks = String($wrap.html() || '').split(/<br\b[^>]*>/i);
             chunks.forEach(function (chunk) {
                 var text = $('<div>').html(chunk).text().replace(/\u00a0/g, ' ').trim();
                 if (text) {
@@ -9834,7 +9849,7 @@
             '<span>' + esc(email) + '</span>' +
             '</div>' +
             '</div>' +
-            '<div class="qp-support-cell">' +
+            '<div class="qp-support-cell" style="margin: 0px 27px 0px 0px;">' +
             '<span class="qp-support-ico is-red" aria-hidden="true"><i class="fas fa-map-marker-alt"></i></span>' +
             '<div class="qp-support-copy">' +
             addressLines.map(function (line) {
@@ -10404,7 +10419,28 @@
             html += '</div></div></div>';
         }
 
-        /* —— 8. Terms —— */
+        /* —— 8. Exclusions (directly after inclusions) —— */
+        if (previewHasHtmlContent(p.exclusion)) {
+            html += '<div class="qp-sec qp-sec-excl">';
+            html += '<div class="qp-terms-card">';
+            html += '<div class="qp-terms-head">' +
+                '<span class="qp-terms-vbar" aria-hidden="true"></span>' +
+                '<span class="qp-terms-icon" aria-hidden="true"><i class="fas fa-ban"></i></span>' +
+                '<div class="qp-terms-head-copy">' +
+                '<div class="qp-terms-title">Exclusions</div>' +
+                '<div class="qp-terms-sub">What is not included in your journey</div>' +
+                '</div>' +
+                '</div>';
+            html += '<div class="qp-terms-body">';
+            html += previewEditable(qpFormatTermsChecklistHtml(p.exclusion || ''), 'exclusion', {
+                type: 'html',
+                multiline: true,
+                cls: 'q-preview-rich qp-terms-rich qp-excl-edit'
+            });
+            html += '</div></div></div>';
+        }
+
+        /* —— 9. Terms —— */
         var policyBlocks = [
             { key: 'payment_policy', title: 'Payment Policy', html: p.payment_policy },
             { key: 'cancellation_policy', title: 'Cancellation Policy', html: p.cancellation_policy },
@@ -10459,18 +10495,6 @@
                     '</div>';
             }
             html += '</div></div>';
-        }
-
-        /* —— 9. Exclusions —— */
-        if (previewHasHtmlContent(p.exclusion)) {
-            html += '<div class="qp-sec">';
-            html += '<div class="qp-excl-head"><span class="qp-bar"></span><h3><i class="fas fa-ban"></i> Exclusions</h3></div>';
-            html += previewEditable(p.exclusion || '', 'exclusion', {
-                type: 'html',
-                multiline: true,
-                cls: 'q-preview-rich qp-excl-edit'
-            });
-            html += '</div>';
         }
 
         /* —— Last print page: Journey + Reviews + Memberships + Footer —— */
@@ -12742,7 +12766,7 @@
                 '}' +
                 '#qPreviewPrintArea.q-preview-doc,#qPreviewPrintArea,.q-preview-doc{' +
                 'margin:0!important;' +
-                'padding:5mm 5mm 0!important;' +
+                'padding:5mm 12mm 0!important;' +
                 'border:0!important;outline:0!important;' +
                 'box-shadow:none!important;-webkit-box-shadow:none!important;' +
                 'border-radius:0!important;' +
@@ -12754,8 +12778,8 @@
                 'position:static!important;left:auto!important;top:auto!important;' +
                 '}' +
                 '.qp-sec-memberships,.qp-sec-support{' +
-                'margin-left:-5mm!important;margin-right:-5mm!important;' +
-                'width:calc(100% + 10mm)!important;max-width:none!important;' +
+                'margin-left:-12mm!important;margin-right:-12mm!important;' +
+                'width:calc(100% + 24mm)!important;max-width:none!important;' +
                 '}' +
                 '@media print{' +
                 '@page{size:A4;margin:0}' +
@@ -12765,7 +12789,7 @@
                 '-webkit-print-color-adjust:exact;print-color-adjust:exact;' +
                 '}' +
                 '#qPreviewPrintArea.q-preview-doc,#qPreviewPrintArea,.q-preview-doc{' +
-                'margin:0!important;padding:5mm 5mm 0!important;' +
+                'margin:0!important;padding:5mm 12mm 0!important;' +
                 'border:0!important;box-shadow:none!important;' +
                 'width:100%!important;max-width:none!important;min-width:0!important;' +
                 'min-height:0!important;background:#fff!important;' +
@@ -12783,14 +12807,27 @@
                 '.qp-last-foot{display:table-row!important;height:1px!important;}' +
                 '.qp-last-foot-inner{display:table-cell!important;vertical-align:bottom!important;}' +
                 '.qp-print-last-page .qp-sec-memberships,.qp-print-last-page .qp-sec-support{' +
-                'margin-left:-5mm!important;margin-right:-5mm!important;' +
-                'width:calc(100% + 10mm)!important;margin-top:0!important;margin-bottom:0!important;' +
+                'margin-left:-12mm!important;margin-right:-12mm!important;' +
+                'width:calc(100% + 24mm)!important;margin-top:0!important;margin-bottom:0!important;' +
                 '}' +
                 '.qp-support-footer{margin-bottom:0!important;padding-bottom:0!important;' +
                 'border-bottom:18px solid #e11d2e!important;}' +
                 '.q-preview-day,.qp-day,.qp-rev-card,.qp-hotel-row-card,.qp-flight-seg-card,' +
-                '.qp-info-card,.qp-acc-card,.qp-tour-card,.qp-notes-card,.qp-terms-card{' +
+                '.qp-info-card,.qp-acc-card,.qp-tour-card,.qp-notes-card,.qp-terms-card,' +
+                '.qp-incl-edit .q-ai-incl-sec,.qp-incl-edit.q-preview-rich>ul,.qp-policy-block{' +
                 'break-inside:avoid!important;page-break-inside:avoid!important;' +
+                '}' +
+                '.qp-incl-card,.qp-sec-incl,.qp-incl-body,.qp-incl-edit{' +
+                'break-inside:auto!important;page-break-inside:auto!important;' +
+                'overflow:visible!important;' +
+                '-webkit-box-decoration-break:clone!important;box-decoration-break:clone!important;' +
+                '}' +
+                '.qp-day,.q-preview-day,.qp-terms-card,.qp-tour-card,.qp-notes-card{' +
+                'overflow:visible!important;' +
+                '}' +
+                '.qp-itin-head{break-after:avoid!important;page-break-after:avoid!important;}' +
+                '.qp-incl-edit .q-ai-incl-sec[data-sec="sightseeing"] ul{' +
+                'columns:auto!important;column-count:1!important;display:flex!important;flex-direction:column!important;' +
                 '}' +
                 '}';
 
@@ -12813,7 +12850,7 @@
                 'width:100%!important;max-width:none!important;min-width:0!important;' +
                 'min-height:0!important;' +
                 'margin:0!important;' +
-                'padding:5mm 5mm 0!important;' +
+                'padding:5mm 12mm 0!important;' +
                 'background:#fff!important;' +
                 'border:0!important;' +
                 'border-radius:0!important;' +
@@ -12823,9 +12860,9 @@
                 'print-color-adjust:exact!important;' +
                 '}' +
                 '.qp-sec-memberships,.qp-sec-support{' +
-                'margin-left:-5mm!important;' +
-                'margin-right:-5mm!important;' +
-                'width:calc(100% + 10mm)!important;' +
+                'margin-left:-12mm!important;' +
+                'margin-right:-12mm!important;' +
+                'width:calc(100% + 24mm)!important;' +
                 'max-width:none!important;' +
                 '}' +
                 '.qp-sec-support{margin-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
@@ -12884,7 +12921,7 @@
                 'min-height:0!important;' +
                 'height:auto!important;' +
                 'margin:0!important;' +
-                'padding:5mm 5mm 0!important;' +
+                'padding:5mm 12mm 0!important;' +
                 'border:0!important;' +
                 'box-shadow:none!important;' +
                 'overflow:visible!important;' +
@@ -12919,9 +12956,9 @@
                 '.qp-print-last-page .qp-sec-memberships{margin-top:0!important;margin-bottom:0!important;padding-bottom:0!important;}' +
                 '.qp-print-last-page .qp-sec-support{margin-top:0!important;margin-bottom:0!important;padding-bottom:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}' +
                 '.qp-sec-memberships,.qp-sec-support{' +
-                'margin-left:-5mm!important;' +
-                'margin-right:-5mm!important;' +
-                'width:calc(100% + 10mm)!important;' +
+                'margin-left:-12mm!important;' +
+                'margin-right:-12mm!important;' +
+                'width:calc(100% + 24mm)!important;' +
                 '}' +
                 '.qp-sec-memberships{border:0!important;}' +
                 '.qp-mem-cell,.qp-mem-cell+.qp-mem-cell{border:0!important;border-left:0!important;}' +
