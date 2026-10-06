@@ -10164,7 +10164,7 @@
             return '<div class="qp-tc-grand">' +
                 '<div class="qp-tc-grand-left">' +
                 '<div class="qp-tc-grand-label">Grand Total</div>' +
-                (inclusiveGst ? '<div class="qp-tc-grand-sub">INCLUSIVE OF GST</div>' : '<div class="qp-tc-grand-sub">TOTAL AMOUNT</div>') +
+                (inclusiveGst ? '' : '<div class="qp-tc-grand-sub">TOTAL AMOUNT</div>') +
                 '</div>' +
                 '<span class="qp-tc-grand-divider" aria-hidden="true"></span>' +
                 '<strong class="qp-tc-grand-amt">' + amountHtml + '</strong>' +
@@ -10399,15 +10399,13 @@
             html += '<div class="qp-incl-card">';
             html += '<div class="qp-incl-head">' +
                 '<div class="qp-incl-head-copy">' +
-                '<div class="qp-incl-kicker"><span class="qp-incl-kicker-bar" aria-hidden="true"></span>Travel Quotation</div>' +
                 '<div class="qp-incl-title">Inclusions</div>' +
                 '<div class="qp-incl-sub">What\'s included in your journey</div>' +
                 '</div>' +
                 '<div class="qp-incl-slogan">' +
                 '<span>Journeys</span>' +
                 '<span>That Create</span>' +
-                '<span>Lasting</span>' +
-                '<span>Memories</span>' +
+                '<span>Lasting Memories</span>' +
                 '</div>' +
                 '</div>';
             html += '<div class="qp-incl-body">';

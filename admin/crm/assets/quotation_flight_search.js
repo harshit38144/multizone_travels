@@ -1528,6 +1528,17 @@
         var p = (typeof window.QUOTATION_PREFILL === 'object' && window.QUOTATION_PREFILL) ? window.QUOTATION_PREFILL : {};
         var city = String(p.departure_city || p.tp_departure || '').trim();
         var code = String(p.departure_airport_code || p.tp_departure_code || '').trim().toUpperCase();
+        city = city.replace(/^ex[\s\-–—]+/i, '').trim();
+        if (city === '—') {
+            city = '';
+        }
+        if (!code) {
+            var embedded = city.match(/\(([A-Za-z]{3})\)\s*$/);
+            if (embedded) {
+                code = embedded[1].toUpperCase();
+                city = city.replace(/\s*\([A-Za-z]{3}\)\s*$/, '').trim();
+            }
+        }
         return { city: city, code: code };
     }
 

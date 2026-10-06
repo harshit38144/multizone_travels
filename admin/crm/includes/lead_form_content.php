@@ -2178,9 +2178,10 @@ if (empty($leadSourceOptions)) {
                 var $tourPanel = $form.find('.js-svc-detail-panel[data-svc="tour_package"]');
                 var selectedServices = getSelectedServices();
                 var tourPackageActive = selectedServices.indexOf('tour_package') >= 0;
-                var panelActive = isIntake
-                    ? ($tourPanel.length > 0 && tourPackageActive)
-                    : (!$tourPanel.length || $tourPanel.is(':visible'));
+                // Use the selected service, not :visible. The Edit Lead modal is often
+                // still opening when this runs, so a shown panel is not :visible yet
+                // and the destination list was cleared.
+                var panelActive = !$tourPanel.length || tourPackageActive;
 
                 if (!panelActive) {
                     setTpDestinationEnabled(false, 'Type to search destination');
@@ -4582,9 +4583,7 @@ if (empty($leadSourceOptions)) {
                 }
 
                 if ($tourType.length && String($tourType.val() || '') !== '') {
-                    setTpDestinationEnabled(true, 'Type to search destination');
-                    renderTpDestinationTags();
-                    syncTpDestinationHiddenInputs();
+                    syncTourPackageDestinations();
                 }
             }
             formEl.applyLeadPrefill = applyLeadPrefill;

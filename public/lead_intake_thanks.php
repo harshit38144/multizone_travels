@@ -11,7 +11,7 @@ $error = '';
 
 $companyName = 'Multi Zone Travels';
 $companyTagline = 'Explore the World with Us';
-$logoUrl = crmResolveIntakeLogoUrl('img/web-logo.png');
+$logoUrl = crmResolveIntakeLogoUrl('images/awer.png');
 $supportPhone = '+91 97094 00140';
 $supportEmail = 'info@multizonetravels.com';
 $homeUrl = function_exists('crmBuildIntakeWebsiteHomeUrl')

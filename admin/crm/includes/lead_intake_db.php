@@ -179,7 +179,7 @@ function crmResolveIntakeLogoUrl($logoPath)
 {
     $logoPath = str_replace('\\', '/', trim((string) $logoPath));
     if ($logoPath === '') {
-        $logoPath = 'img/web-logo.png';
+        $logoPath = 'images/awer.png';
     }
     if (preg_match('/^https?:\/\//i', $logoPath)) {
         return $logoPath;
@@ -207,7 +207,7 @@ function crmIntakeFallbackLogoUrl()
 {
     $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')) ?: '');
     if (crmIntakeIsLocalHost($host)) {
-        return '../admin/img/web-logo.png';
+        return '../images/awer.png';
     }
     return 'https://admin.multizonetravels.com/img/web-logo.png';
 }

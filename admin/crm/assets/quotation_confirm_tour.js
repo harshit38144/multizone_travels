@@ -878,10 +878,7 @@
             var typeLabel = t.type === 'child' ? 'Child' : (t.type === 'infant' ? 'Infant' : 'Adult');
             var typeClass = 'is-' + t.type;
             var passportHtml = t.passport_number
-                ? ('<span class="ct-pax-passport-no">' + esc(t.passport_number) + '</span>' +
-                    (t.passport_expiry
-                        ? '<span class="ct-pax-passport-exp">' + esc(formatPassportExpiry(t.passport_expiry)) + '</span>'
-                        : ''))
+                ? ('<span class="ct-pax-passport-no">' + esc(t.passport_number) + '</span>')
                 : '<span class="text-muted">—</span>';
             var docCount = (t.documents && t.documents.length) ? t.documents.length : 0;
             var docLabel = docCount === 1 ? '1 file' : (docCount + ' files');

@@ -43,7 +43,7 @@ if ($token === '') {
 
 $companyName = 'Multi Zone Travels';
 $companyTagline = 'travel for memories...';
-$logoUrl = crmResolveIntakeLogoUrl('img/web-logo.png');
+$logoUrl = crmResolveIntakeLogoUrl('images/awer.png');
 $logoFallbackUrl = function_exists('crmIntakeFallbackLogoUrl') ? crmIntakeFallbackLogoUrl() : $logoUrl;
 $noteToCustomer = '';
 $intakeFormSubtitle = 'Share your travel plans and we\'ll craft the perfect experience for you.';
@@ -1047,9 +1047,9 @@ if ($request) {
         </div>
     <?php } ?>
 
-    <div class="crm-lead-intake-footer">
-        Secure travel inquiry form &middot; <?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>
-    </div>
+    <!-- <div class="crm-lead-intake-footer">
+        Secure travel inquiry form &middot; <= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>
+    </div> -->
 </div>
 
 <div class="modal fade" id="leadIntakeSuccessModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">

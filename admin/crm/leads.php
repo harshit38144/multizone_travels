@@ -3547,7 +3547,7 @@ foreach ($destinationLookup as $destId => $destName) {
             flex-direction: column;
             justify-content: space-between;
             gap: 0;
-            padding: 1.15rem 1.25rem 1.05rem;
+            padding: 0.5rem 0.5rem 0.5rem;
             margin-bottom: 0;
             min-width: 0;
         }
@@ -3674,7 +3674,7 @@ foreach ($destinationLookup as $destId => $destName) {
         #confirmTourModal .ct-pay-summary {
             display: flex;
             flex-direction: column;
-            gap: 0.95rem;
+            gap: 0.5rem;
             padding: 1.05rem 1.15rem 1rem;
             min-width: 0;
         }
@@ -3893,7 +3893,7 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         #confirmTourModal .ct-pax-table td {
-            padding: 0.85rem 0.9rem;
+            padding: 0.1rem 0.9rem;
             border-bottom: 1px solid #f1f5f9;
             vertical-align: middle;
             font-size: 0.9rem;

@@ -135,6 +135,14 @@ if (!$quotation && $leadId > 0) {
         if (isset($leadGuestPrefill['children_ages']) && is_array($leadGuestPrefill['children_ages'])) {
             $prefill['children_ages'] = array_values($leadGuestPrefill['children_ages']);
         }
+        $leadDepCity = trim((string) ($leadGuestPrefill['departure_city'] ?? ''));
+        if ($leadDepCity !== '' && $leadDepCity !== '—') {
+            $prefill['departure_city'] = $leadDepCity;
+        }
+        $leadDepCode = strtoupper(trim((string) ($leadGuestPrefill['departure_airport_code'] ?? '')));
+        if ($leadDepCode !== '') {
+            $prefill['departure_airport_code'] = $leadDepCode;
+        }
     }
 }
 
@@ -9580,7 +9588,7 @@ $qWizardSteps = [
         }
 
         .qp-title-block h1 {
-            margin: 0;
+            margin: -4px;
             font-size: 1.2rem;
             font-weight: 800;
             letter-spacing: 0.01em;
@@ -11387,9 +11395,9 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 24px;
+            gap: 15px;
             margin: 0;
-            padding: 10px 13px 10px;
+            padding: 5px 13px 5px;
             border: 0;
             color: #fff;
             background:
@@ -11431,7 +11439,7 @@ $qWizardSteps = [
 
         .qp-incl-title {
             margin: 0;
-            font-size: 42px;
+            font-size: 29px;
             font-weight: 800;
             letter-spacing: 0.04em;
             text-transform: uppercase;
@@ -11440,8 +11448,8 @@ $qWizardSteps = [
         }
 
         .qp-incl-sub {
-            margin-top: 8px;
-            font-size: 11px;
+            margin-top: 5px;
+            font-size: 8.3px;
             font-weight: 600;
             letter-spacing: 0.18em;
             text-transform: uppercase;
@@ -11459,7 +11467,7 @@ $qWizardSteps = [
             margin: 0;
             padding: 2px 0 8px 16px;
             border-left: 1px solid rgba(255, 255, 255, 0.72);
-            font-size: 11px;
+            font-size: 8px;
             font-weight: 600;
             letter-spacing: 0.16em;
             text-transform: uppercase;
@@ -12161,7 +12169,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            padding: 4px 4px;
+            padding: 2px 4px;
             border-bottom: 1px solid #eceff3;
             font-family: inherit;
         }
@@ -12182,7 +12190,7 @@ $qWizardSteps = [
             flex-shrink: 0;
             text-align: center;
             color: #6b7280;
-            font-size: 13px;
+            font-size: 11px;
         }
 
         .qp-tc-row.is-gst .qp-tc-row-ico {
@@ -12190,7 +12198,7 @@ $qWizardSteps = [
         }
 
         .qp-tc-row-label {
-            font-size: 13.5px;
+            font-size: 11.5px;
             font-weight: 500;
             font-family: inherit;
             color: #1f2937;
@@ -12200,7 +12208,7 @@ $qWizardSteps = [
 
         .qp-tc-row-amt {
             flex-shrink: 0;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             font-family: inherit;
             color: #111827;
@@ -12214,7 +12222,7 @@ $qWizardSteps = [
             justify-content: space-between;
             gap: 12px;
             margin: 2px 7px 8px;
-            padding: 4px 10px;
+            padding: 1px 10px;
             background: #fff5f5;
             border-radius: 10px;
             font-family: inherit;
@@ -12227,8 +12235,8 @@ $qWizardSteps = [
         }
 
         .qp-tc-grand-label {
-            font-size: 15px;
-            font-weight: 800;
+            font-size: 13px;
+            font-weight: 600;
             font-family: inherit;
             letter-spacing: -0.01em;
             color: #1a2332;
@@ -12255,8 +12263,8 @@ $qWizardSteps = [
         }
 
         .qp-tc-grand-amt {
-            font-size: 18px;
-            font-weight: 800;
+            font-size: 12px;
+            font-weight: 700;
             font-family: inherit;
             color: var(--qp-red);
             letter-spacing: -0.02em;
@@ -16126,7 +16134,7 @@ $qWizardSteps = [
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="crm/assets/quotation_generator.js?v=305"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=31"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=32"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>
