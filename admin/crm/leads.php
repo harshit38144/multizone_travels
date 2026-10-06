@@ -3526,98 +3526,260 @@ foreach ($destinationLookup as $destId => $destName) {
             align-items: flex-start;
         }
 
+        #confirmTourModal .ct-confirm-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.92fr);
+            gap: 1rem;
+            align-items: stretch;
+            margin-bottom: 1.15rem;
+        }
+
+        #confirmTourModal .ct-primary-card,
+        #confirmTourModal .ct-pay-summary {
+            background: #fff;
+            border: 1px solid #e8edf3;
+            border-radius: 16px;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+        }
+
         #confirmTourModal .ct-primary-card {
             display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 0;
+            padding: 1.15rem 1.25rem 1.05rem;
+            margin-bottom: 0;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-primary-head {
+            display: flex;
             align-items: center;
-            gap: 0.85rem;
-            padding: 0.85rem 1rem;
-            border-radius: 12px;
-            background: linear-gradient(90deg, #fff1f2 0%, #ffe4e6 55%, #fff 100%);
-            border: 1px solid #fecdd3;
-            margin-bottom: 0.85rem;
+            gap: 0.9rem;
+            min-width: 0;
         }
 
         #confirmTourModal .ct-primary-avatar {
-            width: 48px;
-            height: 48px;
+            width: 58px;
+            height: 58px;
             border-radius: 50%;
-            background: #e11d48;
+            background: #ff2d55;
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 0.95rem;
-            flex: 0 0 48px;
+            font-size: 1.05rem;
+            letter-spacing: 0.02em;
+            flex: 0 0 58px;
         }
 
-        #confirmTourModal .ct-primary-body {
+        #confirmTourModal .ct-primary-identity {
             flex: 1 1 auto;
             min-width: 0;
-        }
-
-        #confirmTourModal .ct-primary-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #be123c;
-            margin-bottom: 0.15rem;
         }
 
         #confirmTourModal .ct-primary-line {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
-            gap: 0.2rem 0.75rem;
+            gap: 0.4rem 0.65rem;
         }
 
         #confirmTourModal .ct-primary-name {
-            font-size: 1.05rem;
+            font-size: 1.12rem;
             font-weight: 700;
             color: #0f172a;
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
+            line-height: 1.2;
         }
 
-        #confirmTourModal .ct-primary-check {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #e11d48;
-            color: #fff;
+        #confirmTourModal .ct-primary-badge {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-size: 0.6rem;
+            margin: 0;
+            padding: 0.16rem 0.62rem;
+            border-radius: 999px;
+            background: #ffe4ea;
+            color: #ff2d55;
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1.25;
+            white-space: nowrap;
         }
 
         #confirmTourModal .ct-primary-meta {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 0.35rem 0.55rem;
-            margin-top: 0;
+            gap: 0.35rem 1.25rem;
+            margin-top: 0.32rem;
             color: #64748b;
-            font-size: 0.82rem;
+            font-size: 0.86rem;
         }
 
         #confirmTourModal .ct-primary-meta i {
-            color: #e11d48;
-            margin-right: 0.2rem;
+            color: #ff2d55;
+            margin-right: 0.32rem;
+            font-size: 0.78rem;
         }
 
-        #confirmTourModal .ct-primary-sep {
-            color: #cbd5e1;
+        #confirmTourModal .ct-primary-stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.55rem 0.75rem;
+            margin-top: 0.95rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid #e6e8ec;
         }
 
-        #confirmTourModal .ct-primary-actions {
+        #confirmTourModal .ct-pstat {
             display: flex;
             align-items: center;
-            gap: 0.3rem;
-            flex: 0 0 auto;
+            gap: 0.55rem;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-pstat-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #fff1f3;
+            color: #ff2d55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 38px;
+            font-size: 0.86rem;
+        }
+
+        #confirmTourModal .ct-pstat-label {
+            display: block;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            line-height: 1.15;
+        }
+
+        #confirmTourModal .ct-pstat-val {
+            display: block;
+            max-width: 140px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #confirmTourModal .ct-pay-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 0.95rem;
+            padding: 1.05rem 1.15rem 1rem;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-pay-head {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        #confirmTourModal .ct-pay-head-icon {
+            width: 16px;
+            height: 16px;
+            color: #ff2d55;
+            display: inline-flex;
+            flex: 0 0 16px;
+        }
+
+        #confirmTourModal .ct-pay-head-icon svg {
+            display: block;
+            width: 16px;
+            height: 16px;
+        }
+
+        #confirmTourModal .ct-pay-figures {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        #confirmTourModal .ct-pay-fig {
+            min-width: 0;
+            padding: 0 0.75rem;
+            border-left: 1px solid #e2e8f0;
+        }
+
+        #confirmTourModal .ct-pay-fig:first-child {
+            padding-left: 0;
+            border-left: 0;
+        }
+
+        #confirmTourModal .ct-pay-label {
+            display: block;
+            margin-bottom: 0.12rem;
+            font-size: 0.74rem;
+            color: #94a3b8;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-pay-val {
+            display: block;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        #confirmTourModal .ct-pay-val.is-due {
+            color: #ff2d55;
+        }
+
+        #confirmTourModal .ct-pay-actions {
+            display: grid;
+            grid-template-columns: 1.15fr 1fr;
+            gap: 0.65rem;
+            margin-top: auto;
+        }
+
+        #confirmTourModal .ct-pay-add,
+        #confirmTourModal .ct-pay-schedule {
+            height: 42px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        #confirmTourModal .ct-pay-add {
+            border: 0;
+            background: #ff2d55;
+            color: #fff;
+        }
+
+        #confirmTourModal .ct-pay-add:hover {
+            background: #e11d48;
+            color: #fff;
+        }
+
+        #confirmTourModal .ct-pay-schedule {
+            border: 1.5px solid #fda4af;
+            background: #fff;
+            color: #ff2d55;
+        }
+
+        #confirmTourModal .ct-pay-schedule:hover {
+            background: #fff1f3;
+            color: #e11d48;
         }
 
         #confirmTourModal .ct-primary-edit {
@@ -3629,46 +3791,77 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         #confirmTourModal .ct-pax-section {
-            margin-bottom: 0.85rem;
+            margin-bottom: 1.15rem;
         }
 
         #confirmTourModal .ct-pax-head {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
             gap: 0.75rem;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0.85rem;
+        }
+
+        #confirmTourModal .ct-pax-head-main {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-pax-head-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #ffe4ea;
+            color: #ff2d55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 42px;
+            font-size: 0.95rem;
         }
 
         #confirmTourModal .ct-pax-title {
-            font-size: 0.95rem;
+            font-size: 1.02rem;
             font-weight: 700;
             color: #0f172a;
+            line-height: 1.2;
         }
 
         #confirmTourModal .ct-pax-sub {
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             color: #94a3b8;
+            margin-top: 0.12rem;
         }
 
         #confirmTourModal .ct-add-guest-btn {
-            background: #e11d48;
-            border-color: #e11d48;
-            color: #fff;
+            background: #fff;
+            border: 1.5px solid #fda4af;
+            color: #ff2d55;
             font-weight: 600;
-            border-radius: 8px;
+            border-radius: 10px;
             white-space: nowrap;
+            padding: 0.4rem 0.85rem;
         }
 
         #confirmTourModal .ct-add-guest-btn:hover {
-            background: #be123c;
-            border-color: #be123c;
-            color: #fff;
+            background: #fff1f3;
+            border-color: #fb7185;
+            color: #e11d48;
+        }
+
+        #confirmTourModal .ct-add-guest-btn:disabled,
+        #confirmTourModal .ct-add-guest-btn:disabled:hover {
+            background: #fff;
+            border-color: #fda4af;
+            color: #ff2d55;
+            opacity: 0.45;
         }
 
         #confirmTourModal .ct-pax-table-wrap {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
+            border: 1px solid #e8edf3;
+            border-radius: 14px;
             overflow: hidden;
             background: #fff;
         }
@@ -3680,13 +3873,13 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         #confirmTourModal .ct-pax-table th {
-            font-size: 0.72rem;
-            font-weight: 700;
+            font-size: 0.8rem;
+            font-weight: 600;
             color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-            padding: 0.65rem 0.75rem;
-            border-bottom: 1px solid #e2e8f0;
+            text-transform: none;
+            letter-spacing: 0;
+            padding: 0.85rem 0.9rem;
+            border-bottom: 1px solid #eef2f6;
             background: #f8fafc;
         }
 
@@ -3700,11 +3893,16 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         #confirmTourModal .ct-pax-table td {
-            padding: 0.1rem 0.75rem;
+            padding: 0.85rem 0.9rem;
             border-bottom: 1px solid #f1f5f9;
             vertical-align: middle;
-            font-size: 0.86rem;
+            font-size: 0.9rem;
             color: #334155;
+        }
+
+        #confirmTourModal .ct-pax-table td:first-child {
+            color: #94a3b8;
+            font-weight: 600;
         }
 
         #confirmTourModal .ct-pax-table tr:last-child td {
@@ -3738,8 +3936,8 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         #confirmTourModal .ct-pax-type.is-adult {
-            background: #ffe4e6;
-            color: #be123c;
+            background: #ffe4ea;
+            color: #f43f5e;
         }
 
         #confirmTourModal .ct-pax-type.is-child {
@@ -3766,14 +3964,48 @@ foreach ($destinationLookup as $destId => $destName) {
         #confirmTourModal .ct-pax-docs {
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
-            padding: 0.2rem 0.55rem;
+            gap: 0.35rem;
+            padding: 0.28rem 0.7rem;
             border-radius: 999px;
-            background: #f1f5f9;
-            color: #475569;
-            font-size: 0.75rem;
+            background: #e0f2fe;
+            color: #0284c7;
+            font-size: 0.78rem;
             font-weight: 600;
             border: 0;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-pax-docs:hover {
+            background: #bae6fd;
+            color: #0369a1;
+        }
+
+        #confirmTourModal .ct-pax-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.86rem;
+            font-weight: 600;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-pax-status::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            flex: 0 0 8px;
+        }
+
+        #confirmTourModal .ct-pax-status.is-confirmed {
+            color: #16a34a;
+        }
+
+        #confirmTourModal .ct-pax-status.is-pending,
+        #confirmTourModal .ct-pax-status.is-empty {
+            color: #94a3b8;
         }
 
         #confirmTourModal .ct-pax-actions {
@@ -3795,28 +4027,139 @@ foreach ($destinationLookup as $destId => $destName) {
             margin: 0.85rem 0 0.45rem;
         }
 
+        #confirmTourModal .ct-included-block {
+            margin: 0.35rem 0 0.15rem;
+        }
+
+        #confirmTourModal .ct-included-head {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        #confirmTourModal .ct-included-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: #fff1f3;
+            color: #ff2d55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 42px;
+            font-size: 1rem;
+        }
+
+        #confirmTourModal .ct-included-title {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-included-sub {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.12rem;
+        }
+
         #confirmTourModal .ct-included {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.35rem;
+            gap: 0.5rem;
         }
 
         #confirmTourModal .ct-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
             border: 1px solid #e2e8f0;
             background: #fff;
             color: #334155;
-            font-size: 0.78rem;
-            font-weight: 500;
-            padding: 0.25rem 0.55rem;
-            border-radius: 3px;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.38rem 0.75rem;
+            border-radius: 999px;
+            box-shadow: none;
+            line-height: 1.2;
         }
 
-        #confirmTourModal .ct-chip:hover,
+        #confirmTourModal .ct-chip[data-key="visa"],
+        #confirmTourModal .ct-chip[data-key="train"] {
+            color: #7c3aed;
+            border-color: #ddd6fe;
+        }
+
+        #confirmTourModal .ct-chip[data-key="hotels"],
+        #confirmTourModal .ct-chip[data-key="flight"] {
+            color: #2563eb;
+            border-color: #bfdbfe;
+        }
+
+        #confirmTourModal .ct-chip[data-key="land_package"],
+        #confirmTourModal .ct-chip[data-key="travel_insurance"] {
+            color: #16a34a;
+            border-color: #bbf7d0;
+        }
+
+        #confirmTourModal .ct-chip[data-key="forex"] {
+            color: #d97706;
+            border-color: #fde68a;
+        }
+
+        #confirmTourModal .ct-chip[data-key="tours"] {
+            color: #e11d48;
+            border-color: #fecdd3;
+        }
+
+        #confirmTourModal .ct-chip[data-key="cruise"],
+        #confirmTourModal .ct-chip[data-key="transfers"] {
+            color: #0284c7;
+            border-color: #bae6fd;
+        }
+
+        #confirmTourModal .ct-chip:hover:not(.active) {
+            background: #f8fafc;
+        }
+
         #confirmTourModal .ct-chip.active {
-            border-color: #93c5fd;
-            background: #eff6ff;
-            color: #1d4ed8;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+        }
+
+        #confirmTourModal .ct-chip[data-key="visa"].active,
+        #confirmTourModal .ct-chip[data-key="train"].active {
+            background: #7c3aed;
+            border-color: #7c3aed;
+        }
+
+        #confirmTourModal .ct-chip[data-key="hotels"].active,
+        #confirmTourModal .ct-chip[data-key="flight"].active {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        #confirmTourModal .ct-chip[data-key="land_package"].active,
+        #confirmTourModal .ct-chip[data-key="travel_insurance"].active {
+            background: #16a34a;
+            border-color: #16a34a;
+        }
+
+        #confirmTourModal .ct-chip[data-key="forex"].active {
+            background: #d97706;
+            border-color: #d97706;
+        }
+
+        #confirmTourModal .ct-chip[data-key="tours"].active {
+            background: #e11d48;
+            border-color: #e11d48;
+        }
+
+        #confirmTourModal .ct-chip[data-key="cruise"].active,
+        #confirmTourModal .ct-chip[data-key="transfers"].active {
+            background: #0284c7;
+            border-color: #0284c7;
         }
 
         #confirmTourModal .ct-detail-head,
@@ -3949,17 +4292,24 @@ foreach ($destinationLookup as $destId => $destName) {
             display: none;
         }
 
-        @media (max-width: 767.98px) {
-            #confirmTourModal .ct-primary-card {
-                flex-wrap: wrap;
+        @media (max-width: 991.98px) {
+            #confirmTourModal .ct-confirm-hero {
+                grid-template-columns: 1fr;
             }
 
+            #confirmTourModal .ct-primary-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                row-gap: 0.75rem;
+            }
+        }
+
+        @media (max-width: 767.98px) {
             #confirmTourModal .ct-pax-table-wrap {
                 overflow-x: auto;
             }
 
             #confirmTourModal .ct-pax-table {
-                min-width: 680px;
+                min-width: 860px;
             }
         }
 
@@ -3972,6 +4322,10 @@ foreach ($destinationLookup as $destId => $destName) {
                 display: none;
             }
 
+            #confirmTourModal .ct-svc-v2 .ct-detail-head {
+                display: grid;
+            }
+
             #confirmTourModal .ct-detail-row {
                 grid-template-columns: 1fr;
                 gap: 0.35rem;
@@ -3979,6 +4333,12 @@ foreach ($destinationLookup as $destId => $destName) {
                 border-radius: 4px;
                 padding: 0.5rem;
                 margin-bottom: 0.45rem;
+            }
+
+            #confirmTourModal .ct-svc-v2 .ct-detail-row {
+                border: 0;
+                border-radius: 0;
+                margin-bottom: 0;
             }
         }
     </style>
@@ -4404,20 +4764,84 @@ foreach ($destinationLookup as $destId => $destName) {
                         <input type="hidden" id="ctGuestAttachmentName" value="">
                         <input type="hidden" id="ctGuestAttachmentPath" value="">
 
-                        <div class="ct-primary-card" id="ctPrimaryCard">
-                            <div class="ct-primary-avatar" id="ctPrimaryAvatar">—</div>
-                            <div class="ct-primary-body">
-                                <div class="ct-primary-badge"><i class="fas fa-user"></i> Primary Contact</div>
-                                <div class="ct-primary-line">
-                                    <div class="ct-primary-name">
-                                        <span id="ctPrimaryName">—</span>
-                                        <span class="ct-primary-check" title="Primary"><i class="fas fa-check"></i></span>
+                        <div class="ct-confirm-hero">
+                            <div class="ct-primary-card" id="ctPrimaryCard">
+                                <div class="ct-primary-head">
+                                    <div class="ct-primary-avatar" id="ctPrimaryAvatar">—</div>
+                                    <div class="ct-primary-identity">
+                                        <div class="ct-primary-line">
+                                            <div class="ct-primary-name" id="ctPrimaryName">—</div>
+                                            <span class="ct-primary-badge">Primary Traveller</span>
+                                        </div>
+                                        <div class="ct-primary-meta">
+                                            <span><i class="fas fa-phone-alt"></i><span id="ctPrimaryPhone">—</span></span>
+                                            <span><i class="fas fa-envelope"></i><span id="ctPrimaryEmail">—</span></span>
+                                        </div>
                                     </div>
-                                    <div class="ct-primary-meta">
-                                        <span><i class="fas fa-phone-alt"></i> <span id="ctPrimaryPhone">—</span></span>
-                                        <span class="ct-primary-sep">|</span>
-                                        <span><i class="fas fa-envelope"></i> <span id="ctPrimaryEmail">—</span></span>
+                                </div>
+                                <div class="ct-primary-stats" aria-label="Tour summary">
+                                    <div class="ct-pstat is-destination">
+                                        <span class="ct-pstat-icon"><i class="fas fa-map-marker-alt"></i></span>
+                                        <div>
+                                            <span class="ct-pstat-label">Destination</span>
+                                            <span class="ct-pstat-val js-pstat-val">—</span>
+                                        </div>
                                     </div>
+                                    <div class="ct-pstat is-travel-date">
+                                        <span class="ct-pstat-icon"><i class="far fa-calendar-alt"></i></span>
+                                        <div>
+                                            <span class="ct-pstat-label">Travel Date</span>
+                                            <span class="ct-pstat-val js-pstat-val">—</span>
+                                        </div>
+                                    </div>
+                                    <div class="ct-pstat is-departure">
+                                        <span class="ct-pstat-icon"><i class="fas fa-plane"></i></span>
+                                        <div>
+                                            <span class="ct-pstat-label">Ex-City</span>
+                                            <span class="ct-pstat-val js-pstat-val">—</span>
+                                        </div>
+                                    </div>
+                                    <div class="ct-pstat is-pax">
+                                        <span class="ct-pstat-icon"><i class="fas fa-user-friends"></i></span>
+                                        <div>
+                                            <span class="ct-pstat-label">PAX</span>
+                                            <span class="ct-pstat-val js-pstat-val">—</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ct-pay-summary" id="ctPaySummary">
+                                <div class="ct-pay-head">
+                                    <span class="ct-pay-head-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 16 16" fill="currentColor">
+                                            <rect x="1" y="9" width="3.2" height="6" rx="0.7"></rect>
+                                            <rect x="6.4" y="5" width="3.2" height="10" rx="0.7"></rect>
+                                            <rect x="11.8" y="1" width="3.2" height="14" rx="0.7"></rect>
+                                        </svg>
+                                    </span>
+                                    Payment Summary
+                                </div>
+                                <div class="ct-pay-figures">
+                                    <div class="ct-pay-fig">
+                                        <span class="ct-pay-label">Total Amount</span>
+                                        <span class="ct-pay-val js-pay-total">—</span>
+                                    </div>
+                                    <div class="ct-pay-fig">
+                                        <span class="ct-pay-label">Paid Amount</span>
+                                        <span class="ct-pay-val js-pay-paid">—</span>
+                                    </div>
+                                    <div class="ct-pay-fig">
+                                        <span class="ct-pay-label">Outstanding</span>
+                                        <span class="ct-pay-val is-due js-pay-due">—</span>
+                                    </div>
+                                </div>
+                                <div class="ct-pay-actions">
+                                    <button type="button" class="ct-pay-add js-cust-pay-add">
+                                        <i class="fas fa-plus"></i> Add Payment
+                                    </button>
+                                    <button type="button" class="ct-pay-schedule js-cust-pay-view">
+                                        <i class="far fa-calendar-alt"></i> View Schedule
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -4445,12 +4869,15 @@ foreach ($destinationLookup as $destId => $destName) {
 
                         <div class="ct-pax-section">
                             <div class="ct-pax-head">
-                                <div>
-                                    <div class="ct-pax-title">Travellers (PAX)</div>
-                                    <div class="ct-pax-sub">List of travellers for this tour package.</div>
+                                <div class="ct-pax-head-main">
+                                    <span class="ct-pax-head-icon" aria-hidden="true"><i class="fas fa-user-friends"></i></span>
+                                    <div>
+                                        <div class="ct-pax-title">Travellers (PAX)</div>
+                                        <div class="ct-pax-sub">Review traveller details and confirm the travellers for this tour.</div>
+                                    </div>
                                 </div>
                                 <button type="button" class="btn btn-sm ct-add-guest-btn" id="ctAddGuestBtn">
-                                    <i class="fas fa-plus mr-1"></i> Add Guest
+                                    <i class="fas fa-plus mr-1"></i> Add Traveller
                                 </button>
                             </div>
                             <div class="ct-pax-table-wrap">
@@ -4458,23 +4885,32 @@ foreach ($destinationLookup as $destId => $destName) {
                                     <thead>
                                         <tr>
                                             <th style="width:42px;">#</th>
-                                            <th>Guest Name</th>
+                                            <th>Name</th>
                                             <th style="width:90px;">Type</th>
                                             <th style="width:70px;">Age</th>
                                             <th>Passport</th>
-                                            <th style="width:110px;">Documents</th>
+                                            <th style="width:120px;">Documents</th>
+                                            <th class="js-ct-pax-status-col" style="width:120px;">Status</th>
                                             <th style="width:120px;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="ctPaxRows">
-                                        <tr class="ct-pax-empty"><td colspan="7">No travellers yet. Click Add Guest.</td></tr>
+                                        <tr class="ct-pax-empty"><td colspan="8">No travellers yet. Click Add Traveller.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        <div class="ct-section-title">What is Included</div>
-                        <div class="ct-included" id="ctIncludedChips"></div>
+                        <div class="ct-included-block">
+                            <div class="ct-included-head">
+                                <span class="ct-included-icon" aria-hidden="true"><i class="fas fa-gift"></i></span>
+                                <div>
+                                    <div class="ct-included-title">What is Included</div>
+                                    <div class="ct-included-sub">Manage supplier services, costs and payments for this tour.</div>
+                                </div>
+                            </div>
+                            <div class="ct-included" id="ctIncludedChips"></div>
+                        </div>
 
                         <div class="ct-svc-section-head">
                             <span class="ct-svc-section-icon"><i class="fas fa-database"></i></span>
@@ -4483,38 +4919,40 @@ foreach ($destinationLookup as $destId => $destName) {
                                 <div class="ct-svc-section-sub">Manage suppliers, costs and documents for each service.</div>
                             </div>
                         </div>
-                        <div class="ct-svc-table">
+                        <div class="ct-svc-table ct-svc-v2">
                             <div class="ct-detail-head">
-                                <div>#</div>
                                 <div>Service</div>
                                 <div>Supplier</div>
                                 <div>Attachments</div>
-                                <div class="text-right">Total (&#8377;)</div>
+                                <div class="text-right">Total Cost (&#8377;)</div>
                                 <div class="text-right">Paid (&#8377;)</div>
-                                <div class="text-right">Balance (&#8377;)</div>
                                 <div>Status</div>
-                                <div class="text-center">Actions</div>
+                                <div>Actions</div>
                             </div>
                             <div id="ctDetailRows"></div>
                         </div>
                     </div>
-                    <div class="modal-footer ct-svc-footer">
-                        <div class="ct-svc-summary" id="ctSvcSummary">
-                            <div class="ct-sum-card is-total">
-                                <span class="ct-sum-icon"><i class="fas fa-calculator"></i></span>
-                                <div><span class="ct-sum-label">Total Package Cost</span><span class="ct-sum-val js-sum-total">&#8377; 0.00</span></div>
+                    <div class="modal-footer ct-svc-footer ct-svc-footer-v2">
+                        <div class="ct-foot-pay" id="ctSvcSummary">
+                            <div class="ct-foot-pay-title">
+                                <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
+                                    <rect x="1" y="9" width="3.2" height="6" rx="0.7"></rect>
+                                    <rect x="6.4" y="5" width="3.2" height="10" rx="0.7"></rect>
+                                    <rect x="11.8" y="1" width="3.2" height="14" rx="0.7"></rect>
+                                </svg>
+                                Payment Summary
                             </div>
-                            <div class="ct-sum-card is-paid">
-                                <span class="ct-sum-icon"><i class="fas fa-wallet"></i></span>
-                                <div><span class="ct-sum-label">Total Paid</span><span class="ct-sum-val js-sum-paid">&#8377; 0.00</span></div>
+                            <div class="ct-foot-metric">
+                                <span class="ct-foot-label">Total Amount</span>
+                                <span class="ct-foot-val js-foot-total">—</span>
                             </div>
-                            <div class="ct-sum-card is-due">
-                                <span class="ct-sum-icon"><i class="fas fa-chart-pie"></i></span>
-                                <div><span class="ct-sum-label">Outstanding Balance</span><span class="ct-sum-val js-sum-due">&#8377; 0.00</span></div>
+                            <div class="ct-foot-metric">
+                                <span class="ct-foot-label">Paid Amount</span>
+                                <span class="ct-foot-val is-paid js-foot-paid">—</span>
                             </div>
-                            <div class="ct-sum-card is-payments">
-                                <span class="ct-sum-icon"><i class="fas fa-file-invoice"></i></span>
-                                <div><span class="ct-sum-label">Payments Recorded</span><span class="ct-sum-val js-sum-payments">0</span></div>
+                            <div class="ct-foot-metric">
+                                <span class="ct-foot-label">Outstanding</span>
+                                <span class="ct-foot-val is-due js-foot-due">—</span>
                             </div>
                         </div>
                         <div class="ct-svc-footer-actions">
@@ -7434,7 +7872,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=39"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=43"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {

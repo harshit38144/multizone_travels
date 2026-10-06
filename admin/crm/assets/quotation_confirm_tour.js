@@ -299,7 +299,30 @@
             m + ' .ct-btn-save:hover{color:#fff;filter:brightness(.96)}' +
             m + ' .ct-btn-save:disabled{opacity:.65;box-shadow:none}' +
             '@media (max-width:991.98px){' + m + ' .ct-svc-footer-actions{border-left:0;padding-left:0;margin-left:auto}' +
-            m + ' .ct-sum-card{min-width:calc(50% - .4rem)}}'
+            m + ' .ct-sum-card{min-width:calc(50% - .4rem)}}' +
+            m + ' .ct-svc-v2 .ct-detail-head,' + m + ' .ct-svc-v2 .ct-detail-row{grid-template-columns:168px minmax(150px,1.15fr) 124px 112px 110px 142px 120px;min-width:980px}' +
+            m + ' .ct-svc-v2 .ct-detail-head{color:#94a3b8;font-size:.8rem;font-weight:600}' +
+            m + ' .ct-svc-v2 .ct-svc-icon.is-flight{background:#fff1f2;color:#e11d48}' +
+            m + ' .ct-svc-v2 .ct-num .form-control{font-weight:700;color:#0f172a}' +
+            m + ' .ct-svc-v2 .ct-svc-voucher{height:auto;padding:.28rem .7rem;border-radius:999px;background:#e0f2fe;color:#0284c7;font-size:.78rem;font-weight:600}' +
+            m + ' .ct-svc-v2 .ct-svc-voucher .fa-paperclip{color:#0284c7}' +
+            m + ' .ct-svc-v2 .ct-svc-voucher .fa-chevron-down{display:none}' +
+            m + ' .ct-svc-v2 .ct-svc-voucher:hover{background:#bae6fd;color:#0369a1}' +
+            m + ' .ct-svc-v2 .ct-paid-show{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;color:#64748b;white-space:nowrap}' +
+            m + ' .ct-svc-v2 .ct-paid-show.is-paid{color:#16a34a}' +
+            m + ' .ct-svc-v2 .ct-status-pill.is-partial{background:#ffedd5;color:#ea580c}' +
+            m + ' .ct-svc-footer-v2{align-items:center}' +
+            m + ' .ct-svc-footer-v2 .ct-foot-pay{display:flex;align-items:center;flex:1 1 auto;flex-wrap:wrap;gap:0;min-width:0}' +
+            m + ' .ct-svc-footer-v2 .ct-foot-pay-title{display:flex;align-items:center;gap:.4rem;margin-right:.85rem;font-size:.92rem;font-weight:700;color:#0f172a;white-space:nowrap}' +
+            m + ' .ct-svc-footer-v2 .ct-foot-pay-title svg{display:block;color:#ff2d55}' +
+            m + ' .ct-svc-footer-v2 .ct-foot-metric{padding:0 .9rem;border-left:1px solid #e2e8f0}' +
+            m + ' .ct-svc-footer-v2 .ct-foot-label{display:block;font-size:.72rem;color:#94a3b8;line-height:1.2}' +
+            m + ' .ct-svc-footer-v2 .ct-foot-val{display:block;font-size:1rem;font-weight:700;color:#0f172a;line-height:1.25;white-space:nowrap}' +
+            m + ' .ct-svc-footer-v2 .ct-foot-val.is-paid{color:#16a34a}' +
+            m + ' .ct-svc-footer-v2 .ct-foot-val.is-due{color:#ff2d55}' +
+            m + ' .ct-svc-footer-v2 .ct-svc-footer-actions{border-left:0;padding-left:0}' +
+            m + ' .ct-svc-footer-v2 .ct-btn-save{background:#ff2d55;box-shadow:none}' +
+            m + ' .ct-svc-footer-v2 .ct-btn-save:hover{background:#e11d48;filter:none}'
         ).appendTo('head');
     }
 
@@ -329,6 +352,10 @@
     function statusPillHtml(total, paid) {
         var s = paymentStatus(total, paid);
         return '<span class="ct-status-pill ' + s.cls + '">' + s.text + '</span>';
+    }
+
+    function svcLayoutV2() {
+        return $('#confirmTourModal .ct-svc-v2').length > 0;
     }
 
     function payBtnHtml(balance) {
@@ -400,10 +427,12 @@
         var total = row.total != null ? row.total : '';
         var paid = row.paid != null ? row.paid : '';
         var balanceNum = Math.max(0, parseNum(total) - parseNum(paid));
+        var v2 = svcLayoutV2();
+        var paidNum = parseNum(paid);
 
         return '' +
-            '<div class="ct-detail-row' + (parseNum(paid) > 0 ? ' has-paid' : '') + '" data-key="' + esc(key) + '" data-uid="' + esc(uid) + '" data-vouchers="' + voucherCount + '" data-payments="' + paymentCount + '">' +
-            '<div class="ct-row-no" aria-hidden="true"></div>' +
+            '<div class="ct-detail-row' + (paidNum > 0 ? ' has-paid' : '') + '" data-key="' + esc(key) + '" data-uid="' + esc(uid) + '" data-vouchers="' + voucherCount + '" data-payments="' + paymentCount + '">' +
+            (v2 ? '' : '<div class="ct-row-no" aria-hidden="true"></div>') +
             '<div class="ct-detail-label"><span class="ct-svc-icon is-' + esc(key) + '"><i class="fas ' + (SERVICE_ICONS[key] || 'fa-concierge-bell') + '"></i></span>' +
             '<span>' + esc(label) + '</span></div>' +
             '<div class="ct-detail-field ct-supplier-wrap">' +
@@ -412,10 +441,13 @@
             '</div>' +
             '<div class="ct-detail-attach">' + voucherBtnHtml(voucherCount) + '</div>' +
             '<div class="ct-detail-field ct-num"><input type="text" inputmode="numeric" class="form-control ct-total" placeholder="0" aria-label="Total" value="' + esc(amountInputValue(total)) + '"></div>' +
-            '<div class="ct-detail-field ct-num"><input type="text" inputmode="numeric" class="form-control ct-paid" placeholder="0" aria-label="Paid" value="' + esc(amountInputValue(paid)) + '"></div>' +
-            '<div class="ct-balance-wrap">' +
-            '<span class="ct-balance-val' + (balanceNum <= 0 ? ' is-clear' : '') + '">' + money2(balanceNum) + '</span>' +
-            '</div>' +
+            (v2
+                ? '<div class="ct-paid-show' + (paidNum > 0 ? ' is-paid' : '') + '"><span class="ct-paid-amt">\u20B9 ' + money2(paidNum) + '</span>' +
+                    '<input type="hidden" class="ct-paid" value="' + esc(amountInputValue(paid)) + '"></div>'
+                : '<div class="ct-detail-field ct-num"><input type="text" inputmode="numeric" class="form-control ct-paid" placeholder="0" aria-label="Paid" value="' + esc(amountInputValue(paid)) + '"></div>' +
+                    '<div class="ct-balance-wrap">' +
+                    '<span class="ct-balance-val' + (balanceNum <= 0 ? ' is-clear' : '') + '">' + money2(balanceNum) + '</span>' +
+                    '</div>') +
             '<div class="ct-status-wrap">' + statusPillHtml(parseNum(total), parseNum(paid)) + '</div>' +
             '<div class="ct-detail-actions">' +
             payBtnHtml(balanceNum) +
@@ -443,6 +475,11 @@
         var paid = parseNum($row.find('.ct-paid').val());
         var balance = Math.max(0, total - paid);
         $row.find('.ct-balance-val').text(money2(balance)).toggleClass('is-clear', balance <= 0);
+        var $paidShow = $row.find('.ct-paid-show');
+        if ($paidShow.length) {
+            $paidShow.toggleClass('is-paid', paid > 0);
+            $paidShow.find('.ct-paid-amt').text('\u20B9 ' + money2(paid));
+        }
         $row.toggleClass('has-paid', paid > 0);
         $row.find('.ct-pay-row').replaceWith(payBtnHtml(balance));
         $row.find('.ct-status-wrap').html(statusPillHtml(total, paid));
@@ -797,6 +834,18 @@
         set('is-due', loaded ? '\u20B9' + money(custDue) : '—');
         $stats.find('.ct-pstat.is-due').toggleClass('is-clear', loaded && custDue <= 0);
         $stats.find('.ct-pstat.is-paid, .ct-pstat.is-due').attr('title', 'View customer payments');
+        var paxN = leadPaxCount > 0 ? leadPaxCount : travellersState.length;
+        $stats.find('.ct-pstat.is-pax .js-pstat-val').text(
+            (leadPaxCount > 0 || travellersState.length > 0)
+                ? (paxN + (paxN === 1 ? ' Guest' : ' Guests'))
+                : '—'
+        );
+        var $pay = $('#ctPaySummary');
+        if ($pay.length) {
+            $pay.find('.js-pay-total').text(activePackageTotal === null ? '—' : '\u20B9 ' + money(activePackageTotal));
+            $pay.find('.js-pay-paid').text(activeCustomerPaid === null ? '—' : '\u20B9 ' + money(activeCustomerPaid));
+            $pay.find('.js-pay-due').text(loaded ? '\u20B9 ' + money(custDue) : '—');
+        }
 
         var $sum = $('#ctSvcSummary');
         if ($sum.length) {
@@ -805,14 +854,22 @@
             $sum.find('.js-sum-due').text('\u20B9 ' + money2(due));
             $sum.find('.js-sum-payments').text(String(payments));
         }
+        var $foot = $('#ctSvcSummary.ct-foot-pay');
+        if ($foot.length) {
+            $foot.find('.js-foot-total').text(activePackageTotal === null ? '—' : '\u20B9 ' + money(activePackageTotal));
+            $foot.find('.js-foot-paid').text(activeCustomerPaid === null ? '—' : '\u20B9 ' + money(activeCustomerPaid));
+            $foot.find('.js-foot-due').text(loaded ? '\u20B9 ' + money(custDue) : '—');
+        }
     }
 
     function renderTravellers() {
         ensurePaxBadgeStyles();
         updatePrimaryStats();
         var $tbody = $('#ctPaxRows').empty();
+        var showStatus = $('#ctPaxTable thead .js-ct-pax-status-col').length > 0;
+        var colSpan = showStatus ? 8 : 7;
         if (!travellersState.length) {
-            $tbody.append('<tr class="ct-pax-empty"><td colspan="7">No travellers yet. Click Add Guest.</td></tr>');
+            $tbody.append('<tr class="ct-pax-empty"><td colspan="' + colSpan + '">No travellers yet. Click Add Guest.</td></tr>');
             refreshAddGuestButton();
             return;
         }
@@ -839,6 +896,19 @@
                 ? '<span class="text-muted">—</span>'
                 : '<button type="button" class="ct-pax-docs js-ct-pax-docs" title="Documents">' +
                     '<i class="fas fa-paperclip"></i> ' + esc(docLabel) + '</button>';
+            var statusHtml = '';
+            if (showStatus) {
+                var statusClass = 'is-empty';
+                var statusText = 'Not Added';
+                if (!isBlank && isPrimary) {
+                    statusClass = 'is-confirmed';
+                    statusText = 'Confirmed';
+                } else if (!isBlank) {
+                    statusClass = 'is-pending';
+                    statusText = 'Pending';
+                }
+                statusHtml = '<td><span class="ct-pax-status ' + statusClass + '">' + statusText + '</span></td>';
+            }
             $tbody.append(
                 '<tr data-traveller-id="' + esc(t.id) + '">' +
                 '<td>' + (idx + 1) + '</td>' +
@@ -851,6 +921,7 @@
                 '<td>' + (isBlank || t.age == null ? '<span class="text-muted">—</span>' : esc(String(t.age))) + '</td>' +
                 '<td>' + passportHtml + '</td>' +
                 '<td>' + docsHtml + '</td>' +
+                statusHtml +
                 '<td><div class="ct-pax-actions">' +
                 '<button type="button" class="ct-row-btn js-ct-pax-edit" title="' + (isBlank ? 'Add traveller' : 'Edit') + '"><i class="fas fa-pen"></i></button>' +
                 (isBlank
@@ -871,7 +942,11 @@
         var capped = leadPaxCount > 0 && namedTravellerCount() >= leadPaxCount;
         var $btn = $('#ctAddGuestBtn');
         $btn.prop('disabled', capped);
-        $btn.attr('title', capped ? ('No. of Pax is ' + leadPaxCount) : 'Add Guest');
+        var leadsPaxLayout = $('#confirmTourModal .ct-pax-head-icon').length > 0;
+        $btn.attr('title', capped ? ('No. of Pax is ' + leadPaxCount) : (leadsPaxLayout ? 'Add Traveller' : 'Add Guest'));
+        if (leadsPaxLayout) {
+            return;
+        }
         var $sub = $('#confirmTourModal .ct-pax-sub');
         if (leadPaxCount > 0) {
             $sub.text(leadPaxCount + (leadPaxCount === 1 ? ' traveller' : ' travellers') + ' from this lead\'s No. of Pax.');
@@ -1646,6 +1721,19 @@
         ensureSupplierSuggestStyles();
 
         var chipsHtml = '';
+        var richChips = $('#confirmTourModal .ct-included-head').length > 0;
+        var chipIcons = {
+            visa: 'fa-passport',
+            hotels: 'fa-bed',
+            land_package: 'fa-mountain',
+            forex: 'fa-coins',
+            train: 'fa-train',
+            flight: 'fa-plane',
+            travel_insurance: 'fa-shield-alt',
+            transfers: 'fa-shuttle-van',
+            tours: 'fa-map-marker-alt',
+            cruise: 'fa-ship'
+        };
         Object.keys({
             visa: 'Visa',
             hotels: 'Hotels',
@@ -1670,7 +1758,9 @@
                 tours: 'Tours',
                 cruise: 'Cruise'
             }[key];
-            chipsHtml += '<button type="button" class="ct-chip" data-key="' + key + '">' + esc(label) + ' +</button>';
+            chipsHtml += '<button type="button" class="ct-chip" data-key="' + key + '">' +
+                (richChips ? '<i class="fas ' + chipIcons[key] + '"></i>' : '') +
+                esc(label) + (richChips ? '' : ' +') + '</button>';
         });
         $('#ctIncludedChips').html(chipsHtml);
 
@@ -4603,12 +4693,12 @@
             });
         }
 
-        $(document).on('click', '#ctPrimaryCard .js-cust-pay-add', function (e) {
+        $(document).on('click', '#confirmTourModal .js-cust-pay-add', function (e) {
             e.stopPropagation();
             openCustomerPayModal(true);
         });
 
-        $(document).on('click', '#ctPrimaryCard .ct-pstat.is-paid, #ctPrimaryCard .ct-pstat.is-due', function () {
+        $(document).on('click', '#confirmTourModal .js-cust-pay-view, #ctPrimaryCard .ct-pstat.is-paid, #ctPrimaryCard .ct-pstat.is-due', function () {
             openCustomerPayModal(false);
         });
 
