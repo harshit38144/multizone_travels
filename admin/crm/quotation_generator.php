@@ -189,6 +189,24 @@ foreach ($destinationLookup as $destId => $destName) {
         $qDestinationNameToId[$key] = (int) $destId;
     }
 }
+$qDestinationTourType = [];
+$tourTypeCol = $conn->query("SHOW COLUMNS FROM `destinations` LIKE 'tour_type'");
+if ($tourTypeCol && $tourTypeCol->num_rows > 0) {
+    $destTypeRes = $conn->query("SELECT name, tour_type FROM destinations WHERE is_active = 1");
+    if ($destTypeRes) {
+        while ($typeRow = $destTypeRes->fetch_assoc()) {
+            $typeKey = strtolower(trim((string) ($typeRow['name'] ?? '')));
+            $typeVal = strtolower(trim((string) ($typeRow['tour_type'] ?? '')));
+            if ($typeKey === '' || isset($qDestinationTourType[$typeKey])) {
+                continue;
+            }
+            if ($typeVal !== 'international' && $typeVal !== 'domestic') {
+                $typeVal = '';
+            }
+            $qDestinationTourType[$typeKey] = $typeVal;
+        }
+    }
+}
 $quotationTermsMaster = crmGetQuotationTermsMaster($conn);
 
 $qCountries = [];
@@ -2921,7 +2939,7 @@ $qWizardSteps = [
         }
 
         .q-ai-incl-doc .q-ai-incl-sec li {
-            margin: 0 0 0.28rem;
+            margin: 0 0 0.18rem;
             line-height: 1.45;
             color: #1f2937;
         }
@@ -7406,7 +7424,7 @@ $qWizardSteps = [
             height: 40px;
             display: flex;
             align-items: center;
-            margin-bottom: 0.45rem;
+            margin-bottom: 0rem;
         }
 
         .crm-quotation-gen .q-pricing-row-label {
@@ -7661,8 +7679,8 @@ $qWizardSteps = [
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-amount {
             width: 100%;
             max-width: none;
-            height: 36px !important;
-            min-height: 36px !important;
+            height: 28px !important;
+            min-height: 28px !important;
             padding: 0.2rem 0.55rem 0.2rem 1.25rem !important;
             font-size: 0.82rem !important;
             line-height: 1.2;
@@ -7860,7 +7878,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: space-between;
             gap: 0.65rem;
-            padding: 0.9rem 1rem;
+            padding: 0.2rem 0.5rem;
             background: linear-gradient(135deg, #9f1239 0%, #c4121a 55%, #a31526 100%);
             overflow: hidden;
         }
@@ -7881,8 +7899,8 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-cost-hd-ico {
-            width: 40px;
-            height: 40px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             background: #fff;
             color: #c4121a;
@@ -7900,7 +7918,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-tour-cost-title {
             margin: 0;
-            font-size: 0.98rem;
+            font-size: 0.78rem;
             font-weight: 800;
             color: #fff;
             letter-spacing: -0.01em;
@@ -7972,8 +7990,8 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-cost-avatar {
-            width: 34px;
-            height: 34px;
+            width: 22px;
+            height: 22px;
             border-radius: 10px;
             background: #fde8ea;
             border: 0;
@@ -7983,6 +8001,16 @@ $qWizardSteps = [
             justify-content: center;
             flex-shrink: 0;
             font-size: 0.78rem;
+        }
+
+        .crm-quotation-gen .q-tour-cost-avatar-switch {
+            width: auto;
+            height: auto;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            outline: none;
+            box-shadow: none;
         }
 
         .crm-quotation-gen .q-tour-cost-traveller-text {
@@ -8200,7 +8228,7 @@ $qWizardSteps = [
             width: 2.6rem;
             height: 30px !important;
             min-height: 30px !important;
-            border-radius: 0 !important;
+            border-radius: 8px !important;
             color: #0f172a !important;
             font-size: 0.78rem !important;
             font-weight: 700 !important;
@@ -8285,11 +8313,17 @@ $qWizardSteps = [
             align-items: center;
             gap: 0.45rem;
             margin: 0;
-            cursor: pointer;
             user-select: none;
         }
 
-        .crm-quotation-gen .q-tour-opt-input {
+        .crm-quotation-gen .q-switch {
+            position: relative;
+            display: inline-flex;
+            flex: 0 0 auto;
+            line-height: 0;
+        }
+
+        .crm-quotation-gen .q-switch-input {
             position: absolute;
             opacity: 0;
             width: 1px;
@@ -8298,46 +8332,59 @@ $qWizardSteps = [
             pointer-events: none;
         }
 
-        .crm-quotation-gen .q-tour-opt-box {
-            width: 16px;
-            height: 16px;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 4px;
-            background: #fff;
-            flex-shrink: 0;
+        .crm-quotation-gen .q-switch-track {
+            height: 28px;
+            width: 56px;
+            background-color: #ffffff;
+            border: 0;
+            border-radius: 14px;
+            outline: none;
+            box-shadow: inset 0 0 2px 2px rgba(255, 255, 255, 1),
+                inset 0 0 8px 1px rgba(0, 0, 0, 0.45),
+                3px 6px 10px rgba(0, 0, 0, 0.08),
+                inset 0 0 0 2px rgba(0, 0, 0, 0.28);
+            display: flex;
+            align-items: center;
+            cursor: pointer;
             position: relative;
-            transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+            margin: 0;
+            transition: transform 0.4s;
         }
 
-        .crm-quotation-gen .q-tour-opt-box::after {
-            content: '';
+        .crm-quotation-gen .q-switch-track:hover {
+            transform: perspective(100px) rotateX(5deg) rotateY(-5deg);
+        }
+
+        .crm-quotation-gen .q-switch-input:checked + .q-switch-track:hover {
+            transform: perspective(100px) rotateX(-5deg) rotateY(5deg);
+        }
+
+        .crm-quotation-gen .q-switch-input:focus + .q-switch-track,
+        .crm-quotation-gen .q-switch-track:focus {
+            outline: none;
+            box-shadow: inset 0 0 2px 2px rgba(255, 255, 255, 1),
+                inset 0 0 8px 1px rgba(0, 0, 0, 0.45),
+                3px 6px 10px rgba(0, 0, 0, 0.08),
+                inset 0 0 0 2px rgba(0, 0, 0, 0.28);
+        }
+
+        .crm-quotation-gen .q-switch-track::before {
             position: absolute;
-            left: 4.5px;
-            top: 1.5px;
-            width: 4.5px;
-            height: 8px;
-            border: solid #fff;
-            border-width: 0 1.5px 1.5px 0;
-            transform: rotate(45deg) scale(0);
-            transition: transform 0.12s ease;
+            content: "";
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background-color: #000000;
+            background-image: linear-gradient(130deg, #757272 10%, #ffffff 11%, #726f6f 62%);
+            left: 5px;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 4px 4px 6px rgba(0, 0, 0, 0.25);
+            transition: 0.4s;
         }
 
-        .crm-quotation-gen .q-tour-opt-check:hover .q-tour-opt-box {
-            border-color: #c4121a;
-        }
-
-        .crm-quotation-gen .q-tour-opt-check:focus-within .q-tour-opt-box {
-            border-color: #c4121a;
-            box-shadow: 0 0 0 3px rgba(196, 18, 26, 0.14);
-        }
-
-        .crm-quotation-gen .q-tour-opt-input:checked + .q-tour-opt-box {
-            background: #c4121a;
-            border-color: #c4121a;
-        }
-
-        .crm-quotation-gen .q-tour-opt-input:checked + .q-tour-opt-box::after {
-            transform: rotate(45deg) scale(1);
+        .crm-quotation-gen .q-switch-input:checked + .q-switch-track::before {
+            left: 33px;
+            background-color: #000000;
+            background-image: linear-gradient(315deg, #000000 0%, #414141 70%);
         }
 
         .crm-quotation-gen .q-tour-opt-text {
@@ -8349,13 +8396,14 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-tour-cost-grand {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.65rem;
-            padding: 0.75rem 0.85rem;
-            background: #fff5f5;
-            border: 1px solid #f3c6cb;
-            border-radius: 12px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.35rem 1rem;
+    background: #fff5f5;
+    border: 1px solid #f3c6cb;
+    border-radius: 12px;
+    margin-right: 20px;
         }
 
         .crm-quotation-gen .q-tour-cost-grand-left {
@@ -8435,7 +8483,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-row {
-            padding: 0.7rem 0.8rem;
+            padding: 0rem 0.8rem;
             flex-wrap: nowrap;
         }
 
@@ -9916,6 +9964,7 @@ $qWizardSteps = [
             display: flex;
             flex-direction: column;
             gap: 8px;
+            margin-top: 10px;
         }
 
         .qp-flight-journey {
@@ -11586,7 +11635,7 @@ $qWizardSteps = [
         }
 
         .qp-incl-edit .q-ai-incl-sec[data-sec="airfare"] .q-ai-incl-sec-title i {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M8 28l32-10-6 8 8 2-4 4-10-2-6 8-4-2 4-8-14 0z'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M24 4L27 14L40 20L38 24L27 21L25 32L32 36L30 40L24 36L18 40L16 36L23 32L21 21L10 24L8 20L21 14Z'/%3E%3C/svg%3E");
         }
 
         .qp-incl-edit .q-ai-incl-sec[data-sec="other"] .q-ai-incl-sec-title i {
@@ -11598,8 +11647,8 @@ $qWizardSteps = [
             display: inline-block;
             margin: 2px 0 10px;
             padding-bottom: 7px;
-            font-size: 18px;
-            font-weight: 800;
+            font-size: 14px;
+            font-weight: 700;
             letter-spacing: 0;
             text-transform: none;
             color: #1a1d23;
@@ -12058,8 +12107,8 @@ $qWizardSteps = [
 
         .qp-tour-hd-ico,
         .qp-notes-hd-ico {
-            width: 34px;
-            height: 34px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             background: #c4121a;
             color: #ffffff;
@@ -12067,22 +12116,18 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 15px;
-            font-weight: 800;
+            font-size: 11px;
+            font-weight: 700;
             font-family: inherit;
             line-height: 1;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .qp-notes-hd-ico {
-            font-size: 13px;
-        }
-
         .qp-tour-hd-divider,
         .qp-notes-hd-divider {
             width: 1px;
-            height: 28px;
+            height: 22px;
             background: #e5e7eb;
             flex-shrink: 0;
         }
@@ -12095,11 +12140,11 @@ $qWizardSteps = [
         .qp-tour-title,
         .qp-notes-title {
             margin: 0;
-            font-size: 16px;
-            font-weight: 800;
+            font-size: 14px;
+            font-weight: 700;
             font-family: inherit;
             letter-spacing: -0.01em;
-            line-height: 1.15;
+            line-height: 1.2;
             text-transform: none;
             color: #1a2332;
         }
@@ -15747,6 +15792,10 @@ $qWizardSteps = [
                                     <label class="custom-control-label" for="q_without_itinerary">Without Itinerary</label>
                                 </div>
                                 <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="q_hide_tcs" name="hide_tcs" value="1">
+                                    <label class="custom-control-label" for="q_hide_tcs">Hide TCS</label>
+                                </div>
+                                <div class="custom-control custom-checkbox">
                                     <input type="checkbox" class="custom-control-input" id="q_hide_gst_note" name="hide_gst_note" value="1">
                                     <label class="custom-control-label" for="q_hide_gst_note">Hide GST Note</label>
                                 </div>
@@ -16124,6 +16173,7 @@ $qWizardSteps = [
         var Q_HOTEL_SUPPLIERS = <?= json_encode($qHotelSuppliers, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
         var Q_FLIGHT_SUPPLIERS = <?= json_encode($qFlightSuppliers, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
         var Q_DESTINATION_NAME_TO_ID = <?= json_encode($qDestinationNameToId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
+        var Q_DESTINATION_TOUR_TYPE = <?= json_encode($qDestinationTourType, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var Q_DESTINATION_COUNTRY_ID_BY_NAME = <?= json_encode($qDestinationCountryIdByName, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var QUOTATION_TERMS_MASTER = <?= json_encode($quotationTermsMaster, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
         var Q_SUPPLIER_MAIL_TEMPLATE = <?= json_encode([
@@ -16133,7 +16183,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=305"></script>
+    <script src="crm/assets/quotation_generator.js?v=314"></script>
     <script src="crm/assets/quotation_flight_search.js?v=32"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

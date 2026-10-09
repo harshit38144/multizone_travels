@@ -6471,6 +6471,7 @@
         child_rates: [],
         infant_rate: '',
         gst_percent: 5,
+        tcs_percent: 2,
         children_ages: [],
         child_qtys: []
     };
@@ -6489,9 +6490,33 @@
             child_rates: [],
             infant_rate: '',
             gst_percent: 5,
+            tcs_percent: 2,
             children_ages: [],
             child_qtys: []
         };
+    }
+
+    function isInternationalQuotationTour() {
+        var raw = String($('[name=destination]').val() || $('#qDestinationInput').val() || '').trim().toLowerCase();
+        if (!raw) {
+            return false;
+        }
+        var map = window.Q_DESTINATION_TOUR_TYPE || {};
+        if (map[raw] === 'international') {
+            return true;
+        }
+        if (map[raw] === 'domestic') {
+            return false;
+        }
+        var parts = raw.split(/[,;|]+/);
+        var i;
+        for (i = 0; i < parts.length; i++) {
+            var key = parts[i].trim();
+            if (key && map[key] === 'international') {
+                return true;
+            }
+        }
+        return false;
     }
 
     function roundTourMoney(n) {
@@ -6733,30 +6758,22 @@
         return String(num);
     }
 
-    function tourCostOptsHtml(suffix) {
-        var sid = String(suffix || 'x').replace(/[^a-zA-Z0-9_-]/g, '_');
-        var wi = $('#q_without_itinerary').is(':checked') ? ' checked' : '';
-        var hg = $('#q_hide_gst_note').is(':checked') ? ' checked' : '';
+    var qTourSwitchSeq = 0;
+
+    function tourCostSwitchHtml(extraClass, checked, ariaLabel) {
+        qTourSwitchSeq += 1;
+        var id = 'q_sw_' + qTourSwitchSeq;
         return '' +
-            '<div class="q-tour-cost-opts" role="group" aria-label="Quotation display options">' +
-            '<label class="q-tour-opt-check" for="q_tour_opt_wi_' + sid + '">' +
-            '<input type="checkbox" class="q-tour-opt-input q-tour-opt-without-itinerary" id="q_tour_opt_wi_' + sid + '"' + wi + '>' +
-            '<span class="q-tour-opt-box" aria-hidden="true"></span>' +
-            '<span class="q-tour-opt-text">Without Itinerary</span>' +
-            '</label>' +
-            '<label class="q-tour-opt-check" for="q_tour_opt_hg_' + sid + '">' +
-            '<input type="checkbox" class="q-tour-opt-input q-tour-opt-hide-gst" id="q_tour_opt_hg_' + sid + '"' + hg + '>' +
-            '<span class="q-tour-opt-box" aria-hidden="true"></span>' +
-            '<span class="q-tour-opt-text">Hide GST Note</span>' +
-            '</label>' +
-            '</div>';
+            '<span class="q-switch">' +
+            '<input type="checkbox" class="q-switch-input ' + extraClass + '" id="' + id + '"' +
+            (checked ? ' checked' : '') + ' aria-label="' + esc(ariaLabel || 'Toggle') + '">' +
+            '<label class="q-switch-track" for="' + id + '"></label>' +
+            '</span>';
     }
 
     function syncTourCostOptUiFromMasters() {
-        var wi = $('#q_without_itinerary').is(':checked');
-        var hg = $('#q_hide_gst_note').is(':checked');
-        $('.q-tour-opt-without-itinerary').prop('checked', wi);
-        $('.q-tour-opt-hide-gst').prop('checked', hg);
+        $('.q-tour-gst-rate-switch').prop('checked', !$('#q_hide_gst_note').is(':checked'));
+        $('.q-tour-tcs-rate-switch').prop('checked', !$('#q_hide_tcs').is(':checked'));
     }
 
     function tourCostCardShellHtml(suffix) {
@@ -6767,10 +6784,7 @@
             '<span class="q-tour-cost-hd-ico" aria-hidden="true"><i class="fas fa-suitcase-rolling"></i></span>' +
             '<div class="q-tour-cost-hd-copy">' +
             '<h4 class="q-tour-cost-title">Tour Cost Summary</h4>' +
-            '<p class="q-tour-cost-sub">Total cost breakdown of your selected tour</p>' +
             '</div></div>' +
-            '<span class="q-tour-cost-autosave q-sheet-tour-autosave" title="Draft status">' +
-            '<i class="fas fa-check"></i> Auto Saved' +
             '</span></div>' +
             '<div class="q-tour-cost-body q-sheet-tour-cost-rows"></div>' +
             '<div class="q-tour-cost-grand-wrap">' +
@@ -6784,7 +6798,6 @@
             '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
             '<strong class="q-tour-cost-grand-amount q-sheet-tour-grand">INR 0</strong>' +
             '</div></div>' +
-            tourCostOptsHtml(suffix) +
             '</div>';
     }
 
@@ -6817,6 +6830,9 @@
         var hideMeta = !!opts.hideMeta;
         var gstEditable = !!opts.gstEditable;
         var gstPct = opts.gstPct != null ? opts.gstPct : 5;
+        var tcsEditable = !!opts.tcsEditable;
+        var tcsPct = opts.tcsPct != null ? opts.tcsPct : 2;
+        var previewOn = opts.previewOn !== false;
         var removable = !!opts.removable;
         var removeIndex = opts.removeIndex != null ? String(opts.removeIndex) : '';
         var subtitle = '';
@@ -6842,8 +6858,20 @@
                 '<div class="q-tour-cost-controls q-tour-cost-controls-gst">' +
                 '<span class="q-tour-cost-gst-group">' +
                 '<input type="number" step="0.01" min="0" max="100" class="form-control q-tour-gst-input q-tour-cost-gst-inline" value="' + esc(gstPct) + '" aria-label="GST percent">' +
-                '<span class="q-tour-cost-gst-suffix" aria-hidden="true">%</span>' +
                 '</span></div>';
+        } else if (tcsEditable) {
+            controlsHtml =
+                '<div class="q-tour-cost-controls q-tour-cost-controls-gst">' +
+                '<span class="q-tour-cost-gst-group">' +
+                '<input type="number" step="0.01" min="0" max="100" class="form-control q-tour-tcs-input q-tour-cost-gst-inline" value="' + esc(tcsPct) + '" aria-label="TCS percent">' +
+                '</span></div>';
+        }
+
+        var rateSwitchHtml = '';
+        if (gstEditable) {
+            rateSwitchHtml = tourCostSwitchHtml('q-tour-gst-rate-switch', previewOn, 'Show GST in quotation preview');
+        } else if (tcsEditable) {
+            rateSwitchHtml = tourCostSwitchHtml('q-tour-tcs-rate-switch', previewOn, 'Show TCS in quotation preview');
         }
 
         var nameHtml;
@@ -6864,6 +6892,7 @@
         var rowClass = 'q-tour-cost-row' +
             (summary ? ' is-summary' : '') +
             (gstEditable ? ' q-tour-gst-row' : '') +
+            (tcsEditable ? ' q-tour-tcs-row' : '') +
             (removable ? ' has-remove' : '') +
             (ageEditable ? ' has-child-age' : '');
 
@@ -6871,7 +6900,9 @@
             '<div class="' + rowClass + '" data-tour-key="' + esc(key) + '"' +
             (removable ? ' data-child-index="' + esc(removeIndex) + '"' : '') + '>' +
             '<div class="q-tour-cost-traveller">' +
-            '<span class="q-tour-cost-avatar" aria-hidden="true"><i class="' + icon + '"></i></span>' +
+            (rateSwitchHtml
+                ? '<span class="q-tour-cost-avatar q-tour-cost-avatar-switch">' + rateSwitchHtml + '</span>'
+                : '<span class="q-tour-cost-avatar" aria-hidden="true"><i class="' + icon + '"></i></span>') +
             '<div class="q-tour-cost-traveller-text">' +
             nameHtml +
             (subtitle ? '<span class="q-tour-cost-traveller-sub">' + esc(subtitle) + '</span>' : '') +
@@ -6990,8 +7021,10 @@
         }
         counts = readGuestCounts();
         ensureTourCostChildRates(childRows.length);
-        var hideGst = $('#q_hide_gst_note').is(':checked');
-        var gstPct = hideGst ? 0 : (parseFloat(qTourCostState.gst_percent) || 5);
+        var gstPct = parseFloat(qTourCostState.gst_percent);
+        if (isNaN(gstPct) || gstPct < 0) {
+            gstPct = 5;
+        }
         var rateStr = perPersonRate != null && perPersonRate !== '' ? String(perPersonRate) : '';
         var html = '';
         html += tourCostRowHtml({
@@ -7022,16 +7055,33 @@
                 removeIndex: i
             });
         });
-        if (!hideGst) {
+        html += tourCostRowHtml({
+            key: 'gst',
+            icon: 'fas fa-percentage',
+            name: 'GST',
+            editable: false,
+            hideMeta: true,
+            summary: true,
+            gstEditable: true,
+            gstPct: gstPct,
+            previewOn: !$('#q_hide_gst_note').is(':checked'),
+            amountText: 'INR 0'
+        });
+        if (isInternationalQuotationTour()) {
+            var tcsPct = parseFloat(qTourCostState.tcs_percent);
+            if (isNaN(tcsPct) || tcsPct < 0) {
+                tcsPct = 2;
+            }
             html += tourCostRowHtml({
-                key: 'gst',
+                key: 'tcs',
                 icon: 'fas fa-percentage',
-                name: 'GST',
+                name: 'TCS',
                 editable: false,
                 hideMeta: true,
                 summary: true,
-                gstEditable: true,
-                gstPct: gstPct,
+                tcsEditable: true,
+                tcsPct: tcsPct,
+                previewOn: !$('#q_hide_tcs').is(':checked'),
                 amountText: 'INR 0'
             });
         }
@@ -7105,6 +7155,13 @@
                     qTourCostState.gst_percent = g;
                 }
             }
+            var $tcs = $scope.find('.q-tour-tcs-input').first();
+            if ($tcs.length) {
+                var tcsVal = parseFloat($tcs.val());
+                if (!isNaN(tcsVal) && tcsVal >= 0) {
+                    qTourCostState.tcs_percent = tcsVal;
+                }
+            }
             return;
         }
         ensureTourCostChildRates(readChildCostRows().length);
@@ -7126,10 +7183,20 @@
             packageTotal = roundTourMoney(String($('#q_package_total').val() || '').replace(/,/g, ''));
         }
         var breakdown = buildPackageTravelerBreakdown(packageTotal, counts.adults, childQtys);
-        var hideGst = $('#q_hide_gst_note').is(':checked');
-        var gstPct = hideGst ? 0 : (parseFloat(qTourCostState.gst_percent) || 5);
+        var hideGstPreview = $('#q_hide_gst_note').is(':checked');
+        var gstPct = parseFloat(qTourCostState.gst_percent);
+        if (isNaN(gstPct) || gstPct < 0) {
+            gstPct = 5;
+        }
         var gst = roundTourMoney(breakdown.package_total * gstPct / 100);
-        var grand = roundTourMoney(breakdown.package_total + gst);
+        var international = isInternationalQuotationTour();
+        var hideTcsPreview = $('#q_hide_tcs').is(':checked');
+        var tcsPct = parseFloat(qTourCostState.tcs_percent);
+        if (isNaN(tcsPct) || tcsPct < 0) {
+            tcsPct = 2;
+        }
+        var tcs = international ? roundTourMoney(breakdown.package_total * tcsPct / 100) : 0;
+        var grand = roundTourMoney(breakdown.package_total + gst + tcs);
         var childRates = [];
         var i;
         for (i = 0; i < childRows.length; i++) {
@@ -7158,8 +7225,12 @@
             subtotal: breakdown.package_total,
             gst_percent: gstPct,
             gst_amount: gst,
+            tcs_percent: tcsPct,
+            tcs_amount: tcs,
+            hide_tcs: hideTcsPreview ? 1 : 0,
+            international_tour: international ? 1 : 0,
             grand_total: grand,
-            hide_gst: hideGst ? 1 : 0
+            hide_gst: hideGstPreview ? 1 : 0
         };
     }
 
@@ -7187,16 +7258,33 @@
                 $age.val(!isNaN(ageNum) && ageNum > 0 ? String(ageNum) : '');
             }
         }
-        if (payload.hide_gst) {
-            $scope.find('.q-tour-gst-row').hide();
-        } else {
-            $scope.find('.q-tour-gst-row').show();
-            $scope.find('.q-tour-gst-input').each(function () {
+        $scope.find('.q-tour-gst-row').show();
+        $scope.find('.q-tour-gst-input').each(function () {
+            if (!$(this).is(':focus')) {
+                $(this).val(String(payload.gst_percent || 5));
+            }
+        });
+        $scope.find('[data-tour-amount="gst"]').text(formatTourMoney(payload.gst_amount));
+        $scope.find('.q-tour-gst-rate-switch').each(function () {
+            if (!$(this).is(':focus')) {
+                $(this).prop('checked', !payload.hide_gst);
+            }
+        });
+        if (payload.international_tour) {
+            $scope.find('.q-tour-tcs-row').show();
+            $scope.find('.q-tour-tcs-input').each(function () {
                 if (!$(this).is(':focus')) {
-                    $(this).val(String(payload.gst_percent || 5));
+                    $(this).val(String(payload.tcs_percent != null ? payload.tcs_percent : 2));
                 }
             });
-            $scope.find('[data-tour-amount="gst"]').text(formatTourMoney(payload.gst_amount));
+            $scope.find('[data-tour-amount="tcs"]').text(formatTourMoney(payload.tcs_amount));
+            $scope.find('.q-tour-tcs-rate-switch').each(function () {
+                if (!$(this).is(':focus')) {
+                    $(this).prop('checked', !payload.hide_tcs);
+                }
+            });
+        } else {
+            $scope.find('.q-tour-tcs-row').hide();
         }
     }
 
@@ -7330,6 +7418,16 @@
         if (Array.isArray(state.child_rates)) qTourCostState.child_rates = state.child_rates.slice();
         if (state.infant_rate != null) qTourCostState.infant_rate = state.infant_rate;
         if (state.gst_percent != null) qTourCostState.gst_percent = state.gst_percent;
+        if (state.tcs_percent != null && state.tcs_percent !== '') qTourCostState.tcs_percent = state.tcs_percent;
+        if (state.hide_gst != null && state.hide_gst !== '') {
+            $('#q_hide_gst_note').prop('checked', parseInt(state.hide_gst, 10) === 1);
+        }
+        if (state.hide_tcs != null && state.hide_tcs !== '') {
+            $('#q_hide_tcs').prop('checked', parseInt(state.hide_tcs, 10) === 1);
+        } else if (state.apply_tcs != null && state.apply_tcs !== '') {
+            $('#q_hide_tcs').prop('checked', parseInt(state.apply_tcs, 10) !== 1);
+        }
+        syncTourCostOptUiFromMasters();
         if (Array.isArray(state.children_ages) || Array.isArray(state.child_qtys)) {
             var agesApply = Array.isArray(state.children_ages) ? state.children_ages : [];
             var qtysApply = Array.isArray(state.child_qtys) ? state.child_qtys : [];
@@ -7532,7 +7630,7 @@
     /* USD converter                                                       */
     /* ------------------------------------------------------------------ */
     var $lastFocusedCost = null;
-    $(document).on('focus', '#qPricingSheetsHost .q-cost, #qPricingSheetsHost .q-sheet-profit-percent, #qPricingSheetsHost .q-sheet-profit-amount, #qPricingSheetsHost .q-sheet-price-per-adult, .q-sheet-tour-cost-rows .q-tour-rate-input, .q-sheet-tour-cost-rows .q-tour-gst-input, .q-sheet-tour-cost-rows .q-tour-qty-input, #qTourCostRows .q-tour-rate-input, #qTourCostRows .q-tour-gst-input, #qTourCostRows .q-tour-qty-input', function () {
+    $(document).on('focus', '#qPricingSheetsHost .q-cost, #qPricingSheetsHost .q-sheet-profit-percent, #qPricingSheetsHost .q-sheet-profit-amount, #qPricingSheetsHost .q-sheet-price-per-adult, .q-sheet-tour-cost-rows .q-tour-rate-input, .q-sheet-tour-cost-rows .q-tour-gst-input, .q-sheet-tour-cost-rows .q-tour-tcs-input, .q-sheet-tour-cost-rows .q-tour-qty-input, #qTourCostRows .q-tour-rate-input, #qTourCostRows .q-tour-gst-input, #qTourCostRows .q-tour-tcs-input, #qTourCostRows .q-tour-qty-input', function () {
         $lastFocusedCost = $(this);
         qCalcUpdateTargetLabel();
     });
@@ -7544,6 +7642,37 @@
         $('.q-sheet-tour-cost-rows .q-tour-gst-input, #qTourCostRows .q-tour-gst-input').not(this).each(function () {
             if (!$(this).is(':focus')) {
                 $(this).val(gstVal);
+            }
+        });
+        if ($sheet.length) {
+            var activePayload = null;
+            $('#qPricingSheetsHost .q-pricing-option-sheet').each(function () {
+                var payload = recalcTourCostForSheet($(this));
+                if ($(this).hasClass('is-active')) {
+                    activePayload = payload;
+                }
+            });
+            if (activePayload) {
+                $('#q_quotation_total').val(money(activePayload.grand_total));
+                $('#q_package_total').val(money(activePayload.package_total != null ? activePayload.package_total : activePayload.subtotal));
+                $('#q_price_per_adult').val($sheet.find('.q-sheet-price-per-adult').val() || '');
+                qTourCostState.adult_rate = activePayload.adult_rate || '';
+                $('#q_tour_cost_json').val(JSON.stringify(activePayload));
+            }
+        } else {
+            recalcAllTourCostCards();
+        }
+        markTourCostAutoSaved($sheet.find('.q-sheet-tour-autosave'));
+        saveFormDraftToStorage();
+    });
+
+    $(document).on('input change', '.q-sheet-tour-cost-rows .q-tour-tcs-input, #qTourCostRows .q-tour-tcs-input', function () {
+        var $sheet = $(this).closest('.q-pricing-option-sheet');
+        snapshotTourCostFromDom($(this));
+        var tcsVal = $(this).val();
+        $('.q-sheet-tour-cost-rows .q-tour-tcs-input, #qTourCostRows .q-tour-tcs-input').not(this).each(function () {
+            if (!$(this).is(':focus')) {
+                $(this).val(tcsVal);
             }
         });
         if ($sheet.length) {
@@ -7730,26 +7859,38 @@
         recalcCosts();
     });
 
-    $(document).on('change', '#q_hide_gst_note', function () {
-        syncTourCostOptUiFromMasters();
+    $(document).on('change', '[name=destination]', function () {
         snapshotTourCostFromDom();
         renderTourCostRows();
         recalcAllTourCostCards();
     });
 
-    $(document).on('change', '.q-tour-opt-without-itinerary', function () {
-        var checked = $(this).is(':checked');
-        $('#q_without_itinerary').prop('checked', checked);
-        syncTourCostOptUiFromMasters();
+    function refreshOpenQuotationPreview() {
+        var previewOpen = $('#qPreviewModal').hasClass('show') || $('body').hasClass('q-preview-only');
+        if (!previewOpen || !$('#qPreviewPrintArea').length) {
+            return;
+        }
+        refreshQuotationPreviewPreserveFocus();
+    }
+
+    $(document).on('change', '.q-tour-gst-rate-switch', function () {
+        var showInPreview = $(this).is(':checked');
+        $('#q_hide_gst_note').prop('checked', !showInPreview);
+        $('.q-tour-gst-rate-switch').not(this).prop('checked', showInPreview);
+        snapshotTourCostFromDom();
+        recalcAllTourCostCards();
+        refreshOpenQuotationPreview();
+        saveFormDraftToStorage();
     });
 
-    $(document).on('change', '.q-tour-opt-hide-gst', function () {
-        var checked = $(this).is(':checked');
-        $('#q_hide_gst_note').prop('checked', checked);
-        syncTourCostOptUiFromMasters();
+    $(document).on('change', '.q-tour-tcs-rate-switch', function () {
+        var showInPreview = $(this).is(':checked');
+        $('#q_hide_tcs').prop('checked', !showInPreview);
+        $('.q-tour-tcs-rate-switch').not(this).prop('checked', showInPreview);
         snapshotTourCostFromDom();
-        renderTourCostRows();
         recalcAllTourCostCards();
+        refreshOpenQuotationPreview();
+        saveFormDraftToStorage();
     });
 
     /* ------------------------------------------------------------------ */
@@ -8398,20 +8539,7 @@
 
     function qpHotelSectionHead(title) {
         title = title || 'Hotel Details';
-        return '<div class="qp-hotel-sec-head">' +
-            '<div class="qp-hotel-sec-top">' +
-            '<div class="qp-hotel-sec-left">' +
-            '<span class="qp-hotel-sec-icon" aria-hidden="true"><i class="fas fa-bed"></i></span>' +
-            '<span class="qp-hotel-sec-title">' + esc(title) + '</span>' +
-            '</div>' +
-            '<div class="qp-hotel-sec-rule" aria-hidden="true"></div>' +
-            '<div class="qp-hotel-sec-slogan">' +
-            'YOUR JOURNEY <span class="qp-hotel-slogan-dot">•</span> ' +
-            'OUR CARE <span class="qp-hotel-slogan-dot">•</span> ' +
-            'MEMORABLE STAYS' +
-            '</div>' +
-            '</div>' +
-            '</div>';
+        return qpSectionHead('fas fa-bed', title, 'YOUR JOURNEY • OUR CARE • MEMORABLE STAYS');
     }
 
     function qpParseHotelStarCount(starCategory) {
@@ -8689,18 +8817,7 @@
     }
 
     function qpFlightSectionHead() {
-        return '<div class="qp-flight-sec-head">' +
-            '<div class="qp-flight-sec-top">' +
-            '<div class="qp-flight-sec-left">' +
-            '<span class="qp-flight-sec-icon" aria-hidden="true">' + qpFlightPlaneSvg('qp-flight-sec-icon-svg', 15, 'up') + '</span>' +
-            '<span class="qp-flight-sec-title">Flight Details</span>' +
-            '</div>' +
-            '<div class="qp-flight-sec-rule" aria-hidden="true"></div>' +
-            '<div class="qp-flight-sec-slogan-wrap">' +
-            '<div class="qp-flight-sec-slogan">TAILORED FOR A HIGHER TOMORROW</div>' +
-            '</div>' +
-            '</div>' +
-            '</div>';
+        return qpSectionHead('fas fa-plane', 'Flight Details', 'TAILORED FOR A HIGHER TOMORROW');
     }
 
     function qpParseFlightPlace(place) {
@@ -10228,7 +10345,16 @@
                         'is-gst'
                     );
                 }
-                return wrapTourCostBlock(rowsTc, qpTourGrandHtml(esc(money(tourCost.grand_total)), showGst));
+                var showTcs = !parseInt(tourCost.hide_tcs, 10) && parseFloat(tourCost.tcs_amount) > 0;
+                if (showTcs) {
+                    rowsTc += qpTourCostRowHtml(
+                        '<i class="fas fa-file-invoice-dollar"></i>',
+                        'TCS @ ' + esc(String(tourCost.tcs_percent != null ? tourCost.tcs_percent : 2)) + '%',
+                        esc(money(tourCost.tcs_amount)),
+                        'is-gst'
+                    );
+                }
+                return wrapTourCostBlock(rowsTc, qpTourGrandHtml(esc(money(tourCost.grand_total)), showGst || showTcs));
             }
 
             var ppa = parseFloat(opt && opt.price_per_adult);

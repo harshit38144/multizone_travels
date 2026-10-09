@@ -38,6 +38,9 @@ if ($token === '') {
     } else {
         $decoded = json_decode((string) ($request['field_config'] ?? '[]'), true);
         $enabledFields = is_array($decoded) ? crmLeadIntakeNormalizeFields($decoded) : [];
+        if (in_array('tp_destination', $enabledFields, true) && !in_array('tp_departure', $enabledFields, true)) {
+            $enabledFields[] = 'tp_departure';
+        }
     }
 }
 
@@ -144,9 +147,9 @@ if ($request) {
         }
 
         .crm-lead-intake-page {
-            max-width: 980px;
+            max-width: 1280px;
             margin: 0 auto;
-            padding: 1.5rem 1rem 2.25rem;
+            padding: 1.5rem 1.25rem 2.25rem;
         }
 
         .crm-lead-intake-hero {
@@ -417,12 +420,22 @@ if ($request) {
             padding-left: 0.45rem;
             padding-right: 0.45rem;
         }
-        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .tp-pack-col-wide {
-            flex: 2.2 1 0;
+        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .form-group > label {
+            white-space: nowrap;
+        }
+        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] > .tp-pack-row:first-of-type > .form-group {
+            flex: 1 1 10.5rem;
+            min-width: 10.5rem;
+        }
+        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .tp-pack-col-wide,
+        .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .tp-pack-col-departure {
+            flex: 1.2 1 12rem;
+            min-width: 12rem;
         }
         .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .tp-pack-col-narrow {
-            flex: 0 0 8.5rem;
-            max-width: 8.5rem;
+            flex: 0 0 7.5rem;
+            max-width: 7.5rem;
+            min-width: 7.5rem;
         }
         .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .d-none,
         .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .js-tp-rg-hidden-inputs {
@@ -571,6 +584,7 @@ if ($request) {
         @media (max-width: 767.98px) {
             .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .form-group,
             .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .tp-pack-col-wide,
+            .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .tp-pack-col-departure,
             .crm-lead-intake-public .svc-detail-panel[data-svc="tour_package"] .tp-pack-row > .tp-pack-col-narrow {
                 flex: 1 1 100%;
                 max-width: 100%;

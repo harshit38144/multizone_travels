@@ -75,10 +75,10 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         $destName = '';
         $nightKey = $destId;
         if (is_int($destId)) {
-            if (!isset($destinationLookup[$destId])) {
-                continue;
-            }
-            $destName = $destinationLookup[$destId];
+        if (!isset($destinationLookup[$destId])) {
+            continue;
+        }
+        $destName = $destinationLookup[$destId];
         } else {
             $destName = (string) $destId;
         }
@@ -4765,15 +4765,15 @@ foreach ($destinationLookup as $destId => $destName) {
                         <input type="hidden" id="ctGuestAttachmentPath" value="">
 
                         <div class="ct-confirm-hero">
-                            <div class="ct-primary-card" id="ctPrimaryCard">
+                        <div class="ct-primary-card" id="ctPrimaryCard">
                                 <div class="ct-primary-head">
                                     <div class="ct-primary-avatar" id="ctPrimaryAvatar">—</div>
                                     <div class="ct-primary-identity">
                                         <div class="ct-primary-line">
                                             <div class="ct-primary-name" id="ctPrimaryName">—</div>
                                             <span class="ct-primary-badge">Primary Traveller</span>
-                                        </div>
-                                        <div class="ct-primary-meta">
+                                </div>
+                                <div class="ct-primary-meta">
                                             <span><i class="fas fa-phone-alt"></i><span id="ctPrimaryPhone">—</span></span>
                                             <span><i class="fas fa-envelope"></i><span id="ctPrimaryEmail">—</span></span>
                                         </div>
@@ -4871,8 +4871,8 @@ foreach ($destinationLookup as $destId => $destName) {
                             <div class="ct-pax-head">
                                 <div class="ct-pax-head-main">
                                     <span class="ct-pax-head-icon" aria-hidden="true"><i class="fas fa-user-friends"></i></span>
-                                    <div>
-                                        <div class="ct-pax-title">Travellers (PAX)</div>
+                                <div>
+                                    <div class="ct-pax-title">Travellers (PAX)</div>
                                         <div class="ct-pax-sub">Review traveller details and confirm the travellers for this tour.</div>
                                     </div>
                                 </div>
@@ -4909,7 +4909,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                     <div class="ct-included-sub">Manage supplier services, costs and payments for this tour.</div>
                                 </div>
                             </div>
-                            <div class="ct-included" id="ctIncludedChips"></div>
+                        <div class="ct-included" id="ctIncludedChips"></div>
                         </div>
 
                         <div class="ct-svc-section-head">

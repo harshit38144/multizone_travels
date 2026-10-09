@@ -1944,6 +1944,26 @@ if ($res && mysqli_num_rows($res) > 0) {
             return ((value || "") + "").toUpperCase();
         }
 
+        function isUnsetLabel(value) {
+            var norm = String(value || "").toLowerCase().replace(/[^a-z]+/g, "");
+            return norm !== "" && /^(?:notselect(?:ed)?|unselected|noselection|notassigned|notavailable)+$/.test(norm);
+        }
+
+        function cleanPaxField(value, isTicket) {
+            var v = String(value || "").trim();
+            if (!v || isUnsetLabel(v)) {
+                return "";
+            }
+            if (isTicket) {
+                var pnr = upperCaseText($("#pnrInput").val() || "").replace(/\s+/g, "");
+                var ticket = upperCaseText(v).replace(/\s+/g, "");
+                if (pnr && ticket === pnr) {
+                    return "";
+                }
+            }
+            return v;
+        }
+
         $(document).on("input blur", ".pax-meal, .pax-seat, .pax-services, .pax-ticket", function () {
             var formatted = upperCaseText($(this).val());
             if ($(this).val() !== formatted) {
@@ -1973,10 +1993,10 @@ if ($res && mysqli_num_rows($res) > 0) {
                 var initial = (($(this).find(".pax-initial").val() || "") + "").trim();
                 var name = (($(this).find(".pax-name").val() || "") + "").trim();
                 var type = (($(this).find(".pax-type").val() || "") + "").trim();
-                var ticket = upperCaseText((($(this).find(".pax-ticket").val() || "") + "").trim());
-                var seat = upperCaseText((($(this).find(".pax-seat").val() || "") + "").trim());
-                var meal = upperCaseText((($(this).find(".pax-meal").val() || "") + "").trim());
-                var services = upperCaseText((($(this).find(".pax-services").val() || "") + "").trim());
+                var ticket = upperCaseText(cleanPaxField((($(this).find(".pax-ticket").val() || "") + "").trim(), true));
+                var seat = upperCaseText(cleanPaxField((($(this).find(".pax-seat").val() || "") + "").trim(), false));
+                var meal = upperCaseText(cleanPaxField((($(this).find(".pax-meal").val() || "") + "").trim(), false));
+                var services = upperCaseText(cleanPaxField((($(this).find(".pax-services").val() || "") + "").trim(), false));
                 var fullName = name ? (initial + " " + name).trim() : "";
 
                 paxRows.push({
@@ -3243,14 +3263,19 @@ if ($res && mysqli_num_rows($res) > 0) {
             }
 
             function segDuration(seg) {
+                // International tickets print elapsed flying time. Local arrival minus
+                // local departure ignores time zones (BOM 11:45–SIN 19:50 is 8h 05m
+                // on the clock but 5h 35m in the air).
+                var printed = parseDurationMinutes(seg.duration);
+                if (printed > 0) {
+                    return esc(minutesLabel(printed));
+                }
                 var dep = segMoment(seg.dep_date, seg.dep_time);
                 var arr = segMoment(seg.arr_date, seg.arr_time);
                 if (dep && arr && arr.isAfter(dep)) {
                     return esc(minutesLabel(arr.diff(dep, "minutes")));
                 }
-                // Keep the page's own wording instead of whatever the ticket printed.
-                var mins = parseDurationMinutes(seg.duration);
-                return mins > 0 ? esc(minutesLabel(mins)) : esc(seg.duration || "");
+                return esc(seg.duration || "");
             }
 
             function baggageText(seg) {
@@ -3376,10 +3401,10 @@ if ($res && mysqli_num_rows($res) > 0) {
                     set(".pax-type", p.type);
                     set(".pax-initial", p.title);
                     set(".pax-name", p.name);
-                    set(".pax-meal", p.meal);
-                    set(".pax-seat", p.seat);
-                    set(".pax-ticket", p.ticket);
-                    set(".pax-services", p.services);
+                    set(".pax-meal", cleanPaxField(p.meal, false));
+                    set(".pax-seat", cleanPaxField(p.seat, false));
+                    set(".pax-ticket", cleanPaxField(p.ticket, true));
+                    set(".pax-services", cleanPaxField(p.services, false));
                     filledRows++;
                 });
                 return filledRows;
@@ -3680,10 +3705,10 @@ if ($res && mysqli_num_rows($res) > 0) {
                     $row.find(".pax-initial").val(p.initial || "Mr");
                     $row.find(".pax-name").val(p.name || "");
                     $row.find(".pax-type").val(p.type || "Adult");
-                    $row.find(".pax-meal").val(p.meal || "");
-                    $row.find(".pax-seat").val(p.seat || "");
-                    $row.find(".pax-ticket").val(p.ticket || "");
-                    $row.find(".pax-services").val(p.services || "");
+                    $row.find(".pax-meal").val(cleanPaxField(p.meal || "", false));
+                    $row.find(".pax-seat").val(cleanPaxField(p.seat || "", false));
+                    $row.find(".pax-ticket").val(cleanPaxField(p.ticket || "", true));
+                    $row.find(".pax-services").val(cleanPaxField(p.services || "", false));
                 });
             } else {
             <?php

@@ -97,7 +97,7 @@ function crmLeadIntakeAllFieldKeys()
  */
 function crmLeadIntakeSendLinkDefaultFields()
 {
-    $exclude = ['tp_departure', 'tp_arrival', 'vehicle_type'];
+    $exclude = ['tp_arrival', 'vehicle_type'];
     $fields = ['customer_name', 'customer_phone', 'customer_email'];
     $catalog = crmLeadIntakeFieldCatalog();
     if (isset($catalog['tour_package']['fields']) && is_array($catalog['tour_package']['fields'])) {

@@ -64,9 +64,11 @@ function etocrPrompt(): string
     $p .= "- Airport codes are the 3-letter IATA codes (DEL, BOM, IXR). Put the city name in from_city / to_city without the code.\n";
     $p .= "- Terminals: digits or short labels only ('1', '2', '1D') — do not include the word Terminal.\n";
     $p .= "- Flight number as printed, e.g. '6E-2373' or 'AI 809'. airline_code is the 2-character carrier code.\n";
-    $p .= "- Times in 24-hour HH:MM, dates as YYYY-MM-DD. Use the travel year printed on the ticket.\n";
+    $p .= "- duration is the flying time printed on that leg, such as '5h 35m' or '2 hrs 10 min'. Copy the printed value. Do not calculate it from the departure and arrival clocks — those are local times and differ across time zones on international flights.\n";
     $p .= "- List each flight leg separately and in travel order. Connections are separate segments, not one leg.\n";
     $p .= "- Put legs that fly back towards the first origin into return_segments; set trip_type to roundtrip only then.\n";
+    $p .= "- ticket_number is the airline ticket or e-ticket number only. If it is the same as the PNR, or it is not printed, return \"\".\n";
+    $p .= "- seat, meal and services: if the ticket prints a placeholder such as \"Not selected\", \"Not select\" or \"NOT SELECTED\", return \"\" for that field.\n";
     $p .= "- Passenger names: exclude the title from name and put the title in the title field. Keep the ticket's spelling.\n";
     $p .= "- One passengers entry per traveller printed on the ticket, in the printed order.\n";
     $p .= "- Fares: digits only, no currency symbol, no thousands separators. Leave \"\" if the fare is hidden or absent.\n";
@@ -191,7 +193,24 @@ function etocrPassengerType($v): string
     return '';
 }
 
-/** Short code / label fields that the ticket prints in capitals (seat, meal, ticket no). */
+/** True for printed placeholders such as "Not selected" or "NOT SELECT / NOT SELECTED". */
+function etocrIsUnsetLabel(string $v): bool
+{
+    $norm = preg_replace('/[^a-z]+/', '', strtolower($v)) ?? '';
+    if ($norm === '') {
+        return false;
+    }
+    return (bool) preg_match('/^(?:notselect(?:ed)?|unselected|noselection|notassigned|notavailable)+$/', $norm);
+}
+
+function etocrOptionalCode($v, int $max): string
+{
+    $raw = (string) $v;
+    if (etocrIsUnsetLabel($raw)) {
+        return '';
+    }
+    return etocrCode($raw, $max);
+}
 function etocrCode($v, int $max = 30): string
 {
     $v = strtoupper(tocrCleanText($v, $max));
@@ -281,10 +300,10 @@ function etocrPassengers($raw): array
             'title' => $title,
             'name' => $name,
             'type' => etocrPassengerType($item['type'] ?? ''),
-            'ticket' => etocrCode($item['ticket_number'] ?? '', 30),
-            'seat' => etocrCode($item['seat'] ?? '', 10),
-            'meal' => etocrCode($item['meal'] ?? '', 20),
-            'services' => etocrCode($item['services'] ?? '', 30),
+            'ticket' => etocrOptionalCode($item['ticket_number'] ?? '', 30),
+            'seat' => etocrOptionalCode($item['seat'] ?? '', 10),
+            'meal' => etocrOptionalCode($item['meal'] ?? '', 20),
+            'services' => etocrOptionalCode($item['services'] ?? '', 30),
         ];
         if ($pax['name'] === '' && $pax['ticket'] === '' && $pax['seat'] === '') {
             continue;
@@ -375,6 +394,16 @@ function etocrNormalize(array $raw): array
         'tax' => $tax,
         'total_fare' => $total,
     ];
+
+    $pnrKey = strtoupper(preg_replace('/\s+/', '', $fields['pnr']) ?? '');
+    if ($pnrKey !== '') {
+        foreach ($passengers as $i => $pax) {
+            $ticketKey = strtoupper(preg_replace('/\s+/', '', (string) ($pax['ticket'] ?? '')) ?? '');
+            if ($ticketKey !== '' && $ticketKey === $pnrKey) {
+                $passengers[$i]['ticket'] = '';
+            }
+        }
+    }
 
     $filled = array_keys(array_filter($fields, static function ($v) {
         return (string) $v !== '';

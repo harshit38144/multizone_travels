@@ -138,7 +138,7 @@ if (empty($leadSourceOptions)) {
     data-lead-destinations="<?= htmlspecialchars(json_encode($leadDestinations), ENT_QUOTES, 'UTF-8') ?>"
     data-destination-save-url="<?= $leadFormPublicIntake ? '' : 'crm/ajax/save_destination.php' ?>"
     data-destination-search-url="<?= $leadFormPublicIntake && function_exists('crmBuildIntakeDestinationSearchUrl') ? htmlspecialchars(crmBuildIntakeDestinationSearchUrl(), ENT_QUOTES, 'UTF-8') : '' ?>"
-    data-departure-search-url="<?= $leadFormPublicIntake ? '' : 'ajax/mmt_autosuggest.php' ?>"
+    data-departure-search-url="ajax/mmt_autosuggest.php"
     data-save-url="<?= $leadFormPublicIntake ? htmlspecialchars((string) ($leadFormIntakeSubmitUrl ?? 'ajax/submit_lead_intake.php'), ENT_QUOTES, 'UTF-8') : 'crm/ajax/save_lead.php' ?>"
     data-next-dest-order="<?= (int) ($nextDestOrder ?? 1) ?>"
     <?= !$leadFormPublicIntake ? 'data-contact-search-url="ajax/search_contacts_for_payment.php"' : '' ?>
@@ -452,7 +452,7 @@ if (empty($leadSourceOptions)) {
                             </div>
                             <?php } ?>
                             <?php if (lfIntakeField('tp_departure')) { ?>
-                            <div class="form-group <?= $tpCol ?: 'col-md-3' ?>">
+                            <div class="form-group <?= $tpCol ? ($tpCol . ' tp-pack-col-departure') : 'col-md-3' ?>">
                                 <label class="label-req">Departure City</label>
                                 <div class="input-group tp-departure-ex-group js-tp-departure-wrap">
                                     <div class="input-group-prepend">

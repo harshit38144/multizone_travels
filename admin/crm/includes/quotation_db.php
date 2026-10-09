@@ -78,7 +78,7 @@ function crmEnsureQuotationTables(mysqli $conn)
 
 /** @return array<string, string> */
 /**
- * Customer-facing total for Confirm Tour: the pricing Grand Total (package + GST).
+ * Customer-facing total for Confirm Tour: the pricing Grand Total (package + GST + TCS when international).
  * Falls back to the saved quotation total, then the package total.
  */
 function crmQuotationGrandTotal(array $row): float
