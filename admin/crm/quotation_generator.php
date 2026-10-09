@@ -6923,30 +6923,186 @@ $qWizardSteps = [
             min-height: 0;
         }
 
-        .crm-quotation-gen .q-usd-side-convert {
-            margin-top: 0.15rem;
+        .crm-quotation-gen .q-fx-title {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .crm-quotation-gen .q-usd-side-convert .btn {
-            width: 100%;
-            height: 38px;
-            min-height: 38px;
-            padding: 0;
-            font-size: 0.82rem;
-            font-weight: 700;
-            line-height: 1;
+        .crm-quotation-gen .q-fx-refresh {
+            margin-left: auto;
+            width: 28px;
+            height: 28px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: #64748b;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border: 0;
-            border-radius: 10px;
-            background: #e11d2e;
-            color: #fff;
+            flex: 0 0 auto;
+            cursor: pointer;
         }
 
-        .crm-quotation-gen .q-usd-side-convert .btn:hover {
-            background: #be123c;
-            color: #fff;
+        .crm-quotation-gen .q-fx-refresh:hover {
+            background: #f1f5f9;
+            color: #be123c;
+        }
+
+        .crm-quotation-gen .q-fx-refresh.is-loading i {
+            animation: q-fx-spin 0.8s linear infinite;
+        }
+
+        @keyframes q-fx-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .crm-quotation-gen .q-fx-pair {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: stretch;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-fx-amount {
+            flex: 1 1 6.5rem;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-fx-picker {
+            position: relative;
+            flex: 1 1 8.2rem;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-fx-picker-btn {
+            width: 100%;
+            height: 36px;
+            border: 1px solid #e5e7eb;
+            border-radius: 9px;
+            background: #fff;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0 0.5rem;
+            font-size: 0.78rem;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .crm-quotation-gen .q-fx-picker-btn .q-fx-code {
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-fx-picker-btn .q-fx-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .crm-quotation-gen .q-fx-picker-btn .fa-chevron-down {
+            margin-left: auto;
+            font-size: 0.62rem;
+            color: #94a3b8;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-fx-menu {
+            position: fixed;
+            z-index: 4000;
+            width: 240px;
+            max-width: calc(100vw - 16px);
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+            padding: 0.4rem;
+            box-sizing: border-box;
+        }
+
+        .crm-quotation-gen .q-fx-search {
+            height: 32px !important;
+            margin-bottom: 0.35rem;
+            font-size: 0.78rem !important;
+        }
+
+        .crm-quotation-gen .q-fx-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            max-height: 220px;
+            overflow: auto;
+        }
+
+        .crm-quotation-gen .q-fx-option {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            text-align: left;
+            border-radius: 7px;
+            padding: 0.35rem 0.45rem;
+            display: flex;
+            gap: 0.4rem;
+            align-items: baseline;
+            cursor: pointer;
+            color: #111827;
+            font-size: 0.78rem;
+        }
+
+        .crm-quotation-gen .q-fx-option:hover,
+        .crm-quotation-gen .q-fx-option.is-active {
+            background: #fff1f2;
+        }
+
+        .crm-quotation-gen .q-fx-option .q-fx-code {
+            font-weight: 800;
+            flex: 0 0 2.6rem;
+        }
+
+        .crm-quotation-gen .q-fx-option .q-fx-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #64748b;
+        }
+
+        .crm-quotation-gen .q-fx-empty {
+            padding: 0.45rem;
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .crm-quotation-gen .q-fx-swap-row {
+            display: flex;
+            justify-content: center;
+        }
+
+        .crm-quotation-gen .q-fx-swap {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            color: #e11d2e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transform: rotate(90deg);
+        }
+
+        .crm-quotation-gen .q-fx-swap:hover {
+            background: #fff1f2;
+            border-color: #fecdd3;
         }
 
         .crm-quotation-gen .q-usd-result {
@@ -6974,6 +7130,27 @@ $qWizardSteps = [
         .crm-quotation-gen .q-usd-result .q-usd-copy-btn,
         .crm-quotation-gen .q-usd-result #qUsdCopyResult {
             color: #be123c;
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-fx-result-copy {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.12rem;
+        }
+
+        .crm-quotation-gen .q-fx-updated {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #94a3b8;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-usd-result.is-error {
+            color: #be123c;
+            font-weight: 700;
+            font-size: 0.78rem;
         }
 
         .crm-quotation-gen .q-pricing-calc-block {
@@ -7420,8 +7597,8 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-row-label,
         .crm-quotation-gen .q-pricing-amount-cell {
-            min-height: 40px;
-            height: 40px;
+            min-height: 32px;
+            height: 28px;
             display: flex;
             align-items: center;
             margin-bottom: 0rem;
@@ -7700,7 +7877,7 @@ $qWizardSteps = [
             flex-direction: row;
             align-items: center;
             justify-content: flex-start;
-            min-height: 40px;
+            min-height: 28px;
             height: auto;
             width: 100%;
         }
@@ -8621,14 +8798,18 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-line.q-profit-add-line {
-            align-items: flex-start;
-            flex-direction: column;
-            gap: 0.4rem;
+            align-items: center;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 0.5rem;
+            padding-right: calc(28px + 0.15rem);
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-add-line .q-profit-line-label {
             line-height: 1.3;
-            width: 100%;
+            width: auto;
+            flex: 0 0 auto;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-line-label {
@@ -8662,18 +8843,14 @@ $qWizardSteps = [
             min-width: 7.75rem;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-profit-total-line {
-            padding-right: calc(28px + 0.15rem);
+        .crm-quotation-gen .q-sheet-profit-block .q-tour-cost-grand {
+            margin-right: 0;
+            width: 100%;
             box-sizing: border-box;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-profit-package-line {
-            margin: 0.1rem -0.15rem -0.15rem;
-            padding: 0.7rem calc(0.85rem + 28px + 0.15rem) 0.7rem 0.85rem;
-            background: #fce7eb;
-            border-radius: 10px;
-            align-items: center;
-            box-sizing: border-box;
+        .crm-quotation-gen .q-sheet-profit-block .q-tour-cost-grand-amount {
+            font-size: 0.95rem;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-row {
@@ -8685,13 +8862,13 @@ $qWizardSteps = [
             max-width: 100%;
             min-width: 0;
             box-sizing: border-box;
-            padding-right: calc(28px + 0.15rem);
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-inputs {
             min-width: 0;
-            width: 100%;
+            width: auto;
             max-width: 100%;
+            flex: 1 1 auto;
             box-sizing: border-box;
         }
 
@@ -8781,34 +8958,6 @@ $qWizardSteps = [
             flex: 0 0 auto;
             white-space: nowrap;
             line-height: 1;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-profit-calc-hint {
-            display: none;
-            margin-top: 0.25rem;
-            font-size: 0.74rem;
-            font-weight: 600;
-            color: #2563eb;
-            font-variant-numeric: tabular-nums;
-            overflow: visible;
-            white-space: nowrap;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-profit-calc-hint.is-visible {
-            display: block;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-profit-package-line .q-profit-line-label {
-            font-size: 0.9rem;
-            font-weight: 800;
-            color: #1f2937;
-        }
-
-        .crm-quotation-gen .q-pricing-option-sheet .q-sum-selling.q-profit-readonly {
-            color: #9f1239;
-            font-weight: 800;
-            font-size: 1.15rem;
-            letter-spacing: -0.02em;
         }
 
         .crm-quotation-gen .q-pricing-sheets-host:not(.is-single-option) .q-pricing-option-sheet .q-profit-line {
@@ -14638,6 +14787,34 @@ $qWizardSteps = [
             color: #fca5a5 !important;
         }
 
+        [data-theme="dark"] .crm-quotation-gen .q-fx-picker-btn,
+        [data-theme="dark"] .crm-quotation-gen .q-fx-menu,
+        [data-theme="dark"] .crm-quotation-gen .q-fx-swap {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--q-border) !important;
+            color: var(--q-text) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-fx-picker-btn .q-fx-name,
+        [data-theme="dark"] .crm-quotation-gen .q-fx-option .q-fx-name,
+        [data-theme="dark"] .crm-quotation-gen .q-fx-updated {
+            color: var(--q-text-muted) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-fx-option {
+            color: var(--q-text) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-fx-option:hover,
+        [data-theme="dark"] .crm-quotation-gen .q-fx-option.is-active {
+            background: rgba(225, 29, 46, 0.16) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-fx-refresh:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #fca5a5;
+        }
+
         [data-theme="dark"] .crm-quotation-gen .q-pricing-amount-cell .form-control,
         [data-theme="dark"] .crm-quotation-gen .q-pricing-amount-cell .cost-input {
             background: var(--mz-theme-input-bg, #1e2128) !important;
@@ -14742,8 +14919,7 @@ $qWizardSteps = [
             color: var(--q-text-muted) !important;
         }
 
-        [data-theme="dark"] .crm-quotation-gen .q-profit-or,
-        [data-theme="dark"] .crm-quotation-gen .q-pricing-option-sheet .q-profit-calc-hint {
+        [data-theme="dark"] .crm-quotation-gen .q-profit-or {
             color: #6ea8fe !important;
         }
 
@@ -15680,23 +15856,56 @@ $qWizardSteps = [
                                                 <h5><span class="q-side-ico"><i class="fas fa-file-alt"></i></span> Notes</h5>
                                                 <textarea class="form-control" id="q_pricing_notes" name="pricing_notes" rows="4" placeholder="Add internal pricing notes, special instructions, or terms (not visible on quotation)…"></textarea>
                                             </div>
-                                            <div class="q-usd-box q-usd-box-side q-pricing-side-block">
-                                                <h5><span class="q-side-ico"><i class="fas fa-exchange-alt"></i></span> USD → INR Converter</h5>
+                                            <div class="q-usd-box q-usd-box-side q-pricing-side-block" id="qFxBox">
+                                                <h5>
+                                                    <span class="q-side-ico"><i class="fas fa-exchange-alt"></i></span>
+                                                    <span class="q-fx-title" id="qFxTitle">USD → INR Converter</span>
+                                                    <button type="button" class="q-fx-refresh" id="qFxRefresh" title="Refresh rates" aria-label="Refresh rates"><i class="fas fa-sync-alt"></i></button>
+                                                </h5>
                                                 <div class="q-usd-side-fields">
                                                     <div>
-                                                        <label class="q-label">USD Amount</label>
-                                                        <input type="number" step="0.01" class="form-control" id="q_usd_amount" placeholder="1,000">
+                                                        <label class="q-label" for="q_usd_amount">From</label>
+                                                        <div class="q-fx-pair">
+                                                            <input type="text" class="form-control q-fx-amount" id="q_usd_amount" value="1" inputmode="decimal" autocomplete="off" aria-label="Amount to convert">
+                                                            <div class="q-fx-picker" data-fx-side="from">
+                                                                <button type="button" class="q-fx-picker-btn" aria-haspopup="listbox" aria-expanded="false">
+                                                                    <span class="q-fx-code">USD</span>
+                                                                    <span class="q-fx-name">US Dollar</span>
+                                                                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                                                </button>
+                                                                <div class="q-fx-menu" hidden>
+                                                                    <input type="search" class="form-control q-fx-search" placeholder="Search currency" aria-label="Search source currency">
+                                                                    <ul class="q-fx-list" role="listbox"></ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="q-fx-swap-row">
+                                                        <button type="button" class="q-fx-swap" id="qFxSwap" title="Swap currencies" aria-label="Swap currencies"><i class="fas fa-exchange-alt"></i></button>
                                                     </div>
                                                     <div>
-                                                        <label class="q-label">Rate (USD to INR)</label>
-                                                        <input type="number" step="0.01" class="form-control" id="q_usd_rate" placeholder="83.20">
-                                                    </div>
-                                                    <div class="q-usd-side-convert">
-                                                        <button type="button" class="btn btn-q-primary btn-sm" id="qConvertUsd">Convert</button>
+                                                        <label class="q-label" for="q_fx_to_amount">To</label>
+                                                        <div class="q-fx-pair">
+                                                            <input type="text" class="form-control q-fx-amount" id="q_fx_to_amount" inputmode="decimal" autocomplete="off" aria-label="Converted amount">
+                                                            <div class="q-fx-picker" data-fx-side="to">
+                                                                <button type="button" class="q-fx-picker-btn" aria-haspopup="listbox" aria-expanded="false">
+                                                                    <span class="q-fx-code">INR</span>
+                                                                    <span class="q-fx-name">Indian Rupee</span>
+                                                                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                                                </button>
+                                                                <div class="q-fx-menu" hidden>
+                                                                    <input type="search" class="form-control q-fx-search" placeholder="Search currency" aria-label="Search target currency">
+                                                                    <ul class="q-fx-list" role="listbox"></ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div class="q-usd-result is-empty" id="qUsdResult" aria-live="polite">
-                                                    <span id="qUsdResultText">Enter amount &amp; rate</span>
+                                                    <div class="q-fx-result-copy">
+                                                        <span id="qUsdResultText">Loading latest rates…</span>
+                                                        <span class="q-fx-updated" id="qFxUpdated"></span>
+                                                    </div>
                                                     <button type="button" class="btn btn-link btn-sm p-0 q-usd-copy-btn" id="qUsdCopyResult" title="Copy result" style="display:none;"><i class="far fa-copy"></i></button>
                                                 </div>
                                             </div>
@@ -16183,7 +16392,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=314"></script>
+    <script src="crm/assets/quotation_generator.js?v=318"></script>
     <script src="crm/assets/quotation_flight_search.js?v=32"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

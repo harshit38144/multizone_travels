@@ -5580,6 +5580,7 @@
             user_edited: { flight_train: 0, hotel: 0, land: 0 },
             profit_percent: '',
             profit_amount: '',
+            profit_source: '',
             price_per_adult: '',
             price_per_adult_edited: 0
         };
@@ -5648,6 +5649,7 @@
             },
             profit_percent: $sheet.find('.q-sheet-profit-percent').val() || '',
             profit_amount: $sheet.find('.q-sheet-profit-amount').val() || '',
+            profit_source: ($sheet.attr('data-profit-source') === 'amount' || $sheet.attr('data-profit-source') === 'percent') ? $sheet.attr('data-profit-source') : '',
             price_per_adult: $sheet.find('.q-sheet-price-per-adult').val() || '',
             price_per_adult_edited: $sheet.find('.q-sheet-price-per-adult').attr('data-user-edited') === '1' ? 1 : 0
         };
@@ -6118,7 +6120,8 @@
         maxCustom = Math.max(0, parseInt(maxCustom, 10) || 0);
         visibleKeys = visibleKeys || pricingFixedCostKeys();
         slotCounts = slotCounts || {};
-        var html = '<div class="q-pricing-option-sheet' + (isActive ? ' is-active' : '') + '" data-cat-id="' + esc(id) + '">';
+        var profitSource = state.profit_source === 'amount' || state.profit_source === 'percent' ? state.profit_source : '';
+        var html = '<div class="q-pricing-option-sheet' + (isActive ? ' is-active' : '') + '" data-cat-id="' + esc(id) + '"' + (profitSource ? ' data-profit-source="' + profitSource + '"' : '') + '>';
         html += '<div class="q-pricing-option-hd">';
         html += '<div class="q-pricing-option-hd-top">';
         html += '<span class="q-pricing-option-hd-ico"><i class="fas fa-building"></i></span>';
@@ -6173,9 +6176,15 @@
         }
 
         html += '<div class="q-sheet-profit-block">';
-        html += '<div class="q-profit-line q-profit-total-line">' +
-            '<span class="q-profit-line-label">Total Cost</span>' +
-            '<div class="q-profit-readonly q-sum-total" data-display="total">0</div>' +
+        html += '<div class="q-tour-cost-grand q-profit-total-line">' +
+            '<div class="q-tour-cost-grand-left">' +
+            '<span class="q-tour-cost-grand-ico" aria-hidden="true">₹</span>' +
+            '<div class="q-tour-cost-grand-text">' +
+            '<span class="q-tour-cost-grand-label">Total Cost</span>' +
+            '<span class="q-tour-cost-grand-sub">Before adding profit</span>' +
+            '</div></div>' +
+            '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
+            '<strong class="q-tour-cost-grand-amount q-sum-total" data-display="total">INR 0</strong>' +
             '</div>';
         html += '<div class="q-profit-line q-profit-add-line">' +
             '<span class="q-profit-line-label">Add Profit</span>' +
@@ -6188,11 +6197,16 @@
             '<span class="q-profit-or">OR</span>' +
             '<input type="number" step="0.01" min="0" class="form-control form-control-sm q-sheet-profit-amount" placeholder="Amount" value="' + esc(state.profit_amount || '') + '" title="Profit amount">' +
             '</div>' +
-            '<div class="q-profit-calc-hint q-sum-profit" data-display="profit"></div>' +
             '</div></div>';
-        html += '<div class="q-profit-line q-profit-package-line">' +
-            '<span class="q-profit-line-label">Package Total</span>' +
-            '<div class="q-profit-readonly q-sum-selling" data-display="selling">0</div>' +
+        html += '<div class="q-tour-cost-grand q-profit-package-line">' +
+            '<div class="q-tour-cost-grand-left">' +
+            '<span class="q-tour-cost-grand-ico" aria-hidden="true">₹</span>' +
+            '<div class="q-tour-cost-grand-text">' +
+            '<span class="q-tour-cost-grand-label">Package Total</span>' +
+            '<span class="q-tour-cost-grand-sub">After adding profit</span>' +
+            '</div></div>' +
+            '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
+            '<strong class="q-tour-cost-grand-amount q-sum-selling" data-display="selling">INR 0</strong>' +
             '</div>';
         html += '</div>';
         html += tourCostCardShellHtml(id);
@@ -6525,6 +6539,62 @@
             num = 0;
         }
         return Math.round(num);
+    }
+
+    function formatProfitPercent(pct) {
+        var rounded = Math.round((parseFloat(pct) || 0) * 100) / 100;
+        if (!isFinite(rounded) || rounded < 0) {
+            return '';
+        }
+        if (Math.abs(rounded - Math.round(rounded)) < 0.001) {
+            return String(Math.round(rounded));
+        }
+        return rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+    }
+
+    /**
+     * Keep profit % and profit amount as the same value.
+     * The field the user is editing stays as typed; the other field is derived from Total Cost.
+     */
+    function syncSheetProfitFields($sheet, total) {
+        var $pct = $sheet.find('.q-sheet-profit-percent');
+        var $amt = $sheet.find('.q-sheet-profit-amount');
+        var pctRaw = String($pct.val() == null ? '' : $pct.val()).trim();
+        var amtRaw = String($amt.val() == null ? '' : $amt.val()).trim();
+        var pct = parseFloat(pctRaw);
+        var amt = parseFloat(amtRaw);
+        var pctSet = pctRaw !== '' && !isNaN(pct);
+        var amtSet = amtRaw !== '' && !isNaN(amt);
+        var source = $sheet.attr('data-profit-source') || '';
+        var profit = 0;
+
+        if (source === 'percent' && pctSet) {
+            profit = roundTourMoney(total * pct / 100);
+            if (!$amt.is(':focus')) {
+                $amt.val(String(profit));
+            }
+        } else if (source === 'amount' && amtSet) {
+            profit = roundTourMoney(amt);
+            if (!$pct.is(':focus')) {
+                $pct.val(total > 0 ? formatProfitPercent(amt / total * 100) : '');
+            }
+        } else if (pctSet && !amtSet) {
+            profit = roundTourMoney(total * pct / 100);
+            if (!$amt.is(':focus')) {
+                $amt.val(String(profit));
+            }
+        } else if (amtSet && !pctSet) {
+            profit = roundTourMoney(amt);
+            if (!$pct.is(':focus')) {
+                $pct.val(total > 0 ? formatProfitPercent(amt / total * 100) : '');
+            }
+        } else if (amtSet) {
+            profit = roundTourMoney(amt);
+        } else if (pctSet) {
+            profit = roundTourMoney(total * pct / 100);
+        }
+
+        return profit;
     }
 
     function readGuestCounts() {
@@ -6979,14 +7049,7 @@
                 total += v;
             }
         });
-        var profit = 0;
-        var pct = parseFloat($sheet.find('.q-sheet-profit-percent').val());
-        var amt = parseFloat($sheet.find('.q-sheet-profit-amount').val());
-        if (!isNaN(amt) && amt > 0) {
-            profit = amt;
-        } else if (!isNaN(pct) && pct > 0) {
-            profit = total * pct / 100;
-        }
+        var profit = syncSheetProfitFields($sheet, total);
         return roundTourMoney(total + profit);
     }
 
@@ -7466,27 +7529,13 @@
             if (!isNaN(v)) total += v;
         });
         $sheet.find('.q-sheet-total-cost').val(money(total));
-        $sheet.find('.q-sum-total').text(money(total));
+        $sheet.find('.q-sum-total').text(formatTourMoney(total));
 
-        var profit = 0;
-        var pct = parseFloat($sheet.find('.q-sheet-profit-percent').val());
-        var amt = parseFloat($sheet.find('.q-sheet-profit-amount').val());
-        var usingAmount = !isNaN(amt) && amt > 0;
-        if (usingAmount) {
-            profit = amt;
-        } else if (!isNaN(pct) && pct > 0) {
-            profit = total * pct / 100;
-        }
+        var profit = syncSheetProfitFields($sheet, total);
         var pkgBase = total + profit;
-        var $profitHint = $sheet.find('.q-sum-profit');
-        if (profit > 0) {
-            $profitHint.text('Rs ' + money(profit)).addClass('is-visible');
-        } else {
-            $profitHint.text('').removeClass('is-visible');
-        }
         $sheet.find('.q-sheet-adult-lbl').text(adults);
         $('#qPricingSheetsHost .q-matrix-adult-lbl').text(adults);
-        $sheet.find('.q-sum-selling').text(money(pkgBase));
+        $sheet.find('.q-sum-selling').text(formatTourMoney(pkgBase));
         $sheet.find('.q-sheet-package-total').val(money(pkgBase));
 
         var counts = readGuestCounts();
@@ -7579,6 +7628,7 @@
                 user_edited: state.user_edited || {},
                 profit_percent: state.profit_percent || '',
                 profit_amount: state.profit_amount || '',
+                profit_source: state.profit_source === 'amount' || state.profit_source === 'percent' ? state.profit_source : '',
                 price_per_adult: state.price_per_adult || '',
                 price_per_adult_edited: state.price_per_adult_edited || 0,
                 total_cost: $sheet.length ? String($sheet.find('.q-sheet-total-cost').val() || '').replace(/,/g, '') : '',
@@ -10947,6 +10997,7 @@
                     user_edited: opt.user_edited || {},
                     profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
                     profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
+                    profit_source: opt.profit_source === 'amount' || opt.profit_source === 'percent' ? opt.profit_source : '',
                     price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
                     price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
                 };
@@ -10961,13 +11012,16 @@
                 user_edited: cs.user_edited || cs.manual || {},
                 profit_percent: '',
                 profit_amount: '',
+                profit_source: '',
                 price_per_adult: '',
                 price_per_adult_edited: 0
             };
             if (p.profit_type === 'amount') {
                 legacyPricing.profit_amount = p.profit_value || '';
+                legacyPricing.profit_source = 'amount';
             } else if (parseFloat(p.profit_value) > 0) {
                 legacyPricing.profit_percent = p.profit_value;
+                legacyPricing.profit_source = 'percent';
             }
             var savedPpa = parseFloat(p.price_per_adult);
             if (savedPpa > 0) {
@@ -10997,6 +11051,7 @@
                     user_edited: opt.user_edited || {},
                     profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
                     profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
+                    profit_source: opt.profit_source === 'amount' || opt.profit_source === 'percent' ? opt.profit_source : '',
                     price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
                     price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
                 };
@@ -11021,6 +11076,7 @@
                     st.price_per_adult_edited = 0;
                     st.profit_percent = '';
                     st.profit_amount = '';
+                    st.profit_source = '';
                 }
                 qPricingOptionsState[cat.id] = st;
             });
@@ -12597,19 +12653,19 @@
         });
 
         $(document).on('input change', '.q-cost', recalcCosts);
-        $(document).on('input change', '.q-sheet-profit-percent, .q-sheet-profit-amount', recalcCosts);
         $(document).on('input change', '.cc-label', function () {
             saveFormDraftToStorage();
         });
-        $(document).on('input', '.q-sheet-profit-percent', function () {
-            if ($(this).val()) {
-                $(this).closest('.q-pricing-option-sheet').find('.q-sheet-profit-amount').val('');
+        $(document).on('input change', '.q-sheet-profit-percent, .q-sheet-profit-amount', function () {
+            var $sheet = $(this).closest('.q-pricing-option-sheet');
+            var isPercent = $(this).hasClass('q-sheet-profit-percent');
+            if (String($(this).val() == null ? '' : $(this).val()).trim() === '') {
+                $sheet.removeAttr('data-profit-source');
+                $sheet.find(isPercent ? '.q-sheet-profit-amount' : '.q-sheet-profit-percent').val('');
+            } else {
+                $sheet.attr('data-profit-source', isPercent ? 'percent' : 'amount');
             }
-        });
-        $(document).on('input', '.q-sheet-profit-amount', function () {
-            if ($(this).val()) {
-                $(this).closest('.q-pricing-option-sheet').find('.q-sheet-profit-percent').val('');
-            }
+            recalcCosts();
         });
         $(document).on('input', '.q-sheet-price-per-adult', function () {
             if ($.trim($(this).val()) === '') {
@@ -12682,38 +12738,323 @@
         $('#q_nights').on('input change', function () { scheduleItineraryRebuild(); });
         $('#q_adults').on('input change', recalcCosts);
 
-        $('#qConvertUsd').on('click', function () {
-            var usd = parseFloat($('#q_usd_amount').val());
-            var rate = parseFloat($('#q_usd_rate').val());
-            if (isNaN(usd) || isNaN(rate)) { alert('Enter both USD amount and rate.'); return; }
-            var inr = usd * rate;
-            var resultText = '₹ ' + inr.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' INR';
-            $('#qUsdResultText').text(resultText);
-            $('#qUsdResult').removeClass('is-empty');
-            $('#qUsdCopyResult').show().data('copy', String(inr.toFixed(2)));
-            var $target = $lastFocusedCost && $lastFocusedCost.length ? $lastFocusedCost : $();
-            if (!$target.length) {
-                $target = $('#qPricingSheetsHost .q-pricing-option-sheet.is-active .q-cost[data-key="land"]').first();
-            }
-            if (!$target.length) {
-                $target = $('#qPricingSheetsHost .q-cost[data-key="land"]').first();
-            }
-            if (!$target.length) {
-                alert('No cost field available to fill.');
+        (function initQuotationFx() {
+            var box = document.getElementById('qFxBox');
+            if (!box) {
                 return;
             }
-            $target.val(String(Math.round(inr)));
-            if ($target.hasClass('q-cost-synced')) {
-                $target.attr('data-user-edited', '1');
-            }
-            recalcCosts();
-        });
+            var NAMES_URL = 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.min.json';
+            var RATES_URL = 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json';
+            var FALLBACK_URL = 'https://open.er-api.com/v6/latest/USD';
+            var fromCode = 'USD';
+            var toCode = 'INR';
+            var names = { usd: 'US Dollar', inr: 'Indian Rupee' };
+            var usdRates = null;
+            var rateDateLabel = '';
+            var editing = '';
+            var requestId = 0;
+            var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        $('#qUsdCopyResult').on('click', function () {
-            var val = String($(this).data('copy') || '');
-            if (!val || !navigator.clipboard) return;
-            navigator.clipboard.writeText(val).catch(function () {});
-        });
+            function codeOf(value) {
+                return String(value || '').trim().toUpperCase();
+            }
+
+            function currencyName(code) {
+                return names[code.toLowerCase()] || code;
+            }
+
+            function parseAmount(raw) {
+                var n = parseFloat(String(raw == null ? '' : raw).replace(/,/g, ''));
+                return isNaN(n) ? null : n;
+            }
+
+            function formatAmount(n, code) {
+                if (n == null || !isFinite(n)) {
+                    return '';
+                }
+                var abs = Math.abs(n);
+                var digits = abs >= 1 ? 2 : (abs >= 0.01 ? 4 : 6);
+                var locale = code === 'INR' ? 'en-IN' : 'en-US';
+                return n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: digits });
+            }
+
+            function formatRate(n) {
+                if (!isFinite(n)) {
+                    return '';
+                }
+                var abs = Math.abs(n);
+                var digits = abs >= 100 ? 2 : (abs >= 1 ? 4 : 6);
+                return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: digits });
+            }
+
+            function formatRateDate(iso) {
+                var parts = String(iso || '').split('-');
+                if (parts.length !== 3) {
+                    return String(iso || '');
+                }
+                var month = MONTHS[(parseInt(parts[1], 10) || 1) - 1] || parts[1];
+                return String(parseInt(parts[2], 10)) + ' ' + month + ' ' + parts[0];
+            }
+
+            function unitRate() {
+                if (!usdRates) {
+                    return null;
+                }
+                var from = usdRates[fromCode.toLowerCase()];
+                var to = usdRates[toCode.toLowerCase()];
+                if (fromCode === 'USD') {
+                    from = 1;
+                }
+                if (toCode === 'USD') {
+                    to = 1;
+                }
+                if (!from || !to) {
+                    return null;
+                }
+                return to / from;
+            }
+
+            function setPickerLabel(side, code) {
+                var $btn = $('#qFxBox .q-fx-picker[data-fx-side="' + side + '"] .q-fx-picker-btn');
+                $btn.find('.q-fx-code').text(code);
+                $btn.find('.q-fx-name').text(currencyName(code));
+            }
+
+            function renderList($picker, query) {
+                var q = String(query || '').trim().toLowerCase();
+                var selected = $picker.attr('data-fx-side') === 'to' ? toCode : fromCode;
+                var html = '';
+                var count = 0;
+                Object.keys(usdRates || {}).sort().forEach(function (key) {
+                    var code = key.toUpperCase();
+                    var name = currencyName(code);
+                    if (q && code.toLowerCase().indexOf(q) === -1 && name.toLowerCase().indexOf(q) === -1) {
+                        return;
+                    }
+                    count++;
+                    html += '<li><button type="button" class="q-fx-option' + (code === selected ? ' is-active' : '') + '" data-code="' + esc(code) + '" role="option">' +
+                        '<span class="q-fx-code">' + esc(code) + '</span><span class="q-fx-name">' + esc(name) + '</span></button></li>';
+                });
+                if (!usdRates || !Object.keys(usdRates).length) {
+                    html = '<li class="q-fx-empty">Rates are still loading</li>';
+                } else if (!count) {
+                    html = '<li class="q-fx-empty">No matching currency</li>';
+                }
+                $picker.find('.q-fx-list').html(html);
+            }
+
+            function closeMenus() {
+                $('#qFxBox .q-fx-menu').attr('hidden', 'hidden');
+                $('#qFxBox .q-fx-picker-btn').attr('aria-expanded', 'false');
+                $('#qFxBox .q-fx-list').empty();
+            }
+
+            function placeMenu($picker) {
+                var btn = $picker.find('.q-fx-picker-btn')[0];
+                var menu = $picker.find('.q-fx-menu')[0];
+                if (!btn || !menu) {
+                    return;
+                }
+                var rect = btn.getBoundingClientRect();
+                var width = Math.max(rect.width, 220);
+                var left = Math.min(rect.left, window.innerWidth - width - 8);
+                menu.style.width = width + 'px';
+                menu.style.left = Math.max(8, left) + 'px';
+                menu.style.top = (rect.bottom + 4) + 'px';
+            }
+
+            function showStatus(message, kind) {
+                var $result = $('#qUsdResult');
+                $result.removeClass('is-empty is-error');
+                if (kind === 'empty' || kind === 'error') {
+                    $result.addClass(kind === 'error' ? 'is-error' : 'is-empty');
+                }
+                $('#qUsdResultText').text(message);
+                if (kind !== 'ready') {
+                    $('#qUsdCopyResult').hide();
+                }
+            }
+
+            function convert(source) {
+                $('#qFxTitle').text(fromCode + ' → ' + toCode + ' Converter');
+                setPickerLabel('from', fromCode);
+                setPickerLabel('to', toCode);
+                if (!usdRates) {
+                    return;
+                }
+                var rate = unitRate();
+                if (rate == null) {
+                    showStatus('No rate is available for this pair.', 'error');
+                    $('#qFxUpdated').text(rateDateLabel ? ('Updated ' + rateDateLabel) : '');
+                    return;
+                }
+                var fromVal = parseAmount($('#q_usd_amount').val());
+                var toVal = parseAmount($('#q_fx_to_amount').val());
+                if (source !== 'to') {
+                    var nextTo = fromVal == null ? '' : formatAmount(fromVal * rate, toCode);
+                    if (document.activeElement !== document.getElementById('q_fx_to_amount')) {
+                        $('#q_fx_to_amount').val(nextTo);
+                    }
+                    toVal = fromVal == null ? null : fromVal * rate;
+                } else if (toVal != null && rate !== 0) {
+                    var nextFrom = formatAmount(toVal / rate, fromCode);
+                    if (document.activeElement !== document.getElementById('q_usd_amount')) {
+                        $('#q_usd_amount').val(nextFrom);
+                    }
+                }
+                var shownTo = toVal == null ? null : (source === 'to' ? toVal : (fromVal == null ? null : fromVal * rate));
+                var line = '1 ' + fromCode + ' = ' + formatRate(rate) + ' ' + toCode;
+                if (fromVal != null && source !== 'to') {
+                    line = formatAmount(fromVal, fromCode) + ' ' + fromCode + ' = ' + formatAmount(fromVal * rate, toCode) + ' ' + toCode;
+                } else if (source === 'to' && toVal != null) {
+                    line = formatAmount(toVal / rate, fromCode) + ' ' + fromCode + ' = ' + formatAmount(toVal, toCode) + ' ' + toCode;
+                }
+                showStatus(line, 'ready');
+                $('#qFxUpdated').text(rateDateLabel ? ('Updated ' + rateDateLabel) : '');
+                var copyVal = shownTo == null ? formatRate(rate) : formatAmount(shownTo, toCode);
+                $('#qUsdCopyResult').show().data('copy', copyVal + ' ' + toCode);
+            }
+
+            function applyRates(rateMap, dateLabel) {
+                usdRates = rateMap;
+                if (usdRates.usd == null) {
+                    usdRates.usd = 1;
+                }
+                rateDateLabel = dateLabel;
+                convert(editing === 'to' ? 'to' : 'from');
+            }
+
+            function fetchJson(url) {
+                return fetch(url).then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('request failed');
+                    }
+                    return response.json();
+                });
+            }
+
+            function loadRates() {
+                var token = ++requestId;
+                $('#qFxRefresh').addClass('is-loading').prop('disabled', true);
+                if (!usdRates) {
+                    showStatus('Loading latest rates…', 'empty');
+                    $('#qFxUpdated').text('');
+                }
+                var bust = '?t=' + Date.now();
+                Promise.all([
+                    fetchJson(NAMES_URL + bust).catch(function () { return null; }),
+                    fetchJson(RATES_URL + bust).catch(function () { return null; })
+                ]).then(function (parts) {
+                    if (token !== requestId) return;
+                    if (parts[0] && typeof parts[0] === 'object') {
+                        names = parts[0];
+                    }
+                    var table = parts[1] && parts[1].usd ? parts[1].usd : null;
+                    if (!table) {
+                        throw new Error('rates');
+                    }
+                    applyRates(table, formatRateDate(parts[1].date));
+                }).catch(function () {
+                    if (token !== requestId) return;
+                    return fetchJson(FALLBACK_URL + bust).then(function (data) {
+                        if (token !== requestId) return;
+                        if (!data || data.result !== 'success' || !data.rates) {
+                            throw new Error('fallback');
+                        }
+                        var table = {};
+                        Object.keys(data.rates).forEach(function (code) {
+                            table[code.toLowerCase()] = data.rates[code];
+                        });
+                        var when = data.time_last_update_unix ? new Date(data.time_last_update_unix * 1000) : null;
+                        var label = when ? when.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+                        applyRates(table, label);
+                    });
+                }).catch(function () {
+                    if (token !== requestId) return;
+                    if (usdRates) {
+                        showStatus('Could not refresh rates. Showing the last rate.', 'error');
+                        $('#qFxUpdated').text(rateDateLabel ? ('Updated ' + rateDateLabel) : '');
+                    } else {
+                        showStatus('Could not load exchange rates. Use refresh to try again.', 'error');
+                        $('#qFxUpdated').text('');
+                    }
+                }).then(function () {
+                    if (token === requestId) {
+                        $('#qFxRefresh').removeClass('is-loading').prop('disabled', false);
+                    }
+                });
+            }
+
+            $('#q_usd_amount').on('input', function () {
+                editing = 'from';
+                convert('from');
+            });
+            $('#q_fx_to_amount').on('input', function () {
+                editing = 'to';
+                convert('to');
+            });
+            $('#qFxSwap').on('click', function () {
+                var nextFrom = toCode;
+                toCode = fromCode;
+                fromCode = nextFrom;
+                editing = 'from';
+                convert('from');
+            });
+            $('#qFxRefresh').on('click', loadRates);
+            $('#qFxBox').on('click', '.q-fx-picker-btn', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var $picker = $(this).closest('.q-fx-picker');
+                var $menu = $picker.find('.q-fx-menu');
+                var open = $menu.attr('hidden') == null;
+                closeMenus();
+                if (open) {
+                    return;
+                }
+                $picker.find('.q-fx-search').val('');
+                renderList($picker, '');
+                $menu.removeAttr('hidden');
+                $(this).attr('aria-expanded', 'true');
+                placeMenu($picker);
+                window.setTimeout(function () { $picker.find('.q-fx-search').trigger('focus'); }, 0);
+            });
+            $('#qFxBox').on('input', '.q-fx-search', function () {
+                renderList($(this).closest('.q-fx-picker'), $(this).val());
+            });
+            $('#qFxBox').on('click', '.q-fx-option', function (e) {
+                e.preventDefault();
+                var code = codeOf($(this).attr('data-code'));
+                var side = $(this).closest('.q-fx-picker').attr('data-fx-side');
+                if (side === 'to') {
+                    toCode = code;
+                } else {
+                    fromCode = code;
+                }
+                closeMenus();
+                editing = 'from';
+                convert('from');
+            });
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('#qFxBox .q-fx-picker').length) {
+                    closeMenus();
+                }
+            });
+            function repositionOpenMenu() {
+                $('#qFxBox .q-fx-menu').each(function () {
+                    if (this.hasAttribute('hidden')) return;
+                    placeMenu($(this).closest('.q-fx-picker'));
+                });
+            }
+            $(window).on('resize', repositionOpenMenu);
+            document.addEventListener('scroll', repositionOpenMenu, true);
+            $('#qUsdCopyResult').on('click', function () {
+                var val = String($(this).data('copy') || '');
+                if (!val || !navigator.clipboard) return;
+                navigator.clipboard.writeText(val).catch(function () {});
+            });
+
+            loadRates();
+        })();
 
         $(document).on('click', '#qCalcKeys [data-calc]', function () {
             var key = String($(this).attr('data-calc') || '');
@@ -13578,6 +13919,7 @@
                             user_edited: opt.user_edited || {},
                             profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
                             profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
+                            profit_source: opt.profit_source === 'amount' || opt.profit_source === 'percent' ? opt.profit_source : '',
                             price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
                             price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
                         };
