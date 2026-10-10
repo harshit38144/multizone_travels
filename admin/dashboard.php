@@ -8,6 +8,7 @@ if ($_SESSION['role'] != '1') {
 }
 
 require_once __DIR__ . '/includes/dashboard_data.php';
+require_once __DIR__ . '/includes/upcoming_tours_map.php';
 if (file_exists(__DIR__ . '/../includes/payment_helpers.php')) {
     require_once __DIR__ . '/../includes/payment_helpers.php';
 }
@@ -24,6 +25,7 @@ if (!in_array($period, ['this_month', 'last_month', 'all_time'], true)) {
 }
 
 $stats = dashCollectOrganizationStats($conn, $period);
+$upcomingMap = dashUpcomingToursMap($conn, 5);
 
 $pipelineMax = 1;
 foreach ($stats['pipeline'] as $count) {
@@ -219,6 +221,22 @@ $trendWon = array_column($stats['monthly_trend'], 'won');
     @media (max-width: 991px) {
       .dash-card .card-value { font-size: 1.15rem; }
     }
+
+    @media (max-width: 575.98px) {
+      .kpi-row { margin-bottom: 0.5rem; }
+      .kpi-row > [class*="col-"] { margin-bottom: 0.45rem; }
+      .kpi-row .dash-card .card-top { padding: 0.45rem 0.55rem 0.1rem; }
+      .kpi-row .dash-card .card-icon {
+        width: 24px; height: 24px; border-radius: 6px; font-size: 0.72rem;
+      }
+      .kpi-row .dash-card .card-link { font-size: 0.68rem; }
+      .kpi-row .dash-card .card-body-inner { padding: 0 0.55rem 0.5rem; }
+      .kpi-row .dash-card .card-title {
+        font-size: 0.68rem; margin-bottom: 0.1rem; line-height: 1.25;
+      }
+      .kpi-row .dash-card .card-value { font-size: 0.95rem !important; line-height: 1.15; }
+      .kpi-row .dash-card .card-sub { font-size: 0.62rem; margin-top: 0.12rem; line-height: 1.2; }
+    }
   </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed org-dashboard">
@@ -253,7 +271,7 @@ $trendWon = array_column($stats['monthly_trend'], 'won');
 
         <!-- KPI Row -->
         <div class="row kpi-row">
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-lg-2 col-md-4 col-6">
             <div class="dash-card">
               <div class="card-top">
                 <span class="card-icon"><i class="fas fa-comments"></i></span>
@@ -266,7 +284,7 @@ $trendWon = array_column($stats['monthly_trend'], 'won');
               </div>
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-lg-2 col-md-4 col-6">
             <div class="dash-card">
               <div class="card-top">
                 <span class="card-icon"><i class="fas fa-calendar-check"></i></span>
@@ -279,7 +297,7 @@ $trendWon = array_column($stats['monthly_trend'], 'won');
               </div>
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-lg-2 col-md-4 col-6">
             <div class="dash-card">
               <div class="card-top">
                 <span class="card-icon"><i class="fas fa-file-invoice-dollar"></i></span>
@@ -292,7 +310,7 @@ $trendWon = array_column($stats['monthly_trend'], 'won');
               </div>
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-lg-2 col-md-4 col-6">
             <div class="dash-card">
               <div class="card-top">
                 <span class="card-icon"><i class="fas fa-plane-departure"></i></span>
@@ -305,7 +323,7 @@ $trendWon = array_column($stats['monthly_trend'], 'won');
               </div>
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-lg-2 col-md-4 col-6">
             <div class="dash-card">
               <div class="card-top">
                 <span class="card-icon"><i class="fas fa-wallet"></i></span>
@@ -318,7 +336,7 @@ $trendWon = array_column($stats['monthly_trend'], 'won');
               </div>
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-lg-2 col-md-4 col-6">
             <div class="dash-card">
               <div class="card-top">
                 <span class="card-icon"><i class="fas fa-money-bill-wave"></i></span>
@@ -440,6 +458,59 @@ $trendWon = array_column($stats['monthly_trend'], 'won');
             </div>
           </div>
         </div>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+        <link rel="stylesheet" href="assets/css/upcoming-tours-map.css?v=7">
+        <div class="row mb-3">
+          <div class="col-12">
+            <div class="dash-card mz-tour-map-card" id="mzUpcomingToursMap">
+              <div class="card-body-inner pt-3">
+                <div class="section-head">
+                  <div>
+                    <h5 class="mb-0">Upcoming Tours</h5>
+                    <p class="mz-map-kicker">Animated global travel map · next <?= (int) $upcomingMap['limit'] ?> confirmed departures</p>
+                  </div>
+                </div>
+                <div class="mz-tour-map-stage">
+                  <div class="mz-tour-map" role="img" aria-label="World map of upcoming confirmed tours"></div>
+                  <aside class="mz-ops-panel" aria-live="polite"></aside>
+                  <div class="mz-map-overlay">
+                    <div>
+                      <strong>Loading map</strong>
+                      <p>Placing the next confirmed departures.</p>
+                    </div>
+                  </div>
+                </div>
+                <?php if ($upcomingMap['total'] > 0 && $upcomingMap['total'] < $upcomingMap['limit']) { ?>
+                  <p class="mz-map-note">Showing <?= (int) $upcomingMap['total'] ?> upcoming confirmed tour<?= $upcomingMap['total'] === 1 ? '' : 's' ?>. Fewer than <?= (int) $upcomingMap['limit'] ?> are scheduled.</p>
+                <?php } ?>
+                <?php if (!empty($upcomingMap['unmapped'])) { ?>
+                  <ul class="mz-map-unmapped">
+                    <?php foreach ($upcomingMap['unmapped'] as $missed) { ?>
+                      <li>
+                        <strong><?= htmlspecialchars($missed['name'], ENT_QUOTES, 'UTF-8') ?></strong>
+                        · <?= htmlspecialchars($missed['departure_date'], ENT_QUOTES, 'UTF-8') ?>
+                        · <?= htmlspecialchars($missed['departure_city'] !== '' ? $missed['departure_city'] : 'Departure pending', ENT_QUOTES, 'UTF-8') ?>
+                        → <?= htmlspecialchars($missed['destination'], ENT_QUOTES, 'UTF-8') ?>
+                        · <?= htmlspecialchars($missed['travellers_label'], ENT_QUOTES, 'UTF-8') ?>
+                        · <?= htmlspecialchars($missed['status'], ENT_QUOTES, 'UTF-8') ?>
+                        <br><span><?= htmlspecialchars($missed['reason'], ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php if (!empty($missed['detail_url'])) { ?>
+                          · <a href="<?= htmlspecialchars($missed['detail_url'], ENT_QUOTES, 'UTF-8') ?>">View tour</a>
+                        <?php } ?>
+                      </li>
+                    <?php } ?>
+                  </ul>
+                <?php } ?>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          window.MZ_UPCOMING_MAP = <?= json_encode($upcomingMap, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        </script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+        <script src="assets/js/upcoming-tours-map.js?v=12"></script>
 
         <!-- Charts Row -->
         <div class="row mb-3">

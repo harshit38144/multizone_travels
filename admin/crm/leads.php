@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/includes/whatsapp_config.php';
 require_once __DIR__ . '/includes/quotation_db.php';
 require_once __DIR__ . '/includes/legacy_quotation_normalize.php';
 require_once __DIR__ . '/includes/lead_uid.php';
@@ -614,6 +615,7 @@ crmEnsureLeadIntakeTables($conn);
 $sendLinkDefaultFields = crmLeadIntakeSendLinkDefaultFields();
 
 $sendLinkCompanyName = 'Multi Zone Travels';
+$whatsappApiStatus = crmWhatsappPublicStatus();
 
 $pendingIntakeCount = 0;
 $pcRes = $conn->query("SELECT COUNT(*) AS c FROM `crm_lead_intake_submissions` WHERE `status` = 'pending'");
@@ -1445,6 +1447,88 @@ foreach ($destinationLookup as $destId => $destName) {
             .crm-leads-ui table.crm-leads-table tbody td.col-actions {
                 /* Width controlled by JS fit — keep content from forcing scroll */
                 max-width: none;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .crm-leads-ui .filter-bar {
+                gap: 0.4rem;
+                padding: 0.6rem 0.7rem;
+            }
+
+            .crm-leads-ui .filter-bar .search-wrap {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+
+            .crm-leads-ui .filter-bar .search-wrap input {
+                height: 34px;
+                font-size: 0.8rem;
+            }
+
+            .crm-leads-ui .filter-bar .stage-filter,
+            .crm-leads-ui .filter-bar select.form-control {
+                flex: 0.78 1 0 !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                height: 30px;
+                font-size: 0.68rem;
+                font-weight: 600;
+                padding: 0 0.95rem 0 0.35rem;
+                border-radius: 6px;
+            }
+
+            .crm-leads-ui .filter-bar select.leads-fy-select {
+                flex: 1.35 1 0 !important;
+            }
+
+            .crm-leads-ui .filter-bar-actions {
+                flex: 0 1 auto;
+                margin-left: 0;
+                min-width: 0;
+                gap: 0;
+            }
+
+            .crm-leads-ui .filter-bar-actions .btn {
+                height: 30px;
+                font-size: 0.68rem;
+                font-weight: 600;
+                padding: 0 0.4rem;
+                border-radius: 6px;
+            }
+
+            .crm-leads-ui .filter-bar-actions .btn i {
+                margin-right: 0.25rem !important;
+            }
+
+            .crm-leads-ui .table-wrap {
+                overflow-x: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .crm-leads-ui .table-wrap::-webkit-scrollbar {
+                height: 8px;
+            }
+
+            .crm-leads-ui table.crm-leads-table thead th .ld-col-resizer {
+                width: 22px;
+                right: -10px;
+            }
+
+            .crm-leads-ui table.crm-leads-table .col-ld-source,
+            .crm-leads-ui table.crm-leads-table .col-ld-date,
+            .crm-leads-ui table.crm-leads-table .col-ld-assign,
+            .crm-leads-ui table.crm-leads-table .col-ld-services,
+            .crm-leads-ui table.crm-leads-table .col-services,
+            .crm-leads-ui table.crm-leads-table .col-ld-dest,
+            .crm-leads-ui table.crm-leads-table .col-ld-stage,
+            .crm-leads-ui table.crm-leads-table .col-stage {
+                display: table-cell;
+            }
+
+            .crm-leads-ui .lead-id-meta {
+                display: inline;
             }
         }
 
@@ -3394,6 +3478,57 @@ foreach ($destinationLookup as $destId => $destName) {
             cursor: not-allowed;
         }
 
+        #smsTemplatesModal .sms-tpl-api-box {
+            margin-top: 0.75rem;
+            padding-top: 0.7rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        #smsTemplatesModal .sms-tpl-api-session {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.45rem;
+            margin: 0;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        #smsTemplatesModal .sms-tpl-api-session input {
+            margin-top: 0.15rem;
+        }
+
+        #smsTemplatesModal .sms-tpl-api-hint {
+            margin: 0.4rem 0 0;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        #smsTemplatesModal .sms-tpl-api-result {
+            margin-top: 0.45rem;
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
+        #smsTemplatesModal .sms-tpl-api-result.is-ok {
+            color: #15803d;
+        }
+
+        #smsTemplatesModal .sms-tpl-api-result.is-err {
+            color: #b91c1c;
+        }
+
+        #smsTemplatesModal .sms-tpl-btn-api {
+            background: #fff;
+            color: #15803d;
+            border-color: #16a34a;
+        }
+
+        #smsTemplatesModal .sms-tpl-btn-api:hover {
+            background: #f0fdf4;
+        }
+
         #deletedLeadsModal .deleted-leads-pagination .page-link {
             min-width: 32px;
             text-align: center;
@@ -4730,11 +4865,20 @@ foreach ($destinationLookup as $destId => $destName) {
                             <label for="smsTplCustomText">Custom message</label>
                             <textarea id="smsTplCustomText" placeholder="Write your message…"></textarea>
                         </div>
+                        <div class="sms-tpl-api-box" id="smsTplApiBox">
+                            <label class="sms-tpl-api-session" for="smsTplApiSession">
+                                <input type="checkbox" id="smsTplApiSession">
+                                <span>This guest messaged you in the last 24 hours. Send the selected text instead of the approved template.</span>
+                            </label>
+                            <p class="sms-tpl-api-hint" id="smsTplApiHint"></p>
+                            <div id="smsTplApiResult" class="sms-tpl-api-result" hidden></div>
+                        </div>
                     </div>
                     <div class="sms-tpl-ft">
                         <button type="button" class="sms-tpl-btn sms-tpl-btn-cancel" data-dismiss="modal">Cancel</button>
                         <div class="sms-tpl-ft-right">
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-email d-none" id="btnSmsTplSendEmail">Send Email</button>
+                            <button type="button" class="sms-tpl-btn sms-tpl-btn-api" id="btnSmsTplSendApi">Send via API</button>
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-wa" id="btnSmsTplSendWhatsApp">Send on WhatsApp</button>
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-sms" id="btnSmsTplSendSms">Send SMS</button>
                         </div>
@@ -5183,6 +5327,7 @@ foreach ($destinationLookup as $destId => $destName) {
     var sendLinkDefaultFields = <?= json_encode($sendLinkDefaultFields, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
     var sendLinkCompanyName = <?= json_encode($sendLinkCompanyName, JSON_UNESCAPED_UNICODE) ?>;
     var smsTplAgentName = <?= json_encode((string) ($_SESSION['name'] ?? 'Team'), JSON_UNESCAPED_UNICODE) ?>;
+    var whatsappApiStatus = <?= json_encode($whatsappApiStatus, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
     var Q_SUPPLIER_MAIL_CATALOG = <?= json_encode($qSupplierMailCatalog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
     var Q_DESTINATION_NAME_TO_ID = <?= json_encode($qDestinationNameToId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     window.Q_SUPPLIER_MAIL_CATALOG = Q_SUPPLIER_MAIL_CATALOG;
@@ -5476,9 +5621,19 @@ foreach ($destinationLookup as $destId => $destName) {
         return !!(col && (col.fixedWidth || col.key === 'actions' || col.key === 'booking'));
     }
 
+    function leadsEventClientX(e) {
+        var src = e.originalEvent || e;
+        var touch = (src.touches && src.touches[0]) || (src.changedTouches && src.changedTouches[0]);
+        if (touch && typeof touch.clientX === 'number') {
+            return touch.clientX;
+        }
+        return typeof e.clientX === 'number' ? e.clientX : null;
+    }
+
     function leadsApplyFittedColumnWidths($table, state, widthsMap, fitToWrap, lockKey) {
         var visible = [];
         var total = 0;
+        var leadsMobileList = window.matchMedia('(max-width: 767.98px)').matches;
         lockKey = lockKey ? String(lockKey) : '';
         LEADS_TABLE_COLUMNS.forEach(function (col) {
             if (!leadsColumnIsVisible(col, state)) {
@@ -5496,15 +5651,17 @@ foreach ($destinationLookup as $destId => $destName) {
                 w = col.minWidth || 100;
             }
             w = Math.max(col.minWidth || 40, w);
-            if (col.fixedWidth) {
+            if (col.fixedWidth && !leadsMobileList) {
                 w = Math.max(w, leadsParseFixedWidthPx(col.fixedWidth) || (col.minWidth || 90));
             }
-            // While dragging a column, do not clamp that column's maxWidth — let the user widen it.
-            if (col.maxWidth && col.key !== lockKey) {
-                w = Math.min(w, col.maxWidth);
-            } else if (col.maxWidth && col.key === lockKey) {
-                // Soft ceiling so a single drag cannot blow past ~1.5Ã— configured max.
-                w = Math.min(w, Math.max(col.maxWidth, Math.round(col.maxWidth * 1.5)));
+            if (!leadsMobileList) {
+                // While dragging a column, do not clamp that column's maxWidth — let the user widen it.
+                if (col.maxWidth && col.key !== lockKey) {
+                    w = Math.min(w, col.maxWidth);
+                } else if (col.maxWidth && col.key === lockKey) {
+                    // Soft ceiling so a single drag cannot blow past ~1.5× configured max.
+                    w = Math.min(w, Math.max(col.maxWidth, Math.round(col.maxWidth * 1.5)));
+                }
             }
             visible.push({ col: col, width: w });
             total += w;
@@ -5514,6 +5671,9 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         var wrapW = leadsGetTableWrapWidth($table);
+        if (leadsMobileList) {
+            fitToWrap = false;
+        }
         if (fitToWrap && total > 0 && wrapW > 0) {
             if (total > wrapW) {
                 // Shrink flexible columns only — keep Actions/Status (and the column being dragged) usable.
@@ -5609,17 +5769,45 @@ foreach ($destinationLookup as $destId => $destName) {
             leadsSetColumnCellsWidth($table, item.col, item.width);
         });
 
-        $table.css({
-            width: '100%',
-            minWidth: '0',
-            maxWidth: '100%'
-        });
+        if (leadsMobileList) {
+            $table.css({
+                width: total + 'px',
+                minWidth: total + 'px',
+                maxWidth: 'none'
+            });
+        } else {
+            $table.css({
+                width: '100%',
+                minWidth: '0',
+                maxWidth: '100%'
+            });
+        }
         return total;
     }
 
     function leadsRedistributeColumnWidths(state) {
         var $table = $('.crm-leads-ui table.crm-leads-table');
         if (!$table.length) {
+            return;
+        }
+
+        if (window.matchMedia('(max-width: 767.98px)').matches) {
+            var savedMobileWidths = leadsLoadColumnWidths();
+            var mobileWidths = {};
+            LEADS_TABLE_COLUMNS.forEach(function (col) {
+                if (!leadsColumnIsVisible(col, state)) {
+                    return;
+                }
+                var mobileW = col.minWidth || 100;
+                if (col.fixedWidth) {
+                    mobileW = Math.max(mobileW, leadsParseFixedWidthPx(col.fixedWidth) || mobileW);
+                }
+                if (savedMobileWidths && savedMobileWidths[col.key] > 0) {
+                    mobileW = Math.max(col.minWidth || 40, parseInt(savedMobileWidths[col.key], 10) || mobileW);
+                }
+                mobileWidths[col.key] = mobileW;
+            });
+            leadsApplyFittedColumnWidths($table, state, mobileWidths, false);
             return;
         }
 
@@ -5715,9 +5903,10 @@ foreach ($destinationLookup as $destId => $destName) {
         var widths = leadsCaptureCurrentColumnWidths($table, state);
         leadsSaveColumnWidths(widths);
 
-        var startX = e.clientX || (e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[0]
-            ? e.originalEvent.touches[0].clientX
-            : 0);
+        var startX = leadsEventClientX(e);
+        if (startX == null) {
+            startX = 0;
+        }
         var startW = Math.round($th.outerWidth());
         leadsColResizeState = {
             key: key,
@@ -5737,10 +5926,7 @@ foreach ($destinationLookup as $destId => $destName) {
         if (!leadsColResizeState) {
             return;
         }
-        var clientX = e.clientX;
-        if (clientX == null && e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[0]) {
-            clientX = e.originalEvent.touches[0].clientX;
-        }
+        var clientX = leadsEventClientX(e);
         if (clientX == null) {
             return;
         }
@@ -5782,23 +5968,50 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
         $(document)
-            .off('mousedown.leadsColResize touchstart.leadsColResize', '.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer')
-            .on('mousedown.leadsColResize touchstart.leadsColResize', '.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer', function (e) {
-                if (e.type === 'mousedown' && e.which !== 1) {
+            .off('mousedown.leadsColResize', '.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer')
+            .on('mousedown.leadsColResize', '.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer', function (e) {
+                if (e.which !== 1) {
                     return;
                 }
                 leadsStartColumnResize(e, $(this).closest('th'));
             });
 
+        if (!window.leadsColResizeTouchBound) {
+            window.leadsColResizeTouchBound = true;
+            document.addEventListener('touchstart', function (e) {
+                var handle = e.target && e.target.closest
+                    ? e.target.closest('.crm-leads-ui table.crm-leads-table thead th .ld-col-resizer')
+                    : null;
+                if (!handle) {
+                    return;
+                }
+                e.preventDefault();
+                leadsStartColumnResize(e, $(handle).closest('th'));
+            }, { passive: false, capture: true });
+            document.addEventListener('touchmove', function (e) {
+                if (!leadsColResizeState) {
+                    return;
+                }
+                e.preventDefault();
+                leadsMoveColumnResize(e);
+            }, { passive: false, capture: true });
+            document.addEventListener('touchend', function () {
+                leadsEndColumnResize();
+            }, { capture: true });
+            document.addEventListener('touchcancel', function () {
+                leadsEndColumnResize();
+            }, { capture: true });
+        }
+
         $(document)
             .off('mousemove.leadsColResize touchmove.leadsColResize')
-            .on('mousemove.leadsColResize touchmove.leadsColResize', function (e) {
+            .on('mousemove.leadsColResize', function (e) {
                 leadsMoveColumnResize(e);
             });
 
         $(document)
             .off('mouseup.leadsColResize touchend.leadsColResize touchcancel.leadsColResize')
-            .on('mouseup.leadsColResize touchend.leadsColResize touchcancel.leadsColResize', function () {
+            .on('mouseup.leadsColResize', function () {
                 leadsEndColumnResize();
             });
 
@@ -6915,6 +7128,8 @@ foreach ($destinationLookup as $destId => $destName) {
         $('#btnSmsTplSendEmail').toggleClass('d-none', !isEmail);
         $('#btnSmsTplSendWhatsApp').toggleClass('d-none', isEmail);
         $('#btnSmsTplSendSms').toggleClass('d-none', isEmail);
+        $('#btnSmsTplSendApi').toggleClass('d-none', isEmail);
+        $('#smsTplApiBox').toggleClass('d-none', isEmail);
 
         if (isCustom) {
             $list.hide().empty();
@@ -6969,6 +7184,9 @@ foreach ($destinationLookup as $destId => $destName) {
         $('#smsTemplatesModal .sms-tpl-tab').removeClass('is-active');
         $('#smsTemplatesModal .sms-tpl-tab[data-sms-tab="default"]').addClass('is-active');
         $('#smsTplCustomText').val('');
+        $('#smsTplApiSession').prop('checked', false);
+        smsTplShowApiResult('', '');
+        smsTplRenderApiHint();
         smsTplRenderList();
         $('#smsTemplatesModal').modal('show');
     }
@@ -7003,6 +7221,79 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
         window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+    });
+
+    function smsTplRenderApiHint() {
+        var status = whatsappApiStatus || {};
+        var hint = 'Send on WhatsApp opens the chat on this computer. Send via API uses RichAutomate.';
+        if (status.ready && status.template_name) {
+            hint += ' The approved template is ' + status.template_name + ' (' + (status.template_language || 'en_US') + ').';
+        } else if (!status.key_configured) {
+            hint += ' The API key is not configured yet, so Send via API will not deliver.';
+        } else {
+            hint += ' No approved template name is configured yet, so a template send will not run.';
+        }
+        $('#smsTplApiHint').text(hint);
+    }
+
+    function smsTplShowApiResult(message, kind) {
+        var $result = $('#smsTplApiResult');
+        $result.removeClass('is-ok is-err');
+        if (!message) {
+            $result.attr('hidden', 'hidden').text('');
+            return;
+        }
+        $result.removeAttr('hidden').text(message);
+        if (kind === 'ok') {
+            $result.addClass('is-ok');
+        } else if (kind === 'err') {
+            $result.addClass('is-err');
+        }
+    }
+
+    function smsTplPostApi(confirmResend) {
+        var $btn = $('#btnSmsTplSendApi');
+        var mode = $('#smsTplApiSession').is(':checked') ? 'session' : 'template';
+        var text = smsTplGetSelectedBody();
+        if (!smsTplState.leadId) {
+            smsTplShowApiResult('Choose a lead first.', 'err');
+            return;
+        }
+        if (mode === 'session' && !text) {
+            smsTplShowApiResult('Select or write a message before sending.', 'err');
+            return;
+        }
+        $btn.prop('disabled', true);
+        smsTplShowApiResult('Sending…', '');
+        $.post('crm/ajax/send_whatsapp.php', {
+            lead_id: smsTplState.leadId,
+            mode: mode,
+            message: mode === 'session' ? text : '',
+            confirm_resend: confirmResend ? '1' : '0'
+        }, function (res) {
+            $btn.prop('disabled', false);
+            res = res || {};
+            if (res.needs_confirm) {
+                smsTplShowApiResult(res.message || 'This message was already sent.', 'err');
+                if (window.confirm(res.message || 'Send this message again?')) {
+                    smsTplPostApi(true);
+                }
+                return;
+            }
+            var message = res.message || (res.success ? 'WhatsApp accepted the message.' : 'WhatsApp did not accept the message.');
+            smsTplShowApiResult(message, res.success ? 'ok' : 'err');
+        }, 'json').fail(function (xhr) {
+            $btn.prop('disabled', false);
+            var message = 'The send request failed before RichAutomate answered. It was not retried.';
+            if (xhr && xhr.status === 401) {
+                message = 'Your session has expired. Sign in again. Nothing was retried.';
+            }
+            smsTplShowApiResult(message, 'err');
+        });
+    }
+
+    $('#btnSmsTplSendApi').on('click', function () {
+        smsTplPostApi(false);
     });
 
     $('#btnSmsTplSendSms').on('click', function () {

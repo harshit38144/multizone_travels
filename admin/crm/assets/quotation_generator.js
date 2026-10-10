@@ -13795,6 +13795,41 @@
                 return;
             }
             var storageKey = 'qLeadSidebarCollapsed';
+            var mobileQuery = window.matchMedia('(max-width: 991.98px)');
+            function isMobileLeadSidebar() {
+                return mobileQuery.matches;
+            }
+            function syncMobileSidebarHeight() {
+                var el = document.getElementById('qLeadSidebar');
+                if (!el) {
+                    return;
+                }
+                if (isMobileLeadSidebar() && $layout.hasClass('is-lead-sidebar-open')) {
+                    var viewHeight = window.innerHeight || document.documentElement.clientHeight;
+                    if (window.visualViewport && window.visualViewport.height) {
+                        viewHeight = window.visualViewport.height;
+                    }
+                    el.style.top = '0px';
+                    el.style.bottom = '0px';
+                    el.style.height = viewHeight + 'px';
+                    el.style.maxHeight = viewHeight + 'px';
+                    el.style.minHeight = viewHeight + 'px';
+                } else {
+                    el.style.top = '';
+                    el.style.bottom = '';
+                    el.style.height = '';
+                    el.style.maxHeight = '';
+                    el.style.minHeight = '';
+                }
+            }
+            function setMobileOpen(open) {
+                $layout.toggleClass('is-lead-sidebar-open', !!open);
+                $('body').toggleClass('q-lead-sidebar-lock', !!open);
+                $('.js-q-lead-sidebar-backdrop').prop('hidden', !open);
+                $toggle.attr('aria-expanded', open ? 'true' : 'false');
+                $toggle.attr('title', open ? 'Close traveller info' : 'Collapse lead panel');
+                syncMobileSidebarHeight();
+            }
             function applyCollapsed(collapsed) {
                 $layout.toggleClass('is-lead-sidebar-collapsed', !!collapsed);
                 $toggle.attr('aria-expanded', collapsed ? 'false' : 'true');
@@ -13807,12 +13842,31 @@
             try {
                 saved = window.localStorage.getItem(storageKey) || '';
             } catch (e) { /* ignore */ }
-            if (saved === '1') {
+            if (!isMobileLeadSidebar() && saved === '1') {
                 applyCollapsed(true);
             }
             $toggle.on('click', function () {
+                if (isMobileLeadSidebar()) {
+                    setMobileOpen(false);
+                    return;
+                }
                 applyCollapsed(!$layout.hasClass('is-lead-sidebar-collapsed'));
             });
+            $(document).on('click', '.js-q-lead-sidebar-open', function () {
+                setMobileOpen(true);
+            });
+            $(document).on('click', '.js-q-lead-sidebar-backdrop', function () {
+                setMobileOpen(false);
+            });
+            $(document).on('keydown', function (e) {
+                if (e.key === 'Escape' && $layout.hasClass('is-lead-sidebar-open')) {
+                    setMobileOpen(false);
+                }
+            });
+            $(window).on('resize', syncMobileSidebarHeight);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', syncMobileSidebarHeight);
+            }
         })();
 
         // When Guests are updated on the linked lead, refresh Adults/Children here

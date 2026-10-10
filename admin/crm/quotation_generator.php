@@ -4360,7 +4360,13 @@ $qWizardSteps = [
             margin: 0;
             box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
             position: relative;
-            overflow: hidden;
+            overflow: visible;
+            z-index: 1;
+        }
+
+        #qWizardSection3 .q-hotel-row:focus-within,
+        #qWizardSection3 .q-hotel-row:has(.q-hotel-menu:not([style*="display: none"]):not([style*="display:none"])) {
+            z-index: 40;
         }
 
         #qWizardSection3 .q-hotel-row:last-child {
@@ -4415,11 +4421,13 @@ $qWizardSteps = [
             grid-template-columns: 1.05fr 1.15fr 1.05fr 0.55fr 0.55fr 0.5fr 0.85fr 0.85fr;
             background: #fff;
             border-right: 1px solid #f1f5f9;
+            border-radius: 11px 0 0 11px;
         }
 
         #qWizardSection3 .q-hotel-commercial {
             grid-template-columns: 0.95fr 1.2fr 72px;
             background: #fff7f8;
+            border-radius: 0 11px 11px 0;
         }
 
         #qWizardSection3 .q-hotel-field {
@@ -4726,7 +4734,11 @@ $qWizardSteps = [
             #qWizardSection3 .q-hotel-accom {
                 border-right: 0;
                 border-bottom: 1px solid #f1f5f9;
+                border-radius: 11px 11px 0 0;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+            #qWizardSection3 .q-hotel-commercial {
+                border-radius: 0 0 11px 11px;
             }
             #qWizardSection3 .q-hotel-col-labels-accom {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5888,39 +5900,138 @@ $qWizardSteps = [
             text-decoration: none;
         }
 
+        .crm-quotation-gen .q-lead-sidebar-open,
+        .crm-quotation-gen .q-lead-sidebar-backdrop {
+            display: none;
+        }
+
         @media (max-width: 991.98px) {
             .crm-quotation-gen .q-page-layout {
                 flex-direction: column;
+                align-items: stretch;
             }
 
-            .crm-quotation-gen .q-lead-sidebar {
+            .crm-quotation-gen .q-main-panel {
                 width: 100%;
+                max-width: 100%;
+            }
+
+            .crm-quotation-gen .q-lead-sidebar-open {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 auto;
+                width: 36px;
+                height: 36px;
+                margin: 0;
+                padding: 0;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
+                background: #fff;
+                color: #334155;
+                font-size: 1rem;
+                line-height: 1;
+                box-shadow: none;
+            }
+
+            .crm-quotation-gen .q-lead-sidebar-backdrop {
+                display: block;
+                position: fixed;
+                inset: 0;
+                z-index: 1070;
+                background: rgba(15, 23, 42, 0.45);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.22s ease;
+            }
+
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-open .q-lead-sidebar-backdrop {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            .crm-quotation-gen .q-lead-sidebar,
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar,
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-open .q-lead-sidebar {
+                position: fixed;
+                z-index: 1080;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: min(340px, 92vw);
+                max-width: 92vw;
+                height: 100vh;
+                height: 100dvh;
+                min-height: 100vh;
+                min-height: 100dvh;
+                max-height: 100vh;
+                max-height: 100dvh;
                 flex-basis: auto;
-                position: static;
+                align-self: stretch;
+                margin: 0;
+                padding: 0.85rem 0.75rem max(1rem, env(safe-area-inset-bottom));
+                background: #f4f6f9;
+                box-shadow: 8px 0 28px rgba(15, 23, 42, 0.18);
+                transform: translateX(-105%);
+                transition: transform 0.22s ease;
+                overflow: hidden;
+                visibility: hidden;
+                pointer-events: none;
+                box-sizing: border-box;
+            }
+
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-open .q-lead-sidebar,
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed.is-lead-sidebar-open .q-lead-sidebar {
+                transform: translateX(0);
+                visibility: visible;
+                pointer-events: auto;
+            }
+
+            .crm-quotation-gen .q-lead-sidebar-inner,
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-inner,
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-open .q-lead-sidebar-inner {
                 max-height: none;
-                overflow: visible;
-            }
-
-            .crm-quotation-gen .q-lead-sidebar-inner {
-                max-height: none;
-                overflow: visible;
-            }
-
-            .crm-quotation-gen .q-lead-sidebar-toggle {
-                display: none;
-            }
-
-            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar {
-                width: 100%;
-                flex-basis: auto;
-            }
-
-            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-inner {
+                height: 100%;
+                min-height: 100%;
+                overflow-x: hidden;
+                overflow-y: auto;
                 opacity: 1;
                 visibility: visible;
                 pointer-events: auto;
-                max-height: none;
-                overflow: visible;
+                padding-right: 1.6rem;
+                box-sizing: border-box;
+            }
+
+            .crm-quotation-gen .q-lead-sidebar-toggle,
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-toggle {
+                display: inline-flex;
+                top: 0.7rem;
+                right: 0.55rem;
+                left: auto;
+                transform: none;
+                width: 32px;
+                height: 32px;
+                background: #fff;
+                border-color: var(--q-border);
+                color: #334155;
+            }
+
+            .crm-quotation-gen .q-lead-sidebar-toggle i,
+            .crm-quotation-gen .q-page-layout.is-lead-sidebar-collapsed .q-lead-sidebar-toggle i {
+                transform: none;
+            }
+
+            body.q-lead-sidebar-lock {
+                overflow: hidden;
+            }
+
+            .crm-quotation-gen .q-wizard,
+            .crm-quotation-gen .q-wizard.is-scroll-mode {
+                background: transparent;
+                border: 0;
+                border-radius: 0;
+                box-shadow: none;
+                padding: 0;
             }
         }
 
@@ -6130,6 +6241,14 @@ $qWizardSteps = [
             margin-bottom: 0.85rem;
             padding-bottom: 0.75rem;
             box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+        }
+
+        @media (max-width: 991.98px) {
+            .crm-quotation-gen .q-wizard.is-scroll-mode .q-stepper {
+                background: transparent;
+                box-shadow: none;
+                border-radius: 0;
+            }
         }
 
         .crm-quotation-gen .q-wizard.is-scroll-mode .q-wizard-panels {
@@ -6680,9 +6799,17 @@ $qWizardSteps = [
 
         @media (max-width: 575.98px) {
             .crm-quotation-gen .q-gt-fields-2,
-            .crm-quotation-gen .q-gt-fields-4,
-            .crm-quotation-gen .q-gt-fields-5 {
+            .crm-quotation-gen .q-gt-fields-4 {
                 grid-template-columns: 1fr;
+            }
+
+            .crm-quotation-gen .q-gt-fields-5 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.75rem 0.55rem;
+            }
+
+            .crm-quotation-gen .q-gt-fields-5 > .form-group:first-child {
+                grid-column: 1 / -1;
             }
         }
 
@@ -14275,6 +14402,15 @@ $qWizardSteps = [
             box-shadow: none !important;
         }
 
+        @media (max-width: 991.98px) {
+            [data-theme="dark"] .crm-quotation-gen .q-wizard,
+            [data-theme="dark"] .crm-quotation-gen .q-wizard.is-scroll-mode .q-stepper {
+                background: transparent !important;
+                box-shadow: none !important;
+                border-radius: 0;
+            }
+        }
+
         [data-theme="dark"] .crm-quotation-gen .page-title,
         [data-theme="dark"] .crm-quotation-gen .q-section-title,
         [data-theme="dark"] .crm-quotation-gen .q-accordion-head,
@@ -15185,6 +15321,11 @@ $qWizardSteps = [
                             <?php } ?>
                         </div>
                         <div class="page-title-right">
+                            <?php if ($leadSidebar) { ?>
+                                <button type="button" class="q-lead-sidebar-open js-q-lead-sidebar-open" aria-label="Traveller info" title="Traveller info">
+                                    <i class="fas fa-bars" aria-hidden="true"></i>
+                                </button>
+                            <?php } ?>
                             <button type="button" class="btn btn-sm btn-q-send-mail" id="qSendMailBtn">
                                 <i class="fas fa-envelope mr-1"></i> Send Mail
                             </button>
@@ -15198,6 +15339,7 @@ $qWizardSteps = [
 
                     <div class="q-page-layout" id="qPageLayout">
                         <?php if ($leadSidebar) { ?>
+                            <div class="q-lead-sidebar-backdrop js-q-lead-sidebar-backdrop" hidden></div>
                             <aside class="q-lead-sidebar" id="qLeadSidebar" aria-label="Lead details">
                                 <button type="button"
                                     class="q-lead-sidebar-toggle js-q-lead-sidebar-toggle"
@@ -16392,7 +16534,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=318"></script>
+    <script src="crm/assets/quotation_generator.js?v=320"></script>
     <script src="crm/assets/quotation_flight_search.js?v=32"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

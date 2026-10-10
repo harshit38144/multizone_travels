@@ -497,25 +497,96 @@ if (!empty($_SESSION['login_lockout_until'])) {
     @media (max-width: 980px) {
       .login-shell { grid-template-columns: 1fr; }
       .hero {
-        min-height: 42vh;
-        min-height: 38dvh;
+        height: auto;
+        min-height: 0;
+        max-height: none;
+        aspect-ratio: 1305 / 650;
+      }
+      .hero,
+      .hero__img {
+        background-position: left top;
+        object-position: left top;
       }
       .stage {
-        min-height: auto;
-        padding-top: 1.5rem;
-        padding-bottom: 1.5rem;
+        min-height: 0;
+        justify-content: flex-start;
+        padding: 1rem 0.9rem calc(1rem + env(safe-area-inset-bottom, 0px));
       }
-      .card { padding: 1.85rem 1.4rem 1.55rem; }
+      .card {
+        padding: 1.35rem 1.1rem 1.15rem;
+        border-radius: 1.15rem;
+      }
+      .card__brand { margin-bottom: 0.85rem; }
+      .card__brand img { height: 40px; }
+      .card__head { margin-bottom: 1.05rem; }
+      .card__head h1 { font-size: 1.45rem; }
+      .card__head p { font-size: 0.86rem; }
+      .field { margin-bottom: 0.8rem; }
+      .field-wrap input[type="text"],
+      .field-wrap input[type="password"],
+      .field-wrap input[type="email"] {
+        height: 3rem;
+        font-size: 16px;
+      }
+      .toggle-pw {
+        width: 2.75rem;
+        height: 2.75rem;
+        right: 0.15rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn-login { height: 3rem; }
+      .row-options { margin-bottom: 1rem; }
+      .stage-foot { margin-top: 1rem; }
+      .modal-dialog {
+        margin: 0.75rem auto;
+        max-width: calc(100% - 1.5rem);
+      }
+      .modal-body.p-4 { padding: 1rem 1.1rem !important; }
+      .modal-footer {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .modal-footer .btn-cancel-modal,
+      .modal-footer .btn-send-reset {
+        flex: 1 1 auto;
+      }
     }
 
     @media (max-width: 520px) {
-      .hero {
-        min-height: 34vh;
-      }
+      .card { padding: 1.15rem 0.95rem 1rem; }
       .row-options {
-        flex-direction: column;
-        align-items: flex-start;
+        gap: 0.45rem 0.75rem;
       }
+    }
+
+    @media (max-width: 900px) and (max-height: 520px) {
+      .hero { display: none; }
+      .stage {
+        min-height: 100dvh;
+        justify-content: center;
+        padding: 0.55rem 0.9rem;
+      }
+      .card {
+        padding: 0.75rem 1rem 0.7rem;
+      }
+      .card__brand { margin-bottom: 0.35rem; }
+      .card__brand img { height: 28px; }
+      .card__head { margin-bottom: 0.45rem; }
+      .card__head h1 { font-size: 1.2rem; margin-bottom: 0.15rem; }
+      .card__head p { font-size: 0.78rem; }
+      .field { margin-bottom: 0.4rem; }
+      .field > label { margin-bottom: 0.25rem; }
+      .field-wrap input[type="text"],
+      .field-wrap input[type="password"],
+      .field-wrap input[type="email"],
+      .btn-login {
+        height: 2.55rem;
+      }
+      .row-options { margin: 0.15rem 0 0.55rem; }
+      .site-link { margin-top: 0.55rem; }
+      .stage-foot { display: none; }
     }
 
     @media (prefers-reduced-motion: reduce) {

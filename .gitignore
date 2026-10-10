@@ -19,6 +19,9 @@ includes/phonepe_config.php
 # AI / image API local keys
 admin/crm/includes/ai_config.local.php
 
+# RichAutomate WhatsApp key
+admin/crm/includes/whatsapp_config.local.php
+
 # Other API / SMTP local secrets
 admin/config/aviationstack_config.php
 includes/mail_secrets.local.php
