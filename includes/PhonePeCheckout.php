@@ -93,17 +93,14 @@ class PhonePeCheckout
             'merchantUrls' => [
                 'redirectUrl' => $redirectUrl,
             ],
-            // V2 schema: INTENT + QR + COLLECT so mobile UPI apps work (V1 UPI_INTENT keys are ignored on V2).
             'paymentModeConfig' => [
-                'version' => 'V2',
                 'enabledPaymentModes' => [
-                    [
-                        'type' => 'UPI',
-                        'flows' => ['INTENT', 'QR', 'COLLECT'],
-                    ],
+                    ['type' => 'UPI_QR'],
+                    ['type' => 'UPI_INTENT'],
+                    ['type' => 'UPI_COLLECT'],
                     [
                         'type' => 'CARD',
-                        'types' => ['DEBIT_CARD', 'CREDIT_CARD'],
+                        'cardTypes' => ['DEBIT_CARD', 'CREDIT_CARD'],
                     ],
                     ['type' => 'NET_BANKING'],
                 ],

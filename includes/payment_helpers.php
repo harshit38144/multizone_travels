@@ -296,22 +296,17 @@ function payment_redirect_to_payu(string $formAction, array $fields): void
  */
 function payment_redirect_to_phonepe(string $phonepeUrl): void
 {
-    $safeUrl = htmlspecialchars($phonepeUrl, ENT_QUOTES, 'UTF-8');
-    $jsUrl = json_encode($phonepeUrl, JSON_UNESCAPED_SLASHES);
-    header('Referrer-Policy: strict-origin-when-cross-origin');
-    header('Content-Type: text/html; charset=UTF-8');
-    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
-    echo '<meta name="referrer" content="strict-origin-when-cross-origin">';
-    echo '<meta name="viewport" content="width=device-width,initial-scale=1">';
-    echo '<title>Redirecting to PhonePe…</title>';
-    echo '<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f7fb}';
-    echo '.box{text-align:center;padding:2rem;max-width:420px}.spin{width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#5f259f;border-radius:50%;animation:r 1s linear infinite;margin:0 auto 1rem}';
-    echo '@keyframes r{to{transform:rotate(360deg)}}p{color:#64748b;font-size:.95rem;line-height:1.5}</style></head><body>';
-    echo '<div class="box"><div class="spin"></div><p>Redirecting to secure PhonePe checkout…</p>';
-    echo '<p><small>On mobile, choose <strong>Pay by any UPI app</strong>. On desktop, click <strong>Click to view QR</strong> if needed.</small></p>';
-    echo '<p><a href="' . $safeUrl . '">Continue to payment</a></p></div>';
-    echo '<script>setTimeout(function(){window.location.replace(' . $jsUrl . ');},400);</script>';
-    echo '</body></html>';
+    $host = strtolower((string) parse_url($phonepeUrl, PHP_URL_HOST));
+    $scheme = strtolower((string) parse_url($phonepeUrl, PHP_URL_SCHEME));
+    $allowedHost = $host === 'phonepe.com' || substr($host, -strlen('.phonepe.com')) === '.phonepe.com';
+    if ($scheme !== 'https' || !$allowedHost) {
+        http_response_code(500);
+        echo 'Could not redirect to payment gateway.';
+        exit;
+    }
+    // A real browser redirect lets PhonePe draw the UPI QR. A script redirect or a new tab leaves a dead "Click to view QR" placeholder.
+    header('Referrer-Policy: origin-when-cross-origin');
+    header('Location: ' . $phonepeUrl, true, 302);
     exit;
 }
 

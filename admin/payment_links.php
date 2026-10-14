@@ -214,7 +214,7 @@ $avatarColors = ['#c41e20', '#0d9488', '#2563eb', '#7c3aed', '#ea580c', '#0891b2
                                             <td class="pay-date-cell"><?= htmlspecialchars($paidAt) ?></td>
                                             <td class="text-center text-nowrap">
                                                 <div class="pay-actions">
-                                                    <a href="<?= htmlspecialchars($url) ?>" class="pay-action-btn" title="View / open link" target="_blank" rel="noopener">
+                                                    <a href="<?= htmlspecialchars($url) ?>" class="pay-action-btn" title="View / open link">
                                                         <i class="far fa-eye"></i>
                                                     </a>
                                                     <button type="button" class="pay-action-btn copy-btn" data-copy="<?= htmlspecialchars($url) ?>" title="Copy link">
@@ -315,7 +315,7 @@ $avatarColors = ['#c41e20', '#0d9488', '#2563eb', '#7c3aed', '#ea580c', '#0891b2
             html += '<button type="button" class="btn btn-primary copy-btn" data-copy="' + escHtml(url) + '">' +
                 '<i class="fas fa-copy mr-1"></i> Copy link</button>';
             if (url) {
-                html += '<a href="' + escHtml(url) + '" class="btn btn-outline-secondary" target="_blank" rel="noopener">' +
+                html += '<a href="' + escHtml(url) + '" class="btn btn-outline-secondary">' +
                     '<i class="fas fa-external-link-alt mr-1"></i> Open link</a>';
             }
             if (customer.whatsapp_url) {

@@ -241,7 +241,7 @@ if ($isEmbed) {
                             <button type="button" class="btn btn-primary copy-btn" data-copy="<?= htmlspecialchars($generatedUrl) ?>">
                                 <i class="fas fa-copy mr-1"></i> Copy link
                             </button>
-                            <a href="<?= htmlspecialchars($generatedUrl) ?>" class="btn btn-outline-secondary ml-2" target="_blank" rel="noopener">
+                            <a href="<?= htmlspecialchars($generatedUrl) ?>" class="btn btn-outline-secondary ml-2">
                                 <i class="fas fa-external-link-alt mr-1"></i> Open link
                             </a>
                             <a href="payment_links.php" class="btn btn-outline-primary ml-2">
