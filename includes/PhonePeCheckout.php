@@ -20,7 +20,13 @@ class PhonePeCheckout
 
     public function isSandbox(): bool
     {
-        return ($this->cfg['mode'] ?? 'sandbox') === 'sandbox';
+        if (($this->cfg['mode'] ?? 'sandbox') !== 'sandbox') {
+            return false;
+        }
+        // Live hosts use the production API. Sandbox credentials are rejected there with a bare 401.
+        $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+        $host = (string) preg_replace('/:\d+$/', '', $host);
+        return $host === '' || $host === 'localhost' || $host === '127.0.0.1';
     }
 
     public function oauthUrl(): string
