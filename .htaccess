@@ -1,5 +1,9 @@
 RewriteEngine On
 
+# /plink.php/?t=... must run plink.php (WhatsApp link form).
+RewriteRule ^plink\.php/$ plink.php [L,QSA]
+RewriteRule ^payment_return\.php/$ payment_return.php [L,QSA]
+
 # /f/Ab3xK9m2  → short customer form
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

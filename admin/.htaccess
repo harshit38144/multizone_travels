@@ -1,5 +1,10 @@
 RewriteEngine On
 
+# Payment URLs use /plink.php/?t=... so the query string survives WhatsApp.
+# Apache otherwise treats the trailing slash as a missing directory.
+RewriteRule ^plink\.php/$ plink.php [L,QSA]
+RewriteRule ^payment_return\.php/$ payment_return.php [L,QSA]
+
 # When this folder is the vhost docroot (admin.multizonetravels.com),
 # a mistaken /admin/... URL (from old tab history) must redirect to /...
 RewriteRule ^admin/(.*)$ /$1 [R=302,L]

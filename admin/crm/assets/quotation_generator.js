@@ -6928,12 +6928,14 @@
                 '<div class="q-tour-cost-controls q-tour-cost-controls-gst">' +
                 '<span class="q-tour-cost-gst-group">' +
                 '<input type="number" step="0.01" min="0" max="100" class="form-control q-tour-gst-input q-tour-cost-gst-inline" value="' + esc(gstPct) + '" aria-label="GST percent">' +
+                '<span class="q-tour-cost-gst-suffix" aria-hidden="true">%</span>' +
                 '</span></div>';
         } else if (tcsEditable) {
             controlsHtml =
                 '<div class="q-tour-cost-controls q-tour-cost-controls-gst">' +
                 '<span class="q-tour-cost-gst-group">' +
                 '<input type="number" step="0.01" min="0" max="100" class="form-control q-tour-tcs-input q-tour-cost-gst-inline" value="' + esc(tcsPct) + '" aria-label="TCS percent">' +
+                '<span class="q-tour-cost-gst-suffix" aria-hidden="true">%</span>' +
                 '</span></div>';
         }
 
@@ -7259,7 +7261,9 @@
             tcsPct = 2;
         }
         var tcs = international ? roundTourMoney(breakdown.package_total * tcsPct / 100) : 0;
-        var grand = roundTourMoney(breakdown.package_total + gst + tcs);
+        var gstForTotal = hideGstPreview ? 0 : gst;
+        var tcsForTotal = hideTcsPreview ? 0 : tcs;
+        var grand = roundTourMoney(breakdown.package_total + gstForTotal + tcsForTotal);
         var childRates = [];
         var i;
         for (i = 0; i < childRows.length; i++) {
@@ -7327,7 +7331,8 @@
                 $(this).val(String(payload.gst_percent || 5));
             }
         });
-        $scope.find('[data-tour-amount="gst"]').text(formatTourMoney(payload.gst_amount));
+        $scope.find('[data-tour-amount="gst"]').text(formatTourMoney(payload.gst_amount))
+            .toggleClass('is-excluded', !!payload.hide_gst);
         $scope.find('.q-tour-gst-rate-switch').each(function () {
             if (!$(this).is(':focus')) {
                 $(this).prop('checked', !payload.hide_gst);
@@ -7340,7 +7345,8 @@
                     $(this).val(String(payload.tcs_percent != null ? payload.tcs_percent : 2));
                 }
             });
-            $scope.find('[data-tour-amount="tcs"]').text(formatTourMoney(payload.tcs_amount));
+            $scope.find('[data-tour-amount="tcs"]').text(formatTourMoney(payload.tcs_amount))
+                .toggleClass('is-excluded', !!payload.hide_tcs);
             $scope.find('.q-tour-tcs-rate-switch').each(function () {
                 if (!$(this).is(':focus')) {
                     $(this).prop('checked', !payload.hide_tcs);

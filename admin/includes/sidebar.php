@@ -718,29 +718,11 @@ $crmParentPages = array_merge(
         </li>
 
         <!-- Payment Links -->
-        <li class="nav-item has-treeview <?= in_array($page, $paymentPages) ? 'menu-open' : '' ?>">
-          <a href="#" class="nav-link <?= in_array($page, $paymentPages) ? 'active' : '' ?>">
+        <li class="nav-item">
+          <a href="payment_links.php" class="nav-link <?= in_array($page, $paymentPages, true) ? 'active' : '' ?>">
             <i class="nav-icon fas fa-link"></i>
-            <p>
-              Payment Links
-              <i class="right fas fa-angle-left"></i>
-            </p>
+            <p>Payment Links</p>
           </a>
-          <ul class="nav nav-treeview">
-            <li class="nav-item">
-              <a href="payment_link_create.php"
-                class="nav-link <?= ($page === 'payment_link_create') ? 'active' : '' ?>">
-                <i class="far fa-circle nav-icon"></i>
-                <p>Create Payment Link</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="payment_links.php" class="nav-link <?= ($page == 'payment_links') ? 'active' : '' ?>">
-                <i class="far fa-circle nav-icon"></i>
-                <p>All Payment Links</p>
-              </a>
-            </li>
-          </ul>
         </li>
 
         <li class="nav-item">

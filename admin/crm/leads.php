@@ -433,6 +433,7 @@ $stageFilter = trim((string) ($_GET['stage'] ?? ''));
 if ($stageFilter !== '' && !isset($leadStageOptions[$stageFilter])) {
     $stageFilter = '';
 }
+$leadStageCounts = array_fill_keys(array_keys($leadStageOptions), 0);
 $financialYearOptions = crmFinancialYearOptions($conn);
 $totalPages = 1;
 $offset = 0;
@@ -602,6 +603,17 @@ crmLeadsEnrichDisplayFromQuotations($conn, $leadRows);
 crmLeadsResolveMissingQuotationActions($conn, $leadRows);
 crmLeadsAttachBookingStatus($conn, $leadRows);
 crmLeadsSyncFeatureStages($conn, $leadRows);
+
+if ($hasLeadsTable) {
+    $stageCountWhere = crmLeadActiveWhereSql() . crmFinancialYearWhereSql($fyFilter) . crmLeadsSearchWhereSql($conn, $searchFilter);
+    $stageCountRes = $conn->query('SELECT `stage`, COUNT(*) AS c FROM `crm_leads` WHERE ' . $stageCountWhere . ' GROUP BY `stage`');
+    if ($stageCountRes) {
+        while ($stageCountRow = $stageCountRes->fetch_assoc()) {
+            $stageCountKey = crmLeadNormalizeStage((string) ($stageCountRow['stage'] ?? ''));
+            $leadStageCounts[$stageCountKey] = (int) ($leadStageCounts[$stageCountKey] ?? 0) + (int) ($stageCountRow['c'] ?? 0);
+        }
+    }
+}
 
 $deletedLeadsCount = $hasLeadsTable ? crmLeadsDeletedCount($conn) : 0;
 $leadsAdminId = isset($_SESSION['id']) ? (int) $_SESSION['id'] : 0;
@@ -957,16 +969,143 @@ foreach ($destinationLookup as $destId => $destName) {
             background: #fff;
         }
 
-        .crm-leads-ui .filter-bar .stage-filter {
-            min-width: 140px;
+        .crm-leads-ui .leads-stage-filters {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex: 0 1 auto;
+            min-width: 0;
+        }
+
+        .crm-leads-ui .leads-stage-btn {
             height: 38px;
-            border-radius: 6px;
-            border: 1px solid #dbeafe;
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-weight: 600;
-            font-size: calc(0.82rem + 1px);
-            padding: 0 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0 0.45rem 0 0.7rem;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: #f8fafc;
+            color: #334155;
+            font-weight: 700;
+            font-size: 0.78rem;
+            line-height: 1;
+            white-space: nowrap;
+            cursor: pointer;
+            flex: 0 0 auto;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .crm-leads-ui .leads-stage-btn:focus {
+            outline: none;
+        }
+
+        .crm-leads-ui .leads-stage-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.25rem;
+            height: 1.25rem;
+            padding: 0 0.35rem;
+            border-radius: 999px;
+            background: #64748b;
+            color: #fff;
+            font-size: 0.68rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-new_lead {
+            background: #e3f2fd;
+            border-color: #90caf9;
+            color: #1565c0;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-new_lead .leads-stage-count {
+            background: #1e88e5;
+            color: #fff;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-quoted {
+            background: #fff3e0;
+            border-color: #ffcc80;
+            color: #e65100;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-quoted .leads-stage-count {
+            background: #fb8c00;
+            color: #fff;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-confirmed {
+            background: #e8f5e9;
+            border-color: #a5d6a7;
+            color: #2e7d32;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-confirmed .leads-stage-count {
+            background: #43a047;
+            color: #fff;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-lost {
+            background: #f5f5f5;
+            border-color: #e0e0e0;
+            color: #616161;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-lost .leads-stage-count {
+            background: #757575;
+            color: #fff;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-new_lead.is-active {
+            background: #1e88e5;
+            border-color: #1565c0;
+            color: #fff;
+            box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.28);
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-quoted.is-active {
+            background: #fb8c00;
+            border-color: #e65100;
+            color: #fff;
+            box-shadow: 0 0 0 3px rgba(251, 140, 0, 0.28);
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-confirmed.is-active {
+            background: #43a047;
+            border-color: #2e7d32;
+            color: #fff;
+            box-shadow: 0 0 0 3px rgba(67, 160, 71, 0.28);
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-lost.is-active {
+            background: #616161;
+            border-color: #424242;
+            color: #fff;
+            box-shadow: 0 0 0 3px rgba(97, 97, 97, 0.28);
+        }
+
+        .crm-leads-ui .leads-stage-btn.is-active .leads-stage-count {
+            background: #fff;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-new_lead.is-active .leads-stage-count {
+            color: #1e88e5;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-quoted.is-active .leads-stage-count {
+            color: #e65100;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-confirmed.is-active .leads-stage-count {
+            color: #2e7d32;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-lost.is-active .leads-stage-count {
+            color: #424242;
         }
 
         .crm-leads-ui .filter-bar .search-wrap {
@@ -1466,20 +1605,39 @@ foreach ($destinationLookup as $destId => $destName) {
                 font-size: 0.8rem;
             }
 
-            .crm-leads-ui .filter-bar .stage-filter,
-            .crm-leads-ui .filter-bar select.form-control {
-                flex: 0.78 1 0 !important;
-                width: 0 !important;
+            .crm-leads-ui .leads-stage-filters {
+                flex: 1 1 100%;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.4rem;
+                overflow: visible;
+            }
+
+            .crm-leads-ui .leads-stage-btn {
+                width: 100%;
+                height: 30px;
+                font-size: 0.68rem;
+                padding: 0 0.4rem;
+                border-radius: 7px;
+            }
+
+            .crm-leads-ui .leads-stage-count {
+                min-width: 1.05rem;
+                height: 1.05rem;
+                font-size: 0.62rem;
+            }
+
+            .crm-leads-ui .filter-bar select.form-control,
+            .crm-leads-ui .filter-bar select.leads-fy-select {
+                flex: 1 1 auto !important;
+                width: auto !important;
                 min-width: 0 !important;
+                max-width: 100%;
                 height: 30px;
                 font-size: 0.68rem;
                 font-weight: 600;
                 padding: 0 0.95rem 0 0.35rem;
                 border-radius: 6px;
-            }
-
-            .crm-leads-ui .filter-bar select.leads-fy-select {
-                flex: 1.35 1 0 !important;
             }
 
             .crm-leads-ui .filter-bar-actions {
@@ -4115,34 +4273,6 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #0369a1;
         }
 
-        #confirmTourModal .ct-pax-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-size: 0.86rem;
-            font-weight: 600;
-            white-space: nowrap;
-            line-height: 1.2;
-        }
-
-        #confirmTourModal .ct-pax-status::before {
-            content: "";
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-            flex: 0 0 8px;
-        }
-
-        #confirmTourModal .ct-pax-status.is-confirmed {
-            color: #16a34a;
-        }
-
-        #confirmTourModal .ct-pax-status.is-pending,
-        #confirmTourModal .ct-pax-status.is-empty {
-            color: #94a3b8;
-        }
-
         #confirmTourModal .ct-pax-actions {
             display: flex;
             align-items: center;
@@ -4444,7 +4574,7 @@ foreach ($destinationLookup as $destId => $destName) {
             }
 
             #confirmTourModal .ct-pax-table {
-                min-width: 860px;
+                min-width: 740px;
             }
         }
 
@@ -4528,12 +4658,22 @@ foreach ($destinationLookup as $destId => $destName) {
                                 <i class="fas fa-search"></i>
                                 <input type="search" class="form-control leads-search-input" placeholder="Search queries, client, company, destination..." value="<?= htmlspecialchars($searchFilter, ENT_QUOTES, 'UTF-8') ?>" aria-label="Search leads">
                             </div>
-                            <select class="stage-filter form-control leads-stage-select" style="width:auto; flex:0 0 auto;" aria-label="Filter by stage">
-                                <option value="">All Stages</option>
-                                <?php foreach ($leadStageOptions as $stageKey => $stageLabel) { ?>
-                                    <option value="<?= htmlspecialchars((string) $stageKey, ENT_QUOTES, 'UTF-8') ?>" <?= $stageFilter === (string) $stageKey ? 'selected' : '' ?>><?= htmlspecialchars((string) $stageLabel, ENT_QUOTES, 'UTF-8') ?></option>
+                            <div class="leads-stage-filters" role="group" aria-label="Filter by lead stage">
+                                <?php foreach ($leadStageOptions as $stageKey => $stageLabel) {
+                                    $stageKey = (string) $stageKey;
+                                    $stageActive = $stageFilter === $stageKey;
+                                    $stageCount = (int) ($leadStageCounts[$stageKey] ?? 0);
+                                ?>
+                                    <button type="button"
+                                        class="leads-stage-btn stage-<?= htmlspecialchars($stageKey, ENT_QUOTES, 'UTF-8') ?> js-leads-stage-filter<?= $stageActive ? ' is-active' : '' ?>"
+                                        data-stage="<?= htmlspecialchars($stageKey, ENT_QUOTES, 'UTF-8') ?>"
+                                        aria-pressed="<?= $stageActive ? 'true' : 'false' ?>"
+                                        title="<?= $stageActive ? 'Show all leads' : 'Show ' . htmlspecialchars((string) $stageLabel, ENT_QUOTES, 'UTF-8') ?>">
+                                        <span class="leads-stage-btn-label"><?= htmlspecialchars((string) $stageLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                                        <span class="leads-stage-count"><?= $stageCount ?></span>
+                                    </button>
                                 <?php } ?>
-                            </select>
+                            </div>
                             <select class="form-control leads-fy-select" style="width:auto; flex:0 0 auto;" aria-label="Financial year">
                                 <?php foreach ($financialYearOptions as $fyOption) { ?>
                                     <option value="<?= htmlspecialchars((string) $fyOption['value'], ENT_QUOTES, 'UTF-8') ?>" <?= $fyFilter === (string) $fyOption['value'] ? 'selected' : '' ?>><?= htmlspecialchars((string) $fyOption['label'], ENT_QUOTES, 'UTF-8') ?></option>
@@ -5034,12 +5174,11 @@ foreach ($destinationLookup as $destId => $destName) {
                                             <th style="width:70px;">Age</th>
                                             <th>Passport</th>
                                             <th style="width:120px;">Documents</th>
-                                            <th class="js-ct-pax-status-col" style="width:120px;">Status</th>
                                             <th style="width:120px;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="ctPaxRows">
-                                        <tr class="ct-pax-empty"><td colspan="8">No travellers yet. Click Add Traveller.</td></tr>
+                                        <tr class="ct-pax-empty"><td colspan="7">No travellers yet. Click Add Traveller.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -6649,6 +6788,12 @@ foreach ($destinationLookup as $destId => $destName) {
                         break;
                     }
                 }
+                if (leadsListStage && nextStage !== leadsListStage) {
+                    window.location.href = crmLeadsListUrl({ stage: leadsListStage, page: 1 });
+                    return;
+                }
+                leadsShiftStageCount(previousStage, -1);
+                leadsShiftStageCount(nextStage, 1);
             } else {
                 window.alert((res && res.message) ? res.message : 'Could not update stage.');
                 $sel.val(previousStage);
@@ -7691,10 +7836,26 @@ foreach ($destinationLookup as $destId => $destName) {
         window.location.href = crmLeadsListUrl({ fy: fy, page: 1 });
     });
 
-    $('.leads-stage-select').on('change', function () {
-        var stage = String($(this).val() || '');
-        if (stage === leadsListStage) {
+    function leadsShiftStageCount(stage, delta) {
+        stage = String(stage || '');
+        if (!stage || !delta) {
             return;
+        }
+        var $badge = $('.js-leads-stage-filter[data-stage="' + stage + '"] .leads-stage-count');
+        if (!$badge.length) {
+            return;
+        }
+        var next = Math.max(0, (parseInt($badge.text(), 10) || 0) + delta);
+        $badge.text(String(next));
+    }
+
+    $(document).on('click', '.js-leads-stage-filter', function () {
+        var stage = String($(this).attr('data-stage') || '');
+        if (!stage) {
+            return;
+        }
+        if (stage === leadsListStage) {
+            stage = '';
         }
         window.location.href = crmLeadsListUrl({ stage: stage, page: 1 });
     });
