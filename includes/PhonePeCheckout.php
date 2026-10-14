@@ -94,13 +94,15 @@ class PhonePeCheckout
                 'redirectUrl' => $redirectUrl,
             ],
             'paymentModeConfig' => [
+                'version' => 'V2',
                 'enabledPaymentModes' => [
-                    ['type' => 'UPI_QR'],
-                    ['type' => 'UPI_INTENT'],
-                    ['type' => 'UPI_COLLECT'],
+                    [
+                        'type' => 'UPI',
+                        'flows' => ['INTENT', 'QR', 'COLLECT'],
+                    ],
                     [
                         'type' => 'CARD',
-                        'cardTypes' => ['DEBIT_CARD', 'CREDIT_CARD'],
+                        'types' => ['DEBIT_CARD', 'CREDIT_CARD'],
                     ],
                     ['type' => 'NET_BANKING'],
                 ],

@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/includes/payment_helpers.php';
+payment_redirect_admin_host_to_public();
+
 session_start();
 
 require_once __DIR__ . '/admin/config/database.php';

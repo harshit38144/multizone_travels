@@ -72,12 +72,24 @@ function payment_is_https_request(): bool
     return false;
 }
 
+function payment_request_host(): string
+{
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    return (string) preg_replace('/:\d+$/', '', $host);
+}
+
 function payment_public_base_url(): string
 {
     $cfg = payment_load_config();
     $configured = trim((string) ($cfg['public_site_url'] ?? ''));
     if ($configured !== '') {
         return rtrim($configured, '/');
+    }
+
+    // PhonePe allows one website URL. Customer payment pages must use that host
+    // so the UPI QR is not blocked. The admin CRM stays on its own subdomain.
+    if (payment_request_host() === 'admin.multizonetravels.com') {
+        return 'https://www.multizonetravels.com';
     }
 
     $scheme = payment_is_https_request() ? 'https' : 'http';
@@ -91,6 +103,22 @@ function payment_public_base_url(): string
         return $scheme . '://' . $host;
     }
     return $scheme . '://' . $host . $dir;
+}
+
+/**
+ * Send payment-link opens from the admin host to the public site before PhonePe starts.
+ */
+function payment_redirect_admin_host_to_public(): void
+{
+    if (payment_request_host() !== 'admin.multizonetravels.com') {
+        return;
+    }
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+    if ($uri === '' || $uri[0] !== '/') {
+        $uri = '/' . $uri;
+    }
+    header('Location: ' . payment_public_base_url() . $uri, true, 302);
+    exit;
 }
 
 function payment_return_url(): string
@@ -290,7 +318,9 @@ function payment_redirect_to_payu(string $formAction, array $fields): void
 }
 
 /**
- * Same-window redirect page (PhonePe rejects checkout opened in a new tab).
+ * Open PhonePe PayPage in an iframe on this site.
+ * A direct jump to mercury.phonepe.com drops the merchant referrer, and PhonePe then
+ * answers the QR request with INTERNAL_SECURITY_BLOCK so "Click to view QR" stays blank.
  *
  * @return never
  */
@@ -304,9 +334,39 @@ function payment_redirect_to_phonepe(string $phonepeUrl): void
         echo 'Could not redirect to payment gateway.';
         exit;
     }
-    // A real browser redirect lets PhonePe draw the UPI QR. A script redirect or a new tab leaves a dead "Click to view QR" placeholder.
-    header('Referrer-Policy: origin-when-cross-origin');
-    header('Location: ' . $phonepeUrl, true, 302);
+
+    $tokenJs = json_encode($phonepeUrl, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    $returnJs = json_encode(payment_return_url(), JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    if ($tokenJs === false || $returnJs === false) {
+        http_response_code(500);
+        echo 'Could not redirect to payment gateway.';
+        exit;
+    }
+
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Content-Type: text/html; charset=UTF-8');
+    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
+    echo '<meta name="viewport" content="width=device-width,initial-scale=1">';
+    echo '<meta name="referrer" content="strict-origin-when-cross-origin">';
+    echo '<title>Secure payment</title>';
+    echo '<style>html,body{margin:0;height:100%;background:#f4f7fb;font-family:system-ui,sans-serif}';
+    echo '.box{min-height:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;color:#64748b}';
+    echo '.spin{width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#5f259f;border-radius:50%;animation:r 1s linear infinite;margin:0 auto 1rem}';
+    echo '@keyframes r{to{transform:rotate(360deg)}}a{color:#5f259f}</style></head><body>';
+    echo '<div class="box" id="wait"><div><div class="spin"></div><p>Opening secure PhonePe checkout…</p>';
+    echo '<p id="fallback" hidden><a id="continuePay" href="#">Continue to payment</a></p></div></div>';
+    echo '<script src="https://mercury.phonepe.com/web/bundle/checkout.js"></script>';
+    echo '<script>';
+    echo 'var tokenUrl=' . $tokenJs . ';var returnUrl=' . $returnJs . ';';
+    echo 'function onPayDone(response){if(response==="CONCLUDED"){window.location.replace(returnUrl);return;}';
+    echo 'if(response==="USER_CANCEL"){window.location.replace(window.location.href);}}';
+    echo 'function openPay(){if(window.PhonePeCheckout&&typeof window.PhonePeCheckout.transact==="function"){';
+    echo 'var wait=document.getElementById("wait");if(wait){wait.style.display="none";}';
+    echo 'window.PhonePeCheckout.transact({tokenUrl:tokenUrl,callback:onPayDone,type:"IFRAME"});return;}';
+    echo 'var link=document.getElementById("continuePay");var box=document.getElementById("fallback");';
+    echo 'if(link){link.href=tokenUrl;}if(box){box.hidden=false;}}';
+    echo 'if(document.readyState==="complete"){openPay();}else{window.addEventListener("load",openPay);}';
+    echo '</script></body></html>';
     exit;
 }
 
