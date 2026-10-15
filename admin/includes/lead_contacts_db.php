@@ -113,6 +113,52 @@ function lcEnsureContactTables(mysqli $conn)
             $conn->query("ALTER TABLE `{$table}` ADD `profile_photo` VARCHAR(255) DEFAULT NULL AFTER `photo`");
         }
     }
+
+    lcEnsureManualContactPrimaryKey($conn);
+}
+
+function lcEnsureManualContactPrimaryKey(mysqli $conn): void
+{
+    $colRes = $conn->query("SHOW COLUMNS FROM `crm_contacts` LIKE 'id'");
+    $col = $colRes ? $colRes->fetch_assoc() : null;
+    if (!$col) {
+        return;
+    }
+    $hasAi = stripos((string) ($col['Extra'] ?? ''), 'auto_increment') !== false;
+    $pkRes = $conn->query("SHOW INDEX FROM `crm_contacts` WHERE Key_name = 'PRIMARY' AND Column_name = 'id'");
+    $hasPk = $pkRes && $pkRes->num_rows > 0;
+    if ($hasPk && $hasAi) {
+        return;
+    }
+
+    $bad = $conn->query('SELECT `id` FROM `crm_contacts` GROUP BY `id` HAVING COUNT(*) > 1 OR `id` = 0 LIMIT 1');
+    if ($bad && $bad->num_rows > 0) {
+        $maxRes = $conn->query('SELECT COALESCE(MAX(`id`), 0) AS max_id FROM `crm_contacts`');
+        $nextId = 1;
+        if ($maxRes && ($maxRow = $maxRes->fetch_assoc())) {
+            $nextId = max(1, (int) $maxRow['max_id'] + 1);
+        }
+        $zero = $conn->query('SELECT COUNT(*) AS c FROM `crm_contacts` WHERE `id` = 0');
+        $zeroCount = $zero ? (int) ($zero->fetch_assoc()['c'] ?? 0) : 0;
+        if ($zeroCount === 1) {
+            $stmt = $conn->prepare('UPDATE `crm_contacts` SET `id` = ? WHERE `id` = 0');
+            if ($stmt) {
+                $stmt->bind_param('i', $nextId);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+        $bad = $conn->query('SELECT `id` FROM `crm_contacts` GROUP BY `id` HAVING COUNT(*) > 1 OR `id` = 0 LIMIT 1');
+        if ($bad && $bad->num_rows > 0) {
+            return;
+        }
+    }
+
+    if (!$hasPk) {
+        $conn->query('ALTER TABLE `crm_contacts` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT, ADD PRIMARY KEY (`id`)');
+    } elseif (!$hasAi) {
+        $conn->query('ALTER TABLE `crm_contacts` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT');
+    }
 }
 
 function lcJson($success, $message = '', $extra = [])
@@ -377,11 +423,179 @@ function lcListAllContacts(mysqli $conn)
         }
     }
 
+    $counts = lcReferralCountsByContact($conn);
+    foreach ($items as &$item) {
+        $key = (string) ($item['source'] ?? '') . ':' . (int) ($item['ref_id'] ?? 0);
+        $item['referral_count'] = (int) ($counts[$key] ?? 0);
+    }
+    unset($item);
+
     usort($items, function ($a, $b) {
         return strcmp($b['created_at'] ?? '', $a['created_at'] ?? '');
     });
 
     return $items;
+}
+
+/**
+ * Active leads that point at a saved contact. Manual referral names are excluded.
+ *
+ * @return array<string, int> keys are "lead:{id}" or "manual:{id}"
+ */
+function lcReferralCountsByContact(mysqli $conn): array
+{
+    $table = $conn->query("SHOW TABLES LIKE 'crm_leads'");
+    if (!$table || $table->num_rows === 0) {
+        return [];
+    }
+    $col = $conn->query("SHOW COLUMNS FROM `crm_leads` LIKE 'referred_contact_id'");
+    if (!$col || $col->num_rows === 0) {
+        return [];
+    }
+
+    $where = "`referred_contact_id` IS NOT NULL AND `referred_contact_id` > 0 AND `referred_contact_source` IN ('lead', 'manual')";
+    $deleted = $conn->query("SHOW COLUMNS FROM `crm_leads` LIKE 'deleted_at'");
+    if ($deleted && $deleted->num_rows > 0) {
+        $where .= ' AND `deleted_at` IS NULL';
+    }
+
+    $counts = [];
+    $res = $conn->query(
+        'SELECT `referred_contact_source`, `referred_contact_id`, COUNT(*) AS c
+         FROM `crm_leads`
+         WHERE ' . $where . '
+         GROUP BY `referred_contact_source`, `referred_contact_id`'
+    );
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $source = (string) ($row['referred_contact_source'] ?? '');
+            $id = (int) ($row['referred_contact_id'] ?? 0);
+            if ($id > 0 && ($source === 'lead' || $source === 'manual')) {
+                $counts[$source . ':' . $id] = (int) ($row['c'] ?? 0);
+            }
+        }
+    }
+
+    return $counts;
+}
+
+/**
+ * Contacts shown on Lead Contacts, for the Create Lead referral dropdown.
+ *
+ * @return list<array{key: string, source: string, ref_id: int, name: string, label: string, sub_label: string}>
+ */
+function lcListReferralContacts(mysqli $conn, string $query, int $limit = 20): array
+{
+    lcEnsureContactTables($conn);
+    $limit = min(30, max(1, $limit));
+    $query = trim($query);
+    if (function_exists('mb_strlen') && mb_strlen($query) > 80) {
+        $query = mb_substr($query, 0, 80);
+    } elseif (strlen($query) > 80) {
+        $query = substr($query, 0, 80);
+    }
+
+    $items = [];
+    $like = '%' . $query . '%';
+
+    $leadTable = $conn->query("SHOW TABLES LIKE 'crm_leads'");
+    if ($leadTable && $leadTable->num_rows > 0) {
+        if ($query === '') {
+            $stmt = $conn->prepare(
+                'SELECT `id`, `customer_name`, `customer_phone`, `customer_email`
+                 FROM `crm_leads`
+                 ORDER BY `id` DESC
+                 LIMIT ?'
+            );
+            if ($stmt) {
+                $stmt->bind_param('i', $limit);
+            }
+        } else {
+            $stmt = $conn->prepare(
+                'SELECT `id`, `customer_name`, `customer_phone`, `customer_email`
+                 FROM `crm_leads`
+                 WHERE `customer_name` LIKE ? OR `customer_phone` LIKE ? OR `customer_email` LIKE ?
+                 ORDER BY `id` DESC
+                 LIMIT ?'
+            );
+            if ($stmt) {
+                $stmt->bind_param('sssi', $like, $like, $like, $limit);
+            }
+        }
+        if ($stmt) {
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($res && ($row = $res->fetch_assoc())) {
+                $name = trim((string) ($row['customer_name'] ?? ''));
+                $phone = trim((string) ($row['customer_phone'] ?? ''));
+                $email = trim((string) ($row['customer_email'] ?? ''));
+                if ($name === '' && $phone === '' && $email === '') {
+                    continue;
+                }
+                $sub = trim($phone . ($email !== '' ? ($phone !== '' ? ' · ' : '') . $email : ''));
+                $items[] = [
+                    'key' => 'lead:' . (int) $row['id'],
+                    'source' => 'lead',
+                    'ref_id' => (int) $row['id'],
+                    'name' => $name !== '' ? $name : ($phone !== '' ? $phone : $email),
+                    'label' => $name !== '' ? $name : ($phone !== '' ? $phone : $email),
+                    'sub_label' => ($sub !== '' ? $sub . ' · ' : '') . 'Lead',
+                ];
+            }
+            $stmt->close();
+        }
+    }
+
+    if ($query === '') {
+        $stmt = $conn->prepare(
+            'SELECT `id`, `title`, `first_name`, `last_name`, `email`, `mobile`
+             FROM `crm_contacts`
+             ORDER BY `id` DESC
+             LIMIT ?'
+        );
+        if ($stmt) {
+            $stmt->bind_param('i', $limit);
+        }
+    } else {
+        $stmt = $conn->prepare(
+            'SELECT `id`, `title`, `first_name`, `last_name`, `email`, `mobile`
+             FROM `crm_contacts`
+             WHERE `first_name` LIKE ? OR `last_name` LIKE ? OR `email` LIKE ? OR `mobile` LIKE ?
+             ORDER BY `id` DESC
+             LIMIT ?'
+        );
+        if ($stmt) {
+            $stmt->bind_param('ssssi', $like, $like, $like, $like, $limit);
+        }
+    }
+    if ($stmt) {
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($res && ($row = $res->fetch_assoc())) {
+            $name = lcDisplayName($row);
+            $phone = trim((string) ($row['mobile'] ?? ''));
+            $email = trim((string) ($row['email'] ?? ''));
+            if ($name === '' && $phone === '' && $email === '') {
+                continue;
+            }
+            $sub = trim($phone . ($email !== '' ? ($phone !== '' ? ' · ' : '') . $email : ''));
+            $items[] = [
+                'key' => 'manual:' . (int) $row['id'],
+                'source' => 'manual',
+                'ref_id' => (int) $row['id'],
+                'name' => $name !== '' ? $name : ($phone !== '' ? $phone : $email),
+                'label' => $name !== '' ? $name : ($phone !== '' ? $phone : $email),
+                'sub_label' => ($sub !== '' ? $sub . ' · ' : '') . 'Contact',
+            ];
+        }
+        $stmt->close();
+    }
+
+    usort($items, function ($a, $b) {
+        return strcasecmp((string) ($a['label'] ?? ''), (string) ($b['label'] ?? ''));
+    });
+
+    return array_slice($items, 0, $limit);
 }
 
 /**

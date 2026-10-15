@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../includes/lead_uid.php';
+require_once __DIR__ . '/../includes/lead_db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -42,11 +43,21 @@ if (!$conn->query($createTableSql)) {
     leadJsonResponse(false, 'Could not prepare leads table. ' . $conn->error);
 }
 
+crmEnsureLeadReferralColumns($conn);
+
 $customerName = trim($_POST['customer_name'] ?? '');
 $customerPhone = trim($_POST['customer_phone'] ?? '');
 $customerEmail = trim($_POST['customer_email'] ?? '');
 $leadSource = trim($_POST['lead_source'] ?? '');
-$referredBy = trim($_POST['referred_by'] ?? '');
+$referral = crmResolveLeadReferral(
+    $conn,
+    trim((string) ($_POST['referred_by'] ?? '')),
+    trim((string) ($_POST['referred_contact_source'] ?? '')),
+    (int) ($_POST['referred_contact_id'] ?? 0)
+);
+$referredBy = $referral['referred_by'];
+$referredContactSource = $referral['source'];
+$referredContactId = $referral['id'];
 $assignTo = trim($_POST['assign_to'] ?? '');
 $services = $_POST['services'] ?? [];
 $itineraryTotalNights = max(0, (int) ($_POST['itinerary_total_nights'] ?? 0));
@@ -96,9 +107,10 @@ if ($assignTo === '__self__') {
 }
 
 $sql = "INSERT INTO `crm_leads`
-    (`lead_uid`, `customer_name`, `customer_phone`, `customer_email`, `lead_source`, `referred_by`, `assign_to`,
+    (`lead_uid`, `customer_name`, `customer_phone`, `customer_email`, `lead_source`, `referred_by`,
+     `referred_contact_source`, `referred_contact_id`, `assign_to`,
      `services`, `itinerary_total_nights`, `itinerary_total_days`, `payload_json`, `created_by_id`, `created_by_name`)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
@@ -106,13 +118,15 @@ if (!$stmt) {
 }
 
 $stmt->bind_param(
-    'ssssssssiisis',
+    'sssssssissiisis',
     $leadUid,
     $customerName,
     $customerPhone,
     $customerEmail,
     $leadSource,
     $referredBy,
+    $referredContactSource,
+    $referredContactId,
     $assignTo,
     $servicesJson,
     $itineraryTotalNights,

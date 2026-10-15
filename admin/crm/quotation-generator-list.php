@@ -692,7 +692,7 @@ function qlDestinationLine($destination, $nights)
                 <div class="modal-header py-2 ct-modal-header">
                     <div>
                         <h5 class="modal-title mb-0" id="confirmTourModalLabel">Confirm Tour</h5>
-                        <p class="ct-subtitle mb-0">Review traveller details, supplier services and confirm the tour.</p>
+                        <!-- <p class="ct-subtitle mb-0">Review traveller details, supplier services and confirm the tour.</p> -->
                     </div>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>

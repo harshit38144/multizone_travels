@@ -179,26 +179,44 @@ if ($mode === 'hotels') {
     ]);
 }
 
-$sql = "SELECT DISTINCT c.id, c.name
-    FROM crm_hotels h
-    INNER JOIN cities c ON c.id = h.city_id
-    WHERE h.is_active = 1";
-$params = [];
-$types = '';
-
-if ($destinationId > 0) {
-    $sql .= ' AND h.destination_id = ?';
-    $types .= 'i';
-    $params[] = $destinationId;
+if ($destinationId <= 0) {
+    qHotelsJson(true, 'OK', [
+        'cities' => [],
+        'destination_id' => 0,
+    ]);
 }
 
+$like = '%' . $query . '%';
+$sql = "SELECT id, name, country_name FROM (
+    SELECT c.id, c.name, COALESCE(co.name, '') AS country_name
+    FROM crm_hotels h
+    INNER JOIN cities c ON c.id = h.city_id
+    LEFT JOIN countries co ON co.id = c.country_id
+    WHERE h.is_active = 1 AND h.destination_id = ? AND h.city_id > 0";
+$types = 'i';
+$params = [$destinationId];
 if ($query !== '') {
     $sql .= ' AND c.name LIKE ?';
     $types .= 's';
-    $params[] = '%' . $query . '%';
+    $params[] = $like;
 }
-
-$sql .= ' ORDER BY c.name ASC LIMIT ' . (int) $limit;
+$sql .= "
+    UNION
+    SELECT c.id, c.name, COALESCE(co.name, '') AS country_name
+    FROM cities c
+    INNER JOIN countries co ON co.id = c.country_id
+    INNER JOIN destinations d ON d.id = ?
+    WHERE COALESCE(c.is_deleted, 0) = 0
+      AND LOWER(TRIM(c.name)) = LOWER(TRIM(d.name))
+      AND LOWER(TRIM(co.name)) = LOWER(TRIM(d.country))";
+$types .= 'i';
+$params[] = $destinationId;
+if ($query !== '') {
+    $sql .= ' AND c.name LIKE ?';
+    $types .= 's';
+    $params[] = $like;
+}
+$sql .= ') dest_cities ORDER BY name ASC LIMIT ' . (int) $limit;
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
@@ -217,6 +235,7 @@ if ($res) {
         $cities[] = [
             'id' => (int) ($row['id'] ?? 0),
             'name' => (string) ($row['name'] ?? ''),
+            'country_name' => (string) ($row['country_name'] ?? ''),
         ];
     }
 }

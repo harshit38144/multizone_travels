@@ -1519,8 +1519,18 @@
             '</div>' +
             actionCol +
             '</div>' +
-            '<input type="hidden" class="f-hand-bag" value="' + esc(d.hand_baggage) + '">' +
-            '<input type="hidden" class="f-checkin-bag" value="' + esc(d.checkin_baggage) + '">' +
+            '<div class="q-flight-baggage">' +
+            '<label class="q-flight-bag">' +
+            '<i class="fas fa-briefcase" aria-hidden="true"></i>' +
+            '<span>Hand</span>' +
+            '<input type="text" class="form-control form-control-sm f-hand-bag" value="' + esc(d.hand_baggage) + '" placeholder="7 Kg" title="Hand baggage">' +
+            '</label>' +
+            '<label class="q-flight-bag">' +
+            '<i class="fas fa-suitcase" aria-hidden="true"></i>' +
+            '<span>Check-in</span>' +
+            '<input type="text" class="form-control form-control-sm f-checkin-bag" value="' + esc(d.checkin_baggage) + '" placeholder="15 Kg" title="Check-in baggage">' +
+            '</label>' +
+            '</div>' +
             '</div>' +
             '</div>';
     }
@@ -2335,6 +2345,27 @@
         }
     }
 
+    /** Option 01 starts with one blank hotel row when Hotel Details is opened. */
+    function ensureDefaultHotelRow() {
+        ensureHotelCategoriesReady();
+        var $panel = getHotelCategoryPanels().filter('.is-active').first();
+        if (!$panel.length) {
+            $panel = getHotelCategoryPanels().first();
+        }
+        if (!$panel.length) {
+            $panel = addHotelCategory();
+        }
+        if (!$panel || !$panel.length || $panel.find('.q-hotel-row').length) {
+            return;
+        }
+        var $row = $(hotelRowHtml(buildNewHotelRowDefaults($panel)));
+        $panel.find('.q-hotel-rows').append($row);
+        initHotelRow($row);
+        qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select' });
+        syncHotelCheckoutFromNights($row);
+        renderPricingSheets();
+    }
+
     function addHotelCategory(label) {
         ensureHotelCategoriesReady();
         renumberHotelCategoryLabels();
@@ -2604,7 +2635,7 @@
             return;
         }
 
-        fetchCityMasterCities(typed, function (cities) {
+        fetchQuotationHotelCities(typed, function (cities) {
             var $list = $('<div class="q-hotel-menu-list"></div>');
             if (!cities.length) {
                 if (typed) {
@@ -2613,8 +2644,7 @@
                     );
                 } else {
                     $list.append(
-                        '<div class="q-hotel-menu-empty">No cities in City Master' +
-                        (dest.name ? ' for ' + esc(dest.name) : '') + '</div>'
+                        '<div class="q-hotel-menu-empty">No cities for ' + esc(dest.name) + '</div>'
                     );
                 }
             } else {
@@ -3111,7 +3141,7 @@
             return;
         }
         if (cityName) {
-            fetchCityMasterCities(cityName, function (cities) {
+            fetchQuotationHotelCities(cityName, function (cities) {
                 var exact = cities.find(function (c) {
                     return String(c.name).toLowerCase() === cityName.toLowerCase();
                 });
@@ -11555,6 +11585,9 @@
     }
 
     function onWizardStepShown(step) {
+        if (step === 3) {
+            ensureDefaultHotelRow();
+        }
         if (step === 4) {
             refreshAiItineraryMeta();
             if (!$('#qItineraryDays .q-day-card').length) {
@@ -13704,13 +13737,12 @@
                 if ($('#qPreviewModal').hasClass('show')) {
                     $('#qPreviewModal').modal('hide');
                 }
-                setTimeout(function () {
-                    if (res.id) {
-                        window.location.href = absUrl('crm/quotation_generator.php?id=' + encodeURIComponent(res.id));
-                    } else {
-                        window.location.href = absUrl('crm/quotation-generator-list.php');
-                    }
-                }, 900);
+                var savedLeadId = parseInt(res.lead_id, 10) || parseInt($('#q_lead_id').val(), 10) || 0;
+                var leadsUrl = 'crm/leads.php';
+                if (savedLeadId > 0) {
+                    leadsUrl += '?highlight=' + encodeURIComponent(String(savedLeadId));
+                }
+                window.location.href = absUrl(leadsUrl);
             });
         }
 

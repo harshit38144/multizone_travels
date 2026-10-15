@@ -141,7 +141,7 @@ if (empty($leadSourceOptions)) {
     data-departure-search-url="ajax/mmt_autosuggest.php"
     data-save-url="<?= $leadFormPublicIntake ? htmlspecialchars((string) ($leadFormIntakeSubmitUrl ?? 'ajax/submit_lead_intake.php'), ENT_QUOTES, 'UTF-8') : 'crm/ajax/save_lead.php' ?>"
     data-next-dest-order="<?= (int) ($nextDestOrder ?? 1) ?>"
-    <?= !$leadFormPublicIntake ? 'data-contact-search-url="ajax/search_contacts_for_payment.php"' : '' ?>
+    <?= !$leadFormPublicIntake ? 'data-contact-search-url="ajax/search_contacts_for_payment.php" data-referral-search-url="crm/ajax/search_referral_contacts.php" data-inline-child-bed="1"' : '' ?>
     <?= $leadFormPublicIntake ? 'data-lead-intake="1" data-intake-token="' . htmlspecialchars((string) ($leadFormIntakeToken ?? ''), ENT_QUOTES, 'UTF-8') . '" data-intake-enabled-fields="' . htmlspecialchars(json_encode($leadFormIntakeEnabledFields), ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
 
     <?php
@@ -296,11 +296,18 @@ if (empty($leadSourceOptions)) {
                     <div class="form-row">
                         <div class="form-group col-md-6 js-referred-by-wrap">
                             <label for="<?= $idPfx ?>ReferredBy">Referred By</label>
-                            <div class="lead-field-icon">
-                                <i class="fas fa-user lead-field-icon-glyph" aria-hidden="true"></i>
-                                <input type="text" class="form-control" id="<?= $idPfx ?>ReferredBy" name="referred_by"
-                                    placeholder="Enter referred by name">
+                            <div class="lead-contact-combobox js-referral-combobox">
+                                <div class="lead-field-icon">
+                                    <i class="fas fa-user lead-field-icon-glyph" aria-hidden="true"></i>
+                                    <input type="text" class="form-control js-referral-search js-no-browser-autofill" id="<?= $idPfx ?>ReferredBy"
+                                        placeholder="Search a contact or type a name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                                </div>
+                                <input type="hidden" name="referred_by" class="js-referral-name" value="">
+                                <input type="hidden" name="referred_contact_source" class="js-referral-source" value="">
+                                <input type="hidden" name="referred_contact_id" class="js-referral-id" value="">
+                                <div class="lead-contact-menu js-referral-menu" style="display:none;"></div>
                             </div>
+                            <!-- <small class="form-text text-muted mb-0">Choose a saved contact, or type a name. Typed names stay on this lead only.</small> -->
                         </div>
                         <div class="form-group col-md-6">
                             <label class="label-req">Assign To</label>
@@ -346,7 +353,7 @@ if (empty($leadSourceOptions)) {
                         <?php
                         $lfServiceTiles = [];
                         if (!$leadFormPublicIntake || crmLeadIntakeShowServiceCheckbox($leadFormIntakeEnabledFields, 'tour_package')) {
-                            $lfServiceTiles[] = ['tour_package', 'SvcTourPackage', 'fas fa-suitcase-rolling', 'Tour Package'];
+                            $lfServiceTiles[] = ['tour_package', 'SvcTourPackage', 'fas fa-suitcase-rolling', 'Tour'];
                         }
                         if (!$leadFormPublicIntake) {
                             $lfServiceTiles[] = ['flight', 'SvcFlight', 'fas fa-plane', 'Flight'];
@@ -1386,9 +1393,179 @@ if (empty($leadSourceOptions)) {
                     });
             }
 
+            var referralLookupTimer = null;
+            var referralLookupSeq = 0;
+
+            function hideReferralMenu() {
+                $form.find('.js-referral-menu').hide().empty();
+            }
+
+            function syncReferralFields() {
+                var $search = $form.find('.js-referral-search');
+                if (!$search.length) {
+                    return;
+                }
+                var name = jQuery.trim($search.val());
+                var linkedName = String($search.attr('data-linked-name') || '');
+                var source = String($form.find('.js-referral-source').val() || '');
+                var id = parseInt($form.find('.js-referral-id').val(), 10) || 0;
+                if (name === '') {
+                    source = '';
+                    id = 0;
+                    linkedName = '';
+                } else if (id > 0 && name !== linkedName) {
+                    source = '';
+                    id = 0;
+                    linkedName = '';
+                }
+                $search.attr('data-linked-name', linkedName);
+                $form.find('.js-referral-name').val(name);
+                $form.find('.js-referral-source').val(id > 0 ? source : '');
+                $form.find('.js-referral-id').val(id > 0 ? String(id) : '');
+            }
+
+            function selectReferralContact(contact) {
+                var $search = $form.find('.js-referral-search');
+                var name = jQuery.trim((contact && (contact.name || contact.label)) || '');
+                var source = contact && (contact.source === 'manual' || contact.source === 'lead') ? contact.source : '';
+                var id = contact ? (parseInt(contact.ref_id, 10) || 0) : 0;
+                $search.val(name);
+                $search.attr('data-linked-name', id > 0 ? name : '');
+                $form.find('.js-referral-name').val(name);
+                $form.find('.js-referral-source').val(id > 0 ? source : '');
+                $form.find('.js-referral-id').val(id > 0 ? String(id) : '');
+                hideReferralMenu();
+            }
+
+            function selectManualReferral(name) {
+                name = jQuery.trim(name || '');
+                var $search = $form.find('.js-referral-search');
+                $search.val(name);
+                $search.attr('data-linked-name', '');
+                $form.find('.js-referral-name').val(name);
+                $form.find('.js-referral-source').val('');
+                $form.find('.js-referral-id').val('');
+                hideReferralMenu();
+            }
+
+            function renderReferralMenu(items, query) {
+                var $menu = $form.find('.js-referral-menu');
+                if (!$menu.length) {
+                    return;
+                }
+                $menu.empty();
+                var q = jQuery.trim(query || '');
+                if (!items || !items.length) {
+                    if (q === '') {
+                        $menu.append(jQuery('<div class="lead-contact-empty"></div>').text('No saved contacts yet. Type a name to keep it on this lead.'));
+                    }
+                } else {
+                    items.forEach(function (item) {
+                        var $btn = jQuery('<button type="button" class="lead-contact-item"></button>');
+                        $btn.append(jQuery('<span class="lead-contact-item-title"></span>').text(item.label || item.name || 'Contact'));
+                        if (item.sub_label) {
+                            $btn.append(jQuery('<span class="lead-contact-item-meta"></span>').text(item.sub_label));
+                        }
+                        $btn.on('mousedown', function (e) {
+                            e.preventDefault();
+                            selectReferralContact(item);
+                        });
+                        $menu.append($btn);
+                    });
+                }
+                if (q !== '') {
+                    var $manual = jQuery('<button type="button" class="lead-contact-item is-manual"></button>');
+                    $manual.append(jQuery('<span class="lead-contact-item-title"></span>').text('Use "' + q + '" on this lead only'));
+                    $manual.append(jQuery('<span class="lead-contact-item-meta"></span>').text('Does not create a contact'));
+                    $manual.on('mousedown', function (e) {
+                        e.preventDefault();
+                        selectManualReferral(q);
+                    });
+                    $menu.append($manual);
+                }
+                $menu.show();
+            }
+
+            function searchReferralContacts(query, callback) {
+                var seq = ++referralLookupSeq;
+                var searchUrl = $form.attr('data-referral-search-url') || 'crm/ajax/search_referral_contacts.php';
+                jQuery.getJSON(searchUrl, { q: query || '', limit: 20 })
+                    .done(function (res) {
+                        if (seq !== referralLookupSeq) {
+                            return;
+                        }
+                        callback((res && res.success && jQuery.isArray(res.data)) ? res.data : []);
+                    })
+                    .fail(function () {
+                        if (seq !== referralLookupSeq) {
+                            return;
+                        }
+                        callback([]);
+                    });
+            }
+
+            function runReferralLookup() {
+                var $search = $form.find('.js-referral-search');
+                if (!$search.length) {
+                    return;
+                }
+                var query = jQuery.trim($search.val());
+                clearTimeout(referralLookupTimer);
+                referralLookupTimer = setTimeout(function () {
+                    searchReferralContacts(query, function (items) {
+                        renderReferralMenu(items, query);
+                    });
+                }, query === '' ? 0 : 220);
+            }
+
+            function applyReferralPrefill(prefill) {
+                var $search = $form.find('.js-referral-search');
+                if (!$search.length || !prefill) {
+                    return;
+                }
+                var name = prefill.referred_by != null ? String(prefill.referred_by) : '';
+                var source = prefill.referred_contact_source != null ? String(prefill.referred_contact_source) : '';
+                var id = parseInt(prefill.referred_contact_id, 10) || 0;
+                if (source !== 'lead' && source !== 'manual') {
+                    source = '';
+                    id = 0;
+                }
+                if (id <= 0) {
+                    source = '';
+                }
+                $search.val(name);
+                $search.attr('data-linked-name', id > 0 ? name : '');
+                $form.find('.js-referral-name').val(name);
+                $form.find('.js-referral-source').val(id > 0 ? source : '');
+                $form.find('.js-referral-id').val(id > 0 ? String(id) : '');
+            }
+
+            function initReferralLookup() {
+                if (isIntake) {
+                    return;
+                }
+                var $search = $form.find('.js-referral-search');
+                if (!$search.length) {
+                    return;
+                }
+                $search.off('.referralLookup')
+                    .on('focus.referralLookup click.referralLookup', function () {
+                        runReferralLookup();
+                    })
+                    .on('input.referralLookup', function () {
+                        syncReferralFields();
+                        runReferralLookup();
+                    })
+                    .on('blur.referralLookup', function () {
+                        syncReferralFields();
+                        setTimeout(hideReferralMenu, 180);
+                    });
+            }
+
             jQuery(document).off('mousedown.leadContactLookupGlobal').on('mousedown.leadContactLookupGlobal', function (e) {
                 if (!jQuery(e.target).closest('.lead-contact-combobox').length) {
                     hideLeadContactMenus();
+                    hideReferralMenu();
                 }
             });
 
@@ -4198,6 +4375,7 @@ if (empty($leadSourceOptions)) {
             $form.off('submit.leadSave').on('submit.leadSave', function (e) {
                 e.preventDefault();
                 resetLeadSaveAlert();
+                syncReferralFields();
 
                 if (leadPickerApi.syncChildBedTypesFromDom) {
                     leadPickerApi.syncChildBedTypesFromDom();
@@ -4422,7 +4600,7 @@ if (empty($leadSourceOptions)) {
                 }
                 syncTravelDetailsByService();
 
-                var scalarKeys = ['customer_initial', 'customer_name', 'customer_phone', 'customer_email', 'lead_source', 'referred_by', 'assign_to',
+                var scalarKeys = ['customer_initial', 'customer_name', 'customer_phone', 'customer_email', 'lead_source', 'assign_to',
                     'tp_travel_date', 'tp_departure', 'tp_arrival', 'tp_budget', 'tp_notes',
                     'cruise_embark_date', 'cruise_line', 'cruise_cabin', 'cruise_pax', 'cruise_port',
                     'flight_from', 'flight_to', 'flight_depart_date', 'flight_return_date', 'flight_pax', 'flight_class',
@@ -4437,6 +4615,7 @@ if (empty($leadSourceOptions)) {
                         setVal(k, prefill[k]);
                     }
                 });
+                applyReferralPrefill(prefill);
 
                 if (prefill.tp_departure != null && prefill.tp_departure !== '') {
                     var depCode = String(prefill.tp_departure_code || '').trim();
@@ -4599,6 +4778,7 @@ if (empty($leadSourceOptions)) {
 
             initLeadDatePickers();
             initLeadContactLookup();
+            initReferralLookup();
 
             try {
                 var prefillRaw = $form.attr('data-lead-prefill');

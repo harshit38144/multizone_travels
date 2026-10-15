@@ -13,6 +13,7 @@ require_once __DIR__ . '/../mail/includes/mail_service.php';
 crmEnsureSequentialLeadUids($conn);
 crmEnsureLeadDeleteColumns($conn);
 crmEnsureLeadStageColumn($conn);
+crmEnsureLeadReferralColumns($conn);
 crmEnsureAdminUiSettingsTable($conn);
 
 crmEnsureQuotationTables($conn);
@@ -227,6 +228,8 @@ function crmLeadsFormatRow(array $row, array $destinationLookup): array
         'customer_email' => (string) ($row['customer_email'] ?? ''),
         'lead_source' => $leadSource,
         'referred_by' => $referredBy,
+        'referred_contact_source' => (string) ($row['referred_contact_source'] ?? ''),
+        'referred_contact_id' => (int) ($row['referred_contact_id'] ?? 0),
         'lead_source_text' => $leadSourceText,
         'assign_to' => (string) ($row['assign_to'] ?? ''),
         'stage' => crmLeadNormalizeStage($row['stage'] ?? 'new_lead'),
@@ -433,6 +436,10 @@ $stageFilter = trim((string) ($_GET['stage'] ?? ''));
 if ($stageFilter !== '' && !isset($leadStageOptions[$stageFilter])) {
     $stageFilter = '';
 }
+$highlightLeadId = max(0, (int) ($_GET['highlight'] ?? 0));
+if ($highlightLeadId > 0) {
+    $stageFilter = '';
+}
 $leadStageCounts = array_fill_keys(array_keys($leadStageOptions), 0);
 $financialYearOptions = crmFinancialYearOptions($conn);
 $totalPages = 1;
@@ -584,6 +591,22 @@ if ($hasLeadsTable) {
         $totalLeads = (int) ($countRes->fetch_assoc()['c'] ?? 0);
     }
 
+    if ($highlightLeadId > 0 && !isset($_GET['page'])) {
+        $highlightStmt = $conn->prepare('SELECT `id` FROM `crm_leads` WHERE `id` = ? AND ' . $listWhere . ' LIMIT 1');
+        if ($highlightStmt) {
+            $highlightStmt->bind_param('i', $highlightLeadId);
+            $highlightStmt->execute();
+            $highlightRes = $highlightStmt->get_result();
+            $highlightFound = $highlightRes ? $highlightRes->fetch_assoc() : null;
+            $highlightStmt->close();
+            if ($highlightFound) {
+                $rankRes = $conn->query('SELECT COUNT(*) AS c FROM `crm_leads` WHERE ' . $listWhere . ' AND `id` > ' . (int) $highlightLeadId);
+                $ahead = $rankRes ? (int) ($rankRes->fetch_assoc()['c'] ?? 0) : 0;
+                $listPage = (int) floor($ahead / $perPage) + 1;
+            }
+        }
+    }
+
     $totalPages = max(1, (int) ceil($totalLeads / $perPage));
     if ($listPage > $totalPages) {
         $listPage = $totalPages;
@@ -657,7 +680,7 @@ foreach ($destinationLookup as $destId => $destName) {
     <base href="../">
     <title>Leads</title>
     <?php include __DIR__ . '/../includes/header-links.php'; ?>
-    <link rel="stylesheet" href="crm/assets/quotation_supplier_mail.css?v=1">
+    <link rel="stylesheet" href="crm/assets/quotation_supplier_mail.css?v=3">
     <style>
         .crm-leads-ui .content-wrapper>.content {
             background: #f4f6f9;
@@ -1016,6 +1039,17 @@ foreach ($destinationLookup as $destId => $destName) {
             line-height: 1;
         }
 
+        .crm-leads-ui .leads-stage-btn.stage-all {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-all .leads-stage-count {
+            background: #475569;
+            color: #fff;
+        }
+
         .crm-leads-ui .leads-stage-btn.stage-new_lead {
             background: #e3f2fd;
             border-color: #90caf9;
@@ -1060,6 +1094,13 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #fff;
         }
 
+        .crm-leads-ui .leads-stage-btn.stage-all.is-active {
+            background: #334155;
+            border-color: #1e293b;
+            color: #fff;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.22);
+        }
+
         .crm-leads-ui .leads-stage-btn.stage-new_lead.is-active {
             background: #1e88e5;
             border-color: #1565c0;
@@ -1090,6 +1131,10 @@ foreach ($destinationLookup as $destId => $destName) {
 
         .crm-leads-ui .leads-stage-btn.is-active .leads-stage-count {
             background: #fff;
+        }
+
+        .crm-leads-ui .leads-stage-btn.stage-all.is-active .leads-stage-count {
+            color: #334155;
         }
 
         .crm-leads-ui .leads-stage-btn.stage-new_lead.is-active .leads-stage-count {
@@ -1416,7 +1461,7 @@ foreach ($destinationLookup as $destId => $destName) {
         }
 
         .crm-leads-ui table.crm-leads-table tbody td {
-            padding: 0.85rem 0.75rem;
+            padding: 0.35rem 0.75rem;
             vertical-align: middle;
             border-top: 1px solid #f3f4f6;
             border-right: none;
@@ -1725,6 +1770,18 @@ foreach ($destinationLookup as $destId => $destName) {
             background: #dcedc8;
         }
 
+        .crm-leads-ui table.crm-leads-table tbody tr.is-lead-highlight td {
+            background: #fff1f2;
+        }
+
+        .crm-leads-ui table.crm-leads-table tbody tr.is-lead-highlight td:first-child {
+            box-shadow: inset 3px 0 0 #e11d2e;
+        }
+
+        .crm-leads-ui table.crm-leads-table tbody tr.is-lead-highlight:hover td {
+            background: #ffe4e6;
+        }
+
         .crm-leads-ui table.crm-leads-table input[type="checkbox"] {
             width: 15px;
             height: 15px;
@@ -1883,6 +1940,11 @@ foreach ($destinationLookup as $destId => $destName) {
         .crm-leads-ui .travel-route-text .travel-ex-city {
             font-weight: 400;
             color: #6b7280;
+        }
+
+        .crm-leads-ui .travel-route-text .travel-dest-nights {
+            color: #e53935;
+            font-weight: 700;
         }
 
         .crm-leads-ui .travel-route-text .route-join {
@@ -2362,6 +2424,14 @@ foreach ($destinationLookup as $destId => $destName) {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
+        #leadQuotationPreviewModal .qp-modal-header .modal-title,
+        #leadQuotationPreviewModal .qp-modal-header .modal-title i,
+        #leadQuotationPreviewModal .qp-modal-header .qp-modal-hint,
+        #leadQuotationPreviewModal .qp-modal-header .close,
+        #leadQuotationPreviewModal .qp-modal-header .close span {
+            color: #fff !important;
+            text-shadow: none;
+        }
         #leadQuotationPreviewModal .qp-modal-header .modal-title {
             font-size: 1.05rem;
             font-weight: 700;
@@ -2369,7 +2439,7 @@ foreach ($destinationLookup as $destId => $destName) {
         }
         #leadQuotationPreviewModal .qp-modal-hint {
             display: block;
-            color: rgba(255, 255, 255, 0.78);
+            color: #fff !important;
             font-size: 11px;
             margin-top: 2px;
         }
@@ -4606,6 +4676,44 @@ foreach ($destinationLookup as $destId => $destName) {
                 margin-bottom: 0;
             }
         }
+        .modal-header,
+        .send-link-hd,
+        .sms-tpl-hd {
+            background: #e11d2e !important;
+            color: #fff !important;
+            border-bottom-color: transparent !important;
+        }
+
+        .modal-header .modal-title,
+        .modal-header .modal-title i,
+        .modal-header .close,
+        .modal-header .close span,
+        .modal-header .text-muted,
+        .modal-header .qp-modal-hint,
+        .send-link-title,
+        .send-link-subtitle,
+        .send-link-close,
+        .sms-tpl-title,
+        .sms-tpl-close {
+            color: #fff !important;
+            text-shadow: none;
+        }
+
+        .send-link-close {
+            background: transparent !important;
+        }
+
+        .send-link-close:hover,
+        .sms-tpl-close:hover,
+        .modal-header .close:hover {
+            color: #fff !important;
+            opacity: 1;
+        }
+
+        #leadQuotationPreviewModal .qp-modal-unsaved {
+            color: #ffe08a !important;
+        }
+
     </style>
 </head>
 
@@ -4659,6 +4767,18 @@ foreach ($destinationLookup as $destId => $destName) {
                                 <input type="search" class="form-control leads-search-input" placeholder="Search queries, client, company, destination..." value="<?= htmlspecialchars($searchFilter, ENT_QUOTES, 'UTF-8') ?>" aria-label="Search leads">
                             </div>
                             <div class="leads-stage-filters" role="group" aria-label="Filter by lead stage">
+                                <?php
+                                $allStageCount = array_sum($leadStageCounts);
+                                $allStageActive = $stageFilter === '';
+                                ?>
+                                <button type="button"
+                                    class="leads-stage-btn stage-all js-leads-stage-filter<?= $allStageActive ? ' is-active' : '' ?>"
+                                    data-stage="all"
+                                    aria-pressed="<?= $allStageActive ? 'true' : 'false' ?>"
+                                    title="Show all leads">
+                                    <span class="leads-stage-btn-label">All</span>
+                                    <span class="leads-stage-count"><?= (int) $allStageCount ?></span>
+                                </button>
                                 <?php foreach ($leadStageOptions as $stageKey => $stageLabel) {
                                     $stageKey = (string) $stageKey;
                                     $stageActive = $stageFilter === $stageKey;
@@ -4781,7 +4901,7 @@ foreach ($destinationLookup as $destId => $destName) {
                             <span class="send-link-wa-icon" aria-hidden="true"><i class="fab fa-whatsapp"></i></span>
                             <div>
                                 <h5 class="send-link-title" id="sendLinkModalLabel">Send Travel Preference Form</h5>
-                                <p class="send-link-subtitle">Share the form with your guest on WhatsApp</p>
+                                <!-- <p class="send-link-subtitle">Share the form with your guest on WhatsApp</p> -->
                             </div>
                         </div>
                         <button type="button" class="send-link-close" data-dismiss="modal" aria-label="Close">&times;</button>
@@ -4851,7 +4971,7 @@ foreach ($destinationLookup as $destId => $destName) {
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     </div>
                     <div class="modal-body">
-                        <p class="leads-col-settings-hint mb-3">Check a column to show it in the table. Uncheck to hide it.</p>
+                        <!-- <p class="leads-col-settings-hint mb-3">Check a column to show it in the table. Uncheck to hide it.</p> -->
                         <div class="leads-col-settings-list" id="leadsColumnSettingsList" role="group" aria-label="Visible columns">
                             <label class="leads-col-settings-item is-locked">
                                 <input type="checkbox" class="js-leads-col-toggle" data-col-key="lead" checked disabled>
@@ -5034,7 +5154,7 @@ foreach ($destinationLookup as $destId => $destName) {
                     <div class="modal-header py-2 ct-modal-header">
                         <div>
                             <h5 class="modal-title mb-0" id="confirmTourModalLabel">Confirm Tour</h5>
-                            <p class="ct-subtitle mb-0">Review traveller details, supplier services and confirm the tour.</p>
+                            <!-- <p class="ct-subtitle mb-0">Review traveller details, supplier services and confirm the tour.</p> -->
                         </div>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
@@ -5103,7 +5223,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                             <rect x="11.8" y="1" width="3.2" height="14" rx="0.7"></rect>
                                         </svg>
                                     </span>
-                                    Payment Summary
+                                    Customer Payment
                                 </div>
                                 <div class="ct-pay-figures">
                                     <div class="ct-pay-fig">
@@ -5157,7 +5277,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                     <span class="ct-pax-head-icon" aria-hidden="true"><i class="fas fa-user-friends"></i></span>
                                 <div>
                                     <div class="ct-pax-title">Travellers (PAX)</div>
-                                        <div class="ct-pax-sub">Review traveller details and confirm the travellers for this tour.</div>
+                                        <!-- <div class="ct-pax-sub">Review traveller details and confirm the travellers for this tour.</div> -->
                                     </div>
                                 </div>
                                 <button type="button" class="btn btn-sm ct-add-guest-btn" id="ctAddGuestBtn">
@@ -5189,7 +5309,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                 <span class="ct-included-icon" aria-hidden="true"><i class="fas fa-gift"></i></span>
                                 <div>
                                     <div class="ct-included-title">What is Included</div>
-                                    <div class="ct-included-sub">Manage supplier services, costs and payments for this tour.</div>
+                                    <!-- <div class="ct-included-sub">Manage supplier services, costs and payments for this tour.</div> -->
                                 </div>
                             </div>
                         <div class="ct-included" id="ctIncludedChips"></div>
@@ -5199,7 +5319,7 @@ foreach ($destinationLookup as $destId => $destName) {
                             <span class="ct-svc-section-icon"><i class="fas fa-database"></i></span>
                             <div>
                                 <div class="ct-svc-section-title">Supplier &amp; Services</div>
-                                <div class="ct-svc-section-sub">Manage suppliers, costs and documents for each service.</div>
+                                <!-- <div class="ct-svc-section-sub">Manage suppliers, costs and documents for each service.</div> -->
                             </div>
                         </div>
                         <div class="ct-svc-table ct-svc-v2">
@@ -5223,7 +5343,7 @@ foreach ($destinationLookup as $destId => $destName) {
                                     <rect x="6.4" y="5" width="3.2" height="10" rx="0.7"></rect>
                                     <rect x="11.8" y="1" width="3.2" height="14" rx="0.7"></rect>
                                 </svg>
-                                Payment Summary
+                                Supplier Payment
                             </div>
                             <div class="ct-foot-metric">
                                 <span class="ct-foot-label">Total Amount</span>
@@ -5462,6 +5582,7 @@ foreach ($destinationLookup as $destId => $destName) {
     var leadsListFy = <?= json_encode($fyFilter, JSON_UNESCAPED_UNICODE) ?>;
     var leadsListSearch = <?= json_encode($searchFilter, JSON_UNESCAPED_UNICODE) ?>;
     var leadsListStage = <?= json_encode($stageFilter, JSON_UNESCAPED_UNICODE) ?>;
+    var leadsHighlightId = <?= (int) $highlightLeadId ?>;
     var leadsSearchDebounceTimer = null;
     var sendLinkDefaultFields = <?= json_encode($sendLinkDefaultFields, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
     var sendLinkCompanyName = <?= json_encode($sendLinkCompanyName, JSON_UNESCAPED_UNICODE) ?>;
@@ -5471,6 +5592,22 @@ foreach ($destinationLookup as $destId => $destName) {
     var Q_DESTINATION_NAME_TO_ID = <?= json_encode($qDestinationNameToId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     window.Q_SUPPLIER_MAIL_CATALOG = Q_SUPPLIER_MAIL_CATALOG;
     window.Q_DESTINATION_NAME_TO_ID = Q_DESTINATION_NAME_TO_ID;
+
+    if (leadsHighlightId > 0) {
+        window.setTimeout(function () {
+            var row = document.querySelector('tr.is-lead-highlight');
+            if (!row) {
+                return;
+            }
+            var wrap = row.closest('.table-wrap');
+            if (wrap) {
+                var top = row.getBoundingClientRect().top - wrap.getBoundingClientRect().top + wrap.scrollTop;
+                wrap.scrollTop = Math.max(0, top - (wrap.clientHeight / 2) + (row.offsetHeight / 2));
+            } else {
+                row.scrollIntoView({ block: 'center' });
+            }
+        }, 80);
+    }
 
     /* Keep table pane height within the viewport; footer scrolls with the page */
     var leadsTablePaneResizeTimer = null;
@@ -5542,6 +5679,8 @@ foreach ($destinationLookup as $destId => $destName) {
                     customer_email: editLead.customer_email || '',
                     lead_source: editLead.lead_source || (editLead.payload ? editLead.payload.lead_source : '') || '',
                     referred_by: editLead.referred_by || (editLead.payload ? editLead.payload.referred_by : '') || '',
+                    referred_contact_source: editLead.referred_contact_source || (editLead.payload ? editLead.payload.referred_contact_source : '') || '',
+                    referred_contact_id: editLead.referred_contact_id || (editLead.payload ? editLead.payload.referred_contact_id : '') || '',
                     assign_to: editLead.assign_to || (editLead.payload ? editLead.payload.assign_to : '') || '',
                     itinerary_total_nights: (editLead.itinerary_total_nights != null && editLead.itinerary_total_nights !== '')
                         ? editLead.itinerary_total_nights
@@ -6652,7 +6791,7 @@ foreach ($destinationLookup as $destId => $destName) {
     function renderLeadDetailsModal(lead) {
         var payload = (lead && lead.payload && typeof lead.payload === 'object') ? lead.payload : {};
         var serviceLabels = {
-            tour_package: 'Tour Package',
+            tour_package: 'Tour',
             cruise: 'Cruise',
             flight: 'Flight',
             hotel: 'Hotel',
@@ -7851,6 +7990,13 @@ foreach ($destinationLookup as $destId => $destName) {
 
     $(document).on('click', '.js-leads-stage-filter', function () {
         var stage = String($(this).attr('data-stage') || '');
+        if (stage === 'all') {
+            if (!leadsListStage) {
+                return;
+            }
+            window.location.href = crmLeadsListUrl({ stage: '', page: 1 });
+            return;
+        }
         if (!stage) {
             return;
         }

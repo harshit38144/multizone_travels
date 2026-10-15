@@ -371,14 +371,30 @@ $qWizardSteps = [
             overflow: hidden;
         }
 
-        .q-supplier-mail-header {
-            border-bottom: 1px solid #e9ecef;
+        #qSupplierMailModal .modal-header.q-supplier-mail-header {
+            background: #e11d2e !important;
+            color: #fff !important;
+            border-bottom: none !important;
             padding: 0.85rem 1rem;
         }
 
-        .q-supplier-mail-header .modal-title {
+        #qSupplierMailModal .q-supplier-mail-header .modal-title,
+        #qSupplierMailModal .q-supplier-mail-header .close,
+        #qSupplierMailModal .q-supplier-mail-header .close span {
+            color: #fff !important;
+            text-shadow: none;
+            opacity: 1;
+        }
+
+        #qSupplierMailModal .q-supplier-mail-header .modal-title {
             font-size: 1rem;
             font-weight: 700;
+        }
+
+        #qSupplierMailModal .q-supplier-mail-header .close:hover {
+            color: #fff !important;
+            background: rgba(255, 255, 255, 0.12);
+            opacity: 1;
         }
 
         .q-supplier-mail-body {
@@ -4096,6 +4112,51 @@ $qWizardSteps = [
             color: #78350f;
         }
 
+        .crm-quotation-gen .q-flight-baggage {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem 0.65rem;
+            margin-top: 0.55rem;
+            padding-top: 0.55rem;
+            border-top: 1px dashed #e2e8f0;
+        }
+
+        .crm-quotation-gen .q-flight-bag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin: 0;
+            min-width: 168px;
+            padding: 0.15rem 0.65rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 0.72rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-flight-bag i {
+            color: #c62828;
+            font-size: 0.72rem;
+        }
+
+        .crm-quotation-gen .q-flight-bag .form-control {
+            width: 92px;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            height: auto !important;
+            min-height: 0 !important;
+            padding: 0.22rem 0 !important;
+            font-size: 0.78rem !important;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
         .crm-quotation-gen .q-flight-add-wrap {
             display: flex;
             justify-content: center;
@@ -5103,17 +5164,6 @@ $qWizardSteps = [
             pointer-events: none;
         }
 
-        .qfs-flight-search #qfsReturnFrom,
-        .qfs-flight-search #qfsReturnTo {
-            background: #f8fafc;
-            cursor: default;
-        }
-
-        [data-theme="dark"] .qfs-flight-search #qfsReturnFrom,
-        [data-theme="dark"] .qfs-flight-search #qfsReturnTo {
-            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
-        }
-
         [data-theme="dark"] .qfs-flight-search .qfs-swap-btn {
             background: var(--mz-theme-bg-elevated, #2a2e38) !important;
             border-color: var(--q-border) !important;
@@ -5125,8 +5175,7 @@ $qWizardSteps = [
             border-color: #60a5fa !important;
         }
 
-        .qfs-flight-search .qfs-airport-suggest,
-        .qfs-airport-suggest-open {
+        .qfs-flight-search .qfs-airport-suggest {
             display: none;
             position: absolute;
             z-index: 1000;
@@ -5185,8 +5234,11 @@ $qWizardSteps = [
             box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
         }
 
+        .qfs-airport-suggest.qfs-airport-suggest-open,
         body > .qfs-airport-suggest.qfs-airport-suggest-open {
+            display: block !important;
             position: fixed !important;
+            z-index: 20000 !important;
             right: auto !important;
         }
 
@@ -9794,6 +9846,15 @@ $qWizardSteps = [
             print-color-adjust: exact;
         }
 
+        #qPreviewModal .qp-modal-header .modal-title,
+        #qPreviewModal .qp-modal-header .modal-title i,
+        #qPreviewModal .qp-modal-header .qp-modal-hint,
+        #qPreviewModal .qp-modal-header .close,
+        #qPreviewModal .qp-modal-header .close span {
+            color: #fff !important;
+            text-shadow: none;
+        }
+
         #qPreviewModal .qp-modal-header .modal-title {
             font-size: 1.05rem;
             font-weight: 700;
@@ -9802,7 +9863,7 @@ $qWizardSteps = [
 
         #qPreviewModal .qp-modal-hint {
             display: block;
-            color: rgba(255, 255, 255, 0.78);
+            color: #fff !important;
             font-size: 11px;
             margin-top: 2px;
         }
@@ -14720,6 +14781,22 @@ $qWizardSteps = [
             color: #fde68a !important;
         }
 
+        [data-theme="dark"] .crm-quotation-gen .q-flight-baggage {
+            border-top-color: var(--mz-theme-border, #454b58);
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-bag {
+            background: var(--mz-theme-bg-muted, #323744);
+            border-color: var(--mz-theme-border, #454b58);
+            color: var(--q-text-muted) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-bag .form-control {
+            background: transparent !important;
+            border: 0 !important;
+            color: var(--q-text) !important;
+        }
+
         [data-theme="dark"] .crm-quotation-gen .q-flight-journey-card {
             background: var(--mz-theme-bg-muted, #323744) !important;
             border-color: var(--q-border) !important;
@@ -15766,7 +15843,7 @@ $qWizardSteps = [
                             <div class="q-section-accordion-head q-wizard-section-head collapsed" data-target="#qSectionBody3" role="button" tabindex="0" aria-expanded="false">
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Hotel Details</h3>
-                                    <p class="q-wizard-section-subtitle">Add, edit or remove hotel options for your customer.</p>
+                                    <!-- <p class="q-wizard-section-subtitle">Add, edit or remove hotel options for your customer.</p> -->
                                 </div>
                                 <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
                             </div>
@@ -15828,7 +15905,7 @@ $qWizardSteps = [
                             <div class="q-section-accordion-head q-wizard-section-head collapsed" data-target="#qSectionBody4" role="button" tabindex="0" aria-expanded="false">
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Itinerary</h3>
-                                    <p class="q-wizard-section-subtitle">Load a package or build your day-wise itinerary.</p>
+                                    <!-- <p class="q-wizard-section-subtitle">Load a package or build your day-wise itinerary.</p> -->
                                 </div>
                                 <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
                             </div>
@@ -15841,7 +15918,7 @@ $qWizardSteps = [
                                                     <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
                                                     <div class="q-itin-pkg-hd-text">
                                                         <span class="q-itin-pkg-hd-label">Search Existing Package</span>
-                                                        <span class="q-itin-pkg-hd-sub">Search by destination or package name and load to plan itinerary.</span>
+                                                        <!-- <span class="q-itin-pkg-hd-sub">Search by destination or package name and load to plan itinerary.</span> -->
                                                     </div>
                                                 </div>
                                             </div>
@@ -15943,7 +16020,7 @@ $qWizardSteps = [
                             <div class="q-section-accordion-head q-wizard-section-head collapsed" data-target="#qSectionBody5" role="button" tabindex="0" aria-expanded="false">
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Inclusions</h3>
-                                    <p class="q-wizard-section-subtitle">Add what is included and excluded in this quotation.</p>
+                                    <!-- <p class="q-wizard-section-subtitle">Add what is included and excluded in this quotation.</p> -->
                                 </div>
                                 <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
                             </div>
@@ -15993,7 +16070,7 @@ $qWizardSteps = [
                             <div class="q-section-accordion-head q-wizard-section-head collapsed" data-target="#qSectionBody6" role="button" tabindex="0" aria-expanded="false">
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Terms &amp; Policies</h3>
-                                    <p class="q-wizard-section-subtitle">Load master terms or customize payment, cancellation, and other policies.</p>
+                                    <!-- <p class="q-wizard-section-subtitle">Load master terms or customize payment, cancellation, and other policies.</p> -->
                                 </div>
                                 <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
                             </div>
@@ -16602,8 +16679,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=322"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=32"></script>
+    <script src="crm/assets/quotation_generator.js?v=326"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=33"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>

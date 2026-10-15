@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/connection.php';
 require_once __DIR__ . '/includes/lead_contacts_db.php';
+require_once __DIR__ . '/crm/includes/lead_db.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] != '1') {
     header('location:index.php');
@@ -9,6 +10,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != '1') {
 }
 
 lcEnsureContactTables($conn);
+crmEnsureLeadReferralColumns($conn);
 
 $contacts = lcListAllContacts($conn);
 
@@ -782,6 +784,7 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                                     <option value="name_asc">Name (A–Z)</option>
                                     <option value="name_desc">Name (Z–A)</option>
                                     <option value="family_desc">Family (High–Low)</option>
+                                    <option value="referrals_desc">Referrals (High–Low)</option>
                                 </select>
                             </div>
                             <div class="lc-toolbar-actions">
@@ -807,6 +810,7 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                                         <th><span class="lc-th-sort">Mobile <i class="fas fa-sort"></i></span></th>
                                         <th><span class="lc-th-sort">Source <i class="fas fa-sort"></i></span></th>
                                         <th><span class="lc-th-sort">Family Members <i class="fas fa-sort"></i></span></th>
+                                        <th><span class="lc-th-sort">Referrals <i class="fas fa-sort"></i></span></th>
                                         <th><span class="lc-th-sort">Added On <i class="fas fa-sort"></i></span></th>
                                         <th><span class="lc-th-sort">Profile Status <i class="fas fa-sort"></i></span></th>
                                         <th><span class="lc-th-sort">Last Activity <i class="fas fa-sort"></i></span></th>
@@ -815,7 +819,7 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                                 </thead>
                                 <tbody>
                                     <?php if (empty($contacts)) { ?>
-                                        <tr><td colspan="10" class="text-center text-muted py-4">No contacts yet. Add a contact or create a lead in CRM.</td></tr>
+                                        <tr><td colspan="11" class="text-center text-muted py-4">No contacts yet. Add a contact or create a lead in CRM.</td></tr>
                                     <?php } else { ?>
                                         <?php foreach ($contacts as $index => $c) {
                                             $name = trim((string) ($c['customer_name'] ?? ''));
@@ -837,11 +841,13 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                                             }
                                             $profilePhoto = trim((string) ($c['profile_photo'] ?? ''));
                                             $createdTs = $createdAt !== '' ? (int) strtotime($createdAt) : 0;
+                                            $referralCount = (int) ($c['referral_count'] ?? 0);
                                         ?>
                                             <tr data-source="<?= htmlspecialchars($source, ENT_QUOTES, 'UTF-8') ?>"
                                                 data-profile="<?= $hasProf ? 'complete' : 'pending' ?>"
                                                 data-family="<?= $fc > 0 ? 'with' : 'without' ?>"
                                                 data-family-count="<?= $fc ?>"
+                                                data-referral-count="<?= $referralCount ?>"
                                                 data-created="<?= $createdTs ?>"
                                                 data-name="<?= htmlspecialchars(strtolower($name), ENT_QUOTES, 'UTF-8') ?>"
                                                 data-ref-id="<?= $refId ?>"
@@ -867,6 +873,7 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                                                 <td><?= htmlspecialchars($phone !== '' ? $phone : '—', ENT_QUOTES, 'UTF-8') ?></td>
                                                 <td><span class="lc-badge source-<?= $source === 'manual' ? 'manual' : 'lead' ?>"><?= $source === 'manual' ? 'Manual' : 'Lead' ?></span></td>
                                                 <td><span class="lc-family-count"><i class="fas fa-user-friends"></i><span data-family-count><?= $fc ?></span></span></td>
+                                                <td><span class="lc-family-count" title="Leads referred by this contact"><i class="fas fa-user-plus"></i><span><?= $referralCount ?></span></span></td>
                                                 <td><?= htmlspecialchars($addedOn) ?></td>
                                                 <td><span class="lc-badge lc-profile-status <?= $hasProf ? '' : 'pending' ?>"><?= $hasProf ? 'Completed' : 'Pending' ?></span></td>
                                                 <td><span class="lc-activity"><span class="lc-activity-dot"></span><?= htmlspecialchars($activity) ?></span></td>

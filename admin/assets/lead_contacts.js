@@ -1548,6 +1548,9 @@
             if (sort === 'family_desc') {
                 return (parseInt($b.attr('data-family-count'), 10) || 0) - (parseInt($a.attr('data-family-count'), 10) || 0);
             }
+            if (sort === 'referrals_desc') {
+                return (parseInt($b.attr('data-referral-count'), 10) || 0) - (parseInt($a.attr('data-referral-count'), 10) || 0);
+            }
             return (parseInt($b.attr('data-created'), 10) || 0) - (parseInt($a.attr('data-created'), 10) || 0);
         });
 
@@ -1593,7 +1596,7 @@
         $rows.slice(start, end).show();
 
         if ($allRows.length && total === 0) {
-            $tbody.append('<tr id="lcFilteredEmpty"><td colspan="10" class="text-center text-muted py-4">No contacts match the selected filters.</td></tr>');
+            $tbody.append('<tr id="lcFilteredEmpty"><td colspan="11" class="text-center text-muted py-4">No contacts match the selected filters.</td></tr>');
         }
         $('#lcContactInfo').text(total
             ? 'Showing ' + (start + 1) + ' to ' + end + ' of ' + total + ' contacts'
@@ -2011,7 +2014,7 @@
         });
 
         $('#lcExportContacts').on('click', function () {
-            var rows = [['Contact ID', 'Name', 'Email', 'Mobile', 'Source', 'Family Members', 'Added On', 'Profile Status', 'Last Activity']];
+            var rows = [['Contact ID', 'Name', 'Email', 'Mobile', 'Source', 'Family Members', 'Referrals', 'Added On', 'Profile Status', 'Last Activity']];
             filteredContactRows().each(function () {
                 var cells = $(this).children('td');
                 rows.push([
@@ -2023,7 +2026,8 @@
                     cells.eq(5).text().trim(),
                     cells.eq(6).text().trim(),
                     cells.eq(7).text().trim(),
-                    cells.eq(8).text().trim()
+                    cells.eq(8).text().trim(),
+                    cells.eq(9).text().trim()
                 ]);
             });
             var csv = rows.map(function (row) {

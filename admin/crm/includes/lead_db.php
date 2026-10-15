@@ -40,6 +40,212 @@ function crmEnsureLeadStageColumn(mysqli $conn): void
     $conn->query("UPDATE `crm_leads` SET `stage` = 'new_lead' WHERE `stage` IS NULL OR TRIM(`stage`) = ''");
 }
 
+/**
+ * crm_leads.id must identify one contact. Older tables were created without a
+ * primary key, so several leads shared id 0 and could not be stored as a referrer.
+ */
+function crmEnsureLeadPrimaryKey(mysqli $conn): void
+{
+    $tableCheck = $conn->query("SHOW TABLES LIKE 'crm_leads'");
+    if (!$tableCheck || $tableCheck->num_rows === 0) {
+        return;
+    }
+
+    $colRes = $conn->query("SHOW COLUMNS FROM `crm_leads` LIKE 'id'");
+    $col = $colRes ? $colRes->fetch_assoc() : null;
+    if (!$col) {
+        return;
+    }
+    $uidRes = $conn->query("SHOW COLUMNS FROM `crm_leads` LIKE 'lead_uid'");
+    if (!$uidRes || $uidRes->num_rows === 0) {
+        return;
+    }
+
+    $hasAi = stripos((string) ($col['Extra'] ?? ''), 'auto_increment') !== false;
+    $pkRes = $conn->query("SHOW INDEX FROM `crm_leads` WHERE Key_name = 'PRIMARY' AND Column_name = 'id'");
+    $hasPk = $pkRes && $pkRes->num_rows > 0;
+
+    if (!$hasPk || !$hasAi) {
+        $maxRes = $conn->query('SELECT COALESCE(MAX(`id`), 0) AS max_id FROM `crm_leads`');
+        $nextId = 1;
+        if ($maxRes && ($maxRow = $maxRes->fetch_assoc())) {
+            $nextId = max(1, (int) $maxRow['max_id'] + 1);
+        }
+
+        $assign = function (string $leadUid) use ($conn, &$nextId): void {
+            if ($leadUid === '') {
+                return;
+            }
+            $stmt = $conn->prepare('UPDATE `crm_leads` SET `id` = ? WHERE `lead_uid` = ? LIMIT 1');
+            if (!$stmt) {
+                return;
+            }
+            $newId = $nextId;
+            $stmt->bind_param('is', $newId, $leadUid);
+            if ($stmt->execute()) {
+                $nextId++;
+            }
+            $stmt->close();
+        };
+
+        $zeroRes = $conn->query("SELECT `lead_uid` FROM `crm_leads` WHERE `id` = 0 ORDER BY `lead_uid` ASC");
+        if ($zeroRes) {
+            while ($row = $zeroRes->fetch_assoc()) {
+                $assign((string) ($row['lead_uid'] ?? ''));
+            }
+            $zeroRes->free();
+        }
+
+        $dupeRes = $conn->query('SELECT `id` FROM `crm_leads` WHERE `id` > 0 GROUP BY `id` HAVING COUNT(*) > 1');
+        if ($dupeRes) {
+            while ($dupe = $dupeRes->fetch_assoc()) {
+                $dupeId = (int) ($dupe['id'] ?? 0);
+                if ($dupeId <= 0) {
+                    continue;
+                }
+                $rows = $conn->prepare('SELECT `lead_uid` FROM `crm_leads` WHERE `id` = ? ORDER BY `created_at` ASC, `lead_uid` ASC');
+                if (!$rows) {
+                    continue;
+                }
+                $rows->bind_param('i', $dupeId);
+                $rows->execute();
+                $list = $rows->get_result();
+                $keep = true;
+                while ($list && ($row = $list->fetch_assoc())) {
+                    if ($keep) {
+                        $keep = false;
+                        continue;
+                    }
+                    $assign((string) ($row['lead_uid'] ?? ''));
+                }
+                $rows->close();
+            }
+            $dupeRes->free();
+        }
+
+        $stillBad = $conn->query('SELECT `id` FROM `crm_leads` GROUP BY `id` HAVING COUNT(*) > 1 OR `id` = 0 LIMIT 1');
+        if ($stillBad && $stillBad->num_rows > 0) {
+            return;
+        }
+
+        if (!$hasPk) {
+            $conn->query('ALTER TABLE `crm_leads` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT, ADD PRIMARY KEY (`id`)');
+        } elseif (!$hasAi) {
+            $conn->query('ALTER TABLE `crm_leads` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT');
+        }
+    }
+
+    $uidIdx = $conn->query("SHOW INDEX FROM `crm_leads` WHERE Column_name = 'lead_uid' AND Non_unique = 0");
+    if ($uidIdx && $uidIdx->num_rows > 0) {
+        return;
+    }
+    $uidDup = $conn->query("SELECT `lead_uid` FROM `crm_leads` GROUP BY `lead_uid` HAVING COUNT(*) > 1 OR `lead_uid` IS NULL OR `lead_uid` = '' LIMIT 1");
+    if ($uidDup && $uidDup->num_rows > 0) {
+        return;
+    }
+    $conn->query('ALTER TABLE `crm_leads` ADD UNIQUE KEY `uniq_crm_lead_uid` (`lead_uid`)');
+}
+
+function crmEnsureLeadReferralColumns(mysqli $conn): void
+{
+    crmEnsureLeadPrimaryKey($conn);
+
+    $tableCheck = $conn->query("SHOW TABLES LIKE 'crm_leads'");
+    if (!$tableCheck || $tableCheck->num_rows === 0) {
+        return;
+    }
+
+    $cols = [
+        'referred_contact_source' => "VARCHAR(10) DEFAULT NULL AFTER `referred_by`",
+        'referred_contact_id' => "INT UNSIGNED DEFAULT NULL AFTER `referred_contact_source`",
+    ];
+    foreach ($cols as $col => $ddl) {
+        $chk = $conn->query("SHOW COLUMNS FROM `crm_leads` LIKE '" . $conn->real_escape_string($col) . "'");
+        if ($chk && $chk->num_rows === 0) {
+            $conn->query("ALTER TABLE `crm_leads` ADD `" . $col . "` " . $ddl);
+        }
+    }
+
+    $idx = $conn->query("SHOW INDEX FROM `crm_leads` WHERE Key_name = 'idx_crm_leads_referral'");
+    if ($idx && $idx->num_rows === 0) {
+        $conn->query("ALTER TABLE `crm_leads` ADD KEY `idx_crm_leads_referral` (`referred_contact_source`, `referred_contact_id`)");
+    }
+}
+
+/**
+ * Link a lead referral to an existing contact, or keep a typed name with no contact id.
+ *
+ * @return array{referred_by: string, source: ?string, id: ?int}
+ */
+function crmResolveLeadReferral(mysqli $conn, string $name, string $source, int $contactId): array
+{
+    $name = trim($name);
+    if (function_exists('mb_strlen') && mb_strlen($name) > 150) {
+        $name = mb_substr($name, 0, 150);
+    } elseif (strlen($name) > 150) {
+        $name = substr($name, 0, 150);
+    }
+
+    $source = strtolower(trim($source));
+    $unlinked = [
+        'referred_by' => $name,
+        'source' => null,
+        'id' => null,
+    ];
+
+    if ($contactId <= 0 || !in_array($source, ['lead', 'manual'], true)) {
+        return $unlinked;
+    }
+
+    if ($source === 'manual') {
+        $stmt = $conn->prepare('SELECT `title`, `first_name`, `last_name` FROM `crm_contacts` WHERE `id` = ? LIMIT 1');
+        if (!$stmt) {
+            return $unlinked;
+        }
+        $stmt->bind_param('i', $contactId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row) {
+            return $unlinked;
+        }
+        $person = trim(trim((string) ($row['first_name'] ?? '')) . ' ' . trim((string) ($row['last_name'] ?? '')));
+        $title = trim((string) ($row['title'] ?? ''));
+        $display = trim($title . ($title !== '' && $person !== '' ? ' ' : '') . $person);
+        if ($display === '') {
+            $display = $name;
+        }
+
+        return [
+            'referred_by' => $display !== '' ? $display : $name,
+            'source' => 'manual',
+            'id' => $contactId,
+        ];
+    }
+
+    $stmt = $conn->prepare('SELECT `customer_name` FROM `crm_leads` WHERE `id` = ? LIMIT 1');
+    if (!$stmt) {
+        return $unlinked;
+    }
+    $stmt->bind_param('i', $contactId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$row) {
+        return $unlinked;
+    }
+    $display = trim((string) ($row['customer_name'] ?? ''));
+    if ($display === '') {
+        $display = $name;
+    }
+
+    return [
+        'referred_by' => $display,
+        'source' => 'lead',
+        'id' => $contactId,
+    ];
+}
+
 /** @return array<string, string> */
 function crmLeadStageOptions(): array
 {

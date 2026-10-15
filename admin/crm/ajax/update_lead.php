@@ -39,7 +39,16 @@ $customerName = trim($_POST['customer_name'] ?? '');
 $customerPhone = trim($_POST['customer_phone'] ?? '');
 $customerEmail = trim($_POST['customer_email'] ?? '');
 $leadSource = trim($_POST['lead_source'] ?? '');
-$referredBy = trim($_POST['referred_by'] ?? '');
+crmEnsureLeadReferralColumns($conn);
+$referral = crmResolveLeadReferral(
+    $conn,
+    trim((string) ($_POST['referred_by'] ?? '')),
+    trim((string) ($_POST['referred_contact_source'] ?? '')),
+    (int) ($_POST['referred_contact_id'] ?? 0)
+);
+$referredBy = $referral['referred_by'];
+$referredContactSource = $referral['source'];
+$referredContactId = $referral['id'];
 $assignTo = trim($_POST['assign_to'] ?? '');
 $services = $_POST['services'] ?? [];
 $itineraryTotalNights = max(0, (int) ($_POST['itinerary_total_nights'] ?? 0));
@@ -84,6 +93,7 @@ if ($servicesJson === false) {
 
 $sql = "UPDATE `crm_leads` SET
         `customer_name` = ?, `customer_phone` = ?, `customer_email` = ?, `lead_source` = ?, `referred_by` = ?,
+        `referred_contact_source` = ?, `referred_contact_id` = ?,
         `assign_to` = ?, `services` = ?, `itinerary_total_nights` = ?, `itinerary_total_days` = ?, `payload_json` = ?
     WHERE `id` = ?";
 
@@ -93,12 +103,14 @@ if (!$stmt) {
 }
 
 $stmt->bind_param(
-    'sssssssiisi',
+    'ssssssissiisi',
     $customerName,
     $customerPhone,
     $customerEmail,
     $leadSource,
     $referredBy,
+    $referredContactSource,
+    $referredContactId,
     $assignTo,
     $servicesJson,
     $itineraryTotalNights,

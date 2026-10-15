@@ -32,6 +32,10 @@ if (!function_exists('geoEnsureTables')) {
             $conn->query("ALTER TABLE `countries` ADD KEY `idx_countries_is_deleted` (`is_deleted`)");
         }
 
+        // Existing databases may already have `countries` without a primary key.
+        // InnoDB rejects the states/cities foreign keys (errno 150) unless `countries.id` is indexed uniquely.
+        geoEnsureIdPrimaryKey($conn, 'countries');
+
         $conn->query("CREATE TABLE IF NOT EXISTS `states` (
             `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `country_id` INT UNSIGNED NOT NULL,
@@ -77,6 +81,45 @@ if (!function_exists('geoEnsureTables')) {
         if ($idxChk && $idxChk->num_rows === 0) {
             $conn->query("ALTER TABLE `cities` ADD KEY `idx_cities_is_deleted` (`is_deleted`)");
         }
+    }
+}
+
+if (!function_exists('geoEnsureIdPrimaryKey')) {
+    /**
+     * Make `id` a primary key with AUTO_INCREMENT so later foreign keys can reference it.
+     */
+    function geoEnsureIdPrimaryKey(mysqli $conn, string $table): void
+    {
+        if (!in_array($table, ['countries', 'states', 'cities'], true)) {
+            return;
+        }
+
+        $tableExists = $conn->query("SHOW TABLES LIKE '" . $conn->real_escape_string($table) . "'");
+        if (!$tableExists || $tableExists->num_rows === 0) {
+            return;
+        }
+
+        $pk = $conn->query("SHOW INDEX FROM `{$table}` WHERE Key_name = 'PRIMARY'");
+        $hasPk = $pk && $pk->num_rows > 0;
+
+        $col = $conn->query("SHOW COLUMNS FROM `{$table}` LIKE 'id'");
+        $id = $col ? $col->fetch_assoc() : null;
+        if (!$id) {
+            return;
+        }
+
+        $extra = strtolower((string) ($id['Extra'] ?? ''));
+        $hasAuto = strpos($extra, 'auto_increment') !== false;
+        if ($hasPk && $hasAuto) {
+            return;
+        }
+
+        if (!$hasPk) {
+            $conn->query("ALTER TABLE `{$table}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT, ADD PRIMARY KEY (`id`)");
+            return;
+        }
+
+        $conn->query("ALTER TABLE `{$table}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT");
     }
 }
 

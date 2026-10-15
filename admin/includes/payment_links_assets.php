@@ -665,13 +665,21 @@
         align-items: center;
         justify-content: space-between;
     }
+    #payLinkCreateModal .modal-header .modal-title,
+    #payLinkCreateModal .modal-header .modal-title i,
+    #payLinkCreateModal .modal-header .pay-link-modal-sub,
+    #payLinkCreateModal .modal-header .close,
+    #payLinkCreateModal .modal-header .close span {
+        color: #fff !important;
+        text-shadow: none;
+    }
     #payLinkCreateModal .modal-header .modal-title {
         font-size: 1.08rem;
         font-weight: 700;
         letter-spacing: 0.01em;
     }
     #payLinkCreateModal .modal-header .close {
-        color: #fff;
+        color: #fff !important;
         text-shadow: none;
         opacity: 0.9;
         margin: -0.4rem -0.2rem -0.4rem 0.75rem;

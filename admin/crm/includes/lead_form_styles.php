@@ -437,6 +437,47 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
     background: #fff;
     appearance: auto;
 }
+<?= $scope ?> form[data-inline-child-bed="1"] .js-tp-child-bed-field {
+    display: none !important;
+}
+<?= $scope ?> form[data-inline-child-bed="1"] .tp-rg-child-ages-popup {
+    min-width: 420px;
+    max-width: 480px;
+}
+<?= $scope ?> form[data-inline-child-bed="1"] .tp-rg-child-age-row {
+    align-items: center;
+    gap: 0.45rem;
+}
+<?= $scope ?> form[data-inline-child-bed="1"] .tp-rg-child-age-row label {
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+<?= $scope ?> form[data-inline-child-bed="1"] .tp-rg-child-age-controls {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+<?= $scope ?> form[data-inline-child-bed="1"] .tp-rg-child-age-controls .tp-rg-child-age-select {
+    width: auto;
+    min-width: 84px;
+    flex: 0 0 auto;
+}
+<?= $scope ?> form[data-inline-child-bed="1"] .tp-rg-child-bed-select {
+    width: auto;
+    min-width: 132px;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    padding: 0.32rem 0.65rem;
+    background: #fff;
+    color: #111827;
+    font-weight: 600;
+    font-size: 0.82rem;
+}
 <?= $scope ?> .tp-rg-child-ages-note {
     margin: 0;
     font-size: 0.75rem;
@@ -1569,6 +1610,14 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
     padding: 0.55rem 0.65rem;
     font-size: 0.78rem;
     color: #64748b;
+}
+<?= $scope ?> .lead-contact-item.is-manual {
+    border-top: 1px solid #e2e8f0;
+    color: #9a3412;
+}
+<?= $scope ?> .js-referred-by-wrap .form-text {
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
 }
 
 /* ——— Dark mode (Create Lead page + modal embed) ——— */

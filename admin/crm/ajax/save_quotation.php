@@ -218,7 +218,8 @@ try {
 
         $uid = '';
         $version = 1;
-        $uidStmt = $conn->prepare('SELECT `quotation_uid`, `version` FROM `crm_quotations` WHERE `id` = ? LIMIT 1');
+        $savedLeadId = $leadIdPost;
+        $uidStmt = $conn->prepare('SELECT `quotation_uid`, `version`, `lead_id` FROM `crm_quotations` WHERE `id` = ? LIMIT 1');
         if ($uidStmt) {
             $uidStmt->bind_param('i', $id);
             if ($uidStmt->execute()) {
@@ -226,6 +227,9 @@ try {
                 $uidRow = $uidRes ? $uidRes->fetch_assoc() : null;
                 $uid = $uidRow ? (string) $uidRow['quotation_uid'] : '';
                 $version = $uidRow ? max(1, (int) ($uidRow['version'] ?? 1)) : 1;
+                if ($uidRow && (int) ($uidRow['lead_id'] ?? 0) > 0) {
+                    $savedLeadId = (int) $uidRow['lead_id'];
+                }
             }
             $uidStmt->close();
         }
@@ -257,6 +261,7 @@ try {
             'quotation_uid' => $uid,
             'version' => $version ?? 1,
             'status' => 'published',
+            'lead_id' => $savedLeadId,
             'edited_from_version' => $editFromVersion > 0 ? $editFromVersion : null,
         ]);
     }
@@ -356,6 +361,7 @@ try {
         'id' => $newId,
         'quotation_uid' => $uid,
         'status' => 'published',
+        'lead_id' => $leadIdPost,
     ]);
 } catch (Throwable $e) {
     quotationJson(false, 'Save failed: ' . $e->getMessage());

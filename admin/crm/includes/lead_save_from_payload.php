@@ -3,6 +3,7 @@
 require_once __DIR__ . '/lead_intake_db.php';
 require_once __DIR__ . '/lead_intake_fields.php';
 require_once __DIR__ . '/lead_uid.php';
+require_once __DIR__ . '/lead_db.php';
 
 /**
  * Insert a CRM lead from POST-like payload array. Returns ['success'=>bool, 'message'=>..., 'lead'=>...].
@@ -33,12 +34,21 @@ function crmSaveLeadFromPayload(mysqli $conn, array $payload, array $meta = [])
         UNIQUE KEY `uniq_crm_lead_uid` (`lead_uid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     $conn->query($createTableSql);
+    crmEnsureLeadReferralColumns($conn);
 
     $customerName = trim($payload['customer_name'] ?? '');
     $customerPhone = trim($payload['customer_phone'] ?? '');
     $customerEmail = trim($payload['customer_email'] ?? '');
     $leadSource = trim($meta['lead_source'] ?? ($payload['lead_source'] ?? ''));
-    $referredBy = trim($meta['referred_by'] ?? ($payload['referred_by'] ?? ''));
+    $referral = crmResolveLeadReferral(
+        $conn,
+        trim((string) ($meta['referred_by'] ?? ($payload['referred_by'] ?? ''))),
+        trim((string) ($meta['referred_contact_source'] ?? ($payload['referred_contact_source'] ?? ''))),
+        (int) ($meta['referred_contact_id'] ?? ($payload['referred_contact_id'] ?? 0))
+    );
+    $referredBy = $referral['referred_by'];
+    $referredContactSource = $referral['source'];
+    $referredContactId = $referral['id'];
     $assignTo = trim($meta['assign_to'] ?? ($payload['assign_to'] ?? ''));
     if ($assignTo === '') {
         $assignTo = trim((string) ($meta['created_by_name'] ?? ''));
@@ -73,9 +83,10 @@ function crmSaveLeadFromPayload(mysqli $conn, array $payload, array $meta = [])
     $createdByName = isset($meta['created_by_name']) ? trim((string) $meta['created_by_name']) : '';
 
     $sql = "INSERT INTO `crm_leads`
-        (`lead_uid`, `customer_name`, `customer_phone`, `customer_email`, `lead_source`, `referred_by`, `assign_to`,
+        (`lead_uid`, `customer_name`, `customer_phone`, `customer_email`, `lead_source`, `referred_by`,
+         `referred_contact_source`, `referred_contact_id`, `assign_to`,
          `services`, `itinerary_total_nights`, `itinerary_total_days`, `payload_json`, `created_by_id`, `created_by_name`, `intake_submission_id`)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -83,13 +94,15 @@ function crmSaveLeadFromPayload(mysqli $conn, array $payload, array $meta = [])
     }
 
     $stmt->bind_param(
-        'ssssssssiisisi',
+        'sssssssissiisisi',
         $leadUid,
         $customerName,
         $customerPhone,
         $customerEmail,
         $leadSource,
         $referredBy,
+        $referredContactSource,
+        $referredContactId,
         $assignTo,
         $servicesJson,
         $itineraryTotalNights,

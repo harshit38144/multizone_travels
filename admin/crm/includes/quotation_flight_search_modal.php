@@ -83,19 +83,21 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                     </div>
                     <div class="col-md-9 form-group mb-md-0">
                         <div class="qfs-route-row">
-                            <div class="qfs-route-field">
+                            <div class="qfs-route-field qfs-airport-field">
                                 <label for="qfsReturnFrom">From</label>
-                                <input type="text" class="form-control" id="qfsReturnFrom" readonly tabindex="-1" placeholder="Return from" aria-readonly="true">
+                                <input type="text" class="form-control" id="qfsReturnFrom" autocomplete="off" placeholder="Start typing a city...">
+                                <div id="qfsReturnFromSuggest" class="qfs-airport-suggest" style="display:none;"></div>
                             </div>
                             <div class="qfs-swap-wrap">
                                 <label>&nbsp;</label>
-                                <span class="btn qfs-swap-btn qfs-swap-btn-static" title="Return route is the reverse of the onward route" aria-hidden="true">
+                                <button type="button" class="btn qfs-swap-btn" id="qfsSwapReturnAirports" title="Swap return From / To" aria-label="Swap return From and To">
                                     <i class="fas fa-exchange-alt"></i>
-                                </span>
+                                </button>
                             </div>
-                            <div class="qfs-route-field">
+                            <div class="qfs-route-field qfs-airport-field">
                                 <label for="qfsReturnTo">To</label>
-                                <input type="text" class="form-control" id="qfsReturnTo" readonly tabindex="-1" placeholder="Return to" aria-readonly="true">
+                                <input type="text" class="form-control" id="qfsReturnTo" autocomplete="off" placeholder="Start typing a city...">
+                                <div id="qfsReturnToSuggest" class="qfs-airport-suggest" style="display:none;"></div>
                             </div>
                         </div>
                     </div>

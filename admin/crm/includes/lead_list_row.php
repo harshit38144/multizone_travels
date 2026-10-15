@@ -1,6 +1,6 @@
 <?php
                                             $serviceIcons = [
-                                                'tour_package' => ['fas fa-suitcase-rolling', 'Tour Package'],
+                                                'tour_package' => ['fas fa-suitcase-rolling', 'Tour'],
                                                 'cruise' => ['fas fa-ship', 'Cruise'],
                                                 'flight' => ['fas fa-plane', 'Flight'],
                                                 'hotel' => ['fas fa-hotel', 'Hotel'],
@@ -29,7 +29,16 @@
                                                 || !empty($lead['latest_is_tour_confirmed'])
                                                 || !empty($lead['is_tour_confirmed']);
                                         ?>
-                                            <tr data-lead-id="<?= (int) $lead['id'] ?>"<?= $rowTourConfirmed ? ' class="is-tour-confirmed"' : '' ?>>
+                                            <?php
+                                            $leadRowClasses = [];
+                                            if ($rowTourConfirmed) {
+                                                $leadRowClasses[] = 'is-tour-confirmed';
+                                            }
+                                            if ((int) ($highlightLeadId ?? 0) > 0 && (int) ($highlightLeadId ?? 0) === (int) $lead['id']) {
+                                                $leadRowClasses[] = 'is-lead-highlight';
+                                            }
+                                            ?>
+                                            <tr data-lead-id="<?= (int) $lead['id'] ?>"<?= $leadRowClasses ? ' class="' . htmlspecialchars(implode(' ', $leadRowClasses), ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                                                 <td class="col-ld-lead">
                                                     <button type="button" class="lead-id-cell js-lead-row-expand"
                                                         data-lead-id="<?= (int) $lead['id'] ?>"
@@ -59,11 +68,17 @@
                                                         <?php
                                                         $travelDestDisplay = trim((string) ($lead['travel_dest_display'] ?? ''));
                                                         $travelExDisplay = trim((string) ($lead['travel_departure_display'] ?? ''));
+                                                        $travelDestName = $travelDestDisplay;
+                                                        $travelDestNights = '';
+                                                        if (preg_match('/^(.*)-(\d+\s+N)$/', $travelDestDisplay, $destNightsMatch)) {
+                                                            $travelDestName = (string) $destNightsMatch[1];
+                                                            $travelDestNights = (string) $destNightsMatch[2];
+                                                        }
                                                         if ($travelDestDisplay !== '' || $travelExDisplay !== '') {
                                                         ?>
                                                             <div class="travel-route-text" title="<?= htmlspecialchars((string) ($lead['travel_destination_text'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                                                                 <?php if ($travelDestDisplay !== '') { ?>
-                                                                    <span class="travel-dest-name"><?= htmlspecialchars($travelDestDisplay, ENT_QUOTES, 'UTF-8') ?></span>
+                                                                    <span class="travel-dest-name"><?= htmlspecialchars($travelDestName, ENT_QUOTES, 'UTF-8') ?><?php if ($travelDestNights !== '') { ?>-<span class="travel-dest-nights"><?= htmlspecialchars($travelDestNights, ENT_QUOTES, 'UTF-8') ?></span><?php } ?></span>
                                                                 <?php } ?>
                                                                 <?php if ($travelDestDisplay !== '' && $travelExDisplay !== '') { ?>
                                                                     <span class="travel-dest-sep"> | </span>

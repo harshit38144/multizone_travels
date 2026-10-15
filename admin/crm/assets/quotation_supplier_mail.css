@@ -4,14 +4,30 @@
     overflow: hidden;
 }
 
-.q-supplier-mail-header {
-    border-bottom: 1px solid #e9ecef;
+#qSupplierMailModal .modal-header.q-supplier-mail-header {
+    background: #e11d2e !important;
+    color: #fff !important;
+    border-bottom: none !important;
     padding: 0.85rem 1rem;
 }
 
-.q-supplier-mail-header .modal-title {
+#qSupplierMailModal .q-supplier-mail-header .modal-title,
+#qSupplierMailModal .q-supplier-mail-header .close,
+#qSupplierMailModal .q-supplier-mail-header .close span {
+    color: #fff !important;
+    text-shadow: none;
+    opacity: 1;
+}
+
+#qSupplierMailModal .q-supplier-mail-header .modal-title {
     font-size: 1rem;
     font-weight: 700;
+}
+
+#qSupplierMailModal .q-supplier-mail-header .close:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.12);
+    opacity: 1;
 }
 
 .q-supplier-mail-body {

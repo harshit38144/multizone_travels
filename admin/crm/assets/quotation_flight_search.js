@@ -271,7 +271,11 @@
             }
             inputEl.val(fullText ? fullText : code);
             hideSuggest();
-            qfsSyncReturnRoute();
+            if (inputEl.is('#qfsReturnFrom, #qfsReturnTo')) {
+                qfsReturnRouteCustom = true;
+            } else {
+                qfsSyncReturnRoute();
+            }
         });
 
         $(document).on('mousedown', function (e) {
@@ -1125,7 +1129,7 @@
         var s = qfsResultsState;
         if (s.tType === 'ROUNDTRIP') {
             qfsRenderFlightPage('#qfsOnwardList', s.onward, s.onwardPage, 'onward', s.from, s.to, s.fromCity, s.toCity, qfsSelectedOnwardId);
-            qfsRenderFlightPage('#qfsReturnList', s.returning, s.returnPage, 'return', s.to, s.from, s.toCity, s.fromCity, qfsSelectedReturnId);
+            qfsRenderFlightPage('#qfsReturnList', s.returning, s.returnPage, 'return', s.returnFrom || s.to, s.returnTo || s.from, s.returnFromCity || s.toCity, s.returnToCity || s.fromCity, qfsSelectedReturnId);
         } else {
             qfsRenderFlightPage('#qfsOnewayList', s.onward, s.onwardPage, 'onward', s.from, s.to, s.fromCity, s.toCity, qfsSelectedOnwardId);
         }
@@ -1186,6 +1190,10 @@
             to: to,
             fromCity: fromCity,
             toCity: toCity,
+            returnFrom: opts.returnFrom || to,
+            returnTo: opts.returnTo || from,
+            returnFromCity: opts.returnFromCity || toCity,
+            returnToCity: opts.returnToCity || fromCity,
             date: date,
             returnDate: returnDate,
             onward: [],
@@ -1460,8 +1468,13 @@
         }
     }
 
-    /** Return From/To always mirror the opposite of the onward route. */
-    function qfsSyncReturnRoute() {
+    var qfsReturnRouteCustom = false;
+
+    /** Fill return From/To from the reverse onward route until the user edits them. */
+    function qfsSyncReturnRoute(force) {
+        if (qfsReturnRouteCustom && !force) {
+            return;
+        }
         qfsCopyAirportField($('#qfsApiTo'), $('#qfsReturnFrom'));
         qfsCopyAirportField($('#qfsApiFrom'), $('#qfsReturnTo'));
     }
@@ -1605,8 +1618,10 @@
         if (!ret || ret < onward) {
             qfsSetDateField('qfsApiReturnDate', onward === today ? tomorrow : onward);
         }
+        qfsReturnRouteCustom = false;
         qfsSyncPaxFromQuotation();
         qfsPrefillRouteAirports();
+        qfsSyncReturnRoute(true);
         qfsAutoSetReturnDate();
     }
 
@@ -1631,6 +1646,8 @@
     $(function () {
         initQfsAirportAutosuggest('qfsApiFrom', 'qfsApiFromSuggest');
         initQfsAirportAutosuggest('qfsApiTo', 'qfsApiToSuggest');
+        initQfsAirportAutosuggest('qfsReturnFrom', 'qfsReturnFromSuggest');
+        initQfsAirportAutosuggest('qfsReturnTo', 'qfsReturnToSuggest');
 
         $('#qfsSwapAirports').on('click', function () {
             var $from = $('#qfsApiFrom');
@@ -1671,7 +1688,30 @@
             qfsSyncReturnRoute();
         });
 
+        $('#qfsSwapReturnAirports').on('click', function () {
+            var $from = $('#qfsReturnFrom');
+            var $to = $('#qfsReturnTo');
+            var fromVal = $from.val();
+            var toVal = $to.val();
+            var fromCode = $from.attr('data-code') || '';
+            var toCode = $to.attr('data-code') || '';
+            var fromCity = $from.attr('data-city') || '';
+            var toCity = $to.attr('data-city') || '';
+            $from.val(toVal);
+            $to.val(fromVal);
+            if (toCode) { $from.attr('data-code', toCode); } else { $from.removeAttr('data-code'); }
+            if (fromCode) { $to.attr('data-code', fromCode); } else { $to.removeAttr('data-code'); }
+            if (toCity) { $from.attr('data-city', toCity); } else { $from.removeAttr('data-city'); }
+            if (fromCity) { $to.attr('data-city', fromCity); } else { $to.removeAttr('data-city'); }
+            qfsReturnRouteCustom = true;
+            $('#qfsReturnFromSuggest, #qfsReturnToSuggest').hide().empty();
+        });
+
         $('#qfsApiFrom, #qfsApiTo').on('input change', qfsSyncReturnRoute);
+        $('#qfsReturnFrom, #qfsReturnTo').on('input', function () {
+            qfsReturnRouteCustom = true;
+            $(this).removeAttr('data-code');
+        });
 
         $('#qSearchFlight').on('click', function () {
             prefillQfsSearchFromQuotation();
@@ -1716,15 +1756,21 @@
             var to = qfsGetAirportCode($('#qfsApiTo'), '');
             var fromCity = ($('#qfsApiFrom').attr('data-city') || fromVal).split(',')[0].replace(/\(.*?\)/g, '').trim();
             var toCity = ($('#qfsApiTo').attr('data-city') || toVal).split(',')[0].replace(/\(.*?\)/g, '').trim();
+            var tType = $('input[name="qfs_tripType"]:checked').val() === 'roundtrip' ? 'ROUNDTRIP' : 'ONEWAY';
+            var returnFromVal = $('#qfsReturnFrom').val().trim();
+            var returnToVal = $('#qfsReturnTo').val().trim();
+            var returnFrom = tType === 'ROUNDTRIP' ? (qfsGetAirportCode($('#qfsReturnFrom'), '') || to) : '';
+            var returnTo = tType === 'ROUNDTRIP' ? (qfsGetAirportCode($('#qfsReturnTo'), '') || from) : '';
+            var returnFromCity = ($('#qfsReturnFrom').attr('data-city') || returnFromVal || toCity).split(',')[0].replace(/\(.*?\)/g, '').trim();
+            var returnToCity = ($('#qfsReturnTo').attr('data-city') || returnToVal || fromCity).split(',')[0].replace(/\(.*?\)/g, '').trim();
             var paxCounts = qfsSyncPaxToQuotation();
             var adults = paxCounts.adults;
             var children = paxCounts.children;
             var infants = paxCounts.infants;
             var nonStopOnly = $('#qfsNonStop').is(':checked');
-            var tType = $('input[name="qfs_tripType"]:checked').val() === 'roundtrip' ? 'ROUNDTRIP' : 'ONEWAY';
             var returnDate = $('#qfsApiReturnDate').val().trim();
 
-            if (!from || !to || from.length !== 3 || to.length !== 3 || !date || (tType === 'ROUNDTRIP' && !returnDate)) {
+            if (!from || !to || from.length !== 3 || to.length !== 3 || !date || (tType === 'ROUNDTRIP' && (!returnDate || !returnFrom || !returnTo || returnFrom.length !== 3 || returnTo.length !== 3))) {
                 alert('Please fill all required search fields and select airports from the suggestions');
                 return;
             }
@@ -1752,8 +1798,8 @@
             }];
             if (tType === 'ROUNDTRIP') {
                 sectorInfos.push({
-                    src: { code: to, name: toCity || to, city: toCity || to },
-                    dest: { code: from, name: fromCity || from, city: fromCity || from },
+                    src: { code: returnFrom, name: returnFromCity || returnFrom, city: returnFromCity || returnFrom },
+                    dest: { code: returnTo, name: returnToCity || returnTo, city: returnToCity || returnTo },
                     date: moment(returnDate).format('YYYY-MM-DD'),
                     debug: false
                 });
@@ -1773,6 +1819,10 @@
                     to: to,
                     fromCity: fromCity,
                     toCity: toCity,
+                    returnFrom: returnFrom,
+                    returnTo: returnTo,
+                    returnFromCity: returnFromCity,
+                    returnToCity: returnToCity,
                     date: date,
                     returnDate: returnDate,
                     tType: tType,
