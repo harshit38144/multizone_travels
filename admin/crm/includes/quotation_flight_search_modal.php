@@ -122,11 +122,11 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                             <label class="form-check-label font-weight-bold" for="qfsNonStop">Non-stop only</label>
                         </div>
                     </div>
-                    <div class="col-12 col-md-3 form-group d-flex align-items-end">
+                    <!-- <div class="col-12 col-md-3 form-group d-flex align-items-end">
                         <small class="text-muted qfs-pax-hint mb-2">
                             Uses Guest &amp; Tour counts. Changing here also updates the quotation.
                         </small>
-                    </div>
+                    </div> -->
                 </div>
 
                 <button type="button" class="btn btn-primary qfs-search-btn" id="qfsSearchFlightsBtn">Search</button>
