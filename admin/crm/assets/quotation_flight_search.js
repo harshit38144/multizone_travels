@@ -7,6 +7,9 @@
     var qfsSelectedOnwardId = '';
     var qfsSelectedReturnId = '';
     var qfsSearchContext = { from: '', to: '', date: '', returnDate: '' };
+    var qfsSearchBusy = false;
+    var qfsActiveXhrs = [];
+    var qfsLastSearchOpts = null;
     var QFS_PAGE_SIZE = 12;
     var qfsResultsState = {
         tType: 'ONEWAY',
@@ -1372,6 +1375,164 @@
         return { flights: flights, rFlights: rFlights };
     }
 
+    function qfsAbortActiveSearches() {
+        var list = qfsActiveXhrs.slice();
+        qfsActiveXhrs = [];
+        list.forEach(function (xhr) {
+            try {
+                if (xhr && xhr.readyState !== 4) {
+                    xhr.abort();
+                }
+            } catch (err) {}
+        });
+    }
+
+    function qfsSetSearchBusy(busy) {
+        qfsSearchBusy = !!busy;
+        var $btn = $('#qfsSearchFlightsBtn');
+        $btn.prop('disabled', qfsSearchBusy).attr('aria-busy', qfsSearchBusy ? 'true' : 'false');
+        if ($btn.text() !== 'Search') {
+            $btn.text('Search');
+        }
+    }
+
+    function qfsEscHtml(s) {
+        return $('<div>').text(s == null ? '' : String(s)).html();
+    }
+
+    function qfsRouteTitle(opts) {
+        opts = opts || {};
+        var from = opts.from || '';
+        var to = opts.to || '';
+        var date = opts.date || '';
+        var returnDate = opts.returnDate || '';
+        var tType = opts.tType || 'ONEWAY';
+        var dateLabel = date ? moment(date).format('DD/MM/YYYY') : date;
+        if (tType === 'ROUNDTRIP' && returnDate) {
+            return from + ' - ' + to + ' | ' + dateLabel + ' · Return ' + moment(returnDate).format('DD/MM/YYYY');
+        }
+        return from + ' - ' + to + ' | ' + dateLabel;
+    }
+
+    function qfsShowResultsLoading(opts) {
+        opts = opts || {};
+        var title = qfsRouteTitle(opts);
+        $('#qfsFlightsModal .modal-dialog').css('max-width', opts.tType === 'ROUNDTRIP' ? '1200px' : '900px');
+        $('#qfsFlightsModalTitle').text(title || 'Flight Search Results');
+        $('#qfsFlightsModalBody').html(
+            '<div class="qfs-search-status qfs-search-loading" role="status" aria-live="polite">' +
+            '<div class="qfs-search-status-icon"><i class="fas fa-plane"></i></div>' +
+            '<h5>Searching for available flights...</h5>' +
+            '<p>Please wait while we fetch live fares for your route.</p>' +
+            '<div class="qfs-search-progress-wrap">' +
+            '<div class="qfs-search-progress"><div class="qfs-search-progress-bar" id="qfsSearchProgressBar"></div></div>' +
+            '<div class="qfs-search-progress-meta"><span id="qfsSearchProgressLabel">Connecting to flight search...</span><span id="qfsSearchProgressPct">0%</span></div>' +
+            '</div></div>'
+        );
+        qfsSetSearchProgress(4, 'Connecting to flight search...');
+        $('#qfsFlightsModal').modal('show');
+    }
+
+    function qfsSetSearchProgress(pct, label) {
+        pct = Math.max(0, Math.min(100, Math.round(pct || 0)));
+        var $bar = $('#qfsSearchProgressBar');
+        if ($bar.length) {
+            $bar.css('width', pct + '%');
+        }
+        if (label) {
+            $('#qfsSearchProgressLabel').text(label);
+        }
+        $('#qfsSearchProgressPct').text(pct + '%');
+    }
+
+    function qfsShowSearchError(opts, message) {
+        opts = opts || {};
+        $('#qfsFlightsModal .modal-dialog').css('max-width', '900px');
+        $('#qfsFlightsModalTitle').text(qfsRouteTitle(opts) || 'Flight Search Results');
+        $('#qfsFlightsModalBody').html(
+            '<div class="qfs-search-status qfs-search-error" role="alert">' +
+            '<div class="qfs-search-status-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+            '<h5>Search Failed</h5>' +
+            '<p>' + qfsEscHtml(message || 'Could not connect to flight search. Please try again.') + '</p>' +
+            '<button type="button" class="btn btn-primary btn-sm" id="qfsSearchRetryBtn"><i class="fas fa-redo mr-1"></i>Retry</button>' +
+            '</div>'
+        );
+        $('#qfsFlightsModal').modal('show');
+    }
+
+    function qfsShowSearchEmpty(opts) {
+        opts = opts || {};
+        $('#qfsFlightsModal .modal-dialog').css('max-width', '900px');
+        $('#qfsFlightsModalTitle').text(qfsRouteTitle(opts) || 'Flight Search Results');
+        $('#qfsFlightsModalBody').html(
+            '<div class="qfs-search-status qfs-search-empty">' +
+            '<div class="qfs-search-status-icon"><i class="fas fa-search"></i></div>' +
+            '<h5>No flights found</h5>' +
+            '<p>No available flights matched this route and date. Try another date, nearby airport, or remove Non-stop only.</p>' +
+            '<button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Close</button>' +
+            '</div>'
+        );
+        $('#qfsFlightsModal').modal('show');
+    }
+
+    function qfsExtractSearchError(err) {
+        var payload = err && err.responseJSON ? err.responseJSON : null;
+        var errMsg = '';
+        if (payload && payload.err && payload.err.title) {
+            errMsg = String(payload.err.title);
+        } else if (payload && payload.error) {
+            errMsg = String(payload.error);
+        } else if (payload && typeof payload.response === 'string') {
+            try {
+                var nested = JSON.parse(payload.response);
+                if (nested && nested.err && nested.err.title) {
+                    errMsg = String(nested.err.title);
+                }
+            } catch (parseErr) {}
+        }
+        if (!errMsg && err && err.statusText === 'abort') {
+            errMsg = 'Search cancelled.';
+        }
+        return errMsg || 'Could not connect to flight search. Please try again.';
+    }
+
+    function qfsAjaxViaSearch(payload, onProgress) {
+        return $.ajax({
+            url: 'ajax/via_search.php',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            xhr: function () {
+                var xhr = $.ajaxSettings.xhr();
+                if (typeof onProgress === 'function') {
+                    onProgress(0.08, 'Connecting to flight search...');
+                    if (xhr.upload) {
+                        xhr.upload.addEventListener('progress', function (e) {
+                            if (e.lengthComputable && e.total > 0) {
+                                onProgress(0.08 + 0.12 * (e.loaded / e.total), 'Sending search request...');
+                            } else {
+                                onProgress(0.14, 'Sending search request...');
+                            }
+                        });
+                        xhr.upload.addEventListener('load', function () {
+                            onProgress(0.22, 'Waiting for flight results...');
+                        });
+                    } else {
+                        onProgress(0.2, 'Waiting for flight results...');
+                    }
+                    xhr.addEventListener('progress', function (e) {
+                        if (e.lengthComputable && e.total > 0) {
+                            onProgress(0.22 + 0.73 * (e.loaded / e.total), 'Receiving flight results...');
+                        } else if (xhr.readyState >= 3) {
+                            onProgress(0.58, 'Receiving flight results...');
+                        }
+                    });
+                }
+                return xhr;
+            }
+        });
+    }
+
     function qfsReadGuestCounts() {
         var adults = parseInt($('#q_adults').val(), 10);
         var children = parseInt($('#q_children').val(), 10);
@@ -1745,9 +1906,7 @@
             }
         });
 
-        $('#qfsSearchFlightsBtn').on('click', function (e) {
-            e.preventDefault();
-
+        function qfsCollectSearchOpts() {
             var fromVal = $('#qfsApiFrom').val().trim();
             var toVal = $('#qfsApiTo').val().trim();
             var date = $('#qfsApiDate').val().trim();
@@ -1764,26 +1923,62 @@
             var returnFromCity = ($('#qfsReturnFrom').attr('data-city') || returnFromVal || toCity).split(',')[0].replace(/\(.*?\)/g, '').trim();
             var returnToCity = ($('#qfsReturnTo').attr('data-city') || returnToVal || fromCity).split(',')[0].replace(/\(.*?\)/g, '').trim();
             var paxCounts = qfsSyncPaxToQuotation();
-            var adults = paxCounts.adults;
-            var children = paxCounts.children;
-            var infants = paxCounts.infants;
-            var nonStopOnly = $('#qfsNonStop').is(':checked');
             var returnDate = $('#qfsApiReturnDate').val().trim();
-
-            if (!from || !to || from.length !== 3 || to.length !== 3 || !date || (tType === 'ROUNDTRIP' && (!returnDate || !returnFrom || !returnTo || returnFrom.length !== 3 || returnTo.length !== 3))) {
-                alert('Please fill all required search fields and select airports from the suggestions');
-                return;
-            }
-
-            qfsSearchContext = {
+            return {
                 from: from,
                 to: to,
+                fromCity: fromCity,
+                toCity: toCity,
                 date: date,
                 returnDate: returnDate,
-                adults: adults,
-                children: children,
-                infants: infants,
-                nonStopOnly: nonStopOnly
+                returnFrom: returnFrom,
+                returnTo: returnTo,
+                returnFromCity: returnFromCity,
+                returnToCity: returnToCity,
+                tType: tType,
+                adults: paxCounts.adults,
+                children: paxCounts.children,
+                infants: paxCounts.infants,
+                nonStopOnly: $('#qfsNonStop').is(':checked'),
+                isInternational: isInternational
+            };
+        }
+
+        function qfsValidateSearchOpts(opts) {
+            if (!opts.from || !opts.to || opts.from.length !== 3 || opts.to.length !== 3 || !opts.date ||
+                (opts.tType === 'ROUNDTRIP' && (!opts.returnDate || !opts.returnFrom || !opts.returnTo || opts.returnFrom.length !== 3 || opts.returnTo.length !== 3))) {
+                alert('Please fill all required search fields and select airports from the suggestions');
+                return false;
+            }
+            var todayYmd = qfsTodayYmd();
+            if (opts.date < todayYmd) {
+                alert('Travel date cannot be before today. Please choose today or a future date.');
+                qfsSetDateMin('qfsApiDate', todayYmd);
+                qfsSetDateField('qfsApiDate', todayYmd);
+                return false;
+            }
+            if (opts.tType === 'ROUNDTRIP' && opts.returnDate < opts.date) {
+                alert('Return date cannot be before the onward date.');
+                return false;
+            }
+            return true;
+        }
+
+        function qfsExecuteFlightSearch(opts) {
+            if (qfsSearchBusy) {
+                return;
+            }
+            opts = opts || {};
+            qfsLastSearchOpts = $.extend({}, opts);
+            qfsSearchContext = {
+                from: opts.from,
+                to: opts.to,
+                date: opts.date,
+                returnDate: opts.returnDate,
+                adults: opts.adults,
+                children: opts.children,
+                infants: opts.infants,
+                nonStopOnly: opts.nonStopOnly
             };
             qfsSelectedOnward = null;
             qfsSelectedReturn = null;
@@ -1791,98 +1986,144 @@
             qfsSelectedReturnId = '';
 
             var sectorInfos = [{
-                src: { code: from, name: fromCity || from, city: fromCity || from },
-                dest: { code: to, name: toCity || to, city: toCity || to },
-                date: moment(date).format('YYYY-MM-DD'),
+                src: { code: opts.from, name: opts.fromCity || opts.from, city: opts.fromCity || opts.from },
+                dest: { code: opts.to, name: opts.toCity || opts.to, city: opts.toCity || opts.to },
+                date: moment(opts.date).format('YYYY-MM-DD'),
                 debug: false
             }];
-            if (tType === 'ROUNDTRIP') {
+            if (opts.tType === 'ROUNDTRIP') {
                 sectorInfos.push({
-                    src: { code: returnFrom, name: returnFromCity || returnFrom, city: returnFromCity || returnFrom },
-                    dest: { code: returnTo, name: returnToCity || returnTo, city: returnToCity || returnTo },
-                    date: moment(returnDate).format('YYYY-MM-DD'),
+                    src: { code: opts.returnFrom, name: opts.returnFromCity || opts.returnFrom, city: opts.returnFromCity || opts.returnFrom },
+                    dest: { code: opts.returnTo, name: opts.returnToCity || opts.returnTo, city: opts.returnToCity || opts.returnTo },
+                    date: moment(opts.returnDate).format('YYYY-MM-DD'),
                     debug: false
                 });
             }
 
-            var isDomesticSearch = !isInternational;
-            var useDualIntlRoundTrip = tType === 'ROUNDTRIP' && isInternational;
-            var $btn = $('#qfsSearchFlightsBtn').text('Searching...').prop('disabled', true);
+            var isDomesticSearch = !opts.isInternational;
+            var useDualIntlRoundTrip = opts.tType === 'ROUNDTRIP' && opts.isInternational;
 
-            function handleQfsSearchSuccess(res, preParsed) {
-                $btn.text('Search').prop('disabled', false);
-                var parsed = preParsed || qfsParseViaSearchResponse(res);
+            qfsAbortActiveSearches();
+            qfsSetSearchBusy(true);
+            qfsShowResultsLoading(opts);
+
+            function finishSuccess(parsed) {
+                qfsActiveXhrs = [];
+                qfsSetSearchProgress(100, 'Search complete');
+                qfsSetSearchBusy(false);
+                var flights = (parsed && parsed.flights) || [];
+                var rFlights = (parsed && parsed.rFlights) || [];
+                if (!flights.length && !(opts.tType === 'ROUNDTRIP' && rFlights.length)) {
+                    qfsShowSearchEmpty(opts);
+                    return;
+                }
                 qfsRenderSearchResults({
-                    flights: parsed.flights || [],
-                    rFlights: parsed.rFlights || [],
-                    from: from,
-                    to: to,
-                    fromCity: fromCity,
-                    toCity: toCity,
-                    returnFrom: returnFrom,
-                    returnTo: returnTo,
-                    returnFromCity: returnFromCity,
-                    returnToCity: returnToCity,
-                    date: date,
-                    returnDate: returnDate,
-                    tType: tType,
-                    adults: adults,
-                    children: children,
-                    infants: infants,
-                    nonStopOnly: nonStopOnly
+                    flights: flights,
+                    rFlights: rFlights,
+                    from: opts.from,
+                    to: opts.to,
+                    fromCity: opts.fromCity,
+                    toCity: opts.toCity,
+                    returnFrom: opts.returnFrom,
+                    returnTo: opts.returnTo,
+                    returnFromCity: opts.returnFromCity,
+                    returnToCity: opts.returnToCity,
+                    date: opts.date,
+                    returnDate: opts.returnDate,
+                    tType: opts.tType,
+                    adults: opts.adults,
+                    children: opts.children,
+                    infants: opts.infants,
+                    nonStopOnly: opts.nonStopOnly
                 });
             }
 
-            function handleQfsSearchError(err) {
-                $btn.text('Search').prop('disabled', false);
-                $('#qfsFlightsModalTitle').text(from + ' - ' + to + ' | ' + date);
-                var errMsg = (err.responseJSON && err.responseJSON.err && err.responseJSON.err.title)
-                    ? err.responseJSON.err.title
-                    : 'Could not connect to flight search. Please try again.';
-                $('#qfsFlightsModalBody').html('<div class="alert alert-danger" role="alert"><h5 class="alert-heading"><i class="fa fa-exclamation-triangle"></i> Search Failed</h5><p style="margin-bottom:0; font-size:13px;">' + errMsg + '</p></div>');
-                $('#qfsFlightsModal').modal('show');
+            function finishError(err) {
+                qfsActiveXhrs = [];
+                qfsSetSearchBusy(false);
+                if (err && err.statusText === 'abort') {
+                    return;
+                }
+                qfsShowSearchError(opts, qfsExtractSearchError(err));
             }
 
             if (useDualIntlRoundTrip) {
-                var onwardPayload = qfsBuildViaSearchPayload([sectorInfos[0]], false, adults, children, infants);
-                var returnPayload = qfsBuildViaSearchPayload([sectorInfos[1]], false, adults, children, infants);
-
-                $.when(
-                    $.ajax({
-                        url: 'ajax/via_search.php',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(onwardPayload)
-                    }),
-                    $.ajax({
-                        url: 'ajax/via_search.php',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(returnPayload)
-                    })
-                ).done(function (onwardRes, returnRes) {
+                var progressParts = [0.08, 0.08];
+                function syncDualProgress(label) {
+                    var avg = (progressParts[0] + progressParts[1]) / 2;
+                    qfsSetSearchProgress(avg * 100, label || 'Searching both journeys...');
+                }
+                var onwardReq = qfsAjaxViaSearch(
+                    qfsBuildViaSearchPayload([sectorInfos[0]], false, opts.adults, opts.children, opts.infants),
+                    function (part, label) {
+                        progressParts[0] = part;
+                        syncDualProgress(label || 'Searching onward flights...');
+                    }
+                );
+                var returnReq = qfsAjaxViaSearch(
+                    qfsBuildViaSearchPayload([sectorInfos[1]], false, opts.adults, opts.children, opts.infants),
+                    function (part, label) {
+                        progressParts[1] = part;
+                        syncDualProgress(label || 'Searching return flights...');
+                    }
+                );
+                qfsActiveXhrs = [onwardReq, returnReq];
+                $.when(onwardReq, returnReq).done(function (onwardRes, returnRes) {
                     var onwardParsed = qfsParseViaSearchResponse(onwardRes[0]);
                     var returnParsed = qfsParseViaSearchResponse(returnRes[0]);
-                    handleQfsSearchSuccess(null, {
+                    finishSuccess({
                         flights: onwardParsed.flights,
                         rFlights: returnParsed.flights
                     });
-                }).fail(function (err) {
-                    handleQfsSearchError(err);
-                });
+                }).fail(finishError);
                 return;
             }
 
-            $.ajax({
-                url: 'ajax/via_search.php',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(qfsBuildViaSearchPayload(sectorInfos, isDomesticSearch, adults, children, infants)),
-                success: function (res) {
-                    handleQfsSearchSuccess(res);
-                },
-                error: handleQfsSearchError
-            });
+            var singleReq = qfsAjaxViaSearch(
+                qfsBuildViaSearchPayload(sectorInfos, isDomesticSearch, opts.adults, opts.children, opts.infants),
+                function (part, label) {
+                    qfsSetSearchProgress(part * 100, label);
+                }
+            );
+            qfsActiveXhrs = [singleReq];
+            singleReq.done(function (res) {
+                finishSuccess(qfsParseViaSearchResponse(res));
+            }).fail(finishError);
+        }
+
+        $('#qfsSearchFlightsBtn').on('click', function (e) {
+            e.preventDefault();
+            if (qfsSearchBusy) {
+                return;
+            }
+            var opts = qfsCollectSearchOpts();
+            if (!qfsValidateSearchOpts(opts)) {
+                return;
+            }
+            qfsExecuteFlightSearch(opts);
+        });
+
+        $(document).on('click', '#qfsSearchRetryBtn', function (e) {
+            e.preventDefault();
+            if (qfsSearchBusy) {
+                return;
+            }
+            if (qfsLastSearchOpts) {
+                qfsExecuteFlightSearch($.extend({}, qfsLastSearchOpts));
+                return;
+            }
+            var opts = qfsCollectSearchOpts();
+            if (!qfsValidateSearchOpts(opts)) {
+                return;
+            }
+            qfsExecuteFlightSearch(opts);
+        });
+
+        $('#qfsFlightsModal').on('hidden.bs.modal', function () {
+            if (qfsSearchBusy) {
+                qfsAbortActiveSearches();
+                qfsSetSearchBusy(false);
+            }
         });
 
         $(document).on('click', '#qfsFlightsModal .qfs-select-flight-card', function () {

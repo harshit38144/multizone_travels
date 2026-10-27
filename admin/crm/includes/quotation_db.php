@@ -169,15 +169,24 @@ function crmQuotationNormalizeConfirmPayload($raw)
             }
             $total = (float) ($row['total'] ?? 0);
             $paid = (float) ($row['paid'] ?? 0);
-            $services[] = [
+            $label = trim((string) ($row['label'] ?? ''));
+            if ($label === '') {
+                $label = $map[$key];
+            }
+            $service = [
                 'uid' => crmQuotationServiceUid($row, count($services)),
                 'key' => $key,
-                'label' => $map[$key],
+                'label' => $label,
                 'supplier' => trim((string) ($row['supplier'] ?? '')),
                 'total' => $total,
                 'paid' => $paid,
                 'balance' => max(0, round($total - $paid, 2)),
             ];
+            $sourceId = substr((string) preg_replace('/[^A-Za-z0-9_\-]/', '', (string) ($row['source_id'] ?? '')), 0, 40);
+            if ($sourceId !== '') {
+                $service['source_id'] = $sourceId;
+            }
+            $services[] = $service;
         }
     }
 
@@ -833,12 +842,89 @@ function crmQuotationActiveHotelsFromJson($raw): array
     return [];
 }
 
+function crmQuotationConfirmMoney($v): float
+{
+    if (is_string($v)) {
+        $v = str_replace(',', '', $v);
+    }
+    $n = (float) $v;
+    return is_finite($n) ? $n : 0.0;
+}
+
+function crmQuotationConfirmMoneySame($a, $b): bool
+{
+    return abs(round(crmQuotationConfirmMoney($a), 2) - round(crmQuotationConfirmMoney($b), 2)) < 0.01;
+}
+
+function crmQuotationConfirmSupplierName($row): string
+{
+    if (!is_array($row)) {
+        return '';
+    }
+    foreach (['supplier', 'supplier_name', 'airline_supplier'] as $k) {
+        $name = trim((string) ($row[$k] ?? ''));
+        if ($name !== '' && strcasecmp($name, 'Select') !== 0 && stripos($name, 'Create new') !== 0) {
+            return $name;
+        }
+    }
+    return '';
+}
+
+function crmQuotationConfirmNormSupplier(string $name): string
+{
+    $name = strtolower(trim($name));
+    if ($name === '' || $name === 'select' || strpos($name, 'create new') === 0) {
+        return '';
+    }
+    return $name;
+}
+
+function crmQuotationConfirmSourceId(string $prefix, string $identity, int $dup): string
+{
+    return $prefix . substr(sha1($identity . '#' . $dup), 0, 16);
+}
+
+function crmQuotationHotelServiceLabel(array $hotel): string
+{
+    $name = trim((string) ($hotel['name'] ?? ($hotel['hotel_name'] ?? '')));
+    if ($name === '') {
+        $name = trim((string) ($hotel['city'] ?? ''));
+    }
+    return $name !== '' ? $name : 'Hotel';
+}
+
+function crmQuotationFlightServiceLabel(array $flight): string
+{
+    $name = trim((string) ($flight['name'] ?? ''));
+    $no = trim((string) ($flight['fl_tr_no'] ?? ($flight['pnr'] ?? '')));
+    $from = trim((string) ($flight['from'] ?? ''));
+    $to = trim((string) ($flight['to'] ?? ''));
+    $route = '';
+    if ($from !== '' || $to !== '') {
+        $route = $from . ($from !== '' && $to !== '' ? ' – ' : '') . $to;
+    }
+    $head = trim($name . ($no !== '' ? ' ' . $no : ''));
+    if ($head !== '' && $route !== '') {
+        return $head . ' · ' . $route;
+    }
+    if ($head !== '') {
+        return $head;
+    }
+    return $route !== '' ? $route : 'Flight';
+}
+
+function crmQuotationConfirmItemUid(string $key, string $sourceId): string
+{
+    $uid = preg_replace('/[^A-Za-z0-9_\-]/', '', $key) . '_' . preg_replace('/[^A-Za-z0-9_\-]/', '', $sourceId);
+    return substr($uid, 0, 60);
+}
+
 /**
  * Build Confirm-Tour service rows from quotation flights / hotels / land / cost sheet.
- * One row per supplier within each service type (amounts summed when same supplier repeats).
+ * Each hotel and each flight is its own row. Other services stay one row per supplier.
  *
  * @param array<string, mixed> $quotation DB row or partial row with JSON columns
- * @return list<array{key:string,label:string,supplier:string,total:float,paid:float,balance:float}>
+ * @return list<array<string, mixed>>
  */
 function crmQuotationBuildConfirmServicesFromQuote(array $quotation): array
 {
@@ -870,24 +956,11 @@ function crmQuotationBuildConfirmServicesFromQuote(array $quotation): array
     };
 
     $num = static function ($v): float {
-        if (is_string($v)) {
-            $v = str_replace(',', '', $v);
-        }
-        $n = (float) $v;
-        return is_finite($n) ? $n : 0.0;
+        return crmQuotationConfirmMoney($v);
     };
 
     $supplierName = static function ($row): string {
-        if (!is_array($row)) {
-            return '';
-        }
-        foreach (['supplier', 'supplier_name', 'airline_supplier'] as $k) {
-            $name = trim((string) ($row[$k] ?? ''));
-            if ($name !== '' && strcasecmp($name, 'Select') !== 0 && stripos($name, 'Create new') !== 0) {
-                return $name;
-            }
-        }
-        return '';
+        return crmQuotationConfirmSupplierName($row);
     };
 
     $isTrain = static function ($row) use ($supplierName): bool {
@@ -906,29 +979,63 @@ function crmQuotationBuildConfirmServicesFromQuote(array $quotation): array
         return (bool) preg_match('/\b(train|rail|irctc)\b/', $blob);
     };
 
+    $lineItems = [];
+    $hotels = crmQuotationActiveHotelsFromJson($quotation['hotels_json'] ?? '[]');
+    $hotelSeen = [];
+    foreach ($hotels as $h) {
+        if (!is_array($h)) {
+            continue;
+        }
+        $amt = $num($h['rate'] ?? ($h['amount'] ?? 0));
+        $supplier = $supplierName($h);
+        $label = crmQuotationHotelServiceLabel($h);
+        if ($label === 'Hotel' && $supplier === '' && $amt <= 0) {
+            continue;
+        }
+        $identity = strtolower($label) . '|' . strtolower(trim((string) ($h['city'] ?? '')))
+            . '|' . trim((string) ($h['checkin'] ?? ($h['check_in'] ?? '')))
+            . '|' . trim((string) ($h['checkout'] ?? ($h['check_out'] ?? '')))
+            . '|' . strtolower(trim((string) ($h['room_type'] ?? '')));
+        $dup = $hotelSeen[$identity] ?? 0;
+        $hotelSeen[$identity] = $dup + 1;
+        $lineItems[] = [
+            'key' => 'hotels',
+            'label' => $label,
+            'supplier' => $supplier,
+            'total' => round(max(0, $amt), 2),
+            'source_id' => crmQuotationConfirmSourceId('h', $identity, $dup),
+        ];
+    }
+
     $flights = json_decode((string) ($quotation['flights_json'] ?? '[]'), true);
+    $flightSeen = [];
     if (is_array($flights)) {
         foreach ($flights as $f) {
             if (!is_array($f)) {
                 continue;
             }
             $amt = $num($f['fare'] ?? ($f['amount'] ?? 0));
-            $name = $supplierName($f);
-            if ($amt <= 0 && $name === '') {
+            $supplier = $supplierName($f);
+            $label = crmQuotationFlightServiceLabel($f);
+            $key = $isTrain($f) ? 'train' : 'flight';
+            if ($label === 'Flight' && $supplier === '' && $amt <= 0) {
                 continue;
             }
-            $add($isTrain($f) ? 'train' : 'flight', $name, $amt);
+            $identity = $key . '|' . strtolower(trim((string) ($f['name'] ?? '')))
+                . '|' . strtolower(trim((string) ($f['fl_tr_no'] ?? ($f['pnr'] ?? ''))))
+                . '|' . strtolower(trim((string) ($f['from'] ?? '')))
+                . '|' . strtolower(trim((string) ($f['to'] ?? '')))
+                . '|' . trim((string) ($f['dep_date'] ?? ($f['date'] ?? '')));
+            $dup = $flightSeen[$identity] ?? 0;
+            $flightSeen[$identity] = $dup + 1;
+            $lineItems[] = [
+                'key' => $key,
+                'label' => $label,
+                'supplier' => $supplier,
+                'total' => round(max(0, $amt), 2),
+                'source_id' => crmQuotationConfirmSourceId($key === 'train' ? 't' : 'f', $identity, $dup),
+            ];
         }
-    }
-
-    $hotels = crmQuotationActiveHotelsFromJson($quotation['hotels_json'] ?? '[]');
-    foreach ($hotels as $h) {
-        $amt = $num($h['rate'] ?? ($h['amount'] ?? 0));
-        $name = $supplierName($h);
-        if ($amt <= 0 && $name === '') {
-            continue;
-        }
-        $add('hotels', $name, $amt);
     }
 
     $costSheet = json_decode((string) ($quotation['cost_sheet_json'] ?? '{}'), true);
@@ -1008,31 +1115,312 @@ function crmQuotationBuildConfirmServicesFromQuote(array $quotation): array
         }
     }
 
-    // Preferred display order.
-    $order = array_flip(array_keys($map));
-    uasort($buckets, static function ($a, $b) use ($order) {
-        $oa = $order[$a['key']] ?? 99;
-        $ob = $order[$b['key']] ?? 99;
-        if ($oa !== $ob) {
-            return $oa <=> $ob;
-        }
-        return strcasecmp($a['supplier'], $b['supplier']);
-    });
+    $linesByKey = [];
+    foreach ($lineItems as $item) {
+        $linesByKey[$item['key']][] = $item;
+    }
+    $bucketsByKey = [];
+    foreach ($buckets as $b) {
+        $bucketsByKey[$b['key']][] = $b;
+    }
 
     $out = [];
-    foreach ($buckets as $b) {
-        $total = round((float) $b['total'], 2);
-        $out[] = [
-            'key' => $b['key'],
-            'label' => $map[$b['key']],
-            'supplier' => $b['supplier'],
-            'total' => $total,
-            'paid' => 0.0,
-            'balance' => $total,
-        ];
+    foreach ($map as $key => $defaultLabel) {
+        if (!empty($linesByKey[$key])) {
+            foreach ($linesByKey[$key] as $item) {
+                $total = round((float) $item['total'], 2);
+                $out[] = [
+                    'key' => $key,
+                    'label' => (string) $item['label'],
+                    'supplier' => (string) $item['supplier'],
+                    'total' => $total,
+                    'paid' => 0.0,
+                    'balance' => $total,
+                    'source_id' => (string) $item['source_id'],
+                ];
+            }
+            continue;
+        }
+        foreach ($bucketsByKey[$key] ?? [] as $b) {
+            $total = round((float) $b['total'], 2);
+            $out[] = [
+                'key' => $b['key'],
+                'label' => $defaultLabel,
+                'supplier' => $b['supplier'],
+                'total' => $total,
+                'paid' => 0.0,
+                'balance' => $total,
+            ];
+        }
     }
 
     return $out;
+}
+
+/**
+ * Keep saved payment rows attached to the hotel or flight they belong to, and add any
+ * quotation hotels or flights that are not in the saved Confirm Tour yet.
+ *
+ * @param list<array<string, mixed>> $quoteRows
+ * @param list<array<string, mixed>> $storedRows
+ * @return list<array<string, mixed>>
+ */
+function crmQuotationMergeConfirmServices(array $quoteRows, array $storedRows): array
+{
+    $map = crmQuotationConfirmServiceMap();
+    $lineKeys = ['hotels' => true, 'flight' => true, 'train' => true];
+    $storedRows = array_values(array_filter($storedRows, 'is_array'));
+    $used = [];
+
+    $take = static function (int $index) use (&$used): void {
+        $used[$index] = true;
+    };
+
+    $finish = static function (array $row, array $stored) use ($map): array {
+        $total = round(crmQuotationConfirmMoney($row['total'] ?? 0), 2);
+        $paid = round(max(0, crmQuotationConfirmMoney($stored['paid'] ?? 0)), 2);
+        $supplier = trim((string) ($row['supplier'] ?? ''));
+        if ($supplier === '') {
+            $supplier = trim((string) ($stored['supplier'] ?? ''));
+        }
+        $uid = trim((string) ($stored['uid'] ?? ''));
+        if ($uid === '') {
+            $uid = crmQuotationConfirmItemUid((string) $row['key'], (string) ($row['source_id'] ?? ''));
+        }
+        $label = trim((string) ($row['label'] ?? ''));
+        if ($label === '') {
+            $label = $map[$row['key']] ?? (string) $row['key'];
+        }
+        return [
+            'uid' => $uid,
+            'key' => (string) $row['key'],
+            'label' => $label,
+            'supplier' => $supplier,
+            'total' => $total,
+            'paid' => $paid,
+            'balance' => max(0, round($total - $paid, 2)),
+            'source_id' => (string) ($row['source_id'] ?? ''),
+        ];
+    };
+
+    $merged = [];
+    $pending = [];
+    foreach ($quoteRows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $key = (string) ($row['key'] ?? '');
+        if (!isset($lineKeys[$key])) {
+            $pending[] = $row;
+            continue;
+        }
+        $sourceId = (string) ($row['source_id'] ?? '');
+        $matched = null;
+        if ($sourceId !== '') {
+            foreach ($storedRows as $i => $stored) {
+                if (isset($used[$i])) {
+                    continue;
+                }
+                if ((string) ($stored['key'] ?? '') === $key && (string) ($stored['source_id'] ?? '') === $sourceId) {
+                    $matched = $i;
+                    break;
+                }
+            }
+        }
+        if ($matched === null) {
+            $pending[] = $row;
+            continue;
+        }
+        $take($matched);
+        $merged[] = $finish($row, $storedRows[$matched]);
+    }
+
+    $claimExact = static function (array $row) use (&$storedRows, &$used, $take): ?int {
+        $key = (string) ($row['key'] ?? '');
+        $supplier = crmQuotationConfirmNormSupplier((string) ($row['supplier'] ?? ''));
+        $found = null;
+        foreach ($storedRows as $i => $stored) {
+            if (isset($used[$i]) || (string) ($stored['source_id'] ?? '') !== '') {
+                continue;
+            }
+            if ((string) ($stored['key'] ?? '') !== $key) {
+                continue;
+            }
+            if (!crmQuotationConfirmMoneySame($stored['total'] ?? 0, $row['total'] ?? 0)) {
+                continue;
+            }
+            $storedSupplier = crmQuotationConfirmNormSupplier((string) ($stored['supplier'] ?? ''));
+            if ($supplier !== '' && $storedSupplier !== '' && $supplier !== $storedSupplier) {
+                continue;
+            }
+            if ($supplier !== '' && $storedSupplier !== '' && $supplier === $storedSupplier) {
+                $take($i);
+                return $i;
+            }
+            if ($found === null && ($supplier === '' || $storedSupplier === '')) {
+                $found = $i;
+            }
+        }
+        if ($found !== null) {
+            $take($found);
+        }
+        return $found;
+    };
+
+    $stillPending = [];
+    foreach ($pending as $row) {
+        $key = (string) ($row['key'] ?? '');
+        if (!isset($lineKeys[$key])) {
+            $stillPending[] = $row;
+            continue;
+        }
+        $exact = $claimExact($row);
+        if ($exact === null) {
+            $stillPending[] = $row;
+            continue;
+        }
+        $merged[] = $finish($row, $storedRows[$exact]);
+    }
+
+    $byKey = [];
+    foreach ($stillPending as $idx => $row) {
+        $byKey[(string) ($row['key'] ?? '')][] = $idx;
+    }
+    $consumedPending = [];
+    foreach ($byKey as $key => $indexes) {
+        if (!isset($lineKeys[$key]) || count($indexes) < 2) {
+            continue;
+        }
+        $legacy = null;
+        foreach ($storedRows as $i => $stored) {
+            if (isset($used[$i]) || (string) ($stored['source_id'] ?? '') !== '') {
+                continue;
+            }
+            if ((string) ($stored['key'] ?? '') === $key) {
+                $legacy = $i;
+                break;
+            }
+        }
+        if ($legacy === null) {
+            continue;
+        }
+        $sum = 0.0;
+        foreach ($indexes as $idx) {
+            $sum += crmQuotationConfirmMoney($stillPending[$idx]['total'] ?? 0);
+        }
+        if (!crmQuotationConfirmMoneySame($storedRows[$legacy]['total'] ?? 0, $sum)) {
+            continue;
+        }
+        $take($legacy);
+        $remainingPaid = round(crmQuotationConfirmMoney($storedRows[$legacy]['paid'] ?? 0), 2);
+        $lastPayIndex = $indexes[count($indexes) - 1];
+        foreach ($indexes as $idx) {
+            if (crmQuotationConfirmMoney($stillPending[$idx]['total'] ?? 0) > 0) {
+                $lastPayIndex = $idx;
+            }
+        }
+        $first = true;
+        foreach ($indexes as $idx) {
+            $row = $stillPending[$idx];
+            $total = round(crmQuotationConfirmMoney($row['total'] ?? 0), 2);
+            $paid = ($idx === $lastPayIndex) ? $remainingPaid : min($remainingPaid, max(0, $total));
+            $paid = round(max(0, $paid), 2);
+            $remainingPaid = round($remainingPaid - $paid, 2);
+            $stored = $first ? $storedRows[$legacy] : [];
+            $first = false;
+            $built = $finish($row, $stored);
+            $built['paid'] = $paid;
+            $built['balance'] = max(0, round($total - $paid, 2));
+            $merged[] = $built;
+            $consumedPending[$idx] = true;
+        }
+    }
+
+    foreach ($stillPending as $idx => $row) {
+        if (isset($consumedPending[$idx])) {
+            continue;
+        }
+        $key = (string) ($row['key'] ?? '');
+        if (!isset($lineKeys[$key])) {
+            $hasStored = false;
+            foreach ($storedRows as $stored) {
+                if ((string) ($stored['key'] ?? '') === $key) {
+                    $hasStored = true;
+                    break;
+                }
+            }
+            if (!$hasStored) {
+                $merged[] = $finish($row, []);
+            }
+            continue;
+        }
+        $sole = null;
+        if (isset($lineKeys[$key])) {
+            $unusedQuote = 0;
+            foreach ($stillPending as $otherIdx => $other) {
+                if (!isset($consumedPending[$otherIdx]) && (string) ($other['key'] ?? '') === $key) {
+                    $unusedQuote++;
+                }
+            }
+            $unusedStored = [];
+            foreach ($storedRows as $i => $stored) {
+                if (!isset($used[$i]) && (string) ($stored['source_id'] ?? '') === '' && (string) ($stored['key'] ?? '') === $key) {
+                    $unusedStored[] = $i;
+                }
+            }
+            if ($unusedQuote === 1 && count($unusedStored) === 1) {
+                $sole = $unusedStored[0];
+                $take($sole);
+            }
+        }
+        $merged[] = $finish($row, $sole === null ? [] : $storedRows[$sole]);
+    }
+
+    $presentKeys = [];
+    foreach ($merged as $row) {
+        $presentKeys[(string) $row['key']] = true;
+    }
+    foreach ($storedRows as $i => $stored) {
+        if (isset($used[$i])) {
+            continue;
+        }
+        $key = (string) ($stored['key'] ?? '');
+        if (!isset($map[$key])) {
+            continue;
+        }
+        $paid = crmQuotationConfirmMoney($stored['paid'] ?? 0);
+        $label = trim((string) ($stored['label'] ?? ''));
+        $generic = $label === '' || strcasecmp($label, (string) $map[$key]) === 0;
+        if (isset($lineKeys[$key], $presentKeys[$key]) && $paid <= 0 && $generic && (string) ($stored['source_id'] ?? '') === '') {
+            continue;
+        }
+        $total = round(crmQuotationConfirmMoney($stored['total'] ?? 0), 2);
+        $paid = round(max(0, $paid), 2);
+        $kept = [
+            'uid' => (string) ($stored['uid'] ?? crmQuotationServiceUid($stored, count($merged))),
+            'key' => $key,
+            'label' => $label !== '' ? $label : $map[$key],
+            'supplier' => trim((string) ($stored['supplier'] ?? '')),
+            'total' => $total,
+            'paid' => $paid,
+            'balance' => max(0, round($total - $paid, 2)),
+        ];
+        if ((string) ($stored['source_id'] ?? '') !== '') {
+            $kept['source_id'] = (string) $stored['source_id'];
+        }
+        $merged[] = $kept;
+        $presentKeys[$key] = true;
+    }
+
+    $ordered = [];
+    foreach ($map as $key => $_label) {
+        foreach ($merged as $row) {
+            if ((string) $row['key'] === $key) {
+                $ordered[] = $row;
+            }
+        }
+    }
+    return $ordered;
 }
 
 function crmQuotationRenderStatusBadges($tourConfirmJson)

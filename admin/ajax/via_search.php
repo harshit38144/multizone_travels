@@ -55,6 +55,15 @@ if (function_exists('curl_init')) {
 
 if ($httpCode != 200) {
     http_response_code(400);
+    $decoded = is_string($response) ? json_decode($response, true) : null;
+    if (is_array($decoded) && isset($decoded['err']) && is_array($decoded['err'])) {
+        echo json_encode([
+            'err' => $decoded['err'],
+            'error' => (string) ($decoded['err']['title'] ?? ('API request failed. Http code: ' . $httpCode)),
+            'response' => $response,
+        ]);
+        exit;
+    }
     echo json_encode(['error' => 'API request failed. Http code: ' . $httpCode, 'response' => $response]);
     exit;
 }

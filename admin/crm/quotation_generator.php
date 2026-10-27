@@ -4237,7 +4237,131 @@ $qWizardSteps = [
             flex-wrap: wrap;
             align-items: center;
             gap: 0.5rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0 0 1rem;
+            padding: 0.65rem 0.75rem;
+            border: 1px dashed #e7b4ba;
+            border-radius: 12px;
+            background: #fff7f8;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-drop {
+            flex: 1 1 auto;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            border: 0;
+            background: transparent;
+            text-align: left;
+            padding: 0.15rem 0.2rem;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-drop:focus {
+            outline: 2px solid rgba(225, 29, 46, 0.35);
+            outline-offset: 2px;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-drop.is-drag {
+            background: #ffe4e8;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-ico {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #e11d2e;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-copy {
+            min-width: 0;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-copy strong {
+            display: block;
+            color: #1f2937;
+            font-size: 0.84rem;
+            font-weight: 700;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-copy span {
+            display: block;
+            color: #6b7280;
+            font-size: 0.75rem;
+            line-height: 1.35;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-upload {
+            flex: 0 0 auto;
+            border: 1px solid #e11d2e;
+            background: #fff;
+            color: #e11d2e;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.4rem 0.9rem;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-upload:hover,
+        #qWizardSection3 .q-hotel-ocr-upload:focus {
+            background: #e11d2e;
+            color: #fff;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-status {
+            flex: 1 1 100%;
+            display: none;
+            margin: 0;
+            font-size: 0.78rem;
+            color: #6b7280;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-status.is-error {
+            color: #b91c1c;
+        }
+
+        @media (max-width: 767.98px) {
+            #qWizardSection3 .q-hotel-ocr-bar {
+                flex-wrap: wrap;
+            }
+            #qWizardSection3 .q-hotel-ocr-upload {
+                width: 100%;
+            }
+        }
+
+        #qHotelOcrModal .table td {
+            min-width: 7.5rem;
+            vertical-align: top;
+        }
+
+        #qHotelOcrModal .form-control {
+            min-width: 6.5rem;
+            font-size: 0.8rem;
+        }
+
+        #qHotelOcrModal .ocr-note {
+            display: block;
+            margin-top: 0.2rem;
+            color: #047857;
+            font-size: 0.68rem;
+            line-height: 1.3;
+        }
+
+        #qHotelOcrModal .ocr-note.is-plain {
+            color: #6b7280;
         }
 
         #qWizardSection3 .q-hotel-cat-tabs {
@@ -4390,6 +4514,10 @@ $qWizardSteps = [
             grid-template-columns: 0.95fr 1.2fr 72px;
         }
 
+        #qWizardSection3 .q-hotel-col-labels-commercial > span:first-child {
+            justify-content: flex-end;
+        }
+
         #qWizardSection3 .q-hotel-col-head-action {
             justify-content: flex-end;
             text-align: right;
@@ -4525,7 +4653,10 @@ $qWizardSteps = [
             padding: 0 !important;
             font-weight: 800 !important;
             color: #e11d2e !important;
-            text-align: left;
+            flex: 1 1 auto;
+            min-width: 0;
+            width: 1%;
+            text-align: right;
         }
 
         #qWizardSection3 .q-hotel-rate-box .h-rate:focus {
@@ -5217,6 +5348,83 @@ $qWizardSteps = [
         .qfs-flight-search .qfs-search-btn:focus {
             background-color: #5a91b6;
             border-color: #5a91b6;
+        }
+        .qfs-flight-search .qfs-search-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .qfs-search-status {
+            text-align: center;
+            padding: 2.2rem 1.2rem 1.8rem;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e8edf3;
+        }
+        .qfs-search-status-icon {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 0.9rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        .qfs-search-loading .qfs-search-status-icon {
+            background: #eff6ff;
+            color: #2563eb;
+            border: 2px solid #bfdbfe;
+            animation: qfs-pulse 1.2s ease-in-out infinite;
+        }
+        .qfs-search-empty .qfs-search-status-icon {
+            background: #f8fafc;
+            color: #64748b;
+        }
+        .qfs-search-error .qfs-search-status-icon {
+            background: #fff1f2;
+            color: #e11d48;
+        }
+        .qfs-search-status h5 {
+            margin: 0 0 0.35rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .qfs-search-status p {
+            margin: 0 auto 1rem;
+            max-width: 420px;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .qfs-search-progress-wrap {
+            max-width: 360px;
+            margin: 0 auto;
+        }
+        .qfs-search-progress {
+            height: 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+        .qfs-search-progress-bar {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            transition: width 0.25s ease;
+        }
+        .qfs-search-progress-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-top: 0.45rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        @keyframes qfs-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
         }
 
         .qfs-flight-search .qfs-airport-suggest,
@@ -15860,6 +16068,20 @@ $qWizardSteps = [
                                     <i class="fas fa-plus mr-1"></i>Add Hotel
                                 </button>
                             </div>
+                            <div class="q-hotel-ocr-bar" id="qHotelOcrBar">
+                                <button type="button" class="q-hotel-ocr-drop" id="qHotelOcrDrop">
+                                    <span class="q-hotel-ocr-ico" aria-hidden="true"><i class="fas fa-image"></i></span>
+                                    <span class="q-hotel-ocr-copy">
+                                        <strong>Paste or upload a hotel quotation</strong>
+                                        <span>Click here and press Ctrl+V, or upload a screenshot. Review the rows before they are added.</span>
+                                    </span>
+                                </button>
+                                <button type="button" class="btn q-hotel-ocr-upload" id="qHotelOcrUploadBtn">
+                                    <i class="fas fa-upload mr-1"></i>Upload image
+                                </button>
+                                <input type="file" id="qHotelOcrFile" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+                                <p class="q-hotel-ocr-status" id="qHotelOcrStatus" role="status"></p>
+                            </div>
                             <div class="q-hotel-table-head" id="qHotelColHead">
                                 <div class="q-hotel-head-accom">
                                     <div class="q-hotel-group-title">
@@ -16522,6 +16744,44 @@ $qWizardSteps = [
         </div>
     </div>
 
+    <div class="modal fade" id="qHotelOcrModal" tabindex="-1" role="dialog" aria-labelledby="qHotelOcrModalLabel" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title mb-0" id="qHotelOcrModalLabel"><i class="fas fa-hotel mr-2"></i>Review hotel details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Check the values read from the image. Edit anything that is wrong, then add the rows to the current hotel option. Empty cells were left blank on purpose.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0" id="qHotelOcrTable">
+                            <thead>
+                                <tr>
+                                    <th>City</th>
+                                    <th>Hotel</th>
+                                    <th>Room type</th>
+                                    <th>Rooms</th>
+                                    <th>Meal</th>
+                                    <th>Nights</th>
+                                    <th>Check-in</th>
+                                    <th>Check-out</th>
+                                    <th>Rate (₹)</th>
+                                    <th>Supplier</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="qHotelOcrApply"><i class="fas fa-check mr-1"></i>Add to Hotel Details</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade q-city-create-modal" id="qHotelCreateModal" tabindex="-1" role="dialog" aria-labelledby="qHotelCreateModalLabel" aria-hidden="true" data-backdrop="static">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -16679,8 +16939,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=326"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=33"></script>
+    <script src="crm/assets/quotation_generator.js?v=328"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=35"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>

@@ -4,6 +4,7 @@
 
     var serviceMap = {};
     var activeQuotationId = 0;
+    var tourWasConfirmed = false;
     var activePackageTotal = null;
     var activeCustomerPaid = null;
     var activeTripInfo = null;
@@ -424,6 +425,7 @@
         var voucherCount = parseInt(row.voucher_count, 10) || 0;
         var paymentCount = parseInt(row.payment_count, 10) || 0;
         var label = row.label || serviceMap[key] || key;
+        var sourceId = row.source_id || '';
         var total = row.total != null ? row.total : '';
         var paid = row.paid != null ? row.paid : '';
         var balanceNum = Math.max(0, parseNum(total) - parseNum(paid));
@@ -431,10 +433,10 @@
         var paidNum = parseNum(paid);
 
         return '' +
-            '<div class="ct-detail-row' + (paidNum > 0 ? ' has-paid' : '') + '" data-key="' + esc(key) + '" data-uid="' + esc(uid) + '" data-vouchers="' + voucherCount + '" data-payments="' + paymentCount + '">' +
+            '<div class="ct-detail-row' + (paidNum > 0 ? ' has-paid' : '') + '" data-key="' + esc(key) + '" data-uid="' + esc(uid) + '" data-source="' + esc(sourceId) + '" data-label="' + esc(label) + '" data-vouchers="' + voucherCount + '" data-payments="' + paymentCount + '">' +
             (v2 ? '' : '<div class="ct-row-no" aria-hidden="true"></div>') +
             '<div class="ct-detail-label"><span class="ct-svc-icon is-' + esc(key) + '"><i class="fas ' + (SERVICE_ICONS[key] || 'fa-concierge-bell') + '"></i></span>' +
-            '<span>' + esc(label) + '</span></div>' +
+            '<span title="' + esc(label) + '">' + esc(label) + '</span></div>' +
             '<div class="ct-detail-field ct-supplier-wrap">' +
             '<input type="text" class="form-control ct-supplier" placeholder="Type supplier name" ' +
             'autocomplete="off" spellcheck="false" value="' + esc(row.supplier || '') + '">' +
@@ -489,10 +491,16 @@
         var list = [];
         $('#ctDetailRows .ct-detail-row').each(function () {
             var $row = $(this);
+            var key = $row.data('key');
+            var label = String($row.attr('data-label') || '').trim();
+            if (!label) {
+                label = serviceMap[key] || key;
+            }
             list.push({
                 uid: String($row.attr('data-uid') || ''),
-                key: $row.data('key'),
-                label: serviceMap[$row.data('key')] || $row.data('key'),
+                source_id: String($row.attr('data-source') || ''),
+                key: key,
+                label: label,
                 supplier: $row.find('.ct-supplier').val(),
                 total: parseNum($row.find('.ct-total').val()),
                 paid: parseNum($row.find('.ct-paid').val())
@@ -1570,6 +1578,7 @@
 
     function openModal(quotationId, $triggerRow, highlightKey) {
         activeQuotationId = quotationId;
+        tourWasConfirmed = !!($triggerRow && $triggerRow.find('.js-q-book.btn-confirmed').length);
         activePackageTotal = null;
         activeCustomerPaid = null;
         activeTripInfo = null;
@@ -1595,6 +1604,7 @@
                 serviceMap = res.services || {};
                 var q = res.quotation || {};
                 var confirm = res.confirm || {};
+                tourWasConfirmed = parseInt(q.tour_confirmed, 10) === 1;
                 var pkg = parseFloat(q.package_total);
                 activePackageTotal = isNaN(pkg) ? 0 : pkg;
                 var custPaid = parseFloat(q.customer_paid);
@@ -1638,6 +1648,18 @@
         }
         var $bookBtn = activeRow.find('.js-q-book');
         if (parseInt(res.tour_confirmed, 10) === 1) {
+            if (activeRow.closest('.crm-leads-ui').length) {
+                window.setTimeout(function () {
+                    if (!activeRow.closest('table').length) {
+                        return;
+                    }
+                    activeRow.remove();
+                    var $allCount = $('.js-leads-stage-filter[data-stage="all"] .leads-stage-count');
+                    if ($allCount.length) {
+                        $allCount.text(String(Math.max(0, (parseInt($allCount.text(), 10) || 0) - 1)));
+                    }
+                }, 0);
+            }
             if ($bookBtn.hasClass('btn-icon')) {
                 $bookBtn.removeClass('btn-book').addClass('btn-confirmed')
                     .attr('title', 'Tour Confirmed')
@@ -4828,6 +4850,18 @@
             $('#ctTravellerModal').modal('hide');
         });
 
+        $(document).on('click', '#tourConfirmedOk', function () {
+            $('#tourConfirmedPopup').modal('hide');
+        });
+        $(document).on('click', '#tourConfirmedShow', function () {
+            var id = parseInt($('#tourConfirmedPopup').data('quotationId') || 0, 10);
+            if (!id) {
+                $('#tourConfirmedPopup').modal('hide');
+                return;
+            }
+            window.location.href = 'crm/bookings.php?highlight=' + encodeURIComponent(String(id));
+        });
+
         $('#ctSaveBtn').on('click', function () {
             var guest = $.trim($('#ctGuestName').val());
             if (!guest && travellersState[0] && travellersState[0].name) {
@@ -4857,7 +4891,17 @@
             })
                 .done(function (res) {
                     if (res && res.success) {
+                        var justConfirmed = parseInt(res.tour_confirmed, 10) === 1 && !tourWasConfirmed && $('.crm-leads-ui').length && $('#tourConfirmedPopup').length;
+                        var quotationId = parseInt(res.id || activeQuotationId, 10) || 0;
+                        if (parseInt(res.tour_confirmed, 10) === 1) {
+                            tourWasConfirmed = true;
+                        }
                         updateListRow(res);
+                        if (justConfirmed) {
+                            $('#confirmTourModal').one('hidden.bs.modal', function () {
+                                $('#tourConfirmedPopup').data('quotationId', quotationId).modal('show');
+                            });
+                        }
                         $('#confirmTourModal').modal('hide');
                     } else {
                         alert((res && res.message) || 'Could not save.');

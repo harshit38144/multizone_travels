@@ -52,13 +52,12 @@ if ($payload['email'] === '') {
     $payload['email'] = (string) ($row['email'] ?? '');
 }
 
-// First-time Book: prefill supplier + totals from quotation details.
-if (empty($payload['services'])) {
-    $payload['services'] = crmQuotationBuildConfirmServicesFromQuote($row);
-    foreach ($payload['services'] as $i => $svc) {
-        $payload['services'][$i]['uid'] = crmQuotationServiceUid(is_array($svc) ? $svc : [], $i);
-    }
-}
+// Hotels and flights always come from the quotation, one row each.
+// Saved payments stay on the matching row.
+$payload['services'] = crmQuotationMergeConfirmServices(
+    crmQuotationBuildConfirmServicesFromQuote($row),
+    $payload['services']
+);
 require_once __DIR__ . '/../includes/service_vouchers.php';
 svEnsureTable($conn);
 $payload['services'] = svAttachCounts($conn, $id, $payload['services']);

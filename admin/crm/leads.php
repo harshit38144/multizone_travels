@@ -391,6 +391,17 @@ function crmLeadsStageWhereSql(string $stage): string
     return " AND `stage` = '{$safe}'";
 }
 
+function crmLeadsExcludeConfirmedToursSql(mysqli $conn): string
+{
+    $sql = " AND `stage` <> 'confirmed'";
+    $check = $conn->query("SHOW COLUMNS FROM `crm_quotations` LIKE 'tour_confirmed'");
+    if ($check && $check->num_rows > 0) {
+        $sql .= " AND NOT EXISTS (SELECT 1 FROM `crm_quotations` q WHERE q.`lead_id` = `crm_leads`.`id` AND q.`tour_confirmed` = 1)";
+    }
+
+    return $sql;
+}
+
 function crmLeadsPageUrl(int $listPage, int $perPage = 25, string $fy = '', string $search = '', string $stage = ''): string
 {
     $params = [];
@@ -433,6 +444,10 @@ if (mb_strlen($searchFilter) > 120) {
     $searchFilter = mb_substr($searchFilter, 0, 120);
 }
 $stageFilter = trim((string) ($_GET['stage'] ?? ''));
+if ($stageFilter === 'confirmed') {
+    header('Location: bookings.php');
+    exit;
+}
 if ($stageFilter !== '' && !isset($leadStageOptions[$stageFilter])) {
     $stageFilter = '';
 }
@@ -585,7 +600,7 @@ if ($ajaxLeadRowId > 0 && $hasLeadsTable) {
 
 if ($hasLeadsTable) {
     $activeWhere = crmLeadActiveWhereSql();
-    $listWhere = $activeWhere . crmFinancialYearWhereSql($fyFilter) . crmLeadsSearchWhereSql($conn, $searchFilter) . crmLeadsStageWhereSql($stageFilter);
+    $listWhere = $activeWhere . crmFinancialYearWhereSql($fyFilter) . crmLeadsSearchWhereSql($conn, $searchFilter) . crmLeadsStageWhereSql($stageFilter) . crmLeadsExcludeConfirmedToursSql($conn);
     $countRes = $conn->query('SELECT COUNT(*) AS c FROM crm_leads WHERE ' . $listWhere);
     if ($countRes) {
         $totalLeads = (int) ($countRes->fetch_assoc()['c'] ?? 0);
@@ -628,7 +643,7 @@ crmLeadsAttachBookingStatus($conn, $leadRows);
 crmLeadsSyncFeatureStages($conn, $leadRows);
 
 if ($hasLeadsTable) {
-    $stageCountWhere = crmLeadActiveWhereSql() . crmFinancialYearWhereSql($fyFilter) . crmLeadsSearchWhereSql($conn, $searchFilter);
+    $stageCountWhere = crmLeadActiveWhereSql() . crmFinancialYearWhereSql($fyFilter) . crmLeadsSearchWhereSql($conn, $searchFilter) . crmLeadsExcludeConfirmedToursSql($conn);
     $stageCountRes = $conn->query('SELECT `stage`, COUNT(*) AS c FROM `crm_leads` WHERE ' . $stageCountWhere . ' GROUP BY `stage`');
     if ($stageCountRes) {
         while ($stageCountRow = $stageCountRes->fetch_assoc()) {
@@ -4781,6 +4796,9 @@ foreach ($destinationLookup as $destId => $destName) {
                                 </button>
                                 <?php foreach ($leadStageOptions as $stageKey => $stageLabel) {
                                     $stageKey = (string) $stageKey;
+                                    if ($stageKey === 'confirmed') {
+                                        continue;
+                                    }
                                     $stageActive = $stageFilter === $stageKey;
                                     $stageCount = (int) ($leadStageCounts[$stageKey] ?? 0);
                                 ?>
@@ -5362,6 +5380,21 @@ foreach ($destinationLookup as $destId => $destName) {
                             <button type="button" class="btn ct-btn-cancel" data-dismiss="modal">Cancel</button>
                             <button type="button" class="btn ct-btn-save" id="ctSaveBtn"><i class="fas fa-suitcase mr-2"></i>Save Tour</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="tourConfirmedPopup" tabindex="-1" role="dialog" aria-labelledby="tourConfirmedPopupLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px;">
+                <div class="modal-content" style="border: 0; border-radius: 16px; overflow: hidden;">
+                    <div class="modal-body text-center" style="padding: 1.6rem 1.4rem 1.3rem;">
+                        <div style="width: 58px; height: 58px; margin: 0 auto 0.8rem; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h5 class="mb-3" id="tourConfirmedPopupLabel" style="font-weight: 800;">Tour Confirmed</h5>
+                        <button type="button" class="btn btn-outline-secondary" id="tourConfirmedOk" style="min-width: 110px; border-radius: 10px; font-weight: 700;">OK</button>
+                        <button type="button" class="btn btn-danger ml-2" id="tourConfirmedShow" style="min-width: 140px; border-radius: 10px; font-weight: 700; background: #e11d48; border-color: #e11d48;">Show Booking</button>
                     </div>
                 </div>
             </div>
@@ -6933,6 +6966,10 @@ foreach ($destinationLookup as $destId => $destName) {
                 }
                 leadsShiftStageCount(previousStage, -1);
                 leadsShiftStageCount(nextStage, 1);
+                if (nextStage === 'confirmed') {
+                    $sel.closest('tr').remove();
+                    leadsShiftStageCount('all', -1);
+                }
             } else {
                 window.alert((res && res.message) ? res.message : 'Could not update stage.');
                 $sel.val(previousStage);
@@ -8470,7 +8507,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=43"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=46"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {

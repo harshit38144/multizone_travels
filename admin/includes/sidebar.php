@@ -20,10 +20,10 @@ if (strpos($scriptPath, '/crm/') !== false || preg_match('#/crm/[^/]+\.php$#', $
 
 // Menu Groups
 $eticketsPages = ['etickets', 'eticketslist', 'e-ticket-master'];
-$crmPages = ['crm_leads', 'crm_lead_add', 'crm_lead_intake_pending'];
+$crmPages = ['crm_leads', 'crm_lead_add', 'crm_lead_intake_pending', 'crm_tasks_followups'];
 $mastersPages = ['crm_lead_source_master', 'crm_hotel_master', 'crm_hotel_create', 'crm_airline_master', 'crm_airline_create', 'crm_cruise_master', 'crm_cruise_create', 'crm_cruise_view', 'crm_vehicle_master', 'crm_vehicle_create', 'crm_vehicle_view', 'crm_addon_service_master', 'crm_addon_service_view', 'crm_sightseeing_master', 'crm_sightseeing_create', 'crm_sightseeing_destination', 'crm_sightseeing_view', 'crm_testimonial_master', 'crm_testimonial_create', 'crm_quotation_terms_master', 'geo_import'];
 $quotationsPages = ['crm_quotation_templates', 'crm_quotation-generator-list', 'crm_quotation_generator'];
-$bookingsPages = ['crm_bookings', 'crm_booking_add'];
+$bookingsPages = ['crm_bookings', 'crm_booking_add', 'crm_hotel_bookings'];
 $crmCustomersPages = ['crm_customers', 'crm_customer_add'];
 $suppliersPages = ['crm_suppliers'];
 $crmUsersPages = ['crm_users', 'crm_permission_templates'];
@@ -465,6 +465,12 @@ $crmParentPages = array_merge(
                 <p>Leads</p>
               </a>
             </li>
+            <li class="nav-item">
+              <a href="crm/tasks_followups.php" class="nav-link <?= ($page === 'crm_tasks_followups') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-clipboard-check"></i>
+                <p>Tasks &amp; Follow-ups</p>
+              </a>
+            </li>
             <?php
             $pendingIntakeBadge = 0;
             if (isset($conn) && $conn instanceof mysqli) {
@@ -615,6 +621,12 @@ $crmParentPages = array_merge(
                   <a href="crm/booking_add.php" class="nav-link <?= ($page == 'crm_booking_add') ? 'active' : '' ?>">
                     <i class="far fa-circle nav-icon"></i>
                     <p>Add New Booking</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="crm/hotel_bookings.php" class="nav-link <?= ($page === 'crm_hotel_bookings') ? 'active' : '' ?>">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Hotel Bookings</p>
                   </a>
                 </li>
               </ul>

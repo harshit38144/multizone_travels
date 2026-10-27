@@ -3156,6 +3156,346 @@
         if (callback) callback();
     }
 
+    function matchHotelOcrSupplier(name) {
+        var q = String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        if (!q) {
+            return { id: '', name: '' };
+        }
+        var list = (typeof Q_HOTEL_SUPPLIERS !== 'undefined' && Array.isArray(Q_HOTEL_SUPPLIERS))
+            ? Q_HOTEL_SUPPLIERS
+            : [];
+        function norm(s) {
+            return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+        var exact = list.filter(function (s) {
+            return s && norm(s.name) === q;
+        });
+        if (exact.length === 1) {
+            return { id: String(exact[0].id), name: String(exact[0].name || '') };
+        }
+        if (q.length >= 4) {
+            var partial = list.filter(function (s) {
+                var n = norm(s && s.name);
+                return n.length >= 4 && (n.indexOf(q) >= 0 || q.indexOf(n) >= 0);
+            });
+            if (partial.length === 1) {
+                return { id: String(partial[0].id), name: String(partial[0].name || '') };
+            }
+        }
+        return { id: '', name: String(name || '').trim() };
+    }
+
+    function hotelOcrSectionVisible() {
+        return $('#qSectionBody3').is(':visible');
+    }
+
+    function hotelOcrSetStatus(msg, isError) {
+        var $s = $('#qHotelOcrStatus');
+        if (!msg) {
+            $s.hide().text('').removeClass('is-error');
+            return;
+        }
+        $s.text(msg).toggleClass('is-error', !!isError).show();
+    }
+
+    function hotelOcrFileFromClipboard(e) {
+        var data = (e.originalEvent || e).clipboardData;
+        var items = data && data.items;
+        if (!items) {
+            return null;
+        }
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type && items[i].type.indexOf('image/') === 0) {
+                return items[i].getAsFile();
+            }
+        }
+        return null;
+    }
+
+    function hotelOcrReviewRow(hotel) {
+        hotel = hotel || {};
+        var supplier = matchHotelOcrSupplier(hotel.supplier || '');
+        var $tr = $('<tr></tr>');
+        function cell(control) {
+            return $('<td></td>').append(control);
+        }
+        function textInput(cls, value, placeholder) {
+            return $('<input type="text" class="form-control form-control-sm">')
+                .addClass(cls)
+                .val(value || '')
+                .attr('placeholder', placeholder || '');
+        }
+        var $meal = $('<select class="form-control form-control-sm ocr-meal"></select>');
+        $meal.append('<option value=""></option>');
+        ['EP', 'CP', 'MAP', 'AP'].forEach(function (code) {
+            $meal.append($('<option></option>').val(code).text(code));
+        });
+        var meal = String(hotel.meal_plan || '').toUpperCase();
+        if (['EP', 'CP', 'MAP', 'AP'].indexOf(meal) >= 0) {
+            $meal.val(meal);
+        }
+        var $supplier = $('<select class="form-control form-control-sm ocr-supplier"></select>');
+        $supplier.html(hotelSupplierOptionsHtml(supplier.id, supplier.name, { emptyLabel: 'Select' }));
+        $tr.append(cell(textInput('ocr-city', hotel.city, 'City')).append('<span class="ocr-note ocr-city-note"></span>'));
+        $tr.append(cell(textInput('ocr-hotel', hotel.hotel_name, 'Hotel')).append('<span class="ocr-note ocr-hotel-note"></span>'));
+        $tr.append(cell(textInput('ocr-room', hotel.room_type, 'Room type')));
+        $tr.append(cell($('<input type="number" min="0" class="form-control form-control-sm ocr-rooms">').val(hotel.rooms || '')));
+        $tr.append(cell($meal));
+        $tr.append(cell($('<input type="number" min="0" class="form-control form-control-sm ocr-nights">').val(hotel.nights || '')));
+        $tr.append(cell(textInput('ocr-checkin', formatDisplayDate(hotel.check_in || ''), 'dd/mm/yyyy')));
+        $tr.append(cell(textInput('ocr-checkout', formatDisplayDate(hotel.check_out || ''), 'dd/mm/yyyy')));
+        $tr.append(cell($('<input type="number" min="0" step="1" class="form-control form-control-sm ocr-rate">').val(hotel.rate || '')));
+        var $supplierCell = cell($supplier);
+        if (hotel.supplier && !supplier.id) {
+            $supplierCell.append($('<span class="ocr-note is-plain"></span>').text('Read as: ' + hotel.supplier));
+        } else if (supplier.id) {
+            $supplierCell.append($('<span class="ocr-note"></span>').text('Matched'));
+        }
+        $tr.append($supplierCell);
+        $tr.append(cell($('<button type="button" class="btn btn-sm btn-light ocr-remove" title="Remove row">&times;</button>')));
+        syncHotelOcrReviewNights($tr);
+        return $tr;
+    }
+
+    function syncHotelOcrReviewNights($tr) {
+        var checkin = normalizeLegacyDateInput($tr.find('.ocr-checkin').val());
+        var checkout = normalizeLegacyDateInput($tr.find('.ocr-checkout').val());
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(checkin) || !/^\d{4}-\d{2}-\d{2}$/.test(checkout)) {
+            return;
+        }
+        var start = parseHotelIsoDate(checkin);
+        var end = parseHotelIsoDate(checkout);
+        if (!start || !end) {
+            return;
+        }
+        var span = Math.round((end.getTime() - start.getTime()) / 86400000);
+        if (span > 0 && span <= 60) {
+            $tr.find('.ocr-nights').val(String(span));
+        }
+    }
+
+    function matchHotelOcrReviewRow($tr) {
+        var cityName = $.trim($tr.find('.ocr-city').val());
+        var hotelName = $.trim($tr.find('.ocr-hotel').val());
+        $tr.removeAttr('data-city-id').removeAttr('data-hotel-id').removeAttr('data-star');
+        $tr.find('.ocr-city-note, .ocr-hotel-note').text('');
+        function matchHotel() {
+            if (!hotelName) {
+                return;
+            }
+            var cityId = parseInt($tr.attr('data-city-id'), 10) || 0;
+            fetchQuotationHotelsSearch(hotelName, cityId, function (hotels) {
+                if ($.trim($tr.find('.ocr-hotel').val()).toLowerCase() !== hotelName.toLowerCase()) {
+                    return;
+                }
+                var exact = (hotels || []).filter(function (h) {
+                    return String(h.hotel_name || '').toLowerCase() === hotelName.toLowerCase();
+                });
+                if (exact.length !== 1) {
+                    return;
+                }
+                $tr.attr('data-hotel-id', exact[0].id || '');
+                if (exact[0].star_category) {
+                    $tr.attr('data-star', exact[0].star_category);
+                }
+                $tr.find('.ocr-hotel-note').text('Matched');
+            });
+        }
+        if (!cityName) {
+            matchHotel();
+            return;
+        }
+        fetchQuotationHotelCities(cityName, function (cities) {
+            if ($.trim($tr.find('.ocr-city').val()).toLowerCase() !== cityName.toLowerCase()) {
+                return;
+            }
+            var exact = (cities || []).filter(function (c) {
+                return String(c.name || '').toLowerCase() === cityName.toLowerCase();
+            });
+            if (exact.length === 1) {
+                $tr.attr('data-city-id', exact[0].id || '');
+                $tr.find('.ocr-city-note').text('Matched');
+            }
+            matchHotel();
+        });
+    }
+
+    function openHotelOcrReview(hotels) {
+        var $body = $('#qHotelOcrTable tbody').empty();
+        (hotels || []).forEach(function (hotel) {
+            $body.append(hotelOcrReviewRow(hotel));
+        });
+        $('#qHotelOcrModal').modal('show');
+        $body.find('tr').each(function () {
+            matchHotelOcrReviewRow($(this));
+        });
+    }
+
+    function hotelOcrReadFile(file) {
+        if (!file || $('#qHotelOcrModal').hasClass('show')) {
+            return;
+        }
+        var type = String(file.type || '').toLowerCase();
+        if (type === 'image/jpg') {
+            type = 'image/jpeg';
+        }
+        if (!type) {
+            var ext = String(file.name || '').split('.').pop().toLowerCase();
+            if (ext === 'jpg' || ext === 'jpeg') {
+                type = 'image/jpeg';
+            } else if (ext === 'png') {
+                type = 'image/png';
+            } else if (ext === 'webp') {
+                type = 'image/webp';
+            }
+        }
+        if (['image/jpeg', 'image/png', 'image/webp'].indexOf(type) < 0) {
+            hotelOcrSetStatus('Use a JPG, PNG, or WEBP screenshot.', true);
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            hotelOcrSetStatus('That image is larger than 8 MB. Use a smaller screenshot.', true);
+            return;
+        }
+        var fd = new FormData();
+        var name = file.name && file.name !== 'image.png' ? file.name : 'hotel-quote.png';
+        if (!/\.(jpe?g|png|webp)$/i.test(name)) {
+            name += type === 'image/jpeg' ? '.jpg' : (type === 'image/webp' ? '.webp' : '.png');
+        }
+        fd.append('image', file, name);
+        hotelOcrSetStatus('Reading the hotel image…', false);
+        $('#qHotelOcrUploadBtn, #qHotelOcrDrop').prop('disabled', true);
+        $.ajax({
+            url: 'crm/ajax/scan_hotel_quote.php',
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        }).done(function (res) {
+            if (!res || !res.success) {
+                hotelOcrSetStatus((res && res.message) || 'The image could not be read.', true);
+                return;
+            }
+            if (!res.hotels || !res.hotels.length) {
+                hotelOcrSetStatus(res.message || 'No hotel lines could be read. Fill the rows manually.', true);
+                return;
+            }
+            hotelOcrSetStatus('', false);
+            openHotelOcrReview(res.hotels);
+        }).fail(function (xhr) {
+            var msg = 'The image could not be read.';
+            if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            }
+            hotelOcrSetStatus(msg, true);
+        }).always(function () {
+            $('#qHotelOcrUploadBtn, #qHotelOcrDrop').prop('disabled', false);
+            $('#qHotelOcrFile').val('');
+        });
+    }
+
+    function applyHotelOcrRows() {
+        var $panel = getHotelCategoryPanels().filter('.is-active').first();
+        if (!$panel.length) {
+            $panel = getHotelCategoryPanels().first();
+        }
+        if (!$panel.length) {
+            addHotelCategory();
+            $panel = getHotelCategoryPanels().first();
+        }
+        var rows = [];
+        $('#qHotelOcrTable tbody tr').each(function () {
+            var $tr = $(this);
+            var checkin = normalizeLegacyDateInput($tr.find('.ocr-checkin').val());
+            var checkout = normalizeLegacyDateInput($tr.find('.ocr-checkout').val());
+            if (checkin && !/^\d{4}-\d{2}-\d{2}$/.test(checkin)) {
+                checkin = '';
+            }
+            if (checkout && !/^\d{4}-\d{2}-\d{2}$/.test(checkout)) {
+                checkout = '';
+            }
+            var rooms = $.trim($tr.find('.ocr-rooms').val());
+            var nights = $.trim($tr.find('.ocr-nights').val());
+            var rate = $.trim($tr.find('.ocr-rate').val());
+            rows.push({
+                city: $.trim($tr.find('.ocr-city').val()),
+                city_id: $tr.attr('data-city-id') || '',
+                hotel_id: $tr.attr('data-hotel-id') || '',
+                hotel_name: $.trim($tr.find('.ocr-hotel').val()),
+                room_type: $.trim($tr.find('.ocr-room').val()),
+                rooms: /^\d+$/.test(rooms) && parseInt(rooms, 10) > 0 ? rooms : '',
+                meal_plan: String($tr.find('.ocr-meal').val() || ''),
+                nights: /^\d+$/.test(nights) && parseInt(nights, 10) > 0 ? nights : '',
+                check_in: checkin,
+                check_out: checkout,
+                rate: /^\d+(\.\d+)?$/.test(rate) && parseFloat(rate) > 0 ? String(Math.round(parseFloat(rate))) : '',
+                supplier_id: String($tr.find('.ocr-supplier').val() || ''),
+                supplier: $.trim($tr.find('.ocr-supplier option:selected').attr('data-name') || ''),
+                star_category: $tr.attr('data-star') || ''
+            });
+        });
+        if (!rows.length) {
+            $('#qHotelOcrModal').modal('hide');
+            return;
+        }
+        qActiveHotelCategoryId = String($panel.attr('data-cat-id') || '');
+        refreshHotelCategoryTabs();
+        var $existing = $panel.find('.q-hotel-row');
+        var allBlank = !$existing.length || $existing.toArray().every(function (el) {
+            var $row = $(el);
+            var meal = $.trim($row.find('.h-meal').val()).toUpperCase();
+            var rate = parseFloat($row.find('.h-rate').val());
+            return !$.trim($row.find('.h-city').val())
+                && !$.trim($row.find('.h-name').val())
+                && !$.trim($row.find('.h-room').val())
+                && (meal === '' || meal === 'CP')
+                && !(rate > 0)
+                && !$.trim($row.find('.h-supplier').val());
+        });
+        if (allBlank) {
+            $existing.remove();
+        }
+        rows.forEach(function (row) {
+            var $row = $(hotelRowHtml({
+                city: row.city,
+                city_id: row.city_id,
+                hotel_id: row.hotel_id,
+                name: row.hotel_name,
+                room_type: row.room_type,
+                rooms: row.rooms,
+                meal_plan: row.meal_plan || 'CP',
+                nights: row.nights,
+                checkin: row.check_in,
+                checkout: row.check_out,
+                rate: row.rate,
+                supplier_id: row.supplier_id,
+                supplier: row.supplier,
+                star_category: row.star_category
+            }));
+            if (!row.meal_plan) {
+                $row.find('.h-meal').val('');
+            }
+            if (!row.rooms) {
+                $row.find('.h-rooms').val('');
+            }
+            if (!row.nights) {
+                $row.find('.h-nights').val('');
+            }
+            $panel.find('.q-hotel-rows').append($row);
+            initQuotationDatePickers($row);
+            qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select' });
+            if (row.check_in && row.check_out) {
+                syncHotelNightsFromDates($row);
+            }
+        });
+        renderPricingSheets();
+        saveFormDraftToStorage();
+        scheduleItineraryMetaFromHotels();
+        $('#qHotelOcrModal').modal('hide');
+        hotelOcrSetStatus('Hotel rows were added to ' + ($panel.find('.q-hotel-cat-label').val() || 'this option') + '. Review them in the table, then continue as usual.', false);
+    }
+
     /* ------------------------------------------------------------------ */
     /* Summernote rich editor (local — works offline)                      */
     /* ------------------------------------------------------------------ */
@@ -12293,6 +12633,69 @@
             syncHotelCheckoutFromNights($row);
             renderPricingSheets();
             saveFormDraftToStorage();
+        });
+
+        $('#qHotelOcrDrop').on('click', function () {
+            this.focus();
+            hotelOcrSetStatus('Press Ctrl+V to paste a hotel screenshot, or use Upload image.', false);
+        });
+        $('#qHotelOcrUploadBtn').on('click', function () {
+            $('#qHotelOcrFile').trigger('click');
+        });
+        $('#qHotelOcrFile').on('change', function () {
+            var file = this.files && this.files[0];
+            if (file) {
+                hotelOcrReadFile(file);
+            }
+        });
+        $('#qHotelOcrBar').on('dragover', function (e) {
+            e.preventDefault();
+            $('#qHotelOcrDrop').addClass('is-drag');
+        }).on('dragleave drop', function (e) {
+            e.preventDefault();
+            $('#qHotelOcrDrop').removeClass('is-drag');
+            if (e.type !== 'drop') {
+                return;
+            }
+            var file = e.originalEvent && e.originalEvent.dataTransfer && e.originalEvent.dataTransfer.files[0];
+            if (file) {
+                hotelOcrReadFile(file);
+            }
+        });
+        $(document).on('paste', function (e) {
+            if (!hotelOcrSectionVisible() || $('#qHotelOcrModal').hasClass('show')) {
+                return;
+            }
+            if ($(e.target).closest('input, textarea, select, [contenteditable="true"]').length) {
+                return;
+            }
+            var file = hotelOcrFileFromClipboard(e);
+            if (!file) {
+                return;
+            }
+            e.preventDefault();
+            hotelOcrReadFile(file);
+        });
+        $(document).on('click', '#qHotelOcrTable .ocr-remove', function () {
+            $(this).closest('tr').remove();
+        });
+        $(document).on('input', '#qHotelOcrTable .ocr-city, #qHotelOcrTable .ocr-hotel', function () {
+            var $tr = $(this).closest('tr');
+            $tr.removeAttr('data-hotel-id').removeAttr('data-star');
+            $tr.find('.ocr-hotel-note').text('');
+            if ($(this).hasClass('ocr-city')) {
+                $tr.removeAttr('data-city-id');
+                $tr.find('.ocr-city-note').text('');
+            }
+        });
+        $(document).on('blur', '#qHotelOcrTable .ocr-city, #qHotelOcrTable .ocr-hotel', function () {
+            matchHotelOcrReviewRow($(this).closest('tr'));
+        });
+        $(document).on('blur change', '#qHotelOcrTable .ocr-checkin, #qHotelOcrTable .ocr-checkout', function () {
+            syncHotelOcrReviewNights($(this).closest('tr'));
+        });
+        $('#qHotelOcrApply').on('click', function () {
+            applyHotelOcrRows();
         });
 
         $(document).on('click', '#qHotelCategories .q-hotel-step-btn', function (e) {
