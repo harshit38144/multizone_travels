@@ -4240,7 +4240,8 @@ $qWizardSteps = [
             margin-bottom: 0.75rem;
         }
 
-        #qWizardSection3 .q-hotel-ocr-bar {
+        #qWizardSection3 .q-hotel-ocr-bar,
+        #qWizardSection2 .q-flight-ocr-bar {
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -4251,7 +4252,8 @@ $qWizardSteps = [
             background: #fff7f8;
         }
 
-        #qWizardSection3 .q-hotel-ocr-drop {
+        #qWizardSection3 .q-hotel-ocr-drop,
+        #qWizardSection2 .q-flight-ocr-drop {
             flex: 1 1 auto;
             min-width: 0;
             display: flex;
@@ -4265,16 +4267,19 @@ $qWizardSteps = [
             border-radius: 8px;
         }
 
-        #qWizardSection3 .q-hotel-ocr-drop:focus {
+        #qWizardSection3 .q-hotel-ocr-drop:focus,
+        #qWizardSection2 .q-flight-ocr-drop:focus {
             outline: 2px solid rgba(225, 29, 46, 0.35);
             outline-offset: 2px;
         }
 
-        #qWizardSection3 .q-hotel-ocr-drop.is-drag {
+        #qWizardSection3 .q-hotel-ocr-drop.is-drag,
+        #qWizardSection2 .q-flight-ocr-drop.is-drag {
             background: #ffe4e8;
         }
 
-        #qWizardSection3 .q-hotel-ocr-ico {
+        #qWizardSection3 .q-hotel-ocr-ico,
+        #qWizardSection2 .q-flight-ocr-ico {
             width: 36px;
             height: 36px;
             border-radius: 10px;
@@ -4286,25 +4291,29 @@ $qWizardSteps = [
             flex: 0 0 auto;
         }
 
-        #qWizardSection3 .q-hotel-ocr-copy {
+        #qWizardSection3 .q-hotel-ocr-copy,
+        #qWizardSection2 .q-flight-ocr-copy {
             min-width: 0;
         }
 
-        #qWizardSection3 .q-hotel-ocr-copy strong {
+        #qWizardSection3 .q-hotel-ocr-copy strong,
+        #qWizardSection2 .q-flight-ocr-copy strong {
             display: block;
             color: #1f2937;
             font-size: 0.84rem;
             font-weight: 700;
         }
 
-        #qWizardSection3 .q-hotel-ocr-copy span {
+        #qWizardSection3 .q-hotel-ocr-copy span,
+        #qWizardSection2 .q-flight-ocr-copy span {
             display: block;
             color: #6b7280;
             font-size: 0.75rem;
             line-height: 1.35;
         }
 
-        #qWizardSection3 .q-hotel-ocr-upload {
+        #qWizardSection3 .q-hotel-ocr-upload,
+        #qWizardSection2 .q-flight-ocr-upload {
             flex: 0 0 auto;
             border: 1px solid #e11d2e;
             background: #fff;
@@ -4316,12 +4325,15 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-ocr-upload:hover,
-        #qWizardSection3 .q-hotel-ocr-upload:focus {
+        #qWizardSection3 .q-hotel-ocr-upload:focus,
+        #qWizardSection2 .q-flight-ocr-upload:hover,
+        #qWizardSection2 .q-flight-ocr-upload:focus {
             background: #e11d2e;
             color: #fff;
         }
 
-        #qWizardSection3 .q-hotel-ocr-status {
+        #qWizardSection3 .q-hotel-ocr-status,
+        #qWizardSection2 .q-flight-ocr-status {
             flex: 1 1 100%;
             display: none;
             margin: 0;
@@ -4329,30 +4341,36 @@ $qWizardSteps = [
             color: #6b7280;
         }
 
-        #qWizardSection3 .q-hotel-ocr-status.is-error {
+        #qWizardSection3 .q-hotel-ocr-status.is-error,
+        #qWizardSection2 .q-flight-ocr-status.is-error {
             color: #b91c1c;
         }
 
         @media (max-width: 767.98px) {
-            #qWizardSection3 .q-hotel-ocr-bar {
+            #qWizardSection3 .q-hotel-ocr-bar,
+            #qWizardSection2 .q-flight-ocr-bar {
                 flex-wrap: wrap;
             }
-            #qWizardSection3 .q-hotel-ocr-upload {
+            #qWizardSection3 .q-hotel-ocr-upload,
+            #qWizardSection2 .q-flight-ocr-upload {
                 width: 100%;
             }
         }
 
-        #qHotelOcrModal .table td {
+        #qHotelOcrModal .table td,
+        #qFlightOcrModal .table td {
             min-width: 7.5rem;
             vertical-align: top;
         }
 
-        #qHotelOcrModal .form-control {
+        #qHotelOcrModal .form-control,
+        #qFlightOcrModal .form-control {
             min-width: 6.5rem;
             font-size: 0.8rem;
         }
 
-        #qHotelOcrModal .ocr-note {
+        #qHotelOcrModal .ocr-note,
+        #qFlightOcrModal .ocr-note {
             display: block;
             margin-top: 0.2rem;
             color: #047857;
@@ -4360,8 +4378,19 @@ $qWizardSteps = [
             line-height: 1.3;
         }
 
-        #qHotelOcrModal .ocr-note.is-plain {
+        #qHotelOcrModal .ocr-note.is-plain,
+        #qFlightOcrModal .ocr-note.is-plain {
             color: #6b7280;
+        }
+
+        #qFlightOcrModal .ocr-dt-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        #qFlightOcrModal .ocr-dt-wrap .form-control {
+            min-width: 5.5rem;
         }
 
         #qWizardSection3 .q-hotel-cat-tabs {
@@ -6774,6 +6803,51 @@ $qWizardSteps = [
             border-radius: 8px;
             font-weight: 700;
             font-size: 0.78rem;
+        }
+
+        #qHeaderAiModal .modal-header {
+            align-items: center;
+        }
+
+        #qHeaderAiModal .q-header-ai-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            min-width: 0;
+            margin-right: auto;
+        }
+
+        #qHeaderAiModal .q-header-ai-title-row .modal-title {
+            margin-bottom: 0;
+        }
+
+        #qHeaderAiModal .q-header-ai-refresh {
+            flex: 0 0 auto;
+            width: 1.85rem;
+            height: 1.85rem;
+            padding: 0;
+            border: 0;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #334155;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        #qHeaderAiModal .q-header-ai-refresh:hover:not(:disabled) {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        #qHeaderAiModal .q-header-ai-refresh:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
+        #qHeaderAiModal .q-header-ai-refresh .fa-spin {
+            animation-duration: 0.8s;
         }
 
         .crm-quotation-gen .q-gt-fields-4,
@@ -16021,10 +16095,20 @@ $qWizardSteps = [
                                     <button type="button" class="btn btn-sm q-flight-btn q-flight-btn-outline" id="qAddFlight">
                                         <i class="fas fa-plus mr-1"></i>Add Flight / Train
                                     </button>
-                                    <label class="btn btn-sm q-flight-btn q-flight-btn-outline mb-0" id="qUploadSsBtn" for="qUploadSsInput">
-                                        <i class="fas fa-upload mr-1"></i>Upload SS
-                                    </label>
-                                    <input type="file" id="qUploadSsInput" class="d-none" accept="image/*,.pdf">
+                            </div>
+                            <div class="q-flight-ocr-bar" id="qFlightOcrBar">
+                                <button type="button" class="q-flight-ocr-drop" id="qFlightOcrDrop">
+                                    <span class="q-flight-ocr-ico" aria-hidden="true"><i class="fas fa-image"></i></span>
+                                    <span class="q-flight-ocr-copy">
+                                        <strong>Paste or upload a flight / train ticket</strong>
+                                        <span>Click here and press Ctrl+V, or upload a screenshot. Review the segments before they are added.</span>
+                                    </span>
+                                </button>
+                                <button type="button" class="btn q-flight-ocr-upload" id="qFlightOcrUploadBtn">
+                                    <i class="fas fa-upload mr-1"></i>Upload image
+                                </button>
+                                <input type="file" id="qFlightOcrFile" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+                                <p class="q-flight-ocr-status" id="qFlightOcrStatus" role="status"></p>
                             </div>
                             <div class="q-flight-table-wrap">
                                 <div id="qFlightRows" class="q-flight-rows"></div>
@@ -16035,7 +16119,6 @@ $qWizardSteps = [
                                     <i class="fas fa-plus mr-1"></i>Add Another Segment
                                 </button>
                             </div>
-                            <div class="q-flight-upload-label text-muted small" id="qUploadSsLabel"></div>
                             <div class="q-section-next-bar">
                                 <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="2">
                                     Next <i class="fas fa-arrow-right ml-1"></i>
@@ -16782,6 +16865,42 @@ $qWizardSteps = [
         </div>
     </div>
 
+    <div class="modal fade" id="qFlightOcrModal" tabindex="-1" role="dialog" aria-labelledby="qFlightOcrModalLabel" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title mb-0" id="qFlightOcrModalLabel"><i class="fas fa-plane mr-2"></i>Review flight / train details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Check the values read from the image. Edit anything that is wrong, then add the segments to Flight / Train Details. Empty cells were left blank on purpose.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0" id="qFlightOcrTable">
+                            <thead>
+                                <tr>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Airline / Train</th>
+                                    <th>No.</th>
+                                    <th>Departure</th>
+                                    <th>Arrival</th>
+                                    <th>Rate (₹)</th>
+                                    <th>Supplier</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="qFlightOcrApply"><i class="fas fa-check mr-1"></i>Add to Flight / Train Details</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade q-city-create-modal" id="qHotelCreateModal" tabindex="-1" role="dialog" aria-labelledby="qHotelCreateModalLabel" aria-hidden="true" data-backdrop="static">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -16886,7 +17005,12 @@ $qWizardSteps = [
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="qHeaderAiModalLabel">Header suggestions</h5>
+                    <div class="q-header-ai-title-row">
+                        <h5 class="modal-title" id="qHeaderAiModalLabel">Header suggestions</h5>
+                        <button type="button" class="q-header-ai-refresh js-q-header-ai-refresh" title="Load more suggestions" aria-label="Load more suggestions">
+                            <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                        </button>
+                    </div>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -16939,7 +17063,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=328"></script>
+    <script src="crm/assets/quotation_generator.js?v=331"></script>
     <script src="crm/assets/quotation_flight_search.js?v=35"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

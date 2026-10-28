@@ -1519,18 +1519,9 @@
             '</div>' +
             actionCol +
             '</div>' +
-            '<div class="q-flight-baggage">' +
-            '<label class="q-flight-bag">' +
-            '<i class="fas fa-briefcase" aria-hidden="true"></i>' +
-            '<span>Hand</span>' +
-            '<input type="text" class="form-control form-control-sm f-hand-bag" value="' + esc(d.hand_baggage) + '" placeholder="7 Kg" title="Hand baggage">' +
-            '</label>' +
-            '<label class="q-flight-bag">' +
-            '<i class="fas fa-suitcase" aria-hidden="true"></i>' +
-            '<span>Check-in</span>' +
-            '<input type="text" class="form-control form-control-sm f-checkin-bag" value="' + esc(d.checkin_baggage) + '" placeholder="15 Kg" title="Check-in baggage">' +
-            '</label>' +
-            '</div>' +
+            // Baggage is stored for Tour Quote / customer preview, not edited in this form.
+            '<input type="hidden" class="f-hand-bag" value="' + esc(d.hand_baggage) + '">' +
+            '<input type="hidden" class="f-checkin-bag" value="' + esc(d.checkin_baggage) + '">' +
             '</div>' +
             '</div>';
     }
@@ -3494,6 +3485,271 @@
         scheduleItineraryMetaFromHotels();
         $('#qHotelOcrModal').modal('hide');
         hotelOcrSetStatus('Hotel rows were added to ' + ($panel.find('.q-hotel-cat-label').val() || 'this option') + '. Review them in the table, then continue as usual.', false);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Flight / Train Details — paste / upload OCR (mirrors hotel OCR)     */
+    /* ------------------------------------------------------------------ */
+    function matchFlightOcrSupplier(name) {
+        var q = String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        if (!q) {
+            return { id: '', name: '' };
+        }
+        var list = (typeof Q_FLIGHT_SUPPLIERS !== 'undefined' && Array.isArray(Q_FLIGHT_SUPPLIERS))
+            ? Q_FLIGHT_SUPPLIERS
+            : [];
+        function norm(s) {
+            return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+        var exact = list.filter(function (s) {
+            return s && norm(s.name) === q;
+        });
+        if (exact.length === 1) {
+            return { id: String(exact[0].id), name: String(exact[0].name || '') };
+        }
+        if (q.length >= 4) {
+            var partial = list.filter(function (s) {
+                var n = norm(s && s.name);
+                return n.length >= 4 && (n.indexOf(q) >= 0 || q.indexOf(n) >= 0);
+            });
+            if (partial.length === 1) {
+                return { id: String(partial[0].id), name: String(partial[0].name || '') };
+            }
+        }
+        return { id: '', name: String(name || '').trim() };
+    }
+
+    function flightOcrSectionVisible() {
+        return $('#qSectionBody2').is(':visible');
+    }
+
+    function flightOcrSetStatus(msg, isError) {
+        var $s = $('#qFlightOcrStatus');
+        if (!msg) {
+            $s.hide().text('').removeClass('is-error');
+            return;
+        }
+        $s.text(msg).toggleClass('is-error', !!isError).show();
+    }
+
+    function flightOcrFileFromClipboard(e) {
+        var data = (e.originalEvent || e).clipboardData;
+        var items = data && data.items;
+        if (!items) {
+            return null;
+        }
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type && items[i].type.indexOf('image/') === 0) {
+                return items[i].getAsFile();
+            }
+        }
+        return null;
+    }
+
+    function flightOcrReviewRow(seg) {
+        seg = seg || {};
+        var supplier = matchFlightOcrSupplier(seg.supplier || '');
+        var $tr = $('<tr></tr>');
+        function cell(control) {
+            return $('<td></td>').append(control);
+        }
+        function textInput(cls, value, placeholder) {
+            return $('<input type="text" class="form-control form-control-sm">')
+                .addClass(cls)
+                .val(value || '')
+                .attr('placeholder', placeholder || '');
+        }
+        function dateTimeCell(dateCls, timeCls, dateVal, timeVal) {
+            var $wrap = $('<div class="ocr-dt-wrap"></div>');
+            $wrap.append(textInput(dateCls, formatDisplayDate(dateVal || ''), 'dd/mm/yyyy'));
+            $wrap.append($('<input type="time" class="form-control form-control-sm">').addClass(timeCls).val(timeVal || ''));
+            return $wrap;
+        }
+        var $supplier = $('<select class="form-control form-control-sm ocr-f-supplier"></select>');
+        $supplier.html(flightSupplierOptionsHtml(supplier.id, supplier.name));
+        $tr.append(cell(textInput('ocr-f-from', seg.from, 'City (CODE)')));
+        $tr.append(cell(textInput('ocr-f-to', seg.to, 'City (CODE)')));
+        $tr.append(cell(textInput('ocr-f-name', seg.name, 'Airline / Train')));
+        $tr.append(cell(textInput('ocr-f-no', seg.fl_tr_no, 'No.')));
+        $tr.append(cell(dateTimeCell('ocr-f-dep-date', 'ocr-f-dep-time', seg.dep_date, seg.dep_time)));
+        $tr.append(cell(dateTimeCell('ocr-f-arr-date', 'ocr-f-arr-time', seg.arr_date, seg.arr_time)));
+        $tr.append(cell($('<input type="number" min="0" step="1" class="form-control form-control-sm ocr-f-fare">').val(seg.fare || '')));
+        var $supplierCell = cell($supplier);
+        if (seg.supplier && !supplier.id) {
+            $supplierCell.append($('<span class="ocr-note is-plain"></span>').text('Read as: ' + seg.supplier));
+        } else if (supplier.id) {
+            $supplierCell.append($('<span class="ocr-note"></span>').text('Matched'));
+        }
+        $tr.append($supplierCell);
+        $tr.attr('data-hand-baggage', seg.hand_baggage || '');
+        $tr.attr('data-checkin-baggage', seg.checkin_baggage || '');
+        $tr.append(cell($('<button type="button" class="btn btn-sm btn-light ocr-f-remove" title="Remove segment">&times;</button>')));
+        return $tr;
+    }
+
+    function openFlightOcrReview(segments) {
+        var $body = $('#qFlightOcrTable tbody').empty();
+        (segments || []).forEach(function (seg) {
+            $body.append(flightOcrReviewRow(seg));
+        });
+        $('#qFlightOcrModal').modal('show');
+        $body.find('.ocr-f-supplier').each(function () {
+            qInitSupplierSelect2($(this), { placeholder: 'Select' });
+        });
+    }
+
+    function flightOcrReadFile(file) {
+        if (!file || $('#qFlightOcrModal').hasClass('show')) {
+            return;
+        }
+        var type = String(file.type || '').toLowerCase();
+        if (type === 'image/jpg') {
+            type = 'image/jpeg';
+        }
+        if (!type) {
+            var ext = String(file.name || '').split('.').pop().toLowerCase();
+            if (ext === 'jpg' || ext === 'jpeg') {
+                type = 'image/jpeg';
+            } else if (ext === 'png') {
+                type = 'image/png';
+            } else if (ext === 'webp') {
+                type = 'image/webp';
+            }
+        }
+        if (['image/jpeg', 'image/png', 'image/webp'].indexOf(type) < 0) {
+            flightOcrSetStatus('Use a JPG, PNG, or WEBP screenshot.', true);
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            flightOcrSetStatus('That image is larger than 8 MB. Use a smaller screenshot.', true);
+            return;
+        }
+        var fd = new FormData();
+        var name = file.name && file.name !== 'image.png' ? file.name : 'flight-ticket.png';
+        if (!/\.(jpe?g|png|webp)$/i.test(name)) {
+            name += type === 'image/jpeg' ? '.jpg' : (type === 'image/webp' ? '.webp' : '.png');
+        }
+        fd.append('image', file, name);
+        flightOcrSetStatus('Reading the ticket image…', false);
+        $('#qFlightOcrUploadBtn, #qFlightOcrDrop').prop('disabled', true);
+        $.ajax({
+            url: 'crm/ajax/scan_flight_quote.php',
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        }).done(function (res) {
+            if (!res || !res.success) {
+                flightOcrSetStatus((res && res.message) || 'The image could not be read.', true);
+                return;
+            }
+            if (!res.segments || !res.segments.length) {
+                flightOcrSetStatus(res.message || 'No flight / train segments could be read. Fill the rows manually.', true);
+                return;
+            }
+            flightOcrSetStatus('', false);
+            openFlightOcrReview(res.segments);
+        }).fail(function (xhr) {
+            var msg = 'The image could not be read.';
+            if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            }
+            flightOcrSetStatus(msg, true);
+        }).always(function () {
+            $('#qFlightOcrUploadBtn, #qFlightOcrDrop').prop('disabled', false);
+            $('#qFlightOcrFile').val('');
+        });
+    }
+
+    function flightOcrExistingAllBlank() {
+        var $rows = $('#qFlightRows .q-flight-row');
+        if (!$rows.length) {
+            return true;
+        }
+        return $rows.toArray().every(function (el) {
+            var $row = $(el);
+            var fare = parseFloat($row.find('.f-fare').val());
+            return !$.trim($row.find('.f-from').val())
+                && !$.trim($row.find('.f-to').val())
+                && !$.trim($row.find('.f-name').val())
+                && !$.trim($row.find('.f-fl-no').val())
+                && !$.trim($row.find('.f-dep-date').val())
+                && !(fare > 0)
+                && !$.trim($row.find('.f-supplier').val());
+        });
+    }
+
+    function applyFlightOcrRows() {
+        var rows = [];
+        $('#qFlightOcrTable tbody tr').each(function () {
+            var $tr = $(this);
+            var depDate = normalizeLegacyDateInput($tr.find('.ocr-f-dep-date').val());
+            var arrDate = normalizeLegacyDateInput($tr.find('.ocr-f-arr-date').val());
+            if (depDate && !/^\d{4}-\d{2}-\d{2}$/.test(depDate)) {
+                depDate = '';
+            }
+            if (arrDate && !/^\d{4}-\d{2}-\d{2}$/.test(arrDate)) {
+                arrDate = '';
+            }
+            var fare = $.trim($tr.find('.ocr-f-fare').val());
+            var $sup = $tr.find('.ocr-f-supplier');
+            var supplierVal = String($sup.val() || '').trim();
+            if (supplierVal === '__create__') {
+                supplierVal = '';
+            }
+            var supplierName = String($sup.find('option:selected').attr('data-name') || $sup.find('option:selected').text() || '').trim();
+            if (!supplierVal || supplierName === 'Select' || supplierName.indexOf('Create new') === 0) {
+                supplierName = '';
+            }
+            var supplierId = /^\d+$/.test(supplierVal) ? supplierVal : '';
+            if (!supplierName && supplierVal && !supplierId) {
+                supplierName = supplierVal;
+            }
+            rows.push({
+                from: $.trim($tr.find('.ocr-f-from').val()),
+                to: $.trim($tr.find('.ocr-f-to').val()),
+                name: $.trim($tr.find('.ocr-f-name').val()),
+                fl_tr_no: $.trim($tr.find('.ocr-f-no').val()),
+                dep_date: depDate,
+                dep_time: $.trim($tr.find('.ocr-f-dep-time').val()),
+                arr_date: arrDate,
+                arr_time: $.trim($tr.find('.ocr-f-arr-time').val()),
+                fare: /^\d+(\.\d+)?$/.test(fare) && parseFloat(fare) > 0 ? String(Math.round(parseFloat(fare))) : '',
+                supplier_id: supplierId,
+                supplier: supplierName || supplierVal,
+                hand_baggage: $.trim(String($tr.attr('data-hand-baggage') || '')),
+                checkin_baggage: $.trim(String($tr.attr('data-checkin-baggage') || ''))
+            });
+        });
+        if (!rows.length) {
+            $('#qFlightOcrModal').modal('hide');
+            return;
+        }
+
+        if (flightOcrExistingAllBlank()) {
+            $('#qFlightRows').empty();
+        }
+
+        if (rows.length > 1) {
+            appendFlightJourneyCard(rows);
+        } else {
+            $('#qFlightRows').append(flightRowHtml(rows[0]));
+        }
+        qInitSupplierSelect2In($('#qFlightRows'));
+        initQuotationDatePickers($('#qFlightRows'));
+        renumberFlightRows();
+        refreshFlightLayovers();
+        recalcCosts();
+        scheduleSyncReturnAirfareInclusion();
+        saveFormDraftToStorage();
+        $('#qFlightOcrModal').modal('hide');
+        flightOcrSetStatus(
+            rows.length > 1
+                ? (rows.length + ' segments were added as a journey. Review them below, then continue as usual.')
+                : 'Flight / train segment was added. Review it below, then continue as usual.',
+            false
+        );
     }
 
     /* ------------------------------------------------------------------ */
@@ -12408,10 +12664,54 @@
             scheduleSyncReturnAirfareInclusion();
         };
 
-        $('#qUploadSsInput').on('change', function () {
-            var file = this.files && this.files[0];
-            $('#qUploadSsLabel').text(file ? ('Screenshot attached: ' + file.name) : '');
+        $('#qFlightOcrDrop').on('click', function () {
+            this.focus();
+            flightOcrSetStatus('Press Ctrl+V to paste a ticket screenshot, or use Upload image.', false);
         });
+        $('#qFlightOcrUploadBtn').on('click', function () {
+            $('#qFlightOcrFile').trigger('click');
+        });
+        $('#qFlightOcrFile').on('change', function () {
+            var file = this.files && this.files[0];
+            if (file) {
+                flightOcrReadFile(file);
+            }
+        });
+        $('#qFlightOcrBar').on('dragover', function (e) {
+            e.preventDefault();
+            $('#qFlightOcrDrop').addClass('is-drag');
+        }).on('dragleave drop', function (e) {
+            e.preventDefault();
+            $('#qFlightOcrDrop').removeClass('is-drag');
+            if (e.type !== 'drop') {
+                return;
+            }
+            var file = e.originalEvent && e.originalEvent.dataTransfer && e.originalEvent.dataTransfer.files[0];
+            if (file) {
+                flightOcrReadFile(file);
+            }
+        });
+        $(document).on('paste.flightOcr', function (e) {
+            if (!flightOcrSectionVisible() || $('#qFlightOcrModal').hasClass('show') || $('#qHotelOcrModal').hasClass('show')) {
+                return;
+            }
+            if ($(e.target).closest('input, textarea, select, [contenteditable="true"]').length) {
+                return;
+            }
+            var file = flightOcrFileFromClipboard(e);
+            if (!file) {
+                return;
+            }
+            e.preventDefault();
+            flightOcrReadFile(file);
+        });
+        $(document).on('click', '#qFlightOcrTable .ocr-f-remove', function () {
+            $(this).closest('tr').remove();
+        });
+        $('#qFlightOcrApply').on('click', function () {
+            applyFlightOcrRows();
+        });
+
         window.qQuotationAddHotelRow = function (data) {
             ensureHotelCategoriesReady();
             var $panel = getHotelCategoryPanels().filter('[data-cat-id="' + qActiveHotelCategoryId + '"]').first();
@@ -12663,7 +12963,7 @@
             }
         });
         $(document).on('paste', function (e) {
-            if (!hotelOcrSectionVisible() || $('#qHotelOcrModal').hasClass('show')) {
+            if (!hotelOcrSectionVisible() || $('#qHotelOcrModal').hasClass('show') || $('#qFlightOcrModal').hasClass('show')) {
                 return;
             }
             if ($(e.target).closest('input, textarea, select, [contenteditable="true"]').length) {
@@ -14537,11 +14837,13 @@
         (function initHeaderAiSuggest() {
             var $btn = $('#qHeaderAiBtn');
             var $modal = $('#qHeaderAiModal');
+            var $refresh = $modal.find('.js-q-header-ai-refresh');
             if (!$btn.length || !$modal.length) {
                 return;
             }
 
             var request = null;
+            var lastSuggestions = [];
 
             function showStatus(html) {
                 $modal.find('.js-q-header-ai-status').html(html);
@@ -14554,6 +14856,102 @@
                 $modal.modal('show');
             }
 
+            function setLoading(isLoading) {
+                $btn.prop('disabled', !!isLoading);
+                $refresh.prop('disabled', !!isLoading);
+                $refresh.find('i').toggleClass('fa-spin', !!isLoading);
+            }
+
+            function renderSuggestions(items) {
+                lastSuggestions = [];
+                var html = '';
+                (items || []).forEach(function (line) {
+                    line = $.trim(String(line || ''));
+                    if (!line) {
+                        return;
+                    }
+                    lastSuggestions.push(line);
+                    html += '<div class="q-header-ai-item">'
+                        + '<div class="q-header-ai-item-text">' + esc(line) + '</div>'
+                        + '<button type="button" class="btn btn-outline-danger btn-sm q-header-ai-use js-q-header-ai-use" data-header="' + esc(line).replace(/"/g, '&quot;') + '">Use</button>'
+                        + '</div>';
+                });
+                $modal.find('.js-q-header-ai-list').html(html);
+            }
+
+            function loadSuggestions(opts) {
+                opts = opts || {};
+                var refresh = !!opts.refresh;
+                var destination = $.trim(String($('#qDestinationInput').val() || ''));
+                $modal.find('.js-q-header-ai-dest').text(destination ? ('Destination: ' + destination) : '');
+
+                if (!destination) {
+                    $modal.find('.js-q-header-ai-list').empty();
+                    lastSuggestions = [];
+                    showStatus('<div class="alert alert-warning mb-0">Please select a destination first.</div>');
+                    return;
+                }
+
+                if (request && request.abort) {
+                    request.abort();
+                }
+
+                if (!refresh) {
+                    $modal.find('.js-q-header-ai-list').empty();
+                    lastSuggestions = [];
+                }
+
+                setLoading(true);
+                showStatus('<div class="text-muted py-2"><i class="fas fa-spinner fa-spin mr-2"></i>'
+                    + (refresh ? 'Loading more suggestions…' : 'Generating suggestions…')
+                    + '</div>');
+
+                var payload = {
+                    destination: destination,
+                    refresh: refresh ? 1 : 0
+                };
+                if (refresh && lastSuggestions.length) {
+                    payload.exclude = lastSuggestions;
+                }
+
+                request = $.ajax({
+                    url: absUrl('crm/ajax/ai_suggest_header.php'),
+                    method: 'POST',
+                    dataType: 'json',
+                    data: payload
+                }).done(function (res) {
+                    var items = res && Array.isArray(res.suggestions) ? res.suggestions : [];
+                    if (!res || !res.success || !items.length) {
+                        showStatus('<div class="alert alert-danger mb-0">' + esc((res && res.message) || 'Could not generate suggestions. Please try again.') + '</div>');
+                        if (!refresh) {
+                            $modal.find('.js-q-header-ai-list').empty();
+                            lastSuggestions = [];
+                        }
+                        return;
+                    }
+                    showStatus('');
+                    renderSuggestions(items);
+                }).fail(function (xhr, status) {
+                    if (status === 'abort') {
+                        return;
+                    }
+                    var message = 'Could not generate suggestions. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = String(xhr.responseJSON.message);
+                    } else if (xhr.status === 401) {
+                        message = 'Session expired. Please sign in again.';
+                    }
+                    showStatus('<div class="alert alert-danger mb-0">' + esc(message) + '</div>');
+                    if (!refresh) {
+                        $modal.find('.js-q-header-ai-list').empty();
+                        lastSuggestions = [];
+                    }
+                }).always(function () {
+                    setLoading(false);
+                    request = null;
+                });
+            }
+
             $modal.on('click', '.js-q-header-ai-use', function () {
                 var text = String($(this).attr('data-header') || '');
                 if (!text) {
@@ -14563,61 +14961,15 @@
                 $modal.modal('hide');
             });
 
+            $refresh.on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                loadSuggestions({ refresh: true });
+            });
+
             $btn.on('click', function () {
-                var destination = $.trim(String($('#qDestinationInput').val() || ''));
-                $modal.find('.js-q-header-ai-list').empty();
-                $modal.find('.js-q-header-ai-dest').text(destination ? ('Destination: ' + destination) : '');
                 openModal();
-
-                if (!destination) {
-                    showStatus('<div class="alert alert-warning mb-0">Please select a destination first.</div>');
-                    return;
-                }
-
-                if (request && request.abort) {
-                    request.abort();
-                }
-
-                $btn.prop('disabled', true);
-                showStatus('<div class="text-muted py-2"><i class="fas fa-spinner fa-spin mr-2"></i>Generating suggestions…</div>');
-
-                request = $.ajax({
-                    url: absUrl('crm/ajax/ai_suggest_header.php'),
-                    method: 'POST',
-                    dataType: 'json',
-                    data: { destination: destination }
-                }).done(function (res) {
-                    var items = res && Array.isArray(res.suggestions) ? res.suggestions : [];
-                    if (!res || !res.success || !items.length) {
-                        showStatus('<div class="alert alert-danger mb-0">' + esc((res && res.message) || 'Could not generate suggestions. Please try again.') + '</div>');
-                        return;
-                    }
-                    showStatus('');
-                    var html = '';
-                    items.forEach(function (line) {
-                        line = $.trim(String(line || ''));
-                        if (!line) {
-                            return;
-                        }
-                        html += '<div class="q-header-ai-item">'
-                            + '<div class="q-header-ai-item-text">' + esc(line) + '</div>'
-                            + '<button type="button" class="btn btn-outline-danger btn-sm q-header-ai-use js-q-header-ai-use" data-header="' + esc(line).replace(/"/g, '&quot;') + '">Use</button>'
-                            + '</div>';
-                    });
-                    $modal.find('.js-q-header-ai-list').html(html);
-                }).fail(function (xhr, status) {
-                    if (status === 'abort') {
-                        return;
-                    }
-                    var message = 'Could not generate suggestions. Please try again.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        message = String(xhr.responseJSON.message);
-                    }
-                    showStatus('<div class="alert alert-danger mb-0">' + esc(message) + '</div>');
-                }).always(function () {
-                    $btn.prop('disabled', false);
-                    request = null;
-                });
+                loadSuggestions({ refresh: false });
             });
         })();
     });

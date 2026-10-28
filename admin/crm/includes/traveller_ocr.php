@@ -37,31 +37,34 @@ function tocrCallGeminiVisionOnce(string $prompt, string $mime, string $base64, 
         return ['ok' => false, 'error' => 'Could not encode the document for OCR.'];
     }
 
-    $send = static function (string $endpoint, array $headers) use ($body, $timeoutSeconds): array {
-        $ch = curl_init($endpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_TIMEOUT => max(15, $timeoutSeconds),
-        ]);
-        $raw = curl_exec($ch);
-        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err = curl_error($ch);
-        curl_close($ch);
-        return [$raw, $code, $err];
-    };
+    // Prefer shared HTTP helper (cURL when available; file_get_contents fallback for XAMPP Apache without ext-curl).
+    $transport = crmAiHttpPostJson(
+        $url,
+        $body,
+        [
+            'Content-Type: application/json',
+            'x-goog-api-key: ' . $apiKey,
+        ],
+        max(15, $timeoutSeconds)
+    );
+    $raw = $transport['raw'];
+    $httpCode = (int) ($transport['http_code'] ?? 0);
+    $curlErr = (string) ($transport['error'] ?? '');
 
-    [$raw, $httpCode, $curlErr] = $send($url, ['Content-Type: application/json', 'x-goog-api-key: ' . $apiKey]);
-    if ($raw === false || $httpCode === 401 || $httpCode === 403) {
-        [$raw, $httpCode, $curlErr] = $send($url . '?key=' . urlencode($apiKey), ['Content-Type: application/json']);
+    if ($raw === null || $httpCode === 401 || $httpCode === 403) {
+        $transport = crmAiHttpPostJson(
+            $url . '?key=' . urlencode($apiKey),
+            $body,
+            ['Content-Type: application/json'],
+            max(15, $timeoutSeconds)
+        );
+        $raw = $transport['raw'];
+        $httpCode = (int) ($transport['http_code'] ?? 0);
+        $curlErr = (string) ($transport['error'] ?? $curlErr);
     }
 
-    if ($raw === false || $httpCode !== 200) {
-        $msg = $curlErr ?: ('OCR request failed (HTTP ' . $httpCode . ')');
+    if ($raw === null || $httpCode !== 200) {
+        $msg = $curlErr !== '' ? $curlErr : ('OCR request failed (HTTP ' . $httpCode . ')');
         if ($raw) {
             $errData = json_decode((string) $raw, true);
             if (!empty($errData['error']['message'])) {

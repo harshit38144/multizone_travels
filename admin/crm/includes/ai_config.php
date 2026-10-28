@@ -118,6 +118,90 @@ function crmAiIsTransientGeminiError(string $error): bool
 }
 
 /**
+ * POST JSON to a URL. Uses cURL when available; otherwise file_get_contents
+ * (needed on some XAMPP Apache builds where ext-curl fails to load).
+ *
+ * @param array<int, string> $headers
+ * @return array{ok:bool, raw:?string, http_code:int, error:string}
+ */
+function crmAiHttpPostJson(string $url, string $body, array $headers, int $timeoutSeconds = 12): array
+{
+    $timeoutSeconds = max(5, $timeoutSeconds);
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_TIMEOUT => $timeoutSeconds,
+        ]);
+        $raw = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($raw === false) {
+            return ['ok' => false, 'raw' => null, 'http_code' => $httpCode, 'error' => ($curlErr ?: 'cURL request failed.')];
+        }
+
+        return ['ok' => true, 'raw' => (string) $raw, 'http_code' => $httpCode, 'error' => ''];
+    }
+
+    if (!ini_get('allow_url_fopen')) {
+        return [
+            'ok' => false,
+            'raw' => null,
+            'http_code' => 0,
+            'error' => 'PHP cURL extension is missing and allow_url_fopen is off. Enable extension=curl in php.ini and restart Apache.',
+        ];
+    }
+
+    $headerLines = '';
+    foreach ($headers as $h) {
+        $headerLines .= $h . "\r\n";
+    }
+
+    $ctx = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => $headerLines,
+            'content' => $body,
+            'timeout' => $timeoutSeconds,
+            'ignore_errors' => true,
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+        ],
+    ]);
+
+    $raw = @file_get_contents($url, false, $ctx);
+    $httpCode = 0;
+    if (isset($http_response_header) && is_array($http_response_header)) {
+        foreach ($http_response_header as $line) {
+            if (preg_match('/^HTTP\/\S+\s+(\d+)/', (string) $line, $m)) {
+                $httpCode = (int) $m[1];
+                break;
+            }
+        }
+    }
+
+    if ($raw === false) {
+        return [
+            'ok' => false,
+            'raw' => null,
+            'http_code' => $httpCode,
+            'error' => 'HTTP request failed (cURL unavailable; file_get_contents fallback failed). Enable extension=curl in php.ini and restart Apache.',
+        ];
+    }
+
+    return ['ok' => true, 'raw' => (string) $raw, 'http_code' => $httpCode, 'error' => ''];
+}
+
+/**
  * Single-model request (no fallbacks).
  */
 function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds = 12): array
@@ -139,43 +223,35 @@ function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds 
         ],
     ], JSON_UNESCAPED_UNICODE);
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $body,
-        CURLOPT_HTTPHEADER => [
+    $transport = crmAiHttpPostJson(
+        $url,
+        $body,
+        [
             'Content-Type: application/json',
             'x-goog-api-key: ' . $apiKey,
         ],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => max(8, $timeoutSeconds),
-    ]);
-    $raw = curl_exec($ch);
-    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlErr = curl_error($ch);
-    curl_close($ch);
+        $timeoutSeconds
+    );
+    $raw = $transport['raw'];
+    $httpCode = (int) ($transport['http_code'] ?? 0);
+    $transportErr = (string) ($transport['error'] ?? '');
 
     // Fallback: retry with ?key= (works for both legacy AIza… and new AQ. auth keys).
-    if ($raw === false || $httpCode === 401 || $httpCode === 403) {
+    if ($raw === null || $httpCode === 401 || $httpCode === 403) {
         $urlQs = $url . '?key=' . urlencode($apiKey);
-        $ch = curl_init($urlQs);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_TIMEOUT => max(8, $timeoutSeconds),
-        ]);
-        $raw = curl_exec($ch);
-        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlErr = curl_error($ch);
-        curl_close($ch);
+        $transport = crmAiHttpPostJson(
+            $urlQs,
+            $body,
+            ['Content-Type: application/json'],
+            $timeoutSeconds
+        );
+        $raw = $transport['raw'];
+        $httpCode = (int) ($transport['http_code'] ?? 0);
+        $transportErr = (string) ($transport['error'] ?? $transportErr);
     }
 
-    if ($raw === false || $httpCode !== 200) {
-        $msg = $curlErr ?: ('Gemini request failed (HTTP ' . $httpCode . ')');
+    if ($raw === null || $httpCode !== 200) {
+        $msg = $transportErr !== '' ? $transportErr : ('Gemini request failed (HTTP ' . $httpCode . ')');
         if ($raw) {
             $errData = json_decode($raw, true);
             if (!empty($errData['error']['message'])) {
