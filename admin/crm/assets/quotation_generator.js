@@ -142,7 +142,7 @@
         if ($body.hasClass('q-day-body')) {
             var editorId = $body.closest('.q-day-card').attr('data-editor-id');
             if (editorId) {
-                initQuotationSummernote($('#' + editorId), 220, itineraryDaySummernoteToolbar());
+                initQuotationSummernote($('#' + editorId), 160, itineraryDaySummernoteToolbar());
                 updateDayCharCount($body.closest('.q-day-card'));
             }
             return;
@@ -216,7 +216,7 @@
         if (isNaN(idx)) {
             idx = $('#qItineraryDays .q-day-card').index($card);
         }
-        showItineraryDay(idx);
+        showItineraryDay(idx, { scroll: true });
     }
 
     $(document).on('click', '.q-section-accordion-head', function (e) {
@@ -1458,9 +1458,10 @@
     function flightRowHtml(data, opts) {
         var d = normalizeFlightData(data);
         opts = opts || {};
-        var actionCol = opts.hideRemove ? '' : (
+        var actionCol = opts.hideRemove
+            ? '<div class="q-ft-col q-ft-col-action"></div>'
+            : (
             '<div class="q-ft-col q-ft-col-action">' +
-            '<span class="q-ft-label">&nbsp;</span>' +
             '<button type="button" class="btn q-flight-remove q-remove" data-remove=".q-flight-row" title="Remove segment"><i class="fas fa-trash-alt"></i></button>' +
             '</div>'
         );
@@ -1473,51 +1474,50 @@
             '<input type="hidden" class="f-journey-label" value="' + esc(d.journey_label) + '">' +
             '<div class="q-flight-segment-card">' +
             '<div class="q-flight-segment-row' + (opts.hideRemove ? ' is-no-segment-delete' : '') + '">' +
+            '<div class="q-flight-travel">' +
             '<div class="q-ft-col q-ft-col-from">' +
-            '<span class="q-ft-label">From</span>' +
             '<div class="q-flight-place">' +
             '<input type="text" class="form-control form-control-sm f-from" value="' + esc(d.from) + '" placeholder="City (CODE)">' +
             '</div></div>' +
             '<div class="q-ft-col q-ft-col-swap">' +
-            '<span class="q-ft-label">&nbsp;</span>' +
             '<button type="button" class="btn q-flight-swap" title="Swap From / To"><i class="fas fa-exchange-alt"></i></button>' +
             '</div>' +
             '<div class="q-ft-col q-ft-col-to">' +
-            '<span class="q-ft-label">To</span>' +
             '<div class="q-flight-place">' +
             '<input type="text" class="form-control form-control-sm f-to" value="' + esc(d.to) + '" placeholder="City (CODE)">' +
             '</div></div>' +
             '<div class="q-ft-col q-ft-col-airline">' +
-            '<span class="q-ft-label">Airline / Flight No.</span>' +
-            '<div class="q-flight-airline-combo">' +
-            '<input type="text" class="form-control form-control-sm f-name" value="' + esc(d.name) + '" placeholder="Airline">' +
-            '<span class="q-flight-airline-sep" aria-hidden="true">•</span>' +
+            '<div class="q-flight-place">' +
+            '<input type="text" class="form-control form-control-sm f-name" value="' + esc(d.name) + '" placeholder="Airline / Train">' +
+            '</div></div>' +
+            '<div class="q-ft-col q-ft-col-flightno">' +
+            '<div class="q-flight-place">' +
             '<input type="text" class="form-control form-control-sm f-fl-no" value="' + esc(d.fl_tr_no) + '" placeholder="No.">' +
             '</div></div>' +
             '<div class="q-ft-col q-ft-col-depart">' +
-            '<span class="q-ft-label">Departure</span>' +
             '<div class="q-flight-datetime">' +
             '<input type="text" class="form-control form-control-sm f-dep-date js-q-date-input" value="' + esc(formatDisplayDate(d.dep_date)) + '" placeholder="dd/mm/yyyy" autocomplete="off" title="Departure date">' +
             '<input type="time" class="form-control form-control-sm f-dep-time" value="' + esc(d.dep_time) + '" title="Departure time">' +
             '</div></div>' +
             '<div class="q-ft-col q-ft-col-arrive">' +
-            '<span class="q-ft-label">Arrival</span>' +
             '<div class="q-flight-datetime">' +
             '<input type="text" class="form-control form-control-sm f-arr-date js-q-date-input" value="' + esc(formatDisplayDate(d.arr_date)) + '" placeholder="dd/mm/yyyy" autocomplete="off" title="Arrival date">' +
             '<input type="time" class="form-control form-control-sm f-arr-time" value="' + esc(d.arr_time) + '" title="Arrival time">' +
             '</div></div>' +
+            '</div>' +
+            '<div class="q-flight-commercial">' +
             '<div class="q-ft-col q-ft-col-fare">' +
-            '<span class="q-ft-label">Rate</span>' +
-            '<div class="q-flight-fare">' +
+            '<div class="q-flight-rate-box">' +
+            '<span class="q-flight-rate-prefix" aria-hidden="true">₹</span>' +
             '<input type="number" step="0.01" class="form-control form-control-sm f-fare" value="' + esc(d.fare) + '" placeholder="0.00">' +
             '</div></div>' +
             '<div class="q-ft-col q-ft-col-supplier">' +
-            '<span class="q-ft-label">Supplier</span>' +
             '<select class="form-control form-control-sm f-supplier">' +
             flightSupplierOptionsHtml(d.supplier_id, d.supplier) +
             '</select>' +
             '</div>' +
             actionCol +
+            '</div>' +
             '</div>' +
             // Baggage is stored for Tour Quote / customer preview, not edited in this form.
             '<input type="hidden" class="f-hand-bag" value="' + esc(d.hand_baggage) + '">' +
@@ -3189,6 +3189,49 @@
         $s.text(msg).toggleClass('is-error', !!isError).show();
     }
 
+    function hotelOcrSetBusy(on) {
+        var busy = !!on;
+        $('#qHotelOcrSpin').toggleClass('is-on', busy).attr('aria-hidden', busy ? 'false' : 'true');
+        $('#qHotelOcrBar').toggleClass('is-busy', busy);
+        if (busy) {
+            hotelOcrSetStatus('', false);
+        }
+    }
+
+    function hotelOcrClearPreview() {
+        var $img = $('#qHotelOcrPreviewImg');
+        var url = $img.data('objectUrl');
+        if (url) {
+            try {
+                URL.revokeObjectURL(url);
+            } catch (err) {}
+            $img.removeData('objectUrl');
+        }
+        $img.attr('src', '').attr('alt', 'Hotel quotation preview');
+        $('#qHotelOcrBar').removeClass('has-preview');
+        $('#qHotelOcrPlaceholder').text('Paste hotel quotation or upload');
+        $('#qHotelOcrFile').val('');
+    }
+
+    function hotelOcrSetPreview(file) {
+        if (!file) {
+            hotelOcrClearPreview();
+            return;
+        }
+        var $img = $('#qHotelOcrPreviewImg');
+        var prev = $img.data('objectUrl');
+        if (prev) {
+            try {
+                URL.revokeObjectURL(prev);
+            } catch (err) {}
+        }
+        var url = URL.createObjectURL(file);
+        $img.data('objectUrl', url).attr('src', url).attr('alt', file.name || 'Hotel quotation preview');
+        $('#qHotelOcrBar').addClass('has-preview');
+        var label = file.name && file.name !== 'image.png' ? file.name : 'Hotel quotation';
+        $('#qHotelOcrPlaceholder').text(label);
+    }
+
     function hotelOcrFileFromClipboard(e) {
         var data = (e.originalEvent || e).clipboardData;
         var items = data && data.items;
@@ -3348,13 +3391,14 @@
             hotelOcrSetStatus('That image is larger than 8 MB. Use a smaller screenshot.', true);
             return;
         }
+        hotelOcrSetPreview(file);
         var fd = new FormData();
         var name = file.name && file.name !== 'image.png' ? file.name : 'hotel-quote.png';
         if (!/\.(jpe?g|png|webp)$/i.test(name)) {
             name += type === 'image/jpeg' ? '.jpg' : (type === 'image/webp' ? '.webp' : '.png');
         }
         fd.append('image', file, name);
-        hotelOcrSetStatus('Reading the hotel image…', false);
+        hotelOcrSetBusy(true);
         $('#qHotelOcrUploadBtn, #qHotelOcrDrop').prop('disabled', true);
         $.ajax({
             url: 'crm/ajax/scan_hotel_quote.php',
@@ -3381,6 +3425,7 @@
             }
             hotelOcrSetStatus(msg, true);
         }).always(function () {
+            hotelOcrSetBusy(false);
             $('#qHotelOcrUploadBtn, #qHotelOcrDrop').prop('disabled', false);
             $('#qHotelOcrFile').val('');
         });
@@ -3484,7 +3529,8 @@
         saveFormDraftToStorage();
         scheduleItineraryMetaFromHotels();
         $('#qHotelOcrModal').modal('hide');
-        hotelOcrSetStatus('Hotel rows were added to ' + ($panel.find('.q-hotel-cat-label').val() || 'this option') + '. Review them in the table, then continue as usual.', false);
+        hotelOcrSetBusy(false);
+        hotelOcrSetStatus('', false);
     }
 
     /* ------------------------------------------------------------------ */
@@ -3530,6 +3576,49 @@
             return;
         }
         $s.text(msg).toggleClass('is-error', !!isError).show();
+    }
+
+    function flightOcrSetBusy(on) {
+        var busy = !!on;
+        $('#qFlightOcrSpin').toggleClass('is-on', busy).attr('aria-hidden', busy ? 'false' : 'true');
+        $('#qFlightOcrBar').toggleClass('is-busy', busy);
+        if (busy) {
+            flightOcrSetStatus('', false);
+        }
+    }
+
+    function flightOcrClearPreview() {
+        var $img = $('#qFlightOcrPreviewImg');
+        var url = $img.data('objectUrl');
+        if (url) {
+            try {
+                URL.revokeObjectURL(url);
+            } catch (err) {}
+            $img.removeData('objectUrl');
+        }
+        $img.attr('src', '').attr('alt', 'Ticket preview');
+        $('#qFlightOcrBar').removeClass('has-preview');
+        $('#qFlightOcrPlaceholder').text('Paste ticket image or upload');
+        $('#qFlightOcrFile').val('');
+    }
+
+    function flightOcrSetPreview(file) {
+        if (!file) {
+            flightOcrClearPreview();
+            return;
+        }
+        var $img = $('#qFlightOcrPreviewImg');
+        var prev = $img.data('objectUrl');
+        if (prev) {
+            try {
+                URL.revokeObjectURL(prev);
+            } catch (err) {}
+        }
+        var url = URL.createObjectURL(file);
+        $img.data('objectUrl', url).attr('src', url).attr('alt', file.name || 'Ticket preview');
+        $('#qFlightOcrBar').addClass('has-preview');
+        var label = file.name && file.name !== 'image.png' ? file.name : 'Ticket image';
+        $('#qFlightOcrPlaceholder').text(label);
     }
 
     function flightOcrFileFromClipboard(e) {
@@ -3624,13 +3713,14 @@
             flightOcrSetStatus('That image is larger than 8 MB. Use a smaller screenshot.', true);
             return;
         }
+        flightOcrSetPreview(file);
         var fd = new FormData();
         var name = file.name && file.name !== 'image.png' ? file.name : 'flight-ticket.png';
         if (!/\.(jpe?g|png|webp)$/i.test(name)) {
             name += type === 'image/jpeg' ? '.jpg' : (type === 'image/webp' ? '.webp' : '.png');
         }
         fd.append('image', file, name);
-        flightOcrSetStatus('Reading the ticket image…', false);
+        flightOcrSetBusy(true);
         $('#qFlightOcrUploadBtn, #qFlightOcrDrop').prop('disabled', true);
         $.ajax({
             url: 'crm/ajax/scan_flight_quote.php',
@@ -3657,6 +3747,7 @@
             }
             flightOcrSetStatus(msg, true);
         }).always(function () {
+            flightOcrSetBusy(false);
             $('#qFlightOcrUploadBtn, #qFlightOcrDrop').prop('disabled', false);
             $('#qFlightOcrFile').val('');
         });
@@ -3744,12 +3835,8 @@
         scheduleSyncReturnAirfareInclusion();
         saveFormDraftToStorage();
         $('#qFlightOcrModal').modal('hide');
-        flightOcrSetStatus(
-            rows.length > 1
-                ? (rows.length + ' segments were added as a journey. Review them below, then continue as usual.')
-                : 'Flight / train segment was added. Review it below, then continue as usual.',
-            false
-        );
+        flightOcrSetBusy(false);
+        flightOcrSetStatus('', false);
     }
 
     /* ------------------------------------------------------------------ */
@@ -4261,21 +4348,40 @@
 
     var activeItineraryDayIndex = 0;
 
-    function syncItineraryDayNav($card) {
-        if (!$card || !$card.length) {
-            return;
-        }
-        var total = $('#qItineraryDays .q-day-card').length;
-        var idx = parseInt($card.attr('data-day-index'), 10) || 0;
-        $card.find('.q-day-prev').prop('disabled', idx <= 0);
-        $card.find('.q-day-next').prop('disabled', idx >= total - 1);
+    function blankItineraryDay() {
+        return {
+            title: '',
+            description: '',
+            image: '',
+            overnight: '',
+            meal: '',
+            tours: '',
+            transfers: ''
+        };
     }
 
-    function showItineraryDay(index) {
+    function setNightsFromItineraryDayCount(dayCount) {
+        var nights = Math.max(0, (parseInt(dayCount, 10) || 1) - 1);
+        suspendItineraryRebuild();
+        $('#q_nights').val(String(nights));
+        resumeItineraryRebuild();
+        if (typeof refreshAiItineraryMeta === 'function') {
+            refreshAiItineraryMeta();
+        }
+    }
+
+    function refreshItineraryDayActions() {
+        var $cards = $('#qItineraryDays .q-day-card');
+        var canRemove = $cards.length > 1;
+        $cards.find('.q-day-remove').toggle(canRemove);
+    }
+
+    function showItineraryDay(index, opts) {
         var $cards = $('#qItineraryDays .q-day-card');
         if (!$cards.length) {
             return;
         }
+        opts = opts || {};
         index = parseInt(index, 10);
         if (isNaN(index) || index < 0) {
             index = 0;
@@ -4286,34 +4392,66 @@
         activeItineraryDayIndex = index;
         $cards.each(function (i) {
             var $c = $(this);
-            var active = i === index;
-            $c.toggleClass('is-active', active);
-            $c.attr('aria-hidden', active ? 'false' : 'true');
-            if (active) {
-                syncItineraryDayNav($c);
-                var editorId = $c.attr('data-editor-id');
-                if (editorId) {
-                    initQuotationSummernote($('#' + editorId), 220, itineraryDaySummernoteToolbar());
-                    updateDayCharCount($c);
-                }
-            }
+            $c.toggleClass('is-active', i === index);
+            $c.attr('aria-hidden', 'false');
         });
+        refreshItineraryDayActions();
+        if ($('#qSectionBody4').is(':visible')) {
+            initItineraryEditors();
+        }
+        if (opts.scroll) {
+            var $target = $cards.eq(index);
+            if ($target.length && $target[0].scrollIntoView) {
+                $target[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
     }
 
     function initItineraryEditors() {
-        var $active = $('#qItineraryDays .q-day-card.is-active');
-        if (!$active.length) {
-            $active = $('#qItineraryDays .q-day-card').first();
-            $active.addClass('is-active');
-        }
-        if ($active.length) {
-            var editorId = $active.attr('data-editor-id');
+        $('#qItineraryDays .q-day-card').each(function () {
+            var $card = $(this);
+            $card.attr('aria-hidden', 'false');
+            var editorId = $card.attr('data-editor-id');
             if (editorId) {
-                initQuotationSummernote($('#' + editorId), 220, itineraryDaySummernoteToolbar());
-                updateDayCharCount($active);
+                initQuotationSummernote($('#' + editorId), 160, itineraryDaySummernoteToolbar());
+                updateDayCharCount($card);
             }
-            syncItineraryDayNav($active);
+        });
+        refreshItineraryDayActions();
+    }
+
+    function insertItineraryDayAfter(index) {
+        var days = snapshotItinerary();
+        if (!days.length) {
+            days = [blankItineraryDay()];
+            index = -1;
         }
+        index = parseInt(index, 10);
+        if (isNaN(index) || index < 0) {
+            index = days.length - 1;
+        }
+        days.splice(index + 1, 0, blankItineraryDay());
+        activeItineraryDayIndex = index + 1;
+        setNightsFromItineraryDayCount(days.length);
+        rebuildItinerary(days);
+        window.setTimeout(function () {
+            showItineraryDay(index + 1, { scroll: true });
+        }, 80);
+    }
+
+    function removeItineraryDay(index) {
+        var days = snapshotItinerary();
+        if (days.length <= 1) {
+            return;
+        }
+        index = parseInt(index, 10);
+        if (isNaN(index) || index < 0 || index >= days.length) {
+            return;
+        }
+        days.splice(index, 1);
+        activeItineraryDayIndex = Math.min(index, days.length - 1);
+        setNightsFromItineraryDayCount(days.length);
+        rebuildItinerary(days);
     }
 
     function collectItineraryMeta() {
@@ -4548,14 +4686,17 @@
             var heading = fmtItineraryDayHeading(baseDate, i, i + 1);
             var imgVal = prev.image || '';
             var imgCountLabel = imgVal ? '1 Image' : '0 Image';
-            var dayMenuItems = '<a class="dropdown-item q-view-full-itinerary" href="#"><i class="fas fa-list-ul mr-2"></i>View full itinerary</a><div class="dropdown-divider"></div>';
+            var dayMenuItems = '<a class="dropdown-item q-view-full-itinerary" href="#"><i class="fas fa-list-ul mr-2"></i>View full itinerary</a>' +
+                '<a class="dropdown-item q-day-add-after" href="#"><i class="fas fa-plus mr-2"></i>Add day after this</a>' +
+                '<a class="dropdown-item text-danger q-day-remove" href="#"><i class="fas fa-trash-alt mr-2"></i>Remove this day</a>' +
+                '<div class="dropdown-divider"></div>';
             for (var m = 0; m < totalDays; m++) {
                 dayMenuItems += '<a class="dropdown-item q-day-jump" href="#" data-day-index="' + m + '">Day ' + (m + 1) + '</a>';
             }
             var toursVal = prev.tours || '';
             var transfersVal = prev.transfers || '';
             var $card = $(
-                '<div class="q-day-card" data-day-index="' + i + '" data-editor-id="' + editorId + '" aria-hidden="true">' +
+                '<div class="q-day-card" data-day-index="' + i + '" data-editor-id="' + editorId + '" aria-hidden="false">' +
                 '<div class="q-day-toolbar">' +
                 '<div class="q-day-toolbar-left">' +
                 '<span class="q-day-calendar-icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>' +
@@ -4565,11 +4706,8 @@
                 '</div>' +
                 '</div>' +
                 '<div class="q-day-toolbar-right">' +
-                dayServiceDropdownHtml('tours', 'Tours', toursVal) +
-                dayServiceDropdownHtml('transfers', 'Transfers', transfersVal) +
+                '<button type="button" class="btn q-day-add-btn" title="Add a day after this one"><i class="fas fa-plus"></i><span>Add Day</span></button>' +
                 '<button type="button" class="btn q-day-ai-btn" title="AI Suggest this day"><i class="fas fa-magic mr-1"></i>AI Suggest</button>' +
-                '<button type="button" class="btn q-day-nav-btn q-day-prev"><i class="fas fa-chevron-left"></i><span>Previous Day</span></button>' +
-                '<button type="button" class="btn q-day-nav-btn q-day-nav-primary q-day-next"><span>Next Day</span><i class="fas fa-chevron-right"></i></button>' +
                 '<button type="button" class="btn q-day-nav-btn q-view-full-itinerary" title="View full itinerary" aria-label="View full itinerary"><i class="fas fa-eye"></i></button>' +
                 '<div class="dropdown q-day-more-wrap">' +
                 '<button type="button" class="btn q-day-more-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="More">' +
@@ -4581,9 +4719,13 @@
                 '<div class="q-day-body">' +
                 '<div class="q-day-main-grid">' +
                 '<div class="q-day-content-col">' +
+                '<div class="q-day-title-row">' +
                 '<div class="q-floating-field">' +
                 '<label class="q-floating-label">Title <span class="text-danger">*</span></label>' +
                 '<input type="text" class="form-control q-day-title" placeholder="Day title" required>' +
+                '</div>' +
+                dayServiceDropdownHtml('tours', 'Tours', toursVal) +
+                dayServiceDropdownHtml('transfers', 'Transfers', transfersVal) +
                 '</div>' +
                 '<div class="q-day-editor-wrap">' +
                 '<textarea class="form-control q-day-textarea"></textarea>' +
@@ -4597,12 +4739,14 @@
                 '</div>' +
                 '<div class="q-img-preview-wrap">' +
                 '<img class="q-img-preview" alt="Day image preview">' +
+                '<div class="q-day-image-overlay">' +
                 '<div class="q-img-preview-empty text-muted small">No image selected</div>' +
-                '</div>' +
                 '<div class="q-day-image-actions">' +
                 '<button type="button" class="btn q-day-img-btn q-choose-image"><i class="fas fa-upload mr-1"></i>Upload</button>' +
                 '<button type="button" class="btn q-day-img-btn q-search-day-image"><i class="fas fa-search mr-1"></i>Search Online</button>' +
                 '<button type="button" class="btn q-day-img-btn q-day-img-remove q-clear-day-image"><i class="fas fa-trash-alt mr-1"></i>Remove</button>' +
+                '</div>' +
+                '</div>' +
                 '</div>' +
                 '</div>' +
                 '</div>' +
@@ -4657,7 +4801,7 @@
         if (preferredActive >= totalDays) {
             preferredActive = Math.max(0, totalDays - 1);
         }
-        showItineraryDay(preferredActive);
+        showItineraryDay(preferredActive, { scroll: false });
         syncItineraryMetaFromHotels();
         window.setTimeout(function () {
             if (seq !== rebuildItinerarySeq) {
@@ -5914,22 +6058,29 @@
             } catch (err) { /* ignore */ }
         });
 
-        $(document).on('click', '.q-day-prev', function (e) {
+        $(document).on('click', '.q-day-add-btn, .q-day-add-after', function (e) {
             e.preventDefault();
-            var idx = parseInt($(this).closest('.q-day-card').attr('data-day-index'), 10) || 0;
-            showItineraryDay(idx - 1);
+            var idx = parseInt($(this).closest('.q-day-card').attr('data-day-index'), 10);
+            insertItineraryDayAfter(idx);
         });
 
-        $(document).on('click', '.q-day-next', function (e) {
+        $(document).on('click', '.q-day-remove', function (e) {
             e.preventDefault();
-            var idx = parseInt($(this).closest('.q-day-card').attr('data-day-index'), 10) || 0;
-            showItineraryDay(idx + 1);
+            var $cards = $('#qItineraryDays .q-day-card');
+            if ($cards.length <= 1) {
+                return;
+            }
+            if (!window.confirm('Remove this day from the itinerary? Later days will be renumbered.')) {
+                return;
+            }
+            var idx = parseInt($(this).closest('.q-day-card').attr('data-day-index'), 10);
+            removeItineraryDay(idx);
         });
 
         $(document).on('click', '.q-day-jump', function (e) {
             e.preventDefault();
             var idx = parseInt($(this).attr('data-day-index'), 10);
-            showItineraryDay(idx);
+            showItineraryDay(idx, { scroll: true });
         });
 
         $(document).on('click', '.q-view-full-itinerary, #qViewFullItineraryBtn', function (e) {
@@ -5942,13 +6093,7 @@
             var idx = parseInt($(this).attr('data-day-index'), 10);
             $('#qFullItineraryModal').modal('hide');
             expandWizardSection(4);
-            showItineraryDay(idx);
-            window.setTimeout(function () {
-                var $card = $('#qItineraryDays .q-day-card.is-active');
-                if ($card.length && $card[0].scrollIntoView) {
-                    $card[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }, 180);
+            showItineraryDay(idx, { scroll: true });
         });
 
         $(document).on('click', '.q-day-meta-edit', function (e) {
@@ -7746,15 +7891,15 @@
                 removeIndex: i
             });
         });
-        html += tourCostRowHtml({
-            key: 'gst',
-            icon: 'fas fa-percentage',
-            name: 'GST',
-            editable: false,
-            hideMeta: true,
-            summary: true,
-            gstEditable: true,
-            gstPct: gstPct,
+            html += tourCostRowHtml({
+                key: 'gst',
+                icon: 'fas fa-percentage',
+                name: 'GST',
+                editable: false,
+                hideMeta: true,
+                summary: true,
+                gstEditable: true,
+                gstPct: gstPct,
             previewOn: !$('#q_hide_gst_note').is(':checked'),
             amountText: 'INR 0'
         });
@@ -7951,12 +8096,12 @@
                 $age.val(!isNaN(ageNum) && ageNum > 0 ? String(ageNum) : '');
             }
         }
-        $scope.find('.q-tour-gst-row').show();
-        $scope.find('.q-tour-gst-input').each(function () {
-            if (!$(this).is(':focus')) {
-                $(this).val(String(payload.gst_percent || 5));
-            }
-        });
+            $scope.find('.q-tour-gst-row').show();
+            $scope.find('.q-tour-gst-input').each(function () {
+                if (!$(this).is(':focus')) {
+                    $(this).val(String(payload.gst_percent || 5));
+                }
+            });
         $scope.find('[data-tour-amount="gst"]').text(formatTourMoney(payload.gst_amount))
             .toggleClass('is-excluded', !!payload.hide_gst);
         $scope.find('.q-tour-gst-rate-switch').each(function () {
@@ -12749,7 +12894,20 @@
 
         $('#qFlightOcrDrop').on('click', function () {
             this.focus();
-            flightOcrSetStatus('Press Ctrl+V to paste a ticket screenshot, or use Upload image.', false);
+        });
+        $('#qFlightOcrBar').on('click', function (e) {
+            if ($(e.target).closest('#qFlightOcrUploadBtn, #qFlightOcrClear, #qFlightOcrFile').length) {
+                return;
+            }
+            $('#qFlightOcrDrop').trigger('focus');
+        });
+        $('#qFlightOcrClear').on('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            flightOcrClearPreview();
+            flightOcrSetBusy(false);
+            flightOcrSetStatus('', false);
+            $('#qFlightOcrDrop').trigger('focus');
         });
         $('#qFlightOcrUploadBtn').on('click', function () {
             $('#qFlightOcrFile').trigger('click');
@@ -12762,10 +12920,10 @@
         });
         $('#qFlightOcrBar').on('dragover', function (e) {
             e.preventDefault();
-            $('#qFlightOcrDrop').addClass('is-drag');
+            $('#qFlightOcrBar').addClass('is-drag');
         }).on('dragleave drop', function (e) {
             e.preventDefault();
-            $('#qFlightOcrDrop').removeClass('is-drag');
+            $('#qFlightOcrBar').removeClass('is-drag');
             if (e.type !== 'drop') {
                 return;
             }
@@ -13020,7 +13178,20 @@
 
         $('#qHotelOcrDrop').on('click', function () {
             this.focus();
-            hotelOcrSetStatus('Press Ctrl+V to paste a hotel screenshot, or use Upload image.', false);
+        });
+        $('#qHotelOcrBar').on('click', function (e) {
+            if ($(e.target).closest('#qHotelOcrUploadBtn, #qHotelOcrClear, #qHotelOcrFile').length) {
+                return;
+            }
+            $('#qHotelOcrDrop').trigger('focus');
+        });
+        $('#qHotelOcrClear').on('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            hotelOcrClearPreview();
+            hotelOcrSetBusy(false);
+            hotelOcrSetStatus('', false);
+            $('#qHotelOcrDrop').trigger('focus');
         });
         $('#qHotelOcrUploadBtn').on('click', function () {
             $('#qHotelOcrFile').trigger('click');
@@ -13033,10 +13204,10 @@
         });
         $('#qHotelOcrBar').on('dragover', function (e) {
             e.preventDefault();
-            $('#qHotelOcrDrop').addClass('is-drag');
+            $('#qHotelOcrBar').addClass('is-drag');
         }).on('dragleave drop', function (e) {
             e.preventDefault();
-            $('#qHotelOcrDrop').removeClass('is-drag');
+            $('#qHotelOcrBar').removeClass('is-drag');
             if (e.type !== 'drop') {
                 return;
             }
@@ -13654,8 +13825,8 @@
                     var code = key.toUpperCase();
                     var name = currencyName(code);
                     if (q && code.toLowerCase().indexOf(q) === -1 && name.toLowerCase().indexOf(q) === -1) {
-                        return;
-                    }
+                return;
+            }
                     count++;
                     html += '<li><button type="button" class="q-fx-option' + (code === selected ? ' is-active' : '') + '" data-code="' + esc(code) + '" role="option">' +
                         '<span class="q-fx-code">' + esc(code) + '</span><span class="q-fx-name">' + esc(name) + '</span></button></li>';
@@ -13872,11 +14043,11 @@
             }
             $(window).on('resize', repositionOpenMenu);
             document.addEventListener('scroll', repositionOpenMenu, true);
-            $('#qUsdCopyResult').on('click', function () {
-                var val = String($(this).data('copy') || '');
-                if (!val || !navigator.clipboard) return;
-                navigator.clipboard.writeText(val).catch(function () {});
-            });
+        $('#qUsdCopyResult').on('click', function () {
+            var val = String($(this).data('copy') || '');
+            if (!val || !navigator.clipboard) return;
+            navigator.clipboard.writeText(val).catch(function () {});
+        });
 
             loadRates();
         })();
@@ -14951,8 +15122,8 @@
                 (items || []).forEach(function (line) {
                     line = $.trim(String(line || ''));
                     if (!line) {
-                        return;
-                    }
+                    return;
+                }
                     lastSuggestions.push(line);
                     html += '<div class="q-header-ai-item">'
                         + '<div class="q-header-ai-item-text">' + esc(line) + '</div>'
@@ -15009,9 +15180,9 @@
                         if (!refresh) {
                             $modal.find('.js-q-header-ai-list').empty();
                             lastSuggestions = [];
-                        }
-                        return;
                     }
+                            return;
+                        }
                     showStatus('');
                     renderSuggestions(items);
                 }).fail(function (xhr, status) {

@@ -1575,25 +1575,27 @@ $qWizardSteps = [
         .crm-quotation-gen .q-day-card {
             border: 1px solid #e8ecf1;
             border-radius: 14px;
-            margin-bottom: 0.85rem;
-            overflow: hidden;
-            box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
+            margin-bottom: 0;
+            overflow: visible;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
             background: #fff;
-            display: none;
+            display: block;
         }
 
         .crm-quotation-gen .q-day-card.is-active {
             display: block;
+            border-color: #f1a9ae;
+            box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.08), 0 4px 16px rgba(15, 23, 42, 0.04);
         }
 
         .crm-quotation-gen .q-day-toolbar {
             background: #fff;
-            padding: 1rem 1.15rem;
+            padding: 0.7rem 0.85rem;
             border-bottom: 1px solid #eef2f7;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.85rem;
+            gap: 0.55rem;
             flex-wrap: wrap;
         }
 
@@ -1611,14 +1613,14 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-day-head-label {
             font-weight: 700;
-            font-size: 0.98rem;
+            font-size: 0.88rem;
             color: #0f172a;
             line-height: 1.25;
         }
 
         .crm-quotation-gen .q-day-head-sub {
-            margin-top: 0.15rem;
-            font-size: 0.82rem;
+            margin-top: 0.05rem;
+            font-size: 0.75rem;
             font-weight: 500;
             color: #94a3b8;
         }
@@ -1636,18 +1638,20 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-svc-btn {
-            border: 1.5px solid #e2e8f0;
+            border: 1px solid #e2e8f0;
             background: #fff;
             color: #334155;
             font-weight: 600;
-            font-size: 0.78rem;
-            border-radius: 8px;
-            padding: 0.45rem 0.75rem;
+            font-size: 0.8rem;
+            border-radius: 10px;
+            padding: 0 0.65rem;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.3rem;
             line-height: 1.2;
-            min-height: 36px;
+            height: 30px;
+            min-height: 30px;
+            max-height: 30px;
         }
 
         .crm-quotation-gen .q-day-svc-btn:hover,
@@ -1765,11 +1769,11 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-more-btn {
-            width: 36px;
-            height: 36px;
+            width: 30px;
+            height: 30px;
             padding: 0;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
             background: #fff;
             color: #64748b;
             display: inline-flex;
@@ -1778,10 +1782,12 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-nav-btn.q-view-full-itinerary {
-            width: 36px;
-            height: 36px;
+            width: 30px;
+            height: 30px;
             padding: 0;
             justify-content: center;
+            border-radius: 10px;
+            border-width: 1px;
         }
 
         .crm-quotation-gen .q-day-more-btn:hover {
@@ -1813,16 +1819,16 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-calendar-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             background: #c62828;
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             flex: 0 0 auto;
-            font-size: 0.95rem;
+            font-size: 0.82rem;
         }
 
         /* —— Itinerary redesign (package search + selected + suppliers) —— */
@@ -1835,22 +1841,27 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-workspace {
             display: grid;
-            grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
-            gap: 1rem;
-            margin-bottom: 1rem;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
             align-items: stretch;
         }
 
-        @media (max-width: 991.98px) {
+        @media (max-width: 1199.98px) {
+            .crm-quotation-gen .q-itin-workspace {
+                grid-template-columns: 1fr 1fr;
+            }
+            .crm-quotation-gen .q-itin-suppliers-panel {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 767.98px) {
             .crm-quotation-gen .q-itin-workspace {
                 grid-template-columns: 1fr;
-                align-items: start;
             }
-
-            .crm-quotation-gen .q-itin-side-col,
-            .crm-quotation-gen .q-itin-pkg-card.q-itin-pkg-selected-card {
-                height: auto;
-                min-height: 0;
+            .crm-quotation-gen .q-itin-suppliers-panel {
+                grid-column: auto;
             }
         }
 
@@ -1858,69 +1869,51 @@ $qWizardSteps = [
             overflow: visible;
             position: relative;
             z-index: 5;
-        }
-
-        .crm-quotation-gen .q-itin-main-col {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
             min-width: 0;
-            position: relative;
-            z-index: 4;
-            height: 100%;
-        }
-
-        .crm-quotation-gen .q-itin-side-col {
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            min-height: 100%;
         }
 
         .crm-quotation-gen .q-itin-pkg-card.q-itin-pkg-selected-card {
-            flex: 1 1 auto;
-            height: 100%;
-            min-height: 100%;
             display: flex;
             flex-direction: column;
+            min-width: 0;
+            min-height: 0;
         }
 
         .crm-quotation-gen .q-itin-pkg-card {
             background: #fff;
             border: 1px solid #e8ecf1;
             border-radius: 14px;
-            padding: 1rem 1.15rem 1.15rem;
-            box-shadow: 0 6px 22px rgba(15, 23, 42, 0.05);
+            padding: 0.7rem 0.85rem 0.75rem;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
         }
 
         .crm-quotation-gen .q-itin-pkg-card-hd {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 0.9rem;
-            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.55rem;
+            flex-wrap: nowrap;
         }
 
         .crm-quotation-gen .q-itin-pkg-hd-left {
             display: flex;
-            align-items: flex-start;
-            gap: 0.7rem;
+            align-items: center;
+            gap: 0.55rem;
             min-width: 0;
             flex: 1 1 auto;
         }
 
         .crm-quotation-gen .q-itin-pkg-hd-icon {
-            width: 36px;
-            height: 36px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background: #fdecee;
             color: #c62828;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             flex: 0 0 auto;
         }
 
@@ -1931,9 +1924,9 @@ $qWizardSteps = [
         .crm-quotation-gen .q-itin-pkg-hd-label {
             display: block;
             font-weight: 800;
-            font-size: 1rem;
+            font-size: 0.88rem;
             color: #0f172a;
-            line-height: 1.25;
+            line-height: 1.2;
         }
 
         .crm-quotation-gen .q-itin-pkg-hd-sub {
@@ -1955,12 +1948,13 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-pkg-search-wrap .js-q-package-search {
-            padding-left: 2.45rem;
-            padding-right: 2.4rem;
-            height: 46px;
-            border-radius: 12px;
+            padding-left: 2.1rem;
+            padding-right: 2.1rem;
+            height: 30px;
+            min-height: 30px;
+            border-radius: 10px;
             border: 1px solid #e2e8f0;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             background: #fff;
         }
 
@@ -1971,22 +1965,22 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-pkg-search-icon-left {
             position: absolute;
-            left: 14px;
+            left: 10px;
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
             pointer-events: none;
             z-index: 2;
-            font-size: 0.9rem;
+            font-size: 0.78rem;
         }
 
         .crm-quotation-gen .q-itin-pkg-search-clear {
             position: absolute;
-            right: 10px;
-            top: 23px;
+            right: 6px;
+            top: 50%;
             transform: translateY(-50%);
-            width: 26px;
-            height: 26px;
+            width: 22px;
+            height: 22px;
             border: 0;
             border-radius: 50%;
             background: #f1f5f9;
@@ -2102,7 +2096,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: space-between;
             gap: 0.5rem;
-            margin-bottom: 0.9rem;
+            margin-bottom: 0.45rem;
         }
 
         .crm-quotation-gen .q-itin-selected-hd {
@@ -2113,27 +2107,27 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-selected-badge-icon {
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
             background: #c62828;
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             flex: 0 0 auto;
         }
 
         .crm-quotation-gen .q-itin-selected-eyebrow {
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             font-weight: 800;
             color: #0f172a;
         }
 
         .crm-quotation-gen .q-itin-selected-more {
-            width: 34px;
-            height: 34px;
+            width: 28px;
+            height: 28px;
             padding: 0;
             border: 0;
             background: transparent;
@@ -2151,34 +2145,34 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-selected-empty {
             flex: 1 1 auto;
-            min-height: 220px;
+            min-height: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
             color: #94a3b8;
-            padding: 1rem 0.5rem;
+            padding: 0.35rem 0.35rem 0.2rem;
         }
 
         .crm-quotation-gen .q-itin-selected-empty-icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
             background: #fdecee;
             color: #c62828;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            margin-bottom: 0.4rem;
         }
 
         .crm-quotation-gen .q-itin-selected-empty p {
             margin: 0;
-            font-size: 0.85rem;
-            max-width: 220px;
-            line-height: 1.45;
+            font-size: 0.76rem;
+            max-width: 200px;
+            line-height: 1.35;
         }
 
         .crm-quotation-gen .q-itin-selected-filled {
@@ -2190,16 +2184,16 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-selected-preview {
             display: flex;
-            gap: 0.85rem;
+            gap: 0.6rem;
             align-items: flex-start;
-            margin-bottom: 1rem;
+            margin-bottom: 0.55rem;
             flex: 1 1 auto;
         }
 
         .crm-quotation-gen .q-itin-selected-image-wrap {
-            width: 92px;
-            height: 92px;
-            border-radius: 12px;
+            width: 64px;
+            height: 64px;
+            border-radius: 10px;
             overflow: hidden;
             background: #f1f5f9;
             flex: 0 0 auto;
@@ -2230,11 +2224,11 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-selected-title {
-            margin: 0 0 0.55rem;
-            font-size: 1.05rem;
+            margin: 0 0 0.35rem;
+            font-size: 0.88rem;
             font-weight: 800;
             color: #0f172a;
-            line-height: 1.3;
+            line-height: 1.25;
         }
 
         .crm-quotation-gen .q-itin-selected-meta {
@@ -2278,8 +2272,9 @@ $qWizardSteps = [
             background: #c62828;
             color: #fff;
             font-weight: 700;
-            padding: 0.75rem 1rem;
-            box-shadow: 0 8px 18px rgba(198, 40, 40, 0.22);
+            font-size: 0.8rem;
+            padding: 0.4rem 0.75rem;
+            box-shadow: none;
             margin-top: auto;
         }
 
@@ -2298,8 +2293,9 @@ $qWizardSteps = [
             background: #fff;
             border: 1px solid #e8ecf1;
             border-radius: 14px;
-            padding: 1rem 1.15rem 1.1rem;
-            box-shadow: 0 6px 22px rgba(15, 23, 42, 0.05);
+            padding: 0.7rem 0.85rem 0.65rem;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+            min-width: 0;
         }
 
         .crm-quotation-gen .q-itin-suppliers-hd-left {
@@ -2310,7 +2306,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-suppliers-title {
-            font-size: 1rem;
+            font-size: 0.88rem;
             font-weight: 800;
             color: #0f172a;
         }
@@ -2320,10 +2316,11 @@ $qWizardSteps = [
             border: 1.5px solid #f1a9ae;
             color: #c62828;
             background: #fff;
-            border-radius: 10px;
+            border-radius: 999px;
             font-weight: 700;
-            font-size: 0.8rem;
-            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+            padding: 0.28rem 0.7rem;
+            white-space: nowrap;
         }
 
         .crm-quotation-gen .q-itin-add-supplier-btn:hover {
@@ -2340,9 +2337,9 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 0.85rem;
-            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+            flex-wrap: nowrap;
         }
 
         .crm-quotation-gen .q-itin-suppliers-table {
@@ -2353,18 +2350,18 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-suppliers-table thead th {
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             font-weight: 700;
             color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.03em;
             border-bottom: 1px solid #eef2f7;
-            padding: 0.45rem 0.55rem;
+            padding: 0.25rem 0.35rem 0.4rem;
             background: transparent;
         }
 
         .crm-quotation-gen .q-itin-suppliers-table tbody td {
-            padding: 0.55rem;
+            padding: 0.3rem 0.35rem;
             vertical-align: middle;
             border-bottom: 1px solid #f1f5f9;
         }
@@ -2380,20 +2377,33 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-supplier-row .q-itin-supplier,
-        .crm-quotation-gen .q-itin-supplier-row .q-itin-rate,
-        .crm-quotation-gen .q-itin-supplier-row .select2-container .select2-selection--single {
-            border-radius: 8px !important;
-            min-height: 38px;
+        .crm-quotation-gen .q-itin-supplier-row .q-itin-rate {
+            border-radius: 10px !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            font-size: 0.8rem !important;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-row .select2-container {
+            height: 30px;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-row .select2-container--default .select2-selection--single,
+        .crm-quotation-gen .q-itin-supplier-row .q-supplier-s2-selection.select2-selection--single {
+            height: 30px !important;
+            min-height: 30px !important;
+            max-height: 30px !important;
+            border-radius: 10px !important;
         }
 
         .crm-quotation-gen .q-itin-supplier-row .q-itin-supplier-remove {
-            height: 36px;
-            width: 36px;
+            height: 30px;
+            width: 30px;
             padding: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: 10px;
             margin-bottom: 0;
             border: 1px solid #fecaca;
             background: #fff1f2;
@@ -2418,6 +2428,9 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-days {
             margin-top: 0.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
         }
 
         .crm-quotation-gen .q-itin-days-actions {
@@ -2676,17 +2689,41 @@ $qWizardSteps = [
         .crm-quotation-gen .q-day-title-row {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.35rem;
+            margin-bottom: 0.55rem;
         }
 
-        .crm-quotation-gen .q-day-title-row .q-day-title {
+        .crm-quotation-gen .q-day-title-row .q-floating-field {
             flex: 1 1 auto;
             min-width: 0;
+            margin-bottom: 0;
+        }
+
+        .crm-quotation-gen .q-day-title-row .q-day-svc-dd {
+            display: flex;
+            flex: 0 0 auto;
+            align-self: center;
+        }
+
+        .crm-quotation-gen .q-day-title-row .q-day-svc-btn {
+            height: 30px;
+            min-height: 30px;
+            max-height: 30px;
+        }
+
+        @media (max-width: 767.98px) {
+            .crm-quotation-gen .q-day-title-row {
+                flex-wrap: wrap;
+            }
+
+            .crm-quotation-gen .q-day-title-row .q-floating-field {
+                flex: 1 1 100%;
+            }
         }
 
         .crm-quotation-gen .q-day-ai-btn {
             flex: 0 0 auto;
-            border-radius: 8px;
+            border-radius: 10px;
             border: 0;
             background: #c62828;
             color: #fff;
@@ -2694,9 +2731,35 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 0.78rem;
-            padding: 0.45rem 0.75rem;
+            font-size: 0.75rem;
+            height: 30px;
+            min-height: 30px;
+            padding: 0 0.65rem;
             line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-day-add-btn {
+            flex: 0 0 auto;
+            border-radius: 10px;
+            border: 1px solid #fecaca;
+            background: #fff1f2;
+            color: #c62828;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+            font-weight: 700;
+            font-size: 0.75rem;
+            height: 30px;
+            min-height: 30px;
+            padding: 0 0.7rem;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-day-add-btn:hover {
+            background: #ffe4e6;
+            border-color: #f87171;
+            color: #b71c1c;
         }
 
         .crm-quotation-gen .q-day-ai-btn:hover:not(:disabled) {
@@ -2973,14 +3036,14 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-body {
-            padding: 1rem 1.15rem 1.15rem;
+            padding: 0.85rem;
         }
 
         .crm-quotation-gen .q-day-main-grid {
             display: grid;
             grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.9fr);
             gap: 1rem;
-            align-items: stretch;
+            align-items: start;
         }
 
         @media (max-width: 991.98px) {
@@ -2996,12 +3059,12 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-floating-label {
             position: absolute;
-            top: -0.55rem;
-            left: 0.75rem;
+            top: -0.42rem;
+            left: 0.55rem;
             z-index: 2;
             background: #fff;
-            padding: 0 0.3rem;
-            font-size: 0.72rem;
+            padding: 0 0.22rem;
+            font-size: 0.68rem;
             font-weight: 700;
             color: #c62828;
             margin: 0;
@@ -3009,13 +3072,16 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-floating-field .q-day-title {
-            border: 1.5px solid #c62828;
-            border-radius: 8px;
-            font-weight: 700;
+            border: 1px solid #c62828;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.8rem;
             color: #0f172a;
-            height: auto;
-            min-height: 46px;
-            padding: 0.7rem 0.85rem;
+            height: 30px;
+            min-height: 30px;
+            max-height: 30px;
+            padding: 0 0.55rem;
+            line-height: 28px;
             box-shadow: none;
         }
 
@@ -3045,9 +3111,9 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-body .note-editing-area .note-editable {
-            min-height: 180px;
-            font-size: 0.9rem;
-            line-height: 1.55;
+            min-height: 140px;
+            font-size: 0.85rem;
+            line-height: 1.5;
             color: #334155;
         }
 
@@ -3067,7 +3133,9 @@ $qWizardSteps = [
             display: flex;
             flex-direction: column;
             gap: 0.65rem;
-            height: 100%;
+            height: auto;
+            width: 100%;
+            align-self: start;
         }
 
         .crm-quotation-gen .q-day-image-hd {
@@ -3096,10 +3164,27 @@ $qWizardSteps = [
             font-weight: 500;
         }
 
+        .crm-quotation-gen .q-day-image-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            padding: 0.75rem;
+            pointer-events: none;
+        }
+
         .crm-quotation-gen .q-day-image-actions {
             display: flex;
             flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
             gap: 0.4rem;
+            pointer-events: auto;
+            max-width: 100%;
         }
 
         .crm-quotation-gen .q-day-img-btn {
@@ -3111,6 +3196,7 @@ $qWizardSteps = [
             border-radius: 8px;
             padding: 0.4rem 0.65rem;
             line-height: 1.2;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
         }
 
         .crm-quotation-gen .q-day-img-btn:hover {
@@ -3247,8 +3333,12 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-img-preview-wrap {
-            flex: 1 1 auto;
-            min-height: 180px;
+            position: relative;
+            flex: 0 0 auto;
+            width: 100%;
+            height: 220px;
+            min-height: 220px;
+            max-height: 220px;
             border: 1px solid #e8ecf1;
             border-radius: 10px;
             background: #f8fafc;
@@ -3260,17 +3350,22 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-img-preview {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
-            max-height: 240px;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: cover;
+            object-position: center;
             border-radius: 10px;
             display: none;
         }
 
         .crm-quotation-gen .q-img-preview-empty {
             text-align: center;
-            padding: 0.85rem;
+            padding: 0;
+            margin: 0;
             font-size: 0.78rem;
             color: var(--q-text-muted);
         }
@@ -3619,30 +3714,128 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-table-wrap {
             border: 0;
             border-radius: 0;
-            overflow: visible;
+            overflow-x: auto;
             background: transparent;
+        }
+
+        .crm-quotation-gen .q-flight-table-inner {
+            min-width: 0;
         }
 
         .crm-quotation-gen .q-flight-rows {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.55rem;
+        }
+
+        .crm-quotation-gen .q-flight-table-head {
+            display: grid;
+            grid-template-columns: minmax(0, 1.78fr) minmax(260px, 0.72fr);
+            gap: 0;
+            margin: 0 0 0.55rem;
+            border: 1px solid #e8ecf1;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .crm-quotation-gen .q-flight-head-travel,
+        .crm-quotation-gen .q-flight-head-commercial {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .crm-quotation-gen .q-flight-head-travel {
+            background: #f8fafc;
+            border-right: 1px solid #e8ecf1;
+        }
+
+        .crm-quotation-gen .q-flight-head-commercial {
+            background: #fff1f2;
+        }
+
+        .crm-quotation-gen .q-flight-group-title {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 0.75rem 0.35rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+        }
+
+        .crm-quotation-gen .q-flight-group-title i {
+            color: #e11d2e;
+            font-size: 0.78rem;
+            width: 1rem;
+            text-align: center;
+        }
+
+        .crm-quotation-gen .q-flight-col-labels {
+            display: grid;
+            gap: 0.35rem;
+            align-items: center;
+            padding: 0.2rem 0.65rem 0.55rem;
+            color: #64748b;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
+        .crm-quotation-gen .q-flight-col-labels span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.28rem;
+            min-width: 0;
+            white-space: normal;
+            line-height: 1.2;
+            overflow: hidden;
+        }
+
+        .crm-quotation-gen .q-flight-col-labels i {
+            color: #e11d2e;
+            font-size: 0.68rem;
+            width: 0.85rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .crm-quotation-gen .q-flight-col-labels-travel {
+            grid-template-columns: 1fr 36px 1fr 1.05fr 0.95fr 1.25fr 1.25fr;
+        }
+
+        .crm-quotation-gen .q-flight-col-labels-commercial {
+            grid-template-columns: 0.95fr 1.2fr 72px;
+        }
+
+        .crm-quotation-gen .q-flight-col-labels-commercial > span:first-child {
+            justify-content: flex-end;
+        }
+
+        .crm-quotation-gen .q-flight-col-head-action {
+            justify-content: flex-end;
+            text-align: right;
         }
 
         .crm-quotation-gen .q-flight-journey-card {
-            background: #f8fafc;
-            border: 1px solid #dbeafe;
-            border-radius: 16px;
-            padding: 0.85rem;
-            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
         }
 
         .crm-quotation-gen .q-flight-journey-head {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 0.55rem 0.85rem;
-            margin-bottom: 0.75rem;
+            gap: 0rem 0.85rem;
+            margin-bottom: 0;
             padding: 0.55rem 0.75rem;
             background: #fff;
             border: 1px solid #e2e8f0;
@@ -3670,8 +3863,8 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-flight-journey-delete {
-            width: 34px;
-            height: 34px;
+            width: 22px;
+            height: 22px;
             border: 1px solid #fecaca;
             border-radius: 10px;
             background: #fff;
@@ -3693,7 +3886,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-journey-body {
             display: flex;
             flex-direction: column;
-            gap: 0.65rem;
+            gap: 0.1rem;
         }
 
         .crm-quotation-gen .q-flight-journey-body .q-flight-segment-card {
@@ -3701,54 +3894,68 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-flight-segment-card {
-            background: #fff;
-            border: 1px solid #e8edf3;
-            border-radius: 14px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-            padding: 0.85rem 1rem;
-            overflow-x: auto;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 0;
+            overflow: visible;
+            position: relative;
+            z-index: 1;
+        }
+
+        .crm-quotation-gen .q-flight-segment-card:focus-within {
+            z-index: 40;
         }
 
         .crm-quotation-gen .q-flight-segment-row {
             display: grid;
-            grid-template-columns:
-                minmax(120px, 1.05fr) 40px minmax(120px, 1.05fr)
-                minmax(168px, 1.35fr)
-                minmax(150px, 1.15fr) minmax(150px, 1.15fr)
-                minmax(100px, 0.85fr) minmax(110px, 0.95fr) 40px;
-            gap: 0.55rem;
-            align-items: end;
-            min-width: 980px;
+            grid-template-columns: minmax(0, 1.78fr) minmax(260px, 0.72fr);
+            gap: 0;
+            align-items: stretch;
+            min-width: 0;
         }
 
-        .crm-quotation-gen .q-flight-segment-row.is-no-segment-delete {
-            grid-template-columns:
-                minmax(120px, 1.05fr) 40px minmax(120px, 1.05fr)
-                minmax(168px, 1.35fr)
-                minmax(150px, 1.15fr) minmax(150px, 1.15fr)
-                minmax(100px, 0.85fr) minmax(110px, 0.95fr);
+        .crm-quotation-gen .q-flight-travel,
+        .crm-quotation-gen .q-flight-commercial {
+            display: grid;
+            gap: 0.35rem;
+            align-items: center;
+            min-width: 0;
+            padding: 0.15rem 0.65rem;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+        }
+
+        .crm-quotation-gen .q-flight-travel {
+            grid-template-columns: 1fr 36px 1fr 1.05fr 0.95fr 1.25fr 1.25fr;
+        }
+
+        .crm-quotation-gen .q-flight-commercial {
+            grid-template-columns: 0.95fr 1.2fr 72px;
         }
 
         .crm-quotation-gen .q-ft-col {
             min-width: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.32rem;
+            gap: 0;
+            width: 100%;
         }
 
         .crm-quotation-gen .q-ft-col-swap,
         .crm-quotation-gen .q-ft-col-action {
             align-items: center;
+            justify-content: center;
+        }
+
+        .crm-quotation-gen .q-ft-col-action {
+            justify-content: flex-end;
         }
 
         .crm-quotation-gen .q-ft-label {
-            font-size: 0.66rem;
-            font-weight: 700;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            line-height: 1.2;
-            white-space: nowrap;
+            display: none;
         }
 
         .crm-quotation-gen .q-flight-place,
@@ -3759,11 +3966,13 @@ $qWizardSteps = [
             align-items: center;
             gap: 0.35rem;
             min-width: 0;
-            min-height: 38px;
-            padding: 0.2rem 0.55rem;
+            height: 30px;
+            min-height: 30px;
+            padding: 0 0.55rem;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
             background: #fff;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-flight-place:focus-within,
@@ -3772,6 +3981,45 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-fare:focus-within {
             border-color: #f87171;
             box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
+        }
+
+        .crm-quotation-gen .q-flight-rate-box {
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+            height: 30px;
+            min-height: 30px;
+            padding: 0 0.55rem;
+            background: #ffe4e6;
+            border: 1px solid #fecdd3;
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        .crm-quotation-gen .q-flight-rate-prefix {
+            color: #e11d2e;
+            font-weight: 800;
+            font-size: 0.82rem;
+            flex-shrink: 0;
+        }
+
+        .crm-quotation-gen .q-flight-rate-box .f-fare {
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            height: 28px !important;
+            min-height: 28px !important;
+            padding: 0 !important;
+            font-weight: 800 !important;
+            color: #e11d2e !important;
+            flex: 1 1 auto;
+            min-width: 0;
+            width: 1%;
+            text-align: right;
+        }
+
+        .crm-quotation-gen .q-flight-rate-box .f-fare:focus {
+            box-shadow: none !important;
         }
 
         .crm-quotation-gen .q-flight-place-icon,
@@ -3822,9 +4070,9 @@ $qWizardSteps = [
             border: 1px solid #e2e8f0 !important;
             border-radius: 10px !important;
             background: #fff !important;
-            min-height: 38px !important;
-            height: 38px !important;
-            padding: 0.2rem 0.55rem !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            padding: 0.1rem 0.55rem !important;
             font-size: 0.8rem !important;
         }
 
@@ -3841,7 +4089,13 @@ $qWizardSteps = [
         }
         .crm-quotation-gen .q-ft-col-supplier .select2-container {
             display: block;
-            height: 38px;
+            height: 30px;
+        }
+        .crm-quotation-gen .q-ft-col-supplier .select2-container--default .select2-selection--single,
+        .crm-quotation-gen .q-ft-col-supplier .q-supplier-s2-selection.select2-selection--single {
+            height: 30px !important;
+            min-height: 30px !important;
+            max-height: 30px !important;
         }
         .crm-quotation-gen .select2-container--default .select2-selection--single,
         .crm-quotation-gen .q-supplier-s2-selection.select2-selection--single {
@@ -3948,7 +4202,7 @@ $qWizardSteps = [
             box-shadow: none !important;
             outline: none !important;
             font-size: 0.8rem !important;
-            line-height: 38px !important;
+            line-height: 1.25 !important;
             color: #0f172a !important;
             z-index: 2;
         }
@@ -4024,9 +4278,9 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-flight-datetime .f-dep-time,
         .crm-quotation-gen .q-flight-datetime .f-arr-time {
-            flex: 0.85;
+            flex: 0.7;
             min-width: 0;
-            max-width: 5.2rem;
+            max-width: 4.4rem;
         }
 
         .crm-quotation-gen .q-flight-datetime input[type="time"]::-webkit-calendar-picker-indicator {
@@ -4054,8 +4308,8 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-flight-swap {
-            width: 34px;
-            height: 34px;
+            width: 30px;
+            height: 30px;
             border: 1px solid #e2e8f0;
             border-radius: 50%;
             background: #fff;
@@ -4064,8 +4318,8 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.78rem;
-            margin-bottom: 0.1rem;
+            font-size: 0.72rem;
+            margin-bottom: 0;
         }
 
         .crm-quotation-gen .q-flight-swap:hover {
@@ -4075,8 +4329,8 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-flight-remove {
-            width: 34px;
-            height: 34px;
+            width: 30px;
+            height: 30px;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
             background: #fff;
@@ -4085,7 +4339,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 0.1rem;
+            margin-bottom: 0;
         }
 
         .crm-quotation-gen .q-flight-remove:hover {
@@ -4098,8 +4352,8 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
-            margin: 0.15rem 0 0.55rem;
-            padding: 0.45rem 0.75rem;
+            margin: 0.15rem 0 0.15rem;
+            padding: 0rem 0.75rem;
             background: #fffbeb;
             border: 1px solid #fde68a;
             border-radius: 10px;
@@ -4168,7 +4422,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-add-wrap {
             display: flex;
             justify-content: center;
-            margin-top: 0.95rem;
+            margin-top: 0.35rem;
         }
 
         .crm-quotation-gen .q-flight-add-segment {
@@ -4177,7 +4431,7 @@ $qWizardSteps = [
             color: #0f172a;
             border-radius: 10px;
             font-weight: 700;
-            padding: 0.45rem 1rem;
+            padding: 0.15rem 1rem;
         }
 
         .crm-quotation-gen .q-flight-add-segment:hover {
@@ -4195,16 +4449,17 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-segment-row .q-ft-col-fare.is-connecting-locked .form-control,
         .crm-quotation-gen .q-flight-segment-row .q-ft-col-supplier.is-connecting-locked .form-control,
         .crm-quotation-gen .q-flight-segment-row .q-ft-col-fare.is-connecting-locked .select2-selection,
-        .crm-quotation-gen .q-flight-segment-row .q-ft-col-supplier.is-connecting-locked .select2-selection {
+        .crm-quotation-gen .q-flight-segment-row .q-ft-col-supplier.is-connecting-locked .select2-selection,
+        .crm-quotation-gen .q-flight-segment-row .q-ft-col-fare.is-connecting-locked .q-flight-rate-box {
             background: #f1f5f9 !important;
             color: #94a3b8 !important;
             cursor: not-allowed;
             opacity: 0.85;
         }
 
-        .crm-quotation-gen .q-flight-segment-row .q-ft-col-fare.is-connecting-locked .q-ft-label,
-        .crm-quotation-gen .q-flight-segment-row .q-ft-col-supplier.is-connecting-locked .q-ft-label {
-            color: #94a3b8;
+        .crm-quotation-gen .q-flight-segment-row .q-ft-col-fare.is-connecting-locked .q-flight-rate-prefix,
+        .crm-quotation-gen .q-flight-segment-row .q-ft-col-fare.is-connecting-locked .f-fare {
+            color: #94a3b8 !important;
         }
 
         .crm-quotation-gen .q-flight-segment-row input[type="number"] {
@@ -4216,6 +4471,41 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-segment-row input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
+        }
+
+        @media (max-width: 1200px) {
+            .crm-quotation-gen .q-flight-table-head,
+            .crm-quotation-gen .q-flight-segment-row {
+                grid-template-columns: 1fr;
+            }
+            .crm-quotation-gen .q-flight-head-travel {
+                border-right: 0;
+                border-bottom: 1px solid #e8ecf1;
+            }
+            .crm-quotation-gen .q-flight-travel,
+            .crm-quotation-gen .q-flight-commercial {
+                border: 0;
+                border-radius: 0;
+                background: transparent;
+            }
+            .crm-quotation-gen .q-flight-commercial,
+            .crm-quotation-gen .q-flight-col-labels-commercial {
+                grid-template-columns: 1fr 1.2fr 72px;
+            }
+            .crm-quotation-gen .q-ft-col-action {
+                justify-content: flex-end;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .crm-quotation-gen .q-flight-col-labels-travel,
+            .crm-quotation-gen .q-flight-travel {
+                grid-template-columns: 1fr 36px 1fr;
+            }
+            .crm-quotation-gen .q-flight-commercial,
+            .crm-quotation-gen .q-flight-col-labels-commercial {
+                grid-template-columns: 1fr 1fr auto;
+            }
         }
 
 
@@ -4248,120 +4538,412 @@ $qWizardSteps = [
             margin-bottom: 0.75rem;
         }
 
-        #qWizardSection3 .q-hotel-ocr-bar,
-        #qWizardSection2 .q-flight-ocr-bar {
+        #qWizardSection3 .q-hotel-ocr-wrap {
+            flex: 1 1 280px;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            margin: 0 0 1rem;
-            padding: 0.65rem 0.75rem;
-            border: 1px dashed #e7b4ba;
-            border-radius: 12px;
-            background: #fff7f8;
+            gap: 0.4rem;
+            min-width: 240px;
+            max-width: 480px;
+            margin: 0 0 0 auto;
         }
 
-        #qWizardSection3 .q-hotel-ocr-drop,
+        #qWizardSection3 .q-hotel-ocr-bar {
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-width: 0;
+            margin: 0;
+            padding: 3px 4px 3px 8px;
+            min-height: 36px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar.is-drag {
+            border-color: #f87171;
+            background: #fff7f8;
+            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar.has-preview {
+            min-height: 54px;
+            padding-left: 4px;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-thumb {
+            position: relative;
+            flex: 0 0 auto;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar.has-preview .q-hotel-ocr-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            overflow: visible;
+            background: #f1f5f9;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-thumb-empty {
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar.has-preview .q-hotel-ocr-thumb-empty {
+            display: none;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-thumb img {
+            display: none;
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar.has-preview .q-hotel-ocr-thumb img {
+            display: block;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-clear {
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border: 1px solid #fecaca;
+            border-radius: 50%;
+            background: #fff;
+            color: #dc2626;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.62rem;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar.has-preview .q-hotel-ocr-clear {
+            display: inline-flex;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-clear:hover,
+        #qWizardSection3 .q-hotel-ocr-clear:focus {
+            background: #e11d2e;
+            border-color: #e11d2e;
+            color: #fff;
+            outline: none;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-drop {
+            flex: 1 1 auto;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            border: 0;
+            background: transparent;
+            text-align: left;
+            padding: 0 0.25rem;
+            cursor: text;
+            min-height: 28px;
+            box-shadow: none;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-drop:focus {
+            outline: none;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar:focus-within {
+            border-color: #f87171;
+            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
+        }
+
+        #qWizardSection3 .q-hotel-ocr-placeholder {
+            display: block;
+            min-width: 0;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #94a3b8;
+            font-size: 0.78rem;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-bar.has-preview .q-hotel-ocr-placeholder {
+            color: #334155;
+            font-weight: 600;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-upload {
+            flex: 0 0 auto;
+            border: 1px solid #e11d2e;
+            background: #fff;
+            color: #e11d2e;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.28rem 0.7rem;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-upload:hover,
+        #qWizardSection3 .q-hotel-ocr-upload:focus {
+            background: #e11d2e;
+            color: #fff;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-spin {
+            display: none;
+            flex: 0 0 auto;
+            width: 22px;
+            height: 22px;
+            align-items: center;
+            justify-content: center;
+            color: #e11d2e;
+            font-size: 0.95rem;
+            line-height: 1;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-spin.is-on {
+            display: inline-flex;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-status {
+            flex: 1 1 100%;
+            display: none;
+            margin: 0;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        #qWizardSection3 .q-hotel-ocr-status.is-error {
+            color: #b91c1c;
+        }
+
+        #qWizardSection2 .q-flight-ocr-wrap {
+            flex: 1 1 280px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-width: 240px;
+            max-width: 480px;
+            margin: 0 0 0 auto;
+        }
+
+        #qWizardSection2 .q-flight-ocr-bar {
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-width: 0;
+            margin: 0;
+            padding: 3px 4px 3px 8px;
+            min-height: 36px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        #qWizardSection2 .q-flight-ocr-bar.is-drag {
+            border-color: #f87171;
+            background: #fff7f8;
+            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
+        }
+
+        #qWizardSection2 .q-flight-ocr-bar.has-preview {
+            min-height: 54px;
+            padding-left: 4px;
+        }
+
+        #qWizardSection2 .q-flight-ocr-thumb {
+            position: relative;
+            flex: 0 0 auto;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+        }
+
+        #qWizardSection2 .q-flight-ocr-bar.has-preview .q-flight-ocr-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            overflow: visible;
+            background: #f1f5f9;
+        }
+
+        #qWizardSection2 .q-flight-ocr-thumb-empty {
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+
+        #qWizardSection2 .q-flight-ocr-bar.has-preview .q-flight-ocr-thumb-empty {
+            display: none;
+        }
+
+        #qWizardSection2 .q-flight-ocr-thumb img {
+            display: none;
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+        }
+
+        #qWizardSection2 .q-flight-ocr-bar.has-preview .q-flight-ocr-thumb img {
+            display: block;
+        }
+
+        #qWizardSection2 .q-flight-ocr-clear {
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border: 1px solid #fecaca;
+            border-radius: 50%;
+            background: #fff;
+            color: #dc2626;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.62rem;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        #qWizardSection2 .q-flight-ocr-bar.has-preview .q-flight-ocr-clear {
+            display: inline-flex;
+        }
+
+        #qWizardSection2 .q-flight-ocr-clear:hover,
+        #qWizardSection2 .q-flight-ocr-clear:focus {
+            background: #e11d2e;
+            border-color: #e11d2e;
+            color: #fff;
+            outline: none;
+        }
+
         #qWizardSection2 .q-flight-ocr-drop {
             flex: 1 1 auto;
             min-width: 0;
             display: flex;
             align-items: center;
-            gap: 0.7rem;
             border: 0;
             background: transparent;
             text-align: left;
-            padding: 0.15rem 0.2rem;
-            cursor: pointer;
-            border-radius: 8px;
+            padding: 0 0.25rem;
+            cursor: text;
+            min-height: 28px;
+            box-shadow: none;
         }
 
-        #qWizardSection3 .q-hotel-ocr-drop:focus,
         #qWizardSection2 .q-flight-ocr-drop:focus {
-            outline: 2px solid rgba(225, 29, 46, 0.35);
-            outline-offset: 2px;
+            outline: none;
         }
 
-        #qWizardSection3 .q-hotel-ocr-drop.is-drag,
-        #qWizardSection2 .q-flight-ocr-drop.is-drag {
-            background: #ffe4e8;
+        #qWizardSection2 .q-flight-ocr-bar:focus-within {
+            border-color: #f87171;
+            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
         }
 
-        #qWizardSection3 .q-hotel-ocr-ico,
-        #qWizardSection2 .q-flight-ocr-ico {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: #e11d2e;
-            color: #fff;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 auto;
-        }
-
-        #qWizardSection3 .q-hotel-ocr-copy,
-        #qWizardSection2 .q-flight-ocr-copy {
+        #qWizardSection2 .q-flight-ocr-placeholder {
+            display: block;
             min-width: 0;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #94a3b8;
+            font-size: 0.78rem;
+            font-weight: 500;
+            line-height: 1.2;
         }
 
-        #qWizardSection3 .q-hotel-ocr-copy strong,
-        #qWizardSection2 .q-flight-ocr-copy strong {
-            display: block;
-            color: #1f2937;
-            font-size: 0.84rem;
-            font-weight: 700;
+        #qWizardSection2 .q-flight-ocr-bar.has-preview .q-flight-ocr-placeholder {
+            color: #334155;
+            font-weight: 600;
         }
 
-        #qWizardSection3 .q-hotel-ocr-copy span,
-        #qWizardSection2 .q-flight-ocr-copy span {
-            display: block;
-            color: #6b7280;
-            font-size: 0.75rem;
-            line-height: 1.35;
-        }
-
-        #qWizardSection3 .q-hotel-ocr-upload,
         #qWizardSection2 .q-flight-ocr-upload {
             flex: 0 0 auto;
             border: 1px solid #e11d2e;
             background: #fff;
             color: #e11d2e;
             border-radius: 999px;
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            padding: 0.4rem 0.9rem;
+            padding: 0.28rem 0.7rem;
+            white-space: nowrap;
+            line-height: 1.2;
         }
 
-        #qWizardSection3 .q-hotel-ocr-upload:hover,
-        #qWizardSection3 .q-hotel-ocr-upload:focus,
         #qWizardSection2 .q-flight-ocr-upload:hover,
         #qWizardSection2 .q-flight-ocr-upload:focus {
             background: #e11d2e;
             color: #fff;
         }
 
-        #qWizardSection3 .q-hotel-ocr-status,
+        #qWizardSection2 .q-flight-ocr-spin {
+            display: none;
+            flex: 0 0 auto;
+            width: 22px;
+            height: 22px;
+            align-items: center;
+            justify-content: center;
+            color: #e11d2e;
+            font-size: 0.95rem;
+            line-height: 1;
+        }
+
+        #qWizardSection2 .q-flight-ocr-spin.is-on {
+            display: inline-flex;
+        }
+
         #qWizardSection2 .q-flight-ocr-status {
             flex: 1 1 100%;
             display: none;
             margin: 0;
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             color: #6b7280;
         }
 
-        #qWizardSection3 .q-hotel-ocr-status.is-error,
         #qWizardSection2 .q-flight-ocr-status.is-error {
             color: #b91c1c;
         }
 
         @media (max-width: 767.98px) {
-            #qWizardSection3 .q-hotel-ocr-bar,
-            #qWizardSection2 .q-flight-ocr-bar {
-                flex-wrap: wrap;
+            #qWizardSection3 .q-hotel-ocr-wrap {
+                flex: 1 1 100%;
+                max-width: 100%;
+                margin-left: 0;
             }
-            #qWizardSection3 .q-hotel-ocr-upload,
-            #qWizardSection2 .q-flight-ocr-upload {
-                width: 100%;
+            #qWizardSection2 .q-flight-ocr-wrap {
+                flex: 1 1 100%;
+                max-width: 100%;
+                margin-left: 0;
             }
         }
 
@@ -4450,7 +5032,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-add-btn {
-            margin-left: auto;
+            margin-left: 0;
             background: #e11d2e !important;
             border: 1px solid #e11d2e !important;
             color: #fff !important;
@@ -4579,12 +5161,12 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-row {
-            border: 1px solid #e8ecf1;
-            border-radius: 12px;
-            background: #fff;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
             padding: 0;
             margin: 0;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            box-shadow: none;
             position: relative;
             overflow: visible;
             z-index: 1;
@@ -4593,11 +5175,6 @@ $qWizardSteps = [
         #qWizardSection3 .q-hotel-row:focus-within,
         #qWizardSection3 .q-hotel-row:has(.q-hotel-menu:not([style*="display: none"]):not([style*="display:none"])) {
             z-index: 40;
-        }
-
-        #qWizardSection3 .q-hotel-row:last-child {
-            border-bottom: 1px solid #e8ecf1;
-            padding-bottom: 0;
         }
 
         /* Hotel supplier = same Select2 control as Flight / Train (.q-ft-col-supplier) */
@@ -4609,9 +5186,9 @@ $qWizardSteps = [
             border: 1px solid #e2e8f0 !important;
             border-radius: 10px !important;
             background: #fff !important;
-            min-height: 38px !important;
-            height: 38px !important;
-            padding: 0.2rem 0.55rem !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            padding: 0.1rem 0.55rem !important;
             font-size: 0.8rem !important;
         }
 
@@ -4623,7 +5200,7 @@ $qWizardSteps = [
         #qWizardSection3 .q-hotel-field-supplier .select2-container {
             display: block;
             width: 100% !important;
-            height: 38px;
+            height: 30px;
             margin: 0 !important;
         }
 
@@ -4640,20 +5217,18 @@ $qWizardSteps = [
             gap: 0.35rem;
             align-items: center;
             min-width: 0;
-            padding: 0.65rem 0.65rem;
+            padding: 0.15rem 0.65rem;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
         }
 
         #qWizardSection3 .q-hotel-accom {
             grid-template-columns: 1.05fr 1.15fr 1.05fr 0.55fr 0.55fr 0.5fr 0.85fr 0.85fr;
-            background: #fff;
-            border-right: 1px solid #f1f5f9;
-            border-radius: 11px 0 0 11px;
         }
 
         #qWizardSection3 .q-hotel-commercial {
             grid-template-columns: 0.95fr 1.2fr 72px;
-            background: #fff7f8;
-            border-radius: 0 11px 11px 0;
         }
 
         #qWizardSection3 .q-hotel-field {
@@ -4666,11 +5241,13 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             gap: 0.2rem;
-            min-height: 38px;
+            height: 30px;
+            min-height: 30px;
             padding: 0 0.55rem;
             background: #ffe4e6;
             border: 1px solid #fecdd3;
             border-radius: 10px;
+            box-sizing: border-box;
         }
 
         #qWizardSection3 .q-hotel-rate-prefix {
@@ -4685,8 +5262,8 @@ $qWizardSteps = [
             border: 0 !important;
             background: transparent !important;
             box-shadow: none !important;
-            height: 34px !important;
-            min-height: 34px !important;
+            height: 28px !important;
+            min-height: 28px !important;
             padding: 0 !important;
             font-weight: 800 !important;
             color: #e11d2e !important;
@@ -4694,6 +5271,7 @@ $qWizardSteps = [
             min-width: 0;
             width: 1%;
             text-align: right;
+            font-size: 0.8rem !important;
         }
 
         #qWizardSection3 .q-hotel-rate-box .h-rate:focus {
@@ -4704,20 +5282,20 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 0.25rem;
+            gap: 0.35rem;
         }
 
         #qWizardSection3 .q-hotel-row-more,
         #qWizardSection3 .q-hotel-row-remove {
-            width: 32px;
-            height: 32px;
+            width: 30px;
+            height: 30px;
             padding: 0;
-            border-radius: 8px;
+            border-radius: 10px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             line-height: 1;
-            font-size: 0.78rem;
+            font-size: 0.72rem;
         }
 
         #qWizardSection3 .q-hotel-row-more {
@@ -4747,10 +5325,17 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             background: #fff;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            min-height: 40px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            height: 30px;
+            min-height: 30px;
             overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        #qWizardSection3 .q-hotel-input-wrap:focus-within {
+            border-color: #f87171;
+            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.12);
         }
 
         #qWizardSection3 .q-hotel-ico {
@@ -4783,37 +5368,38 @@ $qWizardSteps = [
 
         #qWizardSection3 .q-hotel-input-wrap .form-control,
         #qWizardSection3 .q-hotel-input-wrap select.form-control {
-            height: 40px !important;
-            min-height: 40px !important;
+            height: 100% !important;
+            min-height: 0 !important;
             border: 0 !important;
             box-shadow: none !important;
             background: transparent !important;
-            padding: 0.35rem 1.6rem 0.35rem 2rem !important;
+            padding: 0 1.6rem 0 2rem !important;
             font-size: 0.8rem !important;
-            border-radius: 8px !important;
-            color: #111827 !important;
+            border-radius: 10px !important;
+            color: #0f172a !important;
             width: 100%;
+            line-height: 1.25 !important;
         }
 
         #qWizardSection3 .q-hotel-field-action {
             display: inline-flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 0.25rem;
+            gap: 0.35rem;
         }
 
         #qWizardSection3 .q-hotel-row-remove.q-remove {
-            width: 32px !important;
-            height: 32px !important;
+            width: 30px !important;
+            height: 30px !important;
             padding: 0 !important;
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
-            border-radius: 8px !important;
-            border: 1px solid #fecaca !important;
+            border-radius: 10px !important;
+            border: 1px solid #e2e8f0 !important;
             background: #fff !important;
-            color: #e11d2e !important;
-            font-size: 0.78rem !important;
+            color: #dc2626 !important;
+            font-size: 0.72rem !important;
             position: static !important;
             top: auto !important;
             right: auto !important;
@@ -4826,9 +5412,11 @@ $qWizardSteps = [
         }
 
         /* Hotel supplier Select2 — match commercial pink zone */
-        #qWizardSection3 .q-hotel-field-supplier .select2-container--default .select2-selection--single {
-            height: 38px !important;
-            min-height: 38px !important;
+        #qWizardSection3 .q-hotel-field-supplier .select2-container--default .select2-selection--single,
+        #qWizardSection3 .q-hotel-field-supplier .q-supplier-s2-selection.select2-selection--single {
+            height: 30px !important;
+            min-height: 30px !important;
+            max-height: 30px !important;
             border: 1px solid #e2e8f0 !important;
             border-radius: 10px !important;
             background: #fff !important;
@@ -4837,32 +5425,33 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-field-supplier .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 36px !important;
-            padding-left: 0.65rem !important;
-            padding-right: 1.6rem !important;
+            line-height: 1.25 !important;
+            padding: 0 1.85rem 0 0.55rem !important;
             color: #0f172a !important;
             font-size: 0.8rem !important;
         }
 
         #qWizardSection3 .q-hotel-field-supplier .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 36px !important;
-            right: 0.35rem !important;
+            height: auto !important;
+            right: 2px !important;
         }
 
         #qWizardSection3 .q-hotel-field-no-ico .q-hotel-input-wrap .form-control,
         #qWizardSection3 .q-hotel-field-no-ico .q-hotel-input-wrap select.form-control:not(.select2-hidden-accessible) {
-            padding-left: 0.65rem !important;
+            padding-left: 0.55rem !important;
         }
 
         #qWizardSection3 .q-hotel-stepper-control {
             display: flex;
             align-items: stretch;
             width: 100%;
-            min-height: 40px;
-            border: 1px solid #d1d5db;
+            height: 30px;
+            min-height: 30px;
+            border: 1px solid #e2e8f0;
             border-radius: 10px;
             overflow: hidden;
             background: #fff;
+            box-sizing: border-box;
         }
 
         #qWizardSection3 .q-hotel-stepper-control:focus-within {
@@ -4871,9 +5460,9 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-step-btn {
-            flex: 0 0 28px;
-            width: 28px;
-            min-width: 28px;
+            flex: 0 0 24px;
+            width: 24px;
+            min-width: 24px;
             padding: 0;
             border: 0;
             border-radius: 0;
@@ -4923,10 +5512,10 @@ $qWizardSteps = [
             background: transparent !important;
             text-align: center;
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.8rem;
             color: #9f1239 !important;
-            padding: 0.35rem 0.15rem !important;
-            min-height: 100% !important;
+            padding: 0 0.1rem !important;
+            min-height: 0 !important;
             height: auto !important;
             -moz-appearance: textfield;
             appearance: textfield;
@@ -4961,13 +5550,15 @@ $qWizardSteps = [
                 border-bottom: 1px solid #e8ecf1;
             }
             #qWizardSection3 .q-hotel-accom {
-                border-right: 0;
-                border-bottom: 1px solid #f1f5f9;
-                border-radius: 11px 11px 0 0;
+                border: 0;
+                border-radius: 0;
+                background: transparent;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
             #qWizardSection3 .q-hotel-commercial {
-                border-radius: 0 0 11px 11px;
+                border: 0;
+                border-radius: 0;
+                background: transparent;
             }
             #qWizardSection3 .q-hotel-col-labels-accom {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -15063,7 +15654,70 @@ $qWizardSteps = [
             color: var(--q-text) !important;
         }
 
-        [data-theme="dark"] .crm-quotation-gen .q-flight-segment-card,
+        [data-theme="dark"] #qWizardSection2 .q-flight-ocr-bar {
+            background: var(--mz-theme-input-bg, #1e2128) !important;
+            border-color: var(--mz-theme-input-border, #454b58) !important;
+        }
+
+        [data-theme="dark"] #qWizardSection2 .q-flight-ocr-placeholder {
+            color: #94a3b8 !important;
+        }
+
+        [data-theme="dark"] #qWizardSection2 .q-flight-ocr-bar.has-preview .q-flight-ocr-placeholder {
+            color: var(--q-text) !important;
+        }
+
+        [data-theme="dark"] #qWizardSection2 .q-flight-ocr-bar.has-preview .q-flight-ocr-thumb {
+            background: var(--mz-theme-bg-muted, #323744);
+        }
+
+        [data-theme="dark"] #qWizardSection2 .q-flight-ocr-upload {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            color: #fecaca !important;
+            border-color: rgba(248, 113, 113, 0.45) !important;
+        }
+
+        [data-theme="dark"] #qWizardSection2 .q-flight-ocr-upload:hover,
+        [data-theme="dark"] #qWizardSection2 .q-flight-ocr-upload:focus {
+            background: #e11d2e !important;
+            color: #fff !important;
+        }
+
+        [data-theme="dark"] #qWizardSection3 .q-hotel-ocr-bar {
+            background: var(--mz-theme-input-bg, #1e2128) !important;
+            border-color: var(--mz-theme-input-border, #454b58) !important;
+        }
+
+        [data-theme="dark"] #qWizardSection3 .q-hotel-ocr-placeholder {
+            color: #94a3b8 !important;
+        }
+
+        [data-theme="dark"] #qWizardSection3 .q-hotel-ocr-bar.has-preview .q-hotel-ocr-placeholder {
+            color: var(--q-text) !important;
+        }
+
+        [data-theme="dark"] #qWizardSection3 .q-hotel-ocr-bar.has-preview .q-hotel-ocr-thumb {
+            background: var(--mz-theme-bg-muted, #323744);
+        }
+
+        [data-theme="dark"] #qWizardSection3 .q-hotel-ocr-upload {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            color: #fecaca !important;
+            border-color: rgba(248, 113, 113, 0.45) !important;
+        }
+
+        [data-theme="dark"] #qWizardSection3 .q-hotel-ocr-upload:hover,
+        [data-theme="dark"] #qWizardSection3 .q-hotel-ocr-upload:focus {
+            background: #e11d2e !important;
+            color: #fff !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-segment-card {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+
         [data-theme="dark"] .crm-quotation-gen .q-flight-place,
         [data-theme="dark"] .crm-quotation-gen .q-flight-airline-combo,
         [data-theme="dark"] .crm-quotation-gen .q-flight-datetime,
@@ -15071,6 +15725,44 @@ $qWizardSteps = [
             background: var(--mz-theme-bg-surface, #1e2128) !important;
             border-color: var(--mz-theme-border, #454b58) !important;
             box-shadow: none !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-table-head {
+            background: transparent !important;
+            border-color: var(--q-border) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-head-travel {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--q-border) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-travel,
+        [data-theme="dark"] .crm-quotation-gen .q-flight-commercial {
+            background: transparent !important;
+            border: 0 !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-head-commercial {
+            background: rgba(225, 29, 46, 0.16) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-group-title {
+            color: var(--q-text) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-col-labels {
+            color: var(--q-text-muted) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-rate-box {
+            background: rgba(225, 29, 46, 0.22) !important;
+            border-color: rgba(248, 113, 113, 0.45) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-rate-prefix,
+        [data-theme="dark"] .crm-quotation-gen .q-flight-rate-box .f-fare {
+            color: #fecaca !important;
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-ft-col-supplier .form-control {
@@ -15246,6 +15938,12 @@ $qWizardSteps = [
             background: #c62828 !important;
             border-color: #c62828 !important;
             color: #fff !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-day-add-btn {
+            background: rgba(198, 40, 40, 0.16) !important;
+            border-color: #c62828 !important;
+            color: #f87171 !important;
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-day-svc-btn {
@@ -16203,23 +16901,61 @@ $qWizardSteps = [
                                     <button type="button" class="btn btn-sm q-flight-btn q-flight-btn-outline" id="qAddFlight">
                                         <i class="fas fa-plus mr-1"></i>Add Flight / Train
                                     </button>
-                            </div>
+                            <div class="q-flight-ocr-wrap">
                             <div class="q-flight-ocr-bar" id="qFlightOcrBar">
-                                <button type="button" class="q-flight-ocr-drop" id="qFlightOcrDrop">
-                                    <span class="q-flight-ocr-ico" aria-hidden="true"><i class="fas fa-image"></i></span>
-                                    <span class="q-flight-ocr-copy">
-                                        <strong>Paste or upload a flight / train ticket</strong>
-                                        <span>Click here and press Ctrl+V, or upload a screenshot. Review the segments before they are added.</span>
-                                    </span>
+                                <span class="q-flight-ocr-thumb" id="qFlightOcrThumb">
+                                    <img id="qFlightOcrPreviewImg" alt="Ticket preview">
+                                    <span class="q-flight-ocr-thumb-empty" aria-hidden="true"><i class="fas fa-image"></i></span>
+                                    <button type="button" class="q-flight-ocr-clear" id="qFlightOcrClear" title="Remove image" aria-label="Remove ticket image">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </span>
+                                <button type="button" class="q-flight-ocr-drop" id="qFlightOcrDrop" title="Paste ticket image or upload">
+                                    <span class="q-flight-ocr-placeholder" id="qFlightOcrPlaceholder">Paste ticket image or upload</span>
                                 </button>
                                 <button type="button" class="btn q-flight-ocr-upload" id="qFlightOcrUploadBtn">
                                     <i class="fas fa-upload mr-1"></i>Upload image
                                 </button>
                                 <input type="file" id="qFlightOcrFile" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+                            </div>
+                                <span class="q-flight-ocr-spin" id="qFlightOcrSpin" role="status" aria-live="polite" aria-hidden="true" aria-label="Reading ticket image">
+                                    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                                </span>
+                            </div>
                                 <p class="q-flight-ocr-status" id="qFlightOcrStatus" role="status"></p>
                             </div>
                             <div class="q-flight-table-wrap">
-                                <div id="qFlightRows" class="q-flight-rows"></div>
+                                <div class="q-flight-table-inner">
+                                    <div class="q-flight-table-head" id="qFlightColHead">
+                                        <div class="q-flight-head-travel">
+                                            <div class="q-flight-group-title">
+                                                <i class="fas fa-plane" aria-hidden="true"></i>
+                                                <span>Travel Details</span>
+                                            </div>
+                                            <div class="q-flight-col-labels q-flight-col-labels-travel">
+                                                <span><i class="fas fa-plane-departure" aria-hidden="true"></i>From</span>
+                                                <span class="q-flight-col-head-swap" aria-hidden="true"></span>
+                                                <span><i class="fas fa-plane-arrival" aria-hidden="true"></i>To</span>
+                                                <span><i class="fas fa-plane" aria-hidden="true"></i>Airline / Train Name</span>
+                                                <span><i class="fas fa-hashtag" aria-hidden="true"></i>Flight / Train Number</span>
+                                                <span><i class="far fa-calendar-alt" aria-hidden="true"></i>Departure</span>
+                                                <span><i class="far fa-clock" aria-hidden="true"></i>Arrival</span>
+                                            </div>
+                                        </div>
+                                        <div class="q-flight-head-commercial">
+                                            <div class="q-flight-group-title">
+                                                <i class="fas fa-coins" aria-hidden="true"></i>
+                                                <span>Commercial Details</span>
+                                            </div>
+                                            <div class="q-flight-col-labels q-flight-col-labels-commercial">
+                                                <span><i class="fas fa-rupee-sign" aria-hidden="true"></i>Rate (₹)</span>
+                                                <span><i class="fas fa-building" aria-hidden="true"></i>Supplier</span>
+                                                <span class="q-flight-col-head-action">Actions</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="qFlightRows" class="q-flight-rows"></div>
+                                </div>
                             </div>
 
                             <div class="q-flight-add-wrap">
@@ -16257,22 +16993,30 @@ $qWizardSteps = [
                                 <button type="button" class="btn q-hotel-remove-option-btn" id="qRemoveHotelCategory" title="Remove this option" style="display:none;">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
-                                <button type="button" class="btn q-hotel-add-btn" id="qAddHotelBtn">
-                                    <i class="fas fa-plus mr-1"></i>Add Hotel
-                                </button>
-                            </div>
+                            <div class="q-hotel-ocr-wrap">
                             <div class="q-hotel-ocr-bar" id="qHotelOcrBar">
-                                <button type="button" class="q-hotel-ocr-drop" id="qHotelOcrDrop">
-                                    <span class="q-hotel-ocr-ico" aria-hidden="true"><i class="fas fa-image"></i></span>
-                                    <span class="q-hotel-ocr-copy">
-                                        <strong>Paste or upload a hotel quotation</strong>
-                                        <span>Click here and press Ctrl+V, or upload a screenshot. Review the rows before they are added.</span>
-                                    </span>
+                                <span class="q-hotel-ocr-thumb" id="qHotelOcrThumb">
+                                    <img id="qHotelOcrPreviewImg" alt="Hotel quotation preview">
+                                    <span class="q-hotel-ocr-thumb-empty" aria-hidden="true"><i class="fas fa-image"></i></span>
+                                    <button type="button" class="q-hotel-ocr-clear" id="qHotelOcrClear" title="Remove image" aria-label="Remove hotel quotation image">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </span>
+                                <button type="button" class="q-hotel-ocr-drop" id="qHotelOcrDrop" title="Paste hotel quotation or upload">
+                                    <span class="q-hotel-ocr-placeholder" id="qHotelOcrPlaceholder">Paste hotel quotation or upload</span>
                                 </button>
                                 <button type="button" class="btn q-hotel-ocr-upload" id="qHotelOcrUploadBtn">
                                     <i class="fas fa-upload mr-1"></i>Upload image
                                 </button>
                                 <input type="file" id="qHotelOcrFile" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+                            </div>
+                                <span class="q-hotel-ocr-spin" id="qHotelOcrSpin" role="status" aria-live="polite" aria-hidden="true" aria-label="Reading hotel quotation">
+                                    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                                </span>
+                            </div>
+                                <button type="button" class="btn q-hotel-add-btn" id="qAddHotelBtn">
+                                    <i class="fas fa-plus mr-1"></i>Add Hotel
+                                </button>
                                 <p class="q-hotel-ocr-status" id="qHotelOcrStatus" role="status"></p>
                             </div>
                             <div class="q-hotel-table-head" id="qHotelColHead">
@@ -16328,14 +17072,12 @@ $qWizardSteps = [
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody4" style="display:none;">
                                 <div class="q-itin-workspace">
-                                    <div class="q-itin-main-col">
                                         <div class="q-itin-pkg-card q-itin-pkg-search-card">
                                             <div class="q-itin-pkg-card-hd">
                                                 <div class="q-itin-pkg-hd-left">
                                                     <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
                                                     <div class="q-itin-pkg-hd-text">
                                                         <span class="q-itin-pkg-hd-label">Search Existing Package</span>
-                                                        <!-- <span class="q-itin-pkg-hd-sub">Search by destination or package name and load to plan itinerary.</span> -->
                                                     </div>
                                                 </div>
                                             </div>
@@ -16353,33 +17095,6 @@ $qWizardSteps = [
                                             </div>
                                         </div>
 
-                                        <div class="q-itinerary-suppliers q-itin-suppliers-panel">
-                                            <div class="q-itinerary-suppliers-hd">
-                                                <div class="q-itin-suppliers-hd-left">
-                                                    <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-users"></i></span>
-                                                    <span class="q-itin-suppliers-title">Suppliers &amp; Rates</span>
-                                                </div>
-                                                <button type="button" class="btn q-itin-add-supplier-btn" id="qAddItinerarySupplier">
-                                                    <i class="fas fa-plus mr-1"></i>Add Supplier
-                                                </button>
-                                            </div>
-                                            <div class="table-responsive">
-                                                <table class="q-itin-suppliers-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th scope="col" style="width:48px;">#</th>
-                                                            <th scope="col">Supplier</th>
-                                                            <th scope="col" style="width:140px;">Rate (INR)</th>
-                                                            <th scope="col" style="width:72px;">Delete</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="qItinerarySupplierRows"></tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="q-itin-side-col">
                                         <div class="q-itin-pkg-card q-itin-pkg-selected-card" id="qSelectedPackageCard">
                                             <div class="q-itin-selected-card-hd">
                                                 <div class="q-itin-selected-hd">
@@ -16418,7 +17133,31 @@ $qWizardSteps = [
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
+
+                                        <div class="q-itinerary-suppliers q-itin-suppliers-panel">
+                                            <div class="q-itinerary-suppliers-hd">
+                                                <div class="q-itin-suppliers-hd-left">
+                                                    <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-users"></i></span>
+                                                    <span class="q-itin-suppliers-title">Suppliers &amp; Rates</span>
+                                                </div>
+                                                <button type="button" class="btn q-itin-add-supplier-btn" id="qAddItinerarySupplier">
+                                                    <i class="fas fa-plus mr-1"></i>Add Supplier
+                                                </button>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="q-itin-suppliers-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col" style="width:36px;">#</th>
+                                                            <th scope="col">Supplier</th>
+                                                            <th scope="col" style="width:110px;">Rate (INR)</th>
+                                                            <th scope="col" style="width:56px;">Delete</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="qItinerarySupplierRows"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
                                 </div>
 
                                 <div id="qItineraryDays" class="q-itin-days"></div>
@@ -17176,7 +17915,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=333"></script>
+    <script src="crm/assets/quotation_generator.js?v=339"></script>
     <script src="crm/assets/quotation_flight_search.js?v=35"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
