@@ -1235,7 +1235,7 @@ $qWizardSteps = [
             border-radius: var(--q-radius-sm);
             border: 1px solid var(--q-border);
             font-size: 0.84rem;
-            padding: 0.45rem 0.75rem;
+            padding: 0.15rem 0.75rem;
             height: calc(1.5em + 0.9rem + 2px);
             background: #fff;
             color: var(--q-text);
@@ -1340,9 +1340,9 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-section-accordion-head {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
+            gap: 0.55rem;
             cursor: pointer;
             user-select: none;
             position: relative;
@@ -1351,7 +1351,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-section-accordion-head.q-guest-tour-head,
         .crm-quotation-gen .q-section-accordion-head.q-flight-head,
         .crm-quotation-gen .q-section-accordion-head.q-wizard-section-head {
-            margin-bottom: 0.65rem;
+            margin-bottom: 0.0rem;
             padding: 0 0 0 0.85rem;
             border-bottom: 0;
         }
@@ -1376,7 +1376,7 @@ $qWizardSteps = [
             margin: 0;
             padding: 0;
             border: 0;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.01em;
@@ -1415,11 +1415,19 @@ $qWizardSteps = [
             min-width: 0;
         }
 
+        .crm-quotation-gen .q-section-accordion-head-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex: 0 0 auto;
+            margin-left: auto;
+        }
+
         .crm-quotation-gen .q-section-accordion-toggle {
             flex: 0 0 auto;
             width: 30px;
             height: 30px;
-            margin-top: 0.1rem;
+            margin-top: 0;
             border-radius: 8px;
             border: 1px solid var(--q-border);
             background: var(--q-border-light);
@@ -6334,44 +6342,31 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-stepper {
-            --q-stepper-dot-size: 32px;
+            --q-stepper-dot-size: 28px;
+            position: relative;
+            margin: 0 0 1rem;
+            padding: 0;
+            overflow: visible;
+            border-bottom: 1px solid var(--q-border-light);
+            background: #fff;
+        }
+
+        .crm-quotation-gen .q-stepper-track {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
             gap: 0;
-            position: relative;
-            margin: 0 0 1.15rem;
-            padding: 0.35rem 0.15rem 0.65rem;
+            width: 100%;
+            padding: 0.55rem 0.35rem;
             overflow-x: auto;
-            border-bottom: 1px solid var(--q-border-light);
-        }
-
-        .crm-quotation-gen .q-stepper-connector {
-            position: absolute;
-            top: calc(var(--q-stepper-dot-size) / 2);
-            left: calc(-50% + (var(--q-stepper-dot-size) / 2));
-            width: calc(100% - var(--q-stepper-dot-size));
-            height: 3px;
-            transform: translateY(-50%);
-            background: #e2e8f0;
-            z-index: 0;
-            pointer-events: none;
-            border-radius: 999px;
-        }
-
-        .crm-quotation-gen .q-stepper-item:first-child .q-stepper-connector {
-            display: none;
-        }
-
-        .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-connector,
-        .crm-quotation-gen .q-stepper-item.is-active .q-stepper-connector {
-            background: var(--step-color, #2563eb);
+            -webkit-overflow-scrolling: touch;
         }
 
         .crm-quotation-gen .q-stepper-item {
+            display: flex;
+            align-items: center;
             flex: 1 1 0;
-            min-width: 78px;
-            text-align: center;
+            min-width: 0;
             position: relative;
             z-index: 1;
             cursor: pointer;
@@ -6380,7 +6375,34 @@ $qWizardSteps = [
             padding: 0;
             outline: none;
             box-shadow: none;
+            text-align: left;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        .crm-quotation-gen .q-stepper-connector {
+            flex: 1 1 auto;
+            align-self: center;
+            height: 1px;
+            min-width: 10px;
+            margin: 0 0.45rem;
+            background: #dbe3ee;
+            border-radius: 999px;
+            pointer-events: none;
+            position: static;
+            top: auto;
+            left: auto;
+            width: auto;
+            transform: none;
+            z-index: 0;
+        }
+
+        .crm-quotation-gen .q-stepper-item:last-child .q-stepper-connector {
+            display: none;
+        }
+
+        .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-connector,
+        .crm-quotation-gen .q-stepper-item.is-active .q-stepper-connector {
+            background: #dbe3ee;
         }
 
         .crm-quotation-gen .q-stepper-item:focus,
@@ -6396,76 +6418,74 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-stepper-item:focus-visible .q-stepper-dot {
-            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.22);
+            box-shadow: 0 0 0 3px rgba(225, 29, 46, 0.2);
         }
 
         .crm-quotation-gen .q-stepper-dot {
-            width: var(--q-stepper-dot-size, 32px);
-            height: var(--q-stepper-dot-size, 32px);
+            width: var(--q-stepper-dot-size, 28px);
+            height: var(--q-stepper-dot-size, 28px);
             border-radius: 50%;
-            margin: 0 auto 0.45rem;
-            display: flex;
+            margin: 0;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid #cbd5e1;
+            flex: 0 0 auto;
+            border: 1.5px solid #cfd8e3;
             background: #fff;
-            color: #94a3b8;
-            font-size: 0.72rem;
-            transition: all 0.2s ease;
+            color: #64748b;
+            font-size: 0.75rem;
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
             position: relative;
             z-index: 2;
             box-sizing: border-box;
         }
 
-        .crm-quotation-gen .q-stepper-dot .q-stepper-check {
-            display: none;
-        }
-
+        .crm-quotation-gen .q-stepper-dot .q-stepper-check,
         .crm-quotation-gen .q-stepper-dot .q-stepper-icon {
-            display: none;
+            display: none !important;
         }
 
         .crm-quotation-gen .q-stepper-dot .q-stepper-num {
             display: inline-block;
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-weight: 700;
             line-height: 1;
             color: inherit;
         }
 
-        .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-dot .q-stepper-check {
-            display: inline-block;
-        }
-
-        .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-dot .q-stepper-icon,
-        .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-dot .q-stepper-num {
-            display: none;
-        }
-
         .crm-quotation-gen .q-stepper-label {
-            display: block;
-            font-size: 0.68rem;
+            display: inline-block;
+            flex: 0 1 auto;
+            min-width: 0;
+            margin: 0 0 0 0.4rem;
+            padding: 0;
+            font-size: 0.78rem;
             font-weight: 600;
-            line-height: 1.25;
-            color: #94a3b8;
-            padding: 0 0.15rem;
+            line-height: 1.2;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
+        /* Completed steps keep the number; only the active step is filled red. */
         .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-dot {
-            background: #e11d2e;
-            border-color: #e11d2e;
-            color: #fff;
+            background: #fff;
+            border-color: #cfd8e3;
+            color: #64748b;
+            box-shadow: none;
         }
 
         .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-label {
-            color: #e11d2e;
+            color: #64748b;
+            font-weight: 600;
         }
 
         .crm-quotation-gen .q-stepper-item.is-active .q-stepper-dot {
             background: #e11d2e;
             border-color: #e11d2e;
             color: #fff;
-            box-shadow: 0 0 0 4px rgba(225, 29, 46, 0.14);
+            box-shadow: none;
         }
 
         .crm-quotation-gen .q-stepper-item.is-active .q-stepper-label {
@@ -6473,38 +6493,43 @@ $qWizardSteps = [
             font-weight: 700;
         }
 
-        .crm-quotation-gen .q-stepper-item.is-active .q-stepper-dot .q-stepper-check {
-            display: none;
-        }
-
-        .crm-quotation-gen .q-stepper-item.is-active .q-stepper-dot .q-stepper-icon {
-            display: none;
-        }
-
         .crm-quotation-gen .q-stepper-item.is-active .q-stepper-dot .q-stepper-num {
             display: inline-block;
-        }
-
-        .crm-quotation-gen .q-stepper-item.is-complete.is-active .q-stepper-dot .q-stepper-check {
-            display: none;
-        }
-
-        .crm-quotation-gen .q-stepper-item.is-complete.is-active .q-stepper-dot .q-stepper-num {
-            display: inline-block;
-        }
-
-        .crm-quotation-gen .q-stepper-item.is-complete.is-active .q-stepper-dot .q-stepper-icon {
-            display: none;
+            color: #fff;
         }
 
         .crm-quotation-gen .q-stepper-item.is-locked {
             cursor: not-allowed;
-            opacity: 0.85;
+            opacity: 0.55;
         }
 
-        .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-connector,
-        .crm-quotation-gen .q-stepper-item.is-active .q-stepper-connector {
-            background: #fecaca;
+        @media (max-width: 1199.98px) {
+            .crm-quotation-gen .q-stepper-label {
+                font-size: 0.72rem;
+                margin-left: 0.3rem;
+            }
+            .crm-quotation-gen .q-stepper-connector {
+                margin: 0 0.3rem;
+                min-width: 6px;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .crm-quotation-gen .q-stepper {
+                --q-stepper-dot-size: 26px;
+            }
+            .crm-quotation-gen .q-stepper-track {
+                justify-content: flex-start;
+                gap: 0;
+            }
+            .crm-quotation-gen .q-stepper-item {
+                flex: 0 0 auto;
+                padding-right: 0.15rem;
+            }
+            .crm-quotation-gen .q-stepper-connector {
+                min-width: 14px;
+                flex: 0 0 18px;
+            }
         }
 
         .crm-quotation-gen .q-wizard-step {
@@ -6523,21 +6548,57 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-wizard.is-scroll-mode .q-stepper {
+            position: -webkit-sticky;
             position: sticky;
             top: var(--q-wizard-chrome-offset, 0px);
-            z-index: 40;
+            z-index: 1030;
             background: #fff;
-            margin-bottom: 0.85rem;
-            padding-bottom: 0.75rem;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+            margin-bottom: 0.75rem;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+            border-bottom: 1px solid #e8eef5;
+        }
+
+        .crm-quotation-gen .q-wizard.is-scroll-mode .q-stepper.is-pinned {
+            position: fixed !important;
+            margin-bottom: 0;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+        }
+
+        .crm-quotation-gen .q-stepper-sentinel {
+            display: block;
+            width: 100%;
+            height: 0;
+            margin: 0;
+            padding: 0;
+            pointer-events: none;
+        }
+
+        .crm-quotation-gen .q-wizard.is-scroll-mode .q-stepper-track {
+            padding: 0.65rem 0.4rem;
         }
 
         @media (max-width: 991.98px) {
             .crm-quotation-gen .q-wizard.is-scroll-mode .q-stepper {
-                background: transparent;
-                box-shadow: none;
+                background: #fff;
+                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
                 border-radius: 0;
             }
+        }
+
+        /* Keep sticky working inside embed iframe / AdminLTE wrappers */
+        html.mz-embed .wrapper,
+        html.mz-embed .content-wrapper,
+        html.mz-embed .content-wrapper > .content,
+        html.mz-embed .container-fluid,
+        html.mz-embed .q-page-layout,
+        html.mz-embed .q-main-panel,
+        html.mz-embed #quotationForm,
+        html.mz-embed #qWizard,
+        .crm-quotation-gen .q-wizard.is-scroll-mode,
+        .crm-quotation-gen #quotationForm,
+        .crm-quotation-gen .q-main-panel,
+        .crm-quotation-gen .q-page-layout {
+            overflow: visible !important;
         }
 
         .crm-quotation-gen .q-wizard.is-scroll-mode .q-wizard-panels {
@@ -6576,34 +6637,50 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-section-next-bar {
-            display: flex;
-            justify-content: flex-end;
+            display: inline-flex;
             align-items: center;
-            gap: 0.65rem;
-            margin-top: 1rem;
-            padding-top: 0.95rem;
-            border-top: 1px solid #eef2f7;
-        }
-
-        .crm-quotation-gen .q-section-accordion-body > .q-section-next-bar:last-child {
-            margin-bottom: 0.15rem;
+            justify-content: flex-start;
+            flex: 0 0 auto;
+            width: auto;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            gap: 0;
         }
 
         .crm-quotation-gen .q-section-next-btn {
-            min-width: 120px;
+            width: auto;
+            min-width: 0;
+            white-space: nowrap;
             font-weight: 700;
-            border-radius: 10px;
-            padding: 0.5rem 1.15rem;
+            font-size: 0.78rem;
+            line-height: 1.2;
+            border-radius: 8px;
+            padding: 0.35rem 0.7rem;
             background: #e11d2e;
             border: 1px solid #e11d2e;
             color: #fff;
-            box-shadow: 0 6px 16px rgba(225, 29, 46, 0.18);
+            box-shadow: none;
         }
 
         .crm-quotation-gen .q-section-next-btn:hover {
             background: #c41e20;
             border-color: #c41e20;
             color: #fff;
+        }
+
+        .crm-quotation-gen .q-section-next-btn .fa-arrow-right {
+            font-size: 0.7rem;
+        }
+
+        @media (max-width: 575.98px) {
+            .crm-quotation-gen .q-section-accordion-head-actions {
+                gap: 0.3rem;
+            }
+            .crm-quotation-gen .q-section-next-btn {
+                padding: 0.3rem 0.55rem;
+                font-size: 0.72rem;
+            }
         }
 
         .crm-quotation-gen .q-wizard.is-scroll-mode .q-wizard-nav-draft-only {
@@ -6672,7 +6749,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-guest-tour-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+            gap: 0.3rem;
             align-items: stretch;
         }
 
@@ -6681,26 +6758,26 @@ $qWizardSteps = [
             border: 1px solid #e8edf3;
             border-radius: 14px;
             box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-            padding: 1rem 1.05rem 1.1rem;
+            padding: 0.5rem 0.5rem 0.5rem;
         }
 
         .crm-quotation-gen .q-gt-panel-hd {
             display: flex;
             align-items: center;
             gap: 0.65rem;
-            margin-bottom: 0.95rem;
+            margin-bottom: 0.25rem;
         }
 
         .crm-quotation-gen .q-gt-panel-ico {
-            width: 34px;
-            height: 34px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background: #e11d2e;
             color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.82rem;
+            font-size: 0.62rem;
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(225, 29, 46, 0.25);
         }
@@ -6736,13 +6813,13 @@ $qWizardSteps = [
         .crm-quotation-gen .q-gt-fields {
             display: flex;
             flex-direction: column;
-            gap: 0.85rem;
+            gap: 0.1rem;
         }
 
         .crm-quotation-gen .q-gt-fields-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.85rem 0.75rem;
+            gap: 0.1rem 0.3rem;
         }
 
         .crm-quotation-gen .q-header-ai-row {
@@ -6927,7 +7004,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-wizard-step[data-q-step="1"] .form-control {
             border-radius: 10px;
             border-color: #e2e8f0;
-            min-height: calc(2.4rem + 2px);
+            min-height: calc(0.4rem + 1px);
             font-size: 0.88rem;
             color: #0f172a;
             background: #fff;
@@ -14936,6 +15013,12 @@ $qWizardSteps = [
             color: var(--q-text-muted) !important;
         }
 
+        [data-theme="dark"] .crm-quotation-gen .q-stepper,
+        [data-theme="dark"] .crm-quotation-gen .q-wizard.is-scroll-mode .q-stepper {
+            background: var(--mz-theme-bg, #1e2229) !important;
+            border-bottom-color: var(--q-border) !important;
+        }
+
         [data-theme="dark"] .crm-quotation-gen .q-stepper-connector {
             background: var(--q-border) !important;
         }
@@ -14955,9 +15038,24 @@ $qWizardSteps = [
             color: var(--q-text-muted) !important;
         }
 
-        [data-theme="dark"] .crm-quotation-gen .q-stepper-item.is-active .q-stepper-label,
+        [data-theme="dark"] .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-dot {
+            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
+            border-color: var(--q-border) !important;
+            color: var(--q-text-muted) !important;
+        }
+
         [data-theme="dark"] .crm-quotation-gen .q-stepper-item.is-complete .q-stepper-label {
-            color: var(--q-text) !important;
+            color: var(--q-text-muted) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-stepper-item.is-active .q-stepper-dot {
+            background: #e11d2e !important;
+            border-color: #e11d2e !important;
+            color: #fff !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-stepper-item.is-active .q-stepper-label {
+            color: #e11d2e !important;
         }
 
         /* Flight step */
@@ -15920,20 +16018,21 @@ $qWizardSteps = [
 
                         <div class="q-wizard is-scroll-mode" id="qWizard">
                             <div class="q-stepper" id="qStepper" role="tablist" aria-label="Quotation steps">
+                                <div class="q-stepper-track">
                                 <?php foreach ($qWizardSteps as $stepItem) { ?>
                                     <button type="button"
                                         class="q-stepper-item<?= (int) $stepItem['id'] === 1 ? ' is-active' : '' ?>"
                                         data-q-step="<?= (int) $stepItem['id'] ?>"
                                         style="--step-color: <?= htmlspecialchars((string) $stepItem['color'], ENT_QUOTES, 'UTF-8') ?>"
                                         aria-current="<?= (int) $stepItem['id'] === 1 ? 'step' : 'false' ?>">
-                                        <span class="q-stepper-connector" aria-hidden="true"></span>
-                                        <span class="q-stepper-dot">
-                                            <i class="fas fa-check q-stepper-check"></i>
+                                        <span class="q-stepper-dot" aria-hidden="true">
                                             <span class="q-stepper-num"><?= (int) $stepItem['id'] ?></span>
                                         </span>
                                         <span class="q-stepper-label"><?= htmlspecialchars((string) $stepItem['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <span class="q-stepper-connector" aria-hidden="true"></span>
                                     </button>
                                 <?php } ?>
+                                </div>
                             </div>
 
                             <div class="q-wizard-panels">
@@ -15944,7 +16043,14 @@ $qWizardSteps = [
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Guest &amp; Tour Details</h3>
                                 </div>
-                                <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                <div class="q-section-accordion-head-actions">
+                                    <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                    <div class="q-section-next-bar" data-accordion-ignore>
+                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="1" data-accordion-ignore>
+                                            Next <i class="fas fa-arrow-right ml-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="q-section-accordion-body" id="qSectionBody1">
@@ -16065,11 +16171,6 @@ $qWizardSteps = [
                                     </div>
                                 </section>
                             </div>
-                            <div class="q-section-next-bar">
-                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="1">
-                                    Next <i class="fas fa-arrow-right ml-1"></i>
-                                </button>
-                            </div>
                             </div>
                         </div>
                         </div>
@@ -16081,7 +16182,14 @@ $qWizardSteps = [
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Flight / Train Details</h3>
                                 </div>
-                                <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                <div class="q-section-accordion-head-actions">
+                                    <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                    <div class="q-section-next-bar" data-accordion-ignore>
+                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="2" data-accordion-ignore>
+                                            Next <i class="fas fa-arrow-right ml-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="q-section-accordion-body" id="qSectionBody2" style="display:none;">
@@ -16119,11 +16227,6 @@ $qWizardSteps = [
                                     <i class="fas fa-plus mr-1"></i>Add Another Segment
                                 </button>
                             </div>
-                            <div class="q-section-next-bar">
-                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="2">
-                                    Next <i class="fas fa-arrow-right ml-1"></i>
-                                </button>
-                            </div>
                             </div>
                         </div>
                         </div>
@@ -16136,7 +16239,14 @@ $qWizardSteps = [
                                     <h3 class="q-section-title">Hotel Details</h3>
                                     <!-- <p class="q-wizard-section-subtitle">Add, edit or remove hotel options for your customer.</p> -->
                                 </div>
-                                <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                <div class="q-section-accordion-head-actions">
+                                    <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                    <div class="q-section-next-bar" data-accordion-ignore>
+                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="3" data-accordion-ignore>
+                                            Next <i class="fas fa-arrow-right ml-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody3" style="display:none;">
                             <div class="q-hotel-cat-toolbar">
@@ -16195,11 +16305,6 @@ $qWizardSteps = [
                                 </div>
                             </div>
                             <div id="qHotelCategories"></div>
-                            <div class="q-section-next-bar">
-                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="3">
-                                    Next <i class="fas fa-arrow-right ml-1"></i>
-                                </button>
-                            </div>
                             </div>
                         </div>
                         </div>
@@ -16212,7 +16317,14 @@ $qWizardSteps = [
                                     <h3 class="q-section-title">Itinerary</h3>
                                     <!-- <p class="q-wizard-section-subtitle">Load a package or build your day-wise itinerary.</p> -->
                                 </div>
-                                <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                <div class="q-section-accordion-head-actions">
+                                    <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                    <div class="q-section-next-bar" data-accordion-ignore>
+                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="4" data-accordion-ignore>
+                                            Next <i class="fas fa-arrow-right ml-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody4" style="display:none;">
                                 <div class="q-itin-workspace">
@@ -16310,11 +16422,6 @@ $qWizardSteps = [
                                 </div>
 
                                 <div id="qItineraryDays" class="q-itin-days"></div>
-                            <div class="q-section-next-bar">
-                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="4">
-                                    Next <i class="fas fa-arrow-right ml-1"></i>
-                                </button>
-                            </div>
                             </div>
                         </div>
                         </div>
@@ -16327,7 +16434,14 @@ $qWizardSteps = [
                                     <h3 class="q-section-title">Inclusions</h3>
                                     <!-- <p class="q-wizard-section-subtitle">Add what is included and excluded in this quotation.</p> -->
                                 </div>
-                                <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                <div class="q-section-accordion-head-actions">
+                                    <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                    <div class="q-section-next-bar" data-accordion-ignore>
+                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="5" data-accordion-ignore>
+                                            Next <i class="fas fa-arrow-right ml-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody5" style="display:none;">
                             <div class="q-terms-list">
@@ -16360,11 +16474,6 @@ $qWizardSteps = [
                             </div>
                         <?php endforeach; ?>
                             </div>
-                            <div class="q-section-next-bar">
-                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="5">
-                                    Next <i class="fas fa-arrow-right ml-1"></i>
-                                </button>
-                            </div>
                             </div>
                         </div>
                         </div>
@@ -16377,7 +16486,14 @@ $qWizardSteps = [
                                     <h3 class="q-section-title">Terms &amp; Policies</h3>
                                     <!-- <p class="q-wizard-section-subtitle">Load master terms or customize payment, cancellation, and other policies.</p> -->
                                 </div>
-                                <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                <div class="q-section-accordion-head-actions">
+                                    <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                    <div class="q-section-next-bar" data-accordion-ignore>
+                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="6" data-accordion-ignore>
+                                            Next <i class="fas fa-arrow-right ml-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody6" style="display:none;">
                             <div class="q-terms-actions q-section-body-toolbar">
@@ -16411,11 +16527,6 @@ $qWizardSteps = [
                             </div>
                         <?php endforeach; ?>
                             </div>
-                            <div class="q-section-next-bar">
-                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="6">
-                                    Next <i class="fas fa-arrow-right ml-1"></i>
-                                </button>
-                            </div>
                             </div>
                         </div>
                         </div>
@@ -16427,7 +16538,9 @@ $qWizardSteps = [
                                 <div class="q-section-accordion-head-main">
                                     <h3 class="q-section-title">Pricing</h3>
                                 </div>
-                                <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                <div class="q-section-accordion-head-actions">
+                                    <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
+                                </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody7" style="display:none;">
                             <p class="q-hint mb-2 d-none">Compare hotel options side by side. Flight amounts sync from fares; hotel amounts sync from each option’s rates.</p>
@@ -17063,7 +17176,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=331"></script>
+    <script src="crm/assets/quotation_generator.js?v=333"></script>
     <script src="crm/assets/quotation_flight_search.js?v=35"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

@@ -12066,6 +12066,88 @@
         return syncWizardStickyOffset();
     }
 
+    /**
+     * Pin the step tabs to the top while scrolling.
+     * CSS sticky fails inside the admin tab iframe when ancestors use overflow,
+     * so we fall back to position:fixed against a sentinel.
+     */
+    function initWizardStickyStepper() {
+        if (!Q_WIZARD_SCROLL_MODE) {
+            return;
+        }
+        var stepper = document.getElementById('qStepper');
+        var wizard = document.getElementById('qWizard');
+        if (!stepper || !wizard) {
+            return;
+        }
+
+        var sentinel = wizard.querySelector('.q-stepper-sentinel');
+        if (!sentinel) {
+            sentinel = document.createElement('div');
+            sentinel.className = 'q-stepper-sentinel';
+            sentinel.setAttribute('aria-hidden', 'true');
+            wizard.insertBefore(sentinel, stepper);
+        }
+
+        var pinned = false;
+        var raf = 0;
+
+        function clearPinStyles() {
+            stepper.style.position = '';
+            stepper.style.top = '';
+            stepper.style.left = '';
+            stepper.style.width = '';
+            stepper.style.right = '';
+            stepper.classList.remove('is-pinned');
+            sentinel.style.height = '0px';
+            pinned = false;
+        }
+
+        function applyPin() {
+            var chrome = getFixedTopChromeHeight();
+            var parent = stepper.parentElement || wizard;
+            var parentRect = parent.getBoundingClientRect();
+            var height = stepper.getBoundingClientRect().height || stepper.offsetHeight || 0;
+            if (!pinned) {
+                sentinel.style.height = height + 'px';
+            }
+            stepper.classList.add('is-pinned');
+            stepper.style.position = 'fixed';
+            stepper.style.top = chrome + 'px';
+            stepper.style.left = Math.max(0, parentRect.left) + 'px';
+            stepper.style.width = Math.max(0, parentRect.width) + 'px';
+            stepper.style.zIndex = '1030';
+            pinned = true;
+        }
+
+        function updatePin() {
+            raf = 0;
+            var chrome = getFixedTopChromeHeight();
+            var sentTop = sentinel.getBoundingClientRect().top;
+            var shouldPin = sentTop <= chrome + 0.5;
+            if (shouldPin) {
+                applyPin();
+            } else if (pinned) {
+                clearPinStyles();
+            }
+            syncWizardStickyOffset();
+        }
+
+        function scheduleUpdate() {
+            if (raf) {
+                return;
+            }
+            raf = window.requestAnimationFrame(updatePin);
+        }
+
+        clearPinStyles();
+        scheduleUpdate();
+        window.addEventListener('scroll', scheduleUpdate, { passive: true });
+        document.addEventListener('scroll', scheduleUpdate, { passive: true, capture: true });
+        window.addEventListener('resize', scheduleUpdate);
+        $(window).off('resize.qWizardStickyPin').on('resize.qWizardStickyPin', scheduleUpdate);
+    }
+
     function scrollToWizardStep(step, behavior) {
         var el = getWizardSectionEl(step);
         if (!el) {
@@ -12125,10 +12207,8 @@
             // except keep Next on every unlocked section before Pricing.
             var $nextBar = $(this).find('.q-section-next-bar');
             if ($nextBar.length) {
-                var $body = $('#qSectionBody' + step);
-                var bodyOpen = $body.length ? $body.is(':visible') : false;
-                // Next lives inside the open section body only (no stack of buttons when collapsed).
-                $nextBar.toggle(unlocked && step < Q_WIZARD_TOTAL && bodyOpen);
+                // Next sits beside the collapse arrow in the section header.
+                $nextBar.toggle(unlocked && step < Q_WIZARD_TOTAL);
             }
         });
     }
@@ -12363,6 +12443,7 @@
             qWizardMax = Math.max(1, qWizardMax || 1);
             syncUnlockedWizardSections();
             syncWizardStickyOffset();
+            initWizardStickyStepper();
             $(window).off('resize.qWizardSticky').on('resize.qWizardSticky', function () {
                 syncWizardStickyOffset();
             });
@@ -12376,7 +12457,9 @@
                 setWizardStep(qWizardCurrent - 1, false);
             });
         }
-        $(document).on('click', '.q-section-next-btn', function () {
+        $(document).on('click', '.q-section-next-btn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
             var from = parseInt($(this).attr('data-q-next-from'), 10) || qWizardCurrent;
             advanceWizardFrom(from);
         });

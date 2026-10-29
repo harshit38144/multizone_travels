@@ -202,11 +202,18 @@ body.mz-tab-shell.layout-fixed .wrapper {
 }
 
 /* ——— Embedded page (inside iframe) ——— */
-html.mz-embed,
+/* Only body should scroll — overflow on both html+body breaks position:sticky. */
+html.mz-embed {
+	height: auto;
+	min-height: 100%;
+	overflow: visible !important;
+}
+
 html.mz-embed body {
 	height: auto;
 	min-height: 100%;
-	overflow: auto !important;
+	overflow-x: hidden !important;
+	overflow-y: auto !important;
 }
 
 html.mz-embed body.hold-transition {
