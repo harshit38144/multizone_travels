@@ -1583,6 +1583,13 @@
         activeCustomerPaid = null;
         activeTripInfo = null;
         activeRow = $triggerRow;
+        if (!$('#confirmTourModal').length) {
+            window.alert('Confirm Tour modal is missing on this page.');
+            return;
+        }
+        if (!$('#confirmTourModal').parent().is('body')) {
+            $('#confirmTourModal').appendTo('body');
+        }
         $('#ctQuotationId').val(quotationId);
         setPrimaryContact('', '', '');
         setGuestAttachment('', '');
@@ -1783,10 +1790,86 @@
         });
         $('#ctIncludedChips').html(chipsHtml);
 
+        function ensureAskConfirmTourPopup() {
+            if ($('#askConfirmTourPopup').length) {
+                return;
+            }
+            $('body').append(
+                '<div class="modal fade" id="askConfirmTourPopup" tabindex="-1" role="dialog" aria-labelledby="askConfirmTourPopupLabel" aria-hidden="true">' +
+                '<div class="modal-dialog modal-dialog-centered" role="document" style="max-width:420px;">' +
+                '<div class="modal-content" style="border:0;border-radius:16px;overflow:hidden;">' +
+                '<div class="modal-body text-center" style="padding:1.6rem 1.4rem 1.3rem;">' +
+                '<div style="width:58px;height:58px;margin:0 auto .8rem;border-radius:50%;background:#fff1f2;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">' +
+                '<i class="fas fa-suitcase-rolling"></i></div>' +
+                '<h5 class="mb-2" id="askConfirmTourPopupLabel" style="font-weight:800;">Confirm Tour</h5>' +
+                '<p class="text-muted mb-3" style="font-size:.92rem;">Do you want to confirm this tour?</p>' +
+                '<button type="button" class="btn btn-outline-secondary" data-dismiss="modal" style="min-width:110px;border-radius:10px;font-weight:700;">No</button>' +
+                '<button type="button" class="btn btn-danger ml-2" id="askConfirmTourYes" style="min-width:110px;border-radius:10px;font-weight:700;background:#e11d48;border-color:#e11d48;">Yes</button>' +
+                '</div></div></div></div>'
+            );
+        }
+
+        var pendingQuickConfirm = { id: 0, $row: $() };
+
+        function runQuickConfirmTour(quotationId, $row) {
+            quotationId = parseInt(quotationId, 10) || 0;
+            if (!quotationId) {
+                return;
+            }
+            activeRow = $row && $row.length ? $row : activeRow;
+            var $yes = $('#askConfirmTourYes');
+            $yes.prop('disabled', true).text('Confirming…');
+            $.ajax({
+                url: 'crm/ajax/confirm_tour_quick.php',
+                method: 'POST',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: { id: quotationId }
+            })
+                .done(function (res) {
+                    $('#askConfirmTourPopup').modal('hide');
+                    if (!res || !res.success) {
+                        alert((res && res.message) || 'Could not confirm tour.');
+                        return;
+                    }
+                    tourWasConfirmed = true;
+                    updateListRow(res);
+                    if ($('.crm-leads-ui').length && $('#tourConfirmedPopup').length) {
+                        $('#tourConfirmedPopup').data('quotationId', quotationId).modal('show');
+                    } else {
+                        alert((res && res.message) || 'Tour confirmed.');
+                    }
+                })
+                .fail(function () {
+                    alert('Could not confirm tour. Please try again.');
+                })
+                .always(function () {
+                    $yes.prop('disabled', false).text('Yes');
+                });
+        }
+
         $(document).on('click', '.js-q-book', function (e) {
             e.preventDefault();
-            var id = $(this).data('id');
-            openModal(id, $(this).closest('tr'));
+            e.stopPropagation();
+            var $btn = $(this);
+            var id = parseInt($btn.attr('data-id') || $btn.data('id'), 10) || 0;
+            var $row = $btn.closest('tr');
+            if (!id) {
+                return;
+            }
+            // Already confirmed (or bookings page) → open Confirm Tour details.
+            if ($btn.hasClass('btn-confirmed') || $btn.attr('data-open-confirm') === '1') {
+                openModal(id, $row);
+                return;
+            }
+            ensureAskConfirmTourPopup();
+            pendingQuickConfirm = { id: id, $row: $row };
+            $('#askConfirmTourPopup').modal('show');
+        });
+
+        $(document).on('click', '#askConfirmTourYes', function (e) {
+            e.preventDefault();
+            runQuickConfirmTour(pendingQuickConfirm.id, pendingQuickConfirm.$row);
         });
 
         $(document).on('click', '.js-booking-status-open', function (e) {
@@ -4915,4 +4998,10 @@
                 });
         });
     });
+
+    window.CrmConfirmTour = {
+        open: function (quotationId, $triggerRow, highlightKey) {
+            openModal(quotationId, $triggerRow, highlightKey);
+        }
+    };
 })(jQuery);

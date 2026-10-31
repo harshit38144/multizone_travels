@@ -893,24 +893,84 @@ function crmQuotationHotelServiceLabel(array $hotel): string
     return $name !== '' ? $name : 'Hotel';
 }
 
+function crmQuotationFlightAirportCode(string $place): string
+{
+    $s = trim($place);
+    if ($s === '') {
+        return '';
+    }
+    if (preg_match('/\(([A-Za-z0-9]{3})\)\s*$/', $s, $m)) {
+        return strtoupper($m[1]);
+    }
+    if (preg_match('/^([A-Za-z]{3})$/', $s, $m)) {
+        return strtoupper($m[1]);
+    }
+    if (preg_match('/\b([A-Za-z]{3})\b\s*$/', $s, $m)) {
+        return strtoupper($m[1]);
+    }
+    return '';
+}
+
+function crmQuotationFlightPlaceToken(string $place): string
+{
+    $code = crmQuotationFlightAirportCode($place);
+    if ($code !== '') {
+        return $code;
+    }
+    $s = trim(preg_replace('/\s*\([^)]*\)\s*$/', '', $place));
+    return $s;
+}
+
+function crmQuotationFlightServiceDateShort($raw): string
+{
+    $raw = trim((string) $raw);
+    if ($raw === '' || strpos($raw, '0000-00-00') === 0) {
+        return '';
+    }
+    $candidates = [$raw];
+    if (preg_match('/^\d{4}-\d{2}-\d{2}/', $raw)) {
+        $candidates[] = substr($raw, 0, 10);
+    }
+    foreach ($candidates as $value) {
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'd.m.Y'] as $fmt) {
+            $d = DateTime::createFromFormat('!' . $fmt, $value);
+            if ($d instanceof DateTime && $d->format($fmt) === $value) {
+                return $d->format('j M');
+            }
+        }
+    }
+    $ts = strtotime($raw);
+    if ($ts === false) {
+        return '';
+    }
+    return date('j M', $ts);
+}
+
 function crmQuotationFlightServiceLabel(array $flight): string
 {
-    $name = trim((string) ($flight['name'] ?? ''));
-    $no = trim((string) ($flight['fl_tr_no'] ?? ($flight['pnr'] ?? '')));
     $from = trim((string) ($flight['from'] ?? ''));
     $to = trim((string) ($flight['to'] ?? ''));
+    $fromToken = crmQuotationFlightPlaceToken($from);
+    $toToken = crmQuotationFlightPlaceToken($to);
     $route = '';
-    if ($from !== '' || $to !== '') {
-        $route = $from . ($from !== '' && $to !== '' ? ' – ' : '') . $to;
+    if ($fromToken !== '' || $toToken !== '') {
+        $route = ($fromToken !== '' ? $fromToken : '?') . '-' . ($toToken !== '' ? $toToken : '?');
     }
+    $dateLabel = crmQuotationFlightServiceDateShort($flight['dep_date'] ?? ($flight['date'] ?? ''));
+    if ($dateLabel !== '' && $route !== '') {
+        return $dateLabel . ' | ' . $route;
+    }
+    if ($dateLabel !== '') {
+        return $dateLabel;
+    }
+    if ($route !== '') {
+        return $route;
+    }
+
+    $name = trim((string) ($flight['name'] ?? ''));
+    $no = trim((string) ($flight['fl_tr_no'] ?? ($flight['pnr'] ?? '')));
     $head = trim($name . ($no !== '' ? ' ' . $no : ''));
-    if ($head !== '' && $route !== '') {
-        return $head . ' · ' . $route;
-    }
-    if ($head !== '') {
-        return $head;
-    }
-    return $route !== '' ? $route : 'Flight';
+    return $head !== '' ? $head : 'Flight';
 }
 
 function crmQuotationConfirmItemUid(string $key, string $sourceId): string

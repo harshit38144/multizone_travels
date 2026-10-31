@@ -1612,10 +1612,14 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-head-label {
-            font-weight: 700;
+            font-weight: 500;
             font-size: 0.88rem;
             color: #0f172a;
             line-height: 1.25;
+        }
+
+        .crm-quotation-gen .q-day-head-label .q-day-head-day {
+            font-weight: 700;
         }
 
         .crm-quotation-gen .q-day-head-sub {
@@ -2290,25 +2294,46 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-suppliers-panel {
-            background: #fff;
-            border: 1px solid #e8ecf1;
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
             border-radius: 14px;
-            padding: 0.7rem 0.85rem 0.65rem;
+            padding: 0;
             box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
             min-width: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        .crm-quotation-gen .q-itin-suppliers-hd-left {
+        .crm-quotation-gen .q-itinerary-suppliers {
+            margin-top: 0;
+        }
+
+        .crm-quotation-gen .q-itin-comm-head {
             display: flex;
             align-items: center;
-            gap: 0.65rem;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.55rem 0.75rem 0.2rem;
+            flex-wrap: nowrap;
+        }
+
+        .crm-quotation-gen .q-itin-comm-group-title {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.01em;
             min-width: 0;
         }
 
-        .crm-quotation-gen .q-itin-suppliers-title {
-            font-size: 0.88rem;
-            font-weight: 800;
-            color: #0f172a;
+        .crm-quotation-gen .q-itin-comm-group-title i {
+            color: #e11d2e;
+            font-size: 0.78rem;
+            width: 1rem;
+            text-align: center;
         }
 
         .crm-quotation-gen .q-itin-add-supplier-btn {
@@ -2321,109 +2346,227 @@ $qWizardSteps = [
             font-size: 0.75rem;
             padding: 0.28rem 0.7rem;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .crm-quotation-gen .q-itin-add-supplier-btn:hover {
-            background: #fff1f2;
+            background: #ffe4e6;
             color: #b71c1c;
             border-color: #e57373;
         }
 
-        .crm-quotation-gen .q-itinerary-suppliers {
-            margin-top: 0;
-        }
-
-        .crm-quotation-gen .q-itinerary-suppliers-hd {
-            display: flex;
+        .crm-quotation-gen .q-itin-comm-col-labels {
+            display: grid;
+            grid-template-columns: 0.95fr 1.2fr 72px;
+            gap: 0.35rem;
             align-items: center;
-            justify-content: space-between;
-            gap: 0.5rem;
-            margin-bottom: 0.4rem;
-            flex-wrap: nowrap;
-        }
-
-        .crm-quotation-gen .q-itin-suppliers-table {
-            width: 100%;
-            margin: 0;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .crm-quotation-gen .q-itin-suppliers-table thead th {
+            padding: 0.2rem 0.65rem 0.45rem;
+            color: #64748b;
             font-size: 0.68rem;
             font-weight: 700;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            border-bottom: 1px solid #eef2f7;
-            padding: 0.25rem 0.35rem 0.4rem;
-            background: transparent;
+            letter-spacing: 0.01em;
         }
 
-        .crm-quotation-gen .q-itin-suppliers-table tbody td {
-            padding: 0.3rem 0.35rem;
-            vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .crm-quotation-gen .q-itin-suppliers-table tbody tr:last-child td {
-            border-bottom: 0;
-        }
-
-        .crm-quotation-gen .q-itin-sup-idx {
-            font-weight: 700;
-            color: #64748b;
-            font-size: 0.88rem;
-        }
-
-        .crm-quotation-gen .q-itin-supplier-row .q-itin-supplier,
-        .crm-quotation-gen .q-itin-supplier-row .q-itin-rate {
-            border-radius: 10px !important;
-            min-height: 30px !important;
-            height: 30px !important;
-            font-size: 0.8rem !important;
-        }
-
-        .crm-quotation-gen .q-itin-supplier-row .select2-container {
-            height: 30px;
-        }
-
-        .crm-quotation-gen .q-itin-supplier-row .select2-container--default .select2-selection--single,
-        .crm-quotation-gen .q-itin-supplier-row .q-supplier-s2-selection.select2-selection--single {
-            height: 30px !important;
-            min-height: 30px !important;
-            max-height: 30px !important;
-            border-radius: 10px !important;
-        }
-
-        .crm-quotation-gen .q-itin-supplier-row .q-itin-supplier-remove {
-            height: 30px;
-            width: 30px;
-            padding: 0;
+        .crm-quotation-gen .q-itin-comm-col-labels > span {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            margin-bottom: 0;
-            border: 1px solid #fecaca;
-            background: #fff1f2;
-            color: #c62828;
+            gap: 0.28rem;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .crm-quotation-gen .q-itin-supplier-row .q-itin-supplier-remove:hover:not(:disabled) {
+        .crm-quotation-gen .q-itin-comm-col-labels > span:first-child {
+            justify-content: flex-end;
+        }
+
+        .crm-quotation-gen .q-itin-comm-col-labels i {
+            color: #e11d2e;
+            font-size: 0.68rem;
+            width: 0.85rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .crm-quotation-gen .q-itin-comm-head-action {
+            justify-content: flex-end;
+            text-align: right;
+        }
+
+        .crm-quotation-gen .q-itin-comm-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            padding: 0 0.65rem 0.65rem;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-row {
+            display: grid;
+            grid-template-columns: 0.95fr 1.2fr 72px;
+            gap: 0.35rem;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-itin-comm-field {
+            min-width: 0;
+            width: 100%;
+            position: relative;
+        }
+
+        .crm-quotation-gen .q-itin-rate-box {
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+            height: 30px;
+            min-height: 30px;
+            padding: 0 0.55rem;
             background: #ffe4e6;
-            color: #b71c1c;
+            border: 1px solid #fecdd3;
+            border-radius: 10px;
+            box-sizing: border-box;
         }
 
-        .crm-quotation-gen .q-itin-supplier-row .q-itin-rate {
+        .crm-quotation-gen .q-itin-rate-prefix {
+            color: #e11d2e;
+            font-weight: 800;
+            font-size: 0.82rem;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .crm-quotation-gen .q-itin-rate-box .q-itin-rate {
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            height: 28px !important;
+            min-height: 28px !important;
+            padding: 0 !important;
+            font-weight: 800 !important;
+            color: #e11d2e !important;
+            flex: 1 1 auto;
+            min-width: 0;
+            width: 1%;
+            text-align: right;
+            font-size: 0.8rem !important;
             -moz-appearance: textfield;
             appearance: textfield;
         }
 
-        .crm-quotation-gen .q-itin-supplier-row .q-itin-rate::-webkit-outer-spin-button,
-        .crm-quotation-gen .q-itin-supplier-row .q-itin-rate::-webkit-inner-spin-button {
+        .crm-quotation-gen .q-itin-rate-box .q-itin-rate:focus {
+            box-shadow: none !important;
+        }
+
+        .crm-quotation-gen .q-itin-rate-box .q-itin-rate::-webkit-outer-spin-button,
+        .crm-quotation-gen .q-itin-rate-box .q-itin-rate::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
+        }
+
+        .crm-quotation-gen .q-itin-comm-field-supplier > .q-itin-supplier.form-control {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            background: #fff !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            padding: 0.1rem 0.55rem !important;
+            font-size: 0.8rem !important;
+        }
+
+        .crm-quotation-gen .q-itin-comm-field-supplier .select2-container {
+            display: block;
+            width: 100% !important;
+            height: 30px;
+            margin: 0 !important;
+        }
+
+        .crm-quotation-gen .q-itin-comm-field-supplier .select2-container--default .select2-selection--single,
+        .crm-quotation-gen .q-itin-comm-field-supplier .q-supplier-s2-selection.select2-selection--single {
+            height: 30px !important;
+            min-height: 30px !important;
+            max-height: 30px !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            background: #fff !important;
+            display: flex !important;
+            align-items: center;
+        }
+
+        .crm-quotation-gen .q-itin-comm-field-supplier .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 1.25 !important;
+            padding: 0 1.85rem 0 0.55rem !important;
+            color: #0f172a !important;
+            font-size: 0.8rem !important;
+        }
+
+        .crm-quotation-gen .q-itin-comm-field-supplier .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: auto !important;
+            right: 2px !important;
+        }
+
+        .crm-quotation-gen .q-itin-comm-field-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.35rem;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-more,
+        .crm-quotation-gen .q-itin-supplier-remove {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            font-size: 0.72rem;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-more {
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #64748b;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-more:hover {
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-remove {
+            border: 1px solid #fecaca;
+            background: #fff;
+            color: #e11d2e;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-remove:hover:not(:disabled) {
+            background: #fef2f2;
+            color: #be123c;
+        }
+
+        .crm-quotation-gen .q-itin-supplier-remove:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 575.98px) {
+            .crm-quotation-gen .q-itin-comm-col-labels,
+            .crm-quotation-gen .q-itin-supplier-row {
+                grid-template-columns: 1fr;
+            }
+
+            .crm-quotation-gen .q-itin-comm-col-labels > span:first-child,
+            .crm-quotation-gen .q-itin-comm-head-action {
+                justify-content: flex-start;
+                text-align: left;
+            }
+
+            .crm-quotation-gen .q-itin-comm-field-action {
+                justify-content: flex-start;
+            }
         }
 
         .crm-quotation-gen .q-itin-days {
@@ -12957,8 +13100,8 @@ $qWizardSteps = [
             left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            width: 74px;
-            height: 74px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background-color: #fdecee;
             background-repeat: no-repeat;
@@ -13002,7 +13145,7 @@ $qWizardSteps = [
             display: inline-block;
             margin: 2px 0 10px;
             padding-bottom: 7px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             letter-spacing: 0;
             text-transform: none;
@@ -13053,7 +13196,7 @@ $qWizardSteps = [
             padding: 0 0 0 24px;
             position: relative;
             box-shadow: none;
-            font-size: 14px;
+            font-size: 12.5px;
             line-height: 1.45;
             color: #1f2937;
             -webkit-print-color-adjust: exact;
@@ -17135,28 +17278,21 @@ $qWizardSteps = [
                                         </div>
 
                                         <div class="q-itinerary-suppliers q-itin-suppliers-panel">
-                                            <div class="q-itinerary-suppliers-hd">
-                                                <div class="q-itin-suppliers-hd-left">
-                                                    <span class="q-itin-pkg-hd-icon" aria-hidden="true"><i class="fas fa-users"></i></span>
-                                                    <span class="q-itin-suppliers-title">Suppliers &amp; Rates</span>
+                                            <div class="q-itin-comm-head">
+                                                <div class="q-itin-comm-group-title">
+                                                    <i class="fas fa-coins" aria-hidden="true"></i>
+                                                    <span>Commercial Details</span>
                                                 </div>
                                                 <button type="button" class="btn q-itin-add-supplier-btn" id="qAddItinerarySupplier">
                                                     <i class="fas fa-plus mr-1"></i>Add Supplier
                                                 </button>
                                             </div>
-                                            <div class="table-responsive">
-                                                <table class="q-itin-suppliers-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th scope="col" style="width:36px;">#</th>
-                                                            <th scope="col">Supplier</th>
-                                                            <th scope="col" style="width:110px;">Rate (INR)</th>
-                                                            <th scope="col" style="width:56px;">Delete</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="qItinerarySupplierRows"></tbody>
-                                                </table>
+                                            <div class="q-itin-comm-col-labels">
+                                                <span><i class="fas fa-rupee-sign" aria-hidden="true"></i>Rate (₹)</span>
+                                                <span><i class="fas fa-building" aria-hidden="true"></i>Supplier</span>
+                                                <span class="q-itin-comm-head-action">Actions</span>
                                             </div>
+                                            <div id="qItinerarySupplierRows" class="q-itin-comm-rows"></div>
                                         </div>
                                 </div>
 
@@ -17915,7 +18051,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=339"></script>
+    <script src="crm/assets/quotation_generator.js?v=342"></script>
     <script src="crm/assets/quotation_flight_search.js?v=35"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

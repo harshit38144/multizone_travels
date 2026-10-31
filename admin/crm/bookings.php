@@ -2,7 +2,10 @@
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/includes/confirmed_bookings.php';
 
-$bookings = cbList($conn);
+$bookings = array_values(array_filter(cbList($conn), static function (array $row): bool {
+    // Confirmed tours only (exclude cancelled).
+    return (string) ($row['phase'] ?? '') !== 'cancelled';
+}));
 $ledgers = cbLedgers($conn, $bookings);
 $destinations = [];
 $customers = [];
@@ -28,6 +31,7 @@ sort($destinations);
 sort($customers);
 sort($suppliers);
 sort($tourTypes);
+$leadStageOptions = crmLeadStageOptions();
 $boot = json_encode([
     'bookings' => $bookings,
     'customer_payments' => $ledgers['customer'],
@@ -35,6 +39,7 @@ $boot = json_encode([
     'activity' => $ledgers['activity'],
     'methods' => spPaymentMethods(),
     'today' => date('Y-m-d'),
+    'stages' => $leadStageOptions,
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 ?>
 <!DOCTYPE html>
@@ -44,6 +49,8 @@ $boot = json_encode([
     <base href="../">
     <title>All Bookings</title>
     <?php include __DIR__ . '/../includes/header-links.php'; ?>
+    <link rel="stylesheet" href="crm/assets/quotation_confirm_tour_page.css?v=1">
+    <link rel="stylesheet" href="crm/assets/quotation_preview_modal.css?v=1">
     <style>
         .bk-page { background: #f4f7fb; }
         .bk-page .content-wrapper, .bk-page .content { background: #f4f7fb; }
@@ -71,7 +78,7 @@ $boot = json_encode([
         .bk-stat span { color: #64748b; font-size: 0.75rem; font-weight: 700; }
         .bk-stat small { color: #16a34a; font-weight: 800; }
         .bk-stat small.is-down { color: #e11d48; }
-        .bk-grid { display: grid; grid-template-columns: 1.3fr 0.8fr 0.8fr 0.9fr; gap: 0.7rem; margin-bottom: 0.8rem; }
+        .bk-grid { display: grid; grid-template-columns: 1.4fr 0.9fr 0.9fr; gap: 0.7rem; margin-bottom: 0.8rem; }
         .bk-card { background: #fff; border-radius: 16px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04); padding: 0.85rem; }
         .bk-card h3 { margin: 0 0 0.6rem; font-size: 0.92rem; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
         .bk-card h3 button { border: 0; background: transparent; color: #e11d48; font-weight: 800; font-size: 0.75rem; }
@@ -94,42 +101,302 @@ $boot = json_encode([
         .bk-photo { width: 42px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #fecdd3, #ffe4e6); color: #e11d48; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
         .bk-mini b, .bk-guest b, .bk-code b { display: block; color: #0f172a; }
         .bk-muted { color: #94a3b8; font-size: 0.72rem; }
-        .bk-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0.75rem; align-items: start; }
+        .bk-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; align-items: start; }
         .bk-tabs { display: flex; gap: 0.15rem; overflow: auto; border-bottom: 1px solid #f1f5f9; margin-bottom: 0.7rem; }
         .bk-tabs button { border: 0; background: transparent; color: #64748b; font-weight: 800; font-size: 0.78rem; padding: 0.45rem 0.55rem; border-bottom: 2px solid transparent; white-space: nowrap; }
         .bk-tabs button.is-on { color: #e11d48; border-bottom-color: #e11d48; }
-        .bk-table-wrap { overflow: auto; }
-        table.bk-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 1080px; }
-        .bk-table th { text-align: left; color: #94a3b8; font-size: 0.68rem; letter-spacing: 0.03em; text-transform: uppercase; padding: 0.45rem; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
-        .bk-table td { padding: 0.55rem 0.45rem; border-bottom: 1px solid #f8fafc; vertical-align: middle; color: #334155; }
-        .bk-table tr.is-highlight td { background: #ffe4e6; }
-        .bk-table tr.is-highlight td:first-child { box-shadow: inset 3px 0 0 #e11d48; }
+        .bk-table-wrap { overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
+        table.bk-table {
+            width: 100%;
+            min-width: 980px;
+            table-layout: fixed;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            background: #fff;
+        }
+        .bk-table th {
+            text-align: left;
+            color: #6b7280;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 0.85rem 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .bk-table td {
+            padding: 0.4rem 0.75rem;
+            border-top: 1px solid #f3f4f6;
+            vertical-align: middle;
+            color: #334155;
+            line-height: 1.35;
+            overflow: hidden;
+        }
+        .bk-table tr.is-highlight td { background: #fff1f2; }
+        .bk-table tr.is-highlight td:first-child { box-shadow: inset 3px 0 0 #e53935; }
+        .bk-table .col-bk-id { width: 14%; }
+        .bk-table .col-bk-guest { width: 18%; }
+        .bk-table .col-bk-dest { width: 16%; }
+        .bk-table .col-bk-date { width: 12%; text-align: center; }
+        .bk-table .col-bk-svc { width: 12%; text-align: center; }
+        .bk-table .col-bk-stage { width: 10%; text-align: center; overflow: visible; }
+        .bk-table .col-bk-status { width: 10%; text-align: center; }
+        .bk-table .col-bk-actions { width: 10%; text-align: center; overflow: visible; }
+        .bk-table .lead-stage-select {
+            font-weight: 700;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-size: calc(0.68rem + 1px);
+            border: 1px solid transparent;
+            white-space: nowrap;
+            display: inline-block;
+            text-align: center;
+            line-height: 1.25;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            max-width: 100%;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: none;
+        }
+        .bk-table .lead-stage-select::-ms-expand { display: none; }
+        .bk-table .lead-stage-select:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.16);
+        }
+        .bk-table .lead-stage-select.stage-new_lead {
+            background-color: #e3f2fd;
+            border-color: #bbdefb;
+            color: #1e88e5;
+        }
+        .bk-table .lead-stage-select.stage-quoted {
+            background-color: #fff3e0;
+            border-color: #ffe0b2;
+            color: #fb8c00;
+        }
+        .bk-table .lead-stage-select.stage-confirmed {
+            background-color: #e8f5e9;
+            border-color: #c8e6c9;
+            color: #43a047;
+        }
+        .bk-table .lead-stage-select.stage-lost {
+            background-color: #f5f5f5;
+            border-color: #e0e0e0;
+            color: #757575;
+        }
+        .bk-table .lead-stage-select[data-stage-auto="1"] { cursor: default; }
+        .bk-id-cell {
+            display: block;
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+            border: 0;
+            background: transparent;
+            text-align: left;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .bk-id-uid { font-weight: 700; color: #e53935; }
+        .bk-id-cell:hover .bk-id-uid { color: #c62828; text-decoration: underline; }
+        .bk-id-meta { color: #9ca3af; font-size: 0.72rem; font-weight: 400; }
+        .bk-guest-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-width: 0;
+            max-width: 100%;
+        }
+        .bk-guest-initials {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        .bk-guest-name {
+            text-transform: capitalize;
+            font-weight: 600;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+        .bk-pax-badge {
+            flex-shrink: 0;
+            background: #ecfdf5;
+            color: #047857;
+            border-radius: 999px;
+            padding: 0.1rem 0.4rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+        }
+        .bk-dest-name { font-weight: 700; color: #0f172a; text-transform: uppercase; }
+        .bk-dest-sub { color: #9ca3af; font-size: 0.72rem; }
+        .bk-date-badge {
+            display: inline-block;
+            color: #e53935;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .bk-date-badge i { margin-right: 0.2rem; color: #e53935; }
+        .bk-svc-pills { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; justify-content: center; }
+        .bk-svc-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0.18rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            white-space: nowrap;
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+        .bk-svc-pill.is-flight { background: #dbeafe; color: #1d4ed8; }
+        .bk-svc-pill.is-hotel { background: #ffedd5; color: #c2410c; }
+        .bk-svc-pill.is-tour { background: #ede9fe; color: #6d28d9; }
         .bk-due { color: #e11d48; font-weight: 700; }
         .bk-ok { color: #15803d; font-weight: 800; }
-        .bk-pill { display: inline-flex; border-radius: 999px; padding: 0.12rem 0.5rem; font-weight: 800; font-size: 0.7rem; }
+        .bk-pill {
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 0.18rem 0.55rem;
+            font-weight: 800;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
         .bk-pill.is-confirmed, .bk-pill.is-paid { background: #dcfce7; color: #15803d; }
         .bk-pill.is-progress, .bk-pill.is-partial { background: #ffedd5; color: #c2410c; }
-        .bk-pill.is-completed { background: #e0f2fe; color: #0369a1; }
+        .bk-pill.is-completed { background: #dbeafe; color: #1d4ed8; }
         .bk-pill.is-cancelled, .bk-pill.is-pending { background: #f1f5f9; color: #64748b; }
         .bk-pill.is-overdue { background: #ffe4e6; color: #be123c; }
-        .bk-ico-btn { width: 28px; height: 28px; border-radius: 8px; border: 1px solid #e6ebf2; background: #fff; color: #475569; }
-        .bk-menu { position: relative; display: inline-block; }
-        .bk-pop { display: none; position: fixed; background: #fff; border: 1px solid #e6ebf2; border-radius: 10px; min-width: 180px; z-index: 30; box-shadow: 0 10px 24px rgba(15,23,42,.08); }
-        .bk-pop.is-open { display: block; }
-        .bk-pop button { display: block; width: 100%; text-align: left; border: 0; background: #fff; padding: 0.45rem 0.7rem; font-size: 0.8rem; }
-        .bk-pop button:hover { background: #fff1f2; }
+        .bk-action-btns {
+            display: inline-flex;
+            gap: 2px;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+        .bk-action-btns .btn-icon {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 7px;
+            border: 1px solid transparent;
+            font-size: 0.78rem;
+            text-decoration: none;
+            background: #f5f5f5;
+            color: #616161;
+            cursor: pointer;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .bk-action-btns .btn-view {
+            background: #e8f5e9;
+            border-color: #c8e6c9;
+            color: #2e7d32 !important;
+        }
+        .bk-action-btns .btn-view:hover {
+            background: #c8e6c9;
+            color: #1b5e20 !important;
+            border-color: #a5d6a7;
+            box-shadow: 0 1px 3px rgba(46, 125, 50, 0.15);
+        }
+        .bk-action-btns .btn-book {
+            background: #fff7ed;
+            border-color: #fed7aa;
+            color: #c2410c !important;
+        }
+        .bk-action-btns .btn-book .btn-book-img {
+            width: 14px;
+            height: 14px;
+            object-fit: contain;
+            display: block;
+            pointer-events: none;
+        }
+        .bk-action-btns .btn-book:hover {
+            background: #ffedd5;
+            color: #9a3412 !important;
+            border-color: #fdba74;
+            box-shadow: 0 1px 3px rgba(194, 65, 12, 0.15);
+        }
+        .bk-action-btns .btn-more {
+            background: #f5f5f5;
+            border-color: #e0e0e0;
+            color: #616161 !important;
+        }
+        .bk-action-btns .btn-more:hover,
+        .bk-action-btns .btn-more[aria-expanded="true"] {
+            background: #eeeeee;
+            color: #424242 !important;
+            border-color: #bdbdbd;
+        }
+        .bk-table tr.is-actions-dropdown-open td.col-bk-actions {
+            overflow: visible;
+            z-index: 5;
+            position: relative;
+        }
+        .bk-actions-more { position: relative; display: inline-block; }
+        .bk-actions-menu {
+            display: none;
+            position: fixed;
+            min-width: 11.5rem;
+            padding: 0.35rem 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.35rem;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+            z-index: 2060;
+        }
+        .bk-actions-menu.is-open { display: block; }
+        .bk-actions-menu .dropdown-item {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            border: 0;
+            background: #fff;
+            padding: 0.45rem 0.85rem;
+            font-size: 0.82rem;
+            color: #334155;
+            text-align: left;
+            cursor: pointer;
+        }
+        .bk-actions-menu .dropdown-item i {
+            width: 1.1rem;
+            text-align: center;
+            margin-right: 0.45rem;
+        }
+        .bk-actions-menu .dropdown-item:hover { background: #f8fafc; }
+        .bk-actions-menu .dropdown-item.text-danger { color: #dc2626; }
+        .bk-actions-menu .dropdown-item.text-danger:hover { background: #fef2f2; }
+        .bk-actions-menu .dropdown-divider {
+            height: 0;
+            margin: 0.3rem 0;
+            border-top: 1px solid #e2e8f0;
+        }
         .bk-foot { margin-top: 0.7rem; color: #64748b; font-size: 0.78rem; }
         .bk-pages button { height: 30px; min-width: 30px; border-radius: 8px; border: 1px solid #e6ebf2; background: #fff; font-weight: 700; }
         .bk-pages button.is-on { background: #e11d48; color: #fff; border-color: #e11d48; }
-        .bk-side { display: flex; flex-direction: column; gap: 0.7rem; }
-        .bk-side .bk-card h3 { font-size: 0.8rem; margin-bottom: 0.35rem; }
-        .bk-side .bk-mini { padding: 0.28rem 0; gap: 0.4rem; }
-        .bk-side .bk-mini b { font-size: 0.75rem; font-weight: 700; line-height: 1.25; }
-        .bk-side .bk-muted { font-size: 0.66rem; }
-        .bk-side .bk-photo { width: 28px; height: 24px; font-size: 0.68rem; }
-        .bk-toggle { display: inline-flex; background: #f8fafc; border-radius: 999px; padding: 2px; }
-        .bk-toggle button { border: 0; background: transparent; border-radius: 999px; font-size: 0.68rem; font-weight: 800; color: #64748b; padding: 0.2rem 0.45rem; }
-        .bk-toggle button.is-on { background: #fff; color: #e11d48; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
         .bk-empty { color: #94a3b8; padding: 1rem 0.2rem; }
         .bk-time-item { display: grid; grid-template-columns: 16px 1fr auto; gap: 0.55rem; padding: 0.45rem 0; }
         .bk-dot { width: 10px; height: 10px; border-radius: 50%; background: #e11d48; margin-top: 0.3rem; }
@@ -184,10 +451,6 @@ $boot = json_encode([
                     <h3>Supplier Payment Status</h3>
                     <div class="bk-donut-wrap" id="bkSupDonut"></div>
                 </div>
-                <div class="bk-card">
-                    <h3>Upcoming Tours (Next 30 Days) <button type="button" id="bkViewUpcoming">View All</button></h3>
-                    <div id="bkUpcoming"></div>
-                </div>
             </div>
 
             <div class="bk-layout">
@@ -197,7 +460,6 @@ $boot = json_encode([
                         <button type="button" data-tab="upcoming">Upcoming</button>
                         <button type="button" data-tab="ongoing">Ongoing</button>
                         <button type="button" data-tab="completed">Completed</button>
-                        <button type="button" data-tab="cancelled">Cancelled</button>
                         <button type="button" data-tab="customer">Customer Payments</button>
                         <button type="button" data-tab="supplier">Supplier Payments</button>
                         <button type="button" data-tab="timeline">Timeline</button>
@@ -228,21 +490,6 @@ $boot = json_encode([
                                 <option value="50">50 / page</option>
                             </select>
                         </span>
-                    </div>
-                </div>
-                <div class="bk-side">
-                    <div class="bk-card">
-                        <h3>Upcoming Payments
-                            <span class="bk-toggle">
-                                <button type="button" class="is-on" data-side="customer">Customer</button>
-                                <button type="button" data-side="supplier">Supplier</button>
-                            </span>
-                        </h3>
-                        <div id="bkDue"></div>
-                    </div>
-                    <div class="bk-card">
-                        <h3>Recent Activity</h3>
-                        <div id="bkActivity"></div>
                     </div>
                 </div>
             </div>
@@ -278,6 +525,9 @@ $boot = json_encode([
     </div>
 </div>
 
+<?php include __DIR__ . '/includes/confirm_tour_modals.php'; ?>
+<?php include __DIR__ . '/includes/quotation_preview_modal.php'; ?>
+
 <?php include __DIR__ . '/../includes/footer-links.php'; ?>
 <script>
 (function ($) {
@@ -290,7 +540,7 @@ $boot = json_encode([
         highlightId = 0;
     }
     var highlightScrolled = false;
-    var state = { page: 1, size: 10, tab: 'all', side: 'customer' };
+    var state = { page: 1, size: 10, tab: 'all' };
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
     function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
@@ -303,6 +553,60 @@ $boot = json_encode([
         var d = new Date(iso + (String(iso).length === 10 ? 'T00:00:00' : ''));
         if (isNaN(d.getTime())) return iso;
         return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+    function fmtTravelShort(iso) {
+        if (!iso) return '';
+        var d = new Date(String(iso).slice(0, 10) + 'T00:00:00');
+        if (isNaN(d.getTime())) return '';
+        var yy = String(d.getFullYear()).slice(-2);
+        return pad(d.getDate()) + '-' + months[d.getMonth()] + '-' + yy;
+    }
+    function fmtCreatedMeta(raw) {
+        if (!raw) return '';
+        var d = new Date(raw);
+        if (isNaN(d.getTime())) return '';
+        var h = d.getHours();
+        var ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        if (!h) h = 12;
+        return pad(d.getDate()) + ' ' + months[d.getMonth()].toUpperCase() + ', ' +
+            pad(h) + ':' + pad(d.getMinutes()) + ' ' + ampm;
+    }
+    function guestInitials(name) {
+        name = String(name || '').replace(/^(Mr|Mrs|Ms|Master|Miss|Mstr)\.?\s+/i, '').trim();
+        if (!name) return '';
+        var parts = name.split(/\s+/).filter(Boolean);
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    function paxBadge(b) {
+        var parts = [];
+        if (b.adults > 0) parts.push(b.adults + 'A');
+        if (b.children > 0) parts.push(b.children + 'C');
+        if (b.infants > 0) parts.push(b.infants + 'I');
+        if (!parts.length && b.pax > 0) parts.push(b.pax + 'P');
+        return parts.join(' ');
+    }
+    function servicesHtml(b) {
+        var pills = [];
+        if ((b.flight_count || 0) > 0) {
+            pills.push('<span class="bk-svc-pill is-flight"><i class="fas fa-plane"></i> Flight</span>');
+        }
+        if ((b.hotel_count || 0) > 0) {
+            pills.push('<span class="bk-svc-pill is-hotel"><i class="fas fa-hotel"></i> Hotel</span>');
+        }
+        var type = String(b.tour_type || '').trim();
+        if (!pills.length) {
+            pills.push('<span class="bk-svc-pill is-tour"><i class="fas fa-suitcase-rolling"></i> ' + esc(type || 'Tour') + '</span>');
+        } else if (type && !/^(flight|hotel)s?$/i.test(type)) {
+            pills.unshift('<span class="bk-svc-pill is-tour"><i class="fas fa-suitcase-rolling"></i> Tour</span>');
+        }
+        return '<div class="bk-svc-pills">' + pills.join('') + '</div>';
+    }
+    function payStatusPill(status) {
+        status = String(status || 'pending');
+        var label = status.charAt(0).toUpperCase() + status.slice(1);
+        return '<span class="bk-pill is-' + esc(status) + '">' + esc(label) + '</span>';
     }
     function pad(n) { return (n < 10 ? '0' : '') + n; }
     function monthKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1); }
@@ -344,10 +648,15 @@ $boot = json_encode([
         });
     }
     function tabbed(list) {
-        if (state.tab === 'upcoming') return list.filter(function (b) { return b.phase === 'upcoming'; });
-        if (state.tab === 'ongoing') return list.filter(function (b) { return b.phase === 'ongoing'; });
-        if (state.tab === 'completed') return list.filter(function (b) { return b.phase === 'completed'; });
-        if (state.tab === 'cancelled') return list.filter(function (b) { return b.phase === 'cancelled'; });
+        if (state.tab === 'upcoming') {
+            return list.filter(function (b) { return b.phase === 'upcoming' || b.phase === 'confirmed'; });
+        }
+        if (state.tab === 'ongoing') {
+            return list.filter(function (b) { return b.phase === 'ongoing'; });
+        }
+        if (state.tab === 'completed') {
+            return list.filter(function (b) { return b.phase === 'completed'; });
+        }
         return list;
     }
     function delta(list) {
@@ -454,11 +763,6 @@ $boot = json_encode([
         var active = list.filter(function (b) { return b.phase !== 'cancelled'; });
         $('#bkCustDonut').html(donut(sumStatus(active, 'customer')));
         $('#bkSupDonut').html(donut(sumStatus(active, 'supplier')));
-        var until = addDays(boot.today, 30);
-        var upcoming = active.filter(function (b) { return b.phase === 'upcoming' && b.start && b.start <= until; }).slice(0, 5);
-        $('#bkUpcoming').html(upcoming.length ? upcoming.map(function (b) {
-            return '<div class="bk-mini"><span class="bk-photo"><i class="fas fa-map-marker-alt"></i></span><div><b>' + esc(b.destination || 'Tour') + '</b><div class="bk-muted">' + esc(fmt(b.start)) + ' · ' + esc(b.pax) + ' Pax</div></div><div class="bk-muted">' + esc(b.code) + '</div></div>';
-        }).join('') : '<div class="bk-empty">No tours depart in the next 30 days.</div>');
     }
     function payCell(paid, balance) {
         if (balance > 0.009) return esc(money(paid)) + '<div class="bk-due">' + esc(money(balance)) + ' due</div>';
@@ -470,26 +774,61 @@ $boot = json_encode([
         if (b.phase === 'cancelled') return 'is-cancelled';
         return 'is-confirmed';
     }
-    function rowMenu(b) {
-        return '<div class="bk-menu"><button type="button" class="bk-ico-btn bk-more" aria-label="More"><i class="fas fa-ellipsis-v"></i></button><div class="bk-pop">' +
-            '<button type="button" data-act="edit" data-id="' + b.id + '">Edit quotation</button>' +
-            '<button type="button" data-act="itinerary" data-id="' + b.id + '">View itinerary</button>' +
-            '<button type="button" data-act="hotels" data-id="' + b.id + '">Hotel bookings</button>' +
-            '<button type="button" data-act="flights" data-id="' + b.id + '">Flight bookings</button>' +
-            '<button type="button" data-act="pay" data-id="' + b.id + '">Record payment</button>' +
+    function stageSelectHtml(b) {
+        var stage = String(b.stage || 'confirmed');
+        if (stage !== 'lost') stage = 'confirmed';
+        var stages = boot.stages || {
+            new_lead: 'New Lead',
+            quoted: 'Quoted',
+            confirmed: 'Confirmed',
+            lost: 'Lost'
+        };
+        var opts = Object.keys(stages).map(function (key) {
+            var disabled = (stage !== 'lost' && key !== 'lost') ? ' disabled' : '';
+            var selected = key === stage ? ' selected' : '';
+            return '<option value="' + esc(key) + '"' + selected + disabled + '>' + esc(stages[key]) + '</option>';
+        }).join('');
+        return '<select class="lead-stage-select js-lead-stage-select stage-' + esc(stage) + '"' +
+            ' data-lead-id="' + (b.lead_id || 0) + '"' +
+            ' data-booking-id="' + b.id + '"' +
+            ' data-stage="' + esc(stage) + '"' +
+            ' data-stage-auto="1"' +
+            ' title="Stage updates automatically from quotation activity. You can mark as Lost."' +
+            ' aria-label="Lead stage">' + opts + '</select>';
+    }
+    function rowActions(b) {
+        // Same as leads.php quoted row: eye (quotation preview) + Book + more
+        var editHref = 'crm/quotation_generator.php?id=' + b.id;
+        return '' +
+            '<div class="bk-action-btns">' +
+            '<button type="button" class="btn-icon btn-view js-lead-q-preview" data-quotation-id="' + b.id + '" data-edit-href="' + esc(editHref) + '" title="Preview Quotation" aria-label="Preview Quotation"><i class="far fa-eye"></i></button>' +
+            '<button type="button" class="btn-icon js-q-book btn-book btn-confirmed" data-id="' + b.id + '" data-open-confirm="1" title="Confirm Tour" aria-label="Confirm Tour">' +
+            '<img src="img/booking.png" alt="" class="btn-book-img" width="16" height="16">' +
+            '</button>' +
+            '<div class="bk-actions-more">' +
+            '<button type="button" class="btn-icon btn-more bk-more" aria-haspopup="true" aria-expanded="false" title="More actions" aria-label="More actions"><i class="fas fa-ellipsis-v"></i></button>' +
+            '<div class="bk-actions-menu" role="menu">' +
+            '<button type="button" class="dropdown-item" data-act="confirm" data-id="' + b.id + '"><i class="fas fa-check-circle text-muted"></i> Confirm Tour</button>' +
+            '<button type="button" class="dropdown-item" data-act="preview" data-id="' + b.id + '"><i class="far fa-eye text-muted"></i> Preview Quotation</button>' +
+            '<button type="button" class="dropdown-item" data-act="view" data-id="' + b.id + '"><i class="fas fa-info-circle text-muted"></i> Booking Details</button>' +
+            '<button type="button" class="dropdown-item" data-act="edit" data-id="' + b.id + '"><i class="fas fa-edit text-muted"></i> Edit Quotation</button>' +
+            '<button type="button" class="dropdown-item" data-act="itinerary" data-id="' + b.id + '"><i class="fas fa-route text-muted"></i> View Itinerary</button>' +
+            '<button type="button" class="dropdown-item" data-act="hotels" data-id="' + b.id + '"><i class="fas fa-hotel text-muted"></i> Hotel Bookings</button>' +
+            '<button type="button" class="dropdown-item" data-act="flights" data-id="' + b.id + '"><i class="fas fa-plane text-muted"></i> Flight Bookings</button>' +
+            '<button type="button" class="dropdown-item" data-act="pay" data-id="' + b.id + '"><i class="fas fa-rupee-sign text-muted"></i> Record Payment</button>' +
+            '<div class="dropdown-divider"></div>' +
             (b.phase === 'cancelled'
-                ? '<button type="button" data-act="restore" data-id="' + b.id + '">Restore booking</button>'
-                : '<button type="button" data-act="cancel" data-id="' + b.id + '">Cancel booking</button>') +
-            '</div></div>';
+                ? '<button type="button" class="dropdown-item" data-act="restore" data-id="' + b.id + '"><i class="fas fa-undo text-muted"></i> Restore Booking</button>'
+                : '<button type="button" class="dropdown-item text-danger" data-act="cancel" data-id="' + b.id + '"><i class="fas fa-trash-alt"></i> Cancel Booking</button>') +
+            '</div></div></div>';
     }
     function renderTable() {
         var list = filtered();
         var counts = {
             all: list.length,
-            upcoming: list.filter(function (b) { return b.phase === 'upcoming'; }).length,
+            upcoming: list.filter(function (b) { return b.phase === 'upcoming' || b.phase === 'confirmed'; }).length,
             ongoing: list.filter(function (b) { return b.phase === 'ongoing'; }).length,
             completed: list.filter(function (b) { return b.phase === 'completed'; }).length,
-            cancelled: list.filter(function (b) { return b.phase === 'cancelled'; }).length,
             customer: (boot.customer_payments || []).filter(function (p) { return !!byId(p.quotation_id) && inSet(list, p.quotation_id); }).length,
             supplier: (boot.supplier_payments || []).filter(function (p) { return inSet(list, p.quotation_id); }).length,
             timeline: list.length
@@ -514,21 +853,50 @@ $boot = json_encode([
         if (state.page > pages) state.page = pages;
         var start = (state.page - 1) * state.size;
         var slice = view.slice(start, start + state.size);
-        var html = '<div class="bk-table-wrap"><table class="bk-table"><thead><tr><th></th><th>Booking ID</th><th>Customer / Lead</th><th>Destination</th><th>Travel Date</th><th>Pax</th><th>Total Value</th><th>Customer Payment</th><th>Supplier Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+        var html = '<div class="bk-table-wrap"><table class="bk-table"><thead><tr>' +
+            '<th class="col-bk-id">Booking ID</th>' +
+            '<th class="col-bk-guest">Guest</th>' +
+            '<th class="col-bk-dest">Destination</th>' +
+            '<th class="col-bk-date">Travel Date</th>' +
+            '<th class="col-bk-svc">Services</th>' +
+            '<th class="col-bk-stage">Stage</th>' +
+            '<th class="col-bk-status">Status</th>' +
+            '<th class="col-bk-actions">Actions</th>' +
+            '</tr></thead><tbody>';
         if (!slice.length) {
-            html += '<tr><td colspan="11" class="bk-empty">No confirmed tours match these filters. Tours appear here after Confirm Tour.</td></tr>';
+            html += '<tr><td colspan="8" class="bk-empty">No confirmed tours match these filters. Tours appear here after Confirm Tour.</td></tr>';
         }
         slice.forEach(function (b) {
-            var when = b.start ? (fmt(b.start) + (b.end && b.end !== b.start ? ' – ' + fmt(b.end) : '')) : '—';
-            html += '<tr class="' + (highlightId && b.id === highlightId ? 'is-highlight' : '') + '" data-booking="' + b.id + '"><td></td><td class="bk-code"><b>' + esc(b.code) + '</b><div class="bk-muted">' + esc(fmt(String(b.created_at || '').slice(0, 10))) + '</div></td>' +
-                '<td class="bk-guest"><b>' + esc(b.guest || '—') + '</b><div class="bk-muted">' + esc(b.lead_uid || '') + '</div></td>' +
-                '<td>' + esc(b.destination || '—') + '<div class="bk-muted">' + esc(b.tour_type) + '</div></td>' +
-                '<td>' + esc(when) + '</td><td>' + esc(b.pax) + '</td><td>' + esc(money(b.total)) + '</td>' +
-                '<td>' + payCell(b.customer_paid, b.customer_balance) + '</td><td>' + payCell(b.supplier_paid, b.supplier_balance) + '</td>' +
-                '<td><span class="bk-pill ' + statusClass(b) + '">' + esc(b.status) + '</span></td><td>' +
-                '<button type="button" class="bk-ico-btn" data-act="view" data-id="' + b.id + '" aria-label="View"><i class="fas fa-eye"></i></button> ' +
-                '<button type="button" class="bk-ico-btn" data-act="pay" data-id="' + b.id + '" aria-label="Payment"><i class="fas fa-rupee-sign"></i></button> ' +
-                rowMenu(b) + '</td></tr>';
+            var createdMeta = fmtCreatedMeta(b.created_at);
+            var travel = fmtTravelShort(b.start);
+            var initials = guestInitials(b.guest);
+            var pax = paxBadge(b);
+            var destSub = [];
+            if (b.nights > 0) destSub.push(b.nights + ' N');
+            if (b.tour_type) destSub.push(b.tour_type);
+            html += '<tr class="' + (highlightId && b.id === highlightId ? 'is-highlight' : '') + '" data-booking="' + b.id + '">' +
+                '<td class="col-bk-id">' +
+                '<button type="button" class="bk-id-cell" data-act="view" data-id="' + b.id + '" title="Preview booking">' +
+                '<span class="bk-id-uid">' + esc(b.code) + '</span>' +
+                (createdMeta ? '<span class="bk-id-meta"> | ' + esc(createdMeta) + '</span>' : '') +
+                '</button></td>' +
+                '<td class="col-bk-guest"><div class="bk-guest-wrap">' +
+                (initials ? '<span class="bk-guest-initials" aria-hidden="true">' + esc(initials) + '</span>' : '') +
+                '<span class="bk-guest-name" title="' + esc(b.guest || '') + '">' + esc(b.guest || '—') + '</span>' +
+                (pax ? '<span class="bk-pax-badge">' + esc(pax) + '</span>' : '') +
+                '</div></td>' +
+                '<td class="col-bk-dest"><span class="bk-dest-name">' + esc(b.destination || '—') + '</span>' +
+                (destSub.length ? '<div class="bk-dest-sub">' + esc(destSub.join(' · ')) + '</div>' : '') +
+                '</td>' +
+                '<td class="col-bk-date">' +
+                (travel
+                    ? '<span class="bk-date-badge"><i class="far fa-calendar"></i> ' + esc(travel) + '</span>'
+                    : '<span class="text-muted">—</span>') +
+                '</td>' +
+                '<td class="col-bk-svc">' + servicesHtml(b) + '</td>' +
+                '<td class="col-bk-stage">' + stageSelectHtml(b) + '</td>' +
+                '<td class="col-bk-status">' + payStatusPill(b.customer_pay) + '</td>' +
+                '<td class="col-bk-actions">' + rowActions(b) + '</td></tr>';
         });
         html += '</tbody></table></div>';
         $('#bkBody').html(html);
@@ -582,23 +950,6 @@ $boot = json_encode([
         $('#bkPages').html(buttons);
         $('#bkCount').text(total ? ('Showing ' + (start + 1) + ' to ' + (start + shown) + ' of ' + total) : 'Showing 0');
     }
-    function renderSide() {
-        var list = filtered().filter(function (b) { return b.phase !== 'cancelled'; });
-        var field = state.side === 'supplier' ? 'supplier_balance' : 'customer_balance';
-        var due = list.filter(function (b) { return b[field] > 0; }).sort(function (a, b) {
-            return String(a.start || '9999').localeCompare(String(b.start || '9999'));
-        }).slice(0, 6);
-        $('#bkDue').html(due.length ? due.map(function (b) {
-            var who = state.side === 'supplier' ? ((b.suppliers || [])[0] || 'Supplier') : (b.guest || 'Customer');
-            return '<div class="bk-mini"><div><b>' + esc(money(b[field])) + '</b><div class="bk-muted">' + esc(who) + ' · ' + esc(b.code) + '</div></div><div class="bk-muted">' + esc(b.start ? fmt(b.start) : '') + '</div></div>';
-        }).join('') : '<div class="bk-empty">No outstanding payments in this view.</div>');
-        var ids = {};
-        filtered().forEach(function (b) { ids[b.id] = true; });
-        var activity = (boot.activity || []).filter(function (a) { return !a.quotation_id || ids[a.quotation_id]; }).slice(0, 8);
-        $('#bkActivity').html(activity.length ? activity.map(function (a) {
-            return '<div class="bk-mini"><span class="bk-photo"><i class="fas fa-bell"></i></span><div><b>' + esc(a.title) + '</b><div class="bk-muted">' + esc(a.detail || '') + ' · ' + esc(fmt(String(a.at || '').slice(0, 10))) + '</div></div></div>';
-        }).join('') : '<div class="bk-empty">No recent activity for these bookings.</div>');
-    }
     function placeHighlight() {
         if (!highlightId || !byId(highlightId)) return;
         state.tab = 'all';
@@ -619,7 +970,7 @@ $boot = json_encode([
             try { el.scrollIntoView({ block: 'center' }); } catch (err) { el.scrollIntoView(); }
         }, 60);
     }
-    function render() { renderStats(); renderCharts(); renderTable(); renderSide(); scrollHighlight(); }
+    function render() { renderStats(); renderCharts(); renderTable(); scrollHighlight(); }
     function openView(b) {
         var services = (b.services || []).map(function (s) {
             return '<div class="bk-kv"><span>' + esc(s.label) + (s.supplier ? ' · ' + esc(s.supplier) : '') + '</span><b>' + esc(money(s.paid)) + ' / ' + esc(money(s.total)) + '</b></div>';
@@ -670,8 +1021,25 @@ $boot = json_encode([
         var id = parseInt($(this).data('id'), 10);
         var b = byId(id);
         var act = $(this).data('act');
-        $('.bk-pop').removeClass('is-open');
+        closeBkActionsMenus();
         if (!b) return;
+        if (act === 'confirm') {
+            if (window.CrmConfirmTour && typeof window.CrmConfirmTour.open === 'function') {
+                window.CrmConfirmTour.open(b.id, $(this).closest('tr'));
+            } else {
+                var $book = $(this).closest('tr').find('.js-q-book').first();
+                if ($book.length) $book.trigger('click');
+            }
+            return;
+        }
+        if (act === 'preview') {
+            if (window.CrmQuotationPreview && typeof window.CrmQuotationPreview.open === 'function') {
+                window.CrmQuotationPreview.open(b.id, 'crm/quotation_generator.php?id=' + b.id);
+            } else {
+                $(this).closest('tr').find('.js-lead-q-preview').first().trigger('click');
+            }
+            return;
+        }
         if (act === 'view') openView(b);
         if (act === 'pay') openPay(b);
         if (act === 'edit' || act === 'itinerary' || act === 'flights') window.location.href = 'crm/quotation_generator.php?id=' + b.id;
@@ -679,16 +1047,63 @@ $boot = json_encode([
         if (act === 'cancel' && window.confirm('Mark this booking cancelled? The quotation, hotels, and payments stay as they are.')) postStatus('cancel', b.id);
         if (act === 'restore' && window.confirm('Restore this booking to the active list?')) postStatus('restore', b.id);
     });
+    $(document).on('change', '.js-lead-stage-select', function () {
+        var $sel = $(this);
+        var leadId = Number($sel.attr('data-lead-id') || 0);
+        var bookingId = Number($sel.attr('data-booking-id') || 0);
+        var stage = String($sel.val() || '');
+        var previousStage = String($sel.attr('data-stage') || '');
+        if (!leadId || !stage || stage === previousStage) {
+            return;
+        }
+        $sel.prop('disabled', true);
+        $.post('crm/ajax/update_lead_stage.php', { lead_id: leadId, stage: stage }, function (res) {
+            if (res && res.success) {
+                var nextStage = String(res.stage || stage);
+                $sel.attr('data-stage', nextStage);
+                $sel.removeClass('stage-new_lead stage-quoted stage-confirmed stage-lost');
+                $sel.addClass('stage-' + nextStage);
+                var isAuto = res.stage_is_auto !== false && nextStage !== 'lost';
+                $sel.attr('data-stage-auto', isAuto ? '1' : '0');
+                $sel.find('option').each(function () {
+                    var val = String($(this).val() || '');
+                    $(this).prop('disabled', nextStage !== 'lost' && val !== 'lost');
+                });
+                var row = byId(bookingId);
+                if (row) row.stage = nextStage;
+            } else {
+                window.alert((res && res.message) ? res.message : 'Could not update stage.');
+                $sel.val(previousStage);
+            }
+        }, 'json').fail(function () {
+            window.alert('Could not update stage. Please try again.');
+            $sel.val(previousStage);
+        }).always(function () {
+            $sel.prop('disabled', false);
+        });
+    });
+    function closeBkActionsMenus() {
+        $('.bk-actions-menu').removeClass('is-open').css({ top: '', left: '' });
+        $('.bk-more').attr('aria-expanded', 'false');
+        $('#bkBody tr').removeClass('is-actions-dropdown-open');
+    }
     $(document).on('click', '.bk-more', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        var $pop = $(this).siblings('.bk-pop');
-        var open = $pop.hasClass('is-open');
-        $('.bk-pop').removeClass('is-open');
-        if (!open) {
-            var rect = this.getBoundingClientRect();
-            $pop.css({ top: rect.bottom + 4, left: Math.max(8, rect.right - 190) }).addClass('is-open');
+        var $btn = $(this);
+        var $menu = $btn.siblings('.bk-actions-menu');
+        var open = $menu.hasClass('is-open');
+        closeBkActionsMenus();
+        if (open) {
+            return;
         }
+        var rect = this.getBoundingClientRect();
+        var width = 190;
+        var left = Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8);
+        var top = rect.bottom + 4;
+        $menu.css({ top: top + 'px', left: left + 'px' }).addClass('is-open');
+        $btn.attr('aria-expanded', 'true');
+        $btn.closest('tr').addClass('is-actions-dropdown-open');
     });
     $('#bkPayForm').on('submit', function (e) {
         e.preventDefault();
@@ -729,24 +1144,16 @@ $boot = json_encode([
         $(this).addClass('is-on');
         renderTable();
     });
-    $('#bkViewUpcoming').on('click', function () {
-        state.tab = 'upcoming';
-        state.page = 1;
-        $('#bkTabs button').removeClass('is-on');
-        $('#bkTabs button[data-tab="upcoming"]').addClass('is-on');
-        renderTable();
-    });
-    $('.bk-toggle').on('click', 'button', function () {
-        state.side = $(this).data('side');
-        $('.bk-toggle button').removeClass('is-on');
-        $(this).addClass('is-on');
-        renderSide();
-    });
     $('#bkSize').on('change', function () { state.size = parseInt(this.value, 10) || 10; state.page = 1; renderTable(); });
     $(document).on('click', '#bkPages [data-page]', function () { state.page = parseInt($(this).data('page'), 10) || 1; renderTable(); });
-    $(document).on('click', function () { $('.bk-pop').removeClass('is-open'); });
+    $(document).on('click', function () { closeBkActionsMenus(); });
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeBkActionsMenus();
+        }
+    });
     $('#bkExport').on('click', function () {
-        var list = state.tab === 'all' || state.tab === 'upcoming' || state.tab === 'ongoing' || state.tab === 'completed' || state.tab === 'cancelled' || state.tab === 'timeline' ? tabbed(filtered()) : filtered();
+        var list = state.tab === 'all' || state.tab === 'upcoming' || state.tab === 'ongoing' || state.tab === 'completed' || state.tab === 'timeline' ? tabbed(filtered()) : filtered();
         var head = ['Booking ID', 'Lead', 'Customer', 'Phone', 'Destination', 'Travel start', 'Travel end', 'Pax', 'Tour type', 'Total', 'Customer paid', 'Customer balance', 'Supplier paid', 'Supplier balance', 'Status'];
         var body = list.map(function (b) {
             return [b.code, b.lead_uid, b.guest, b.phone, b.destination, b.start, b.end, b.pax, b.tour_type, b.total, b.customer_paid, b.customer_balance, b.supplier_paid, b.supplier_balance, b.status];
@@ -763,6 +1170,17 @@ $boot = json_encode([
     });
     placeHighlight();
     render();
+})(jQuery);
+</script>
+<script src="crm/assets/quotation_confirm_tour.js?v=48"></script>
+<script src="crm/assets/quotation_preview_modal.js?v=1"></script>
+<script>
+(function ($) {
+    // Keep shared modals on body so Bootstrap shows them above AdminLTE chrome / iframe layout.
+    $(function () {
+        $('#confirmTourModal, #askConfirmTourPopup, #tourConfirmedPopup, #ctTravellerModal, #ctPaxDocsModal, #leadQuotationPreviewModal')
+            .appendTo('body');
+    });
 })(jQuery);
 </script>
 </body>

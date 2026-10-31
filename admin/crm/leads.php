@@ -5385,6 +5385,22 @@ foreach ($destinationLookup as $destId => $destName) {
             </div>
         </div>
 
+        <div class="modal fade" id="askConfirmTourPopup" tabindex="-1" role="dialog" aria-labelledby="askConfirmTourPopupLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px;">
+                <div class="modal-content" style="border: 0; border-radius: 16px; overflow: hidden;">
+                    <div class="modal-body text-center" style="padding: 1.6rem 1.4rem 1.3rem;">
+                        <div style="width: 58px; height: 58px; margin: 0 auto 0.8rem; border-radius: 50%; background: #fff1f2; color: #e11d48; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                            <i class="fas fa-suitcase-rolling"></i>
+                        </div>
+                        <h5 class="mb-2" id="askConfirmTourPopupLabel" style="font-weight: 800;">Confirm Tour</h5>
+                        <p class="text-muted mb-3" style="font-size: 0.92rem;">Do you want to confirm this tour?</p>
+                        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal" id="askConfirmTourNo" style="min-width: 110px; border-radius: 10px; font-weight: 700;">No</button>
+                        <button type="button" class="btn btn-danger ml-2" id="askConfirmTourYes" style="min-width: 110px; border-radius: 10px; font-weight: 700; background: #e11d48; border-color: #e11d48;">Yes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="modal fade" id="tourConfirmedPopup" tabindex="-1" role="dialog" aria-labelledby="tourConfirmedPopupLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px;">
                 <div class="modal-content" style="border: 0; border-radius: 16px; overflow: hidden;">
@@ -8507,7 +8523,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=46"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=47"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {

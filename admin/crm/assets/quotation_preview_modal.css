@@ -1,0 +1,129 @@
+﻿        #leadQuotationPreviewModal .modal-dialog {
+            width: 210mm;
+            max-width: min(210mm, calc(100vw - 24px));
+            height: auto;
+            max-height: calc(100vh - 2rem);
+            margin: 1rem auto;
+        }
+        #leadQuotationPreviewModal .qp-modal-content {
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-height: calc(100vh - 2rem);
+        }
+        #leadQuotationPreviewModal .qp-modal-header {
+            background: #c4121a;
+            color: #fff;
+            border-bottom: none;
+            padding: 12px 18px;
+            align-items: center;
+            flex: 0 0 auto;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        #leadQuotationPreviewModal .qp-modal-header .modal-title,
+        #leadQuotationPreviewModal .qp-modal-header .modal-title i,
+        #leadQuotationPreviewModal .qp-modal-header .qp-modal-hint,
+        #leadQuotationPreviewModal .qp-modal-header .close,
+        #leadQuotationPreviewModal .qp-modal-header .close span {
+            color: #fff !important;
+            text-shadow: none;
+        }
+        #leadQuotationPreviewModal .qp-modal-header .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        #leadQuotationPreviewModal .qp-modal-hint {
+            display: block;
+            color: #fff !important;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+        #leadQuotationPreviewModal .qp-modal-unsaved {
+            color: #ffe08a !important;
+        }
+        #leadQuotationPreviewModal .qp-modal-close {
+            color: #fff;
+            text-shadow: none;
+            opacity: 0.9;
+        }
+        #leadQuotationPreviewModal .modal-body {
+            padding: 6px 6px 8px;
+            background: #dfe3e8;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+            height: calc(100vh - 10rem);
+            max-height: calc(100vh - 10rem);
+        }
+        #leadQuotationPreviewModal .lead-q-preview-frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: #fff;
+            position: absolute;
+            inset: 0;
+        }
+        #leadQuotationPreviewModal .lead-q-preview-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            inset: 0;
+            color: #64748b;
+            font-weight: 600;
+            gap: 0.6rem;
+            background: #fff;
+            z-index: 2;
+        }
+        #leadQuotationPreviewModal .qp-modal-footer {
+            background: #fff;
+            border-top: 1px solid #e8e8ea;
+            padding: 12px 16px;
+            justify-content: flex-end;
+            gap: 8px;
+            flex: 0 0 auto;
+        }
+        #leadQuotationPreviewModal .qp-btn-close {
+            border: 1.5px solid #c4121a;
+            color: #c4121a;
+            background: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+        #leadQuotationPreviewModal .qp-btn-close:hover {
+            background: #fff5f5;
+            color: #a10e15;
+            border-color: #a10e15;
+        }
+        #leadQuotationPreviewModal .qp-btn-edit {
+            background: #c4121a;
+            border-color: #c4121a;
+            color: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+        #leadQuotationPreviewModal .qp-btn-edit:hover {
+            background: #a10e15;
+            border-color: #a10e15;
+            color: #fff;
+        }
+        #leadQuotationPreviewModal .qp-btn-print {
+            background: transparent;
+            border: 1px solid #c5c5c8;
+            color: #555;
+            font-weight: 500;
+            padding: 6px 14px;
+        }
+        #leadQuotationPreviewModal .qp-btn-print:hover {
+            background: #f5f5f5;
+            color: #333;
+            border-color: #b0b0b3;
+        }

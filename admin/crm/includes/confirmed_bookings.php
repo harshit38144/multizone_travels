@@ -8,6 +8,7 @@
 require_once __DIR__ . '/quotation_db.php';
 require_once __DIR__ . '/customer_payments.php';
 require_once __DIR__ . '/service_payments.php';
+require_once __DIR__ . '/lead_db.php';
 
 function cbEnsureTable(mysqli $conn): void
 {
@@ -209,7 +210,7 @@ function cbList(mysqli $conn): array
                    q.`destination`, q.`tentative_date`, q.`no_of_nights`, q.`no_of_adults`, q.`no_of_children`,
                    q.`no_of_infants`, q.`package_total`, q.`quotation_total`, q.`cost_sheet_json`,
                    q.`hotels_json`, q.`flights_json`, q.`tour_confirm_json`, q.`created_at`,
-                   l.`lead_uid`, l.`customer_name`, l.`services`
+                   l.`lead_uid`, l.`customer_name`, l.`services`, l.`stage` AS `lead_stage`
             FROM `crm_quotations` q
             LEFT JOIN `crm_leads` l ON l.`id` = q.`lead_id`
             WHERE q.`tour_confirmed` = 1
@@ -318,6 +319,11 @@ function cbList(mysqli $conn): array
             'upcoming' => 'Confirmed',
             'confirmed' => 'Confirmed',
         ][$phase] ?? 'Confirmed';
+        // Lead Stage column matches leads.php (Confirmed), not travel phase (Completed).
+        $leadStage = crmLeadNormalizeStage((string) ($quote['lead_stage'] ?? 'confirmed'));
+        if ($leadStage !== 'lost') {
+            $leadStage = 'confirmed';
+        }
 
         $bookings[] = [
             'id' => $qid,
@@ -347,6 +353,7 @@ function cbList(mysqli $conn): array
             'suppliers' => $supplierNames,
             'phase' => $phase,
             'status' => $statusLabel,
+            'stage' => $leadStage,
             'created_at' => (string) ($quote['created_at'] ?? ''),
             'hotel_count' => $hotelCount,
             'flight_count' => $flightCount,

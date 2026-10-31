@@ -1717,7 +1717,7 @@
             if (preferSelect && preferSelect.$el && preferSelect.$el[0] === $sel[0] && preferSelect.id) {
                 $sel.val(String(preferSelect.id));
             }
-            qInitSupplierSelect2($sel, { placeholder: 'Select supplier' });
+            qInitSupplierSelect2($sel, { placeholder: 'Select' });
             $sel.data('prevSupplierVal', $sel.val() || '');
         });
     }
@@ -1732,21 +1732,23 @@
             rate = '';
         }
         return '' +
-            '<tr class="q-itin-supplier-row">' +
-            '<td class="q-itin-sup-idx">1</td>' +
-            '<td>' +
+            '<div class="q-itin-supplier-row">' +
+            '<div class="q-itin-comm-field q-itin-comm-field-rate">' +
+            '<div class="q-itin-rate-box">' +
+            '<span class="q-itin-rate-prefix" aria-hidden="true">₹</span>' +
+            '<input type="number" min="0" step="1" inputmode="numeric" class="form-control q-itin-rate" value="' + esc(rate) + '" placeholder="0">' +
+            '</div></div>' +
+            '<div class="q-itin-comm-field q-itin-comm-field-supplier">' +
             '<select class="form-control form-control-sm q-itin-supplier">' +
-            hotelSupplierOptionsHtml(data.supplier_id, data.supplier || data.supplier_name, { allowCreate: true }) +
-            '</select>' +
-            '</td>' +
-            '<td>' +
-            '<input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm q-itin-rate" value="' + esc(rate) + '" placeholder="0">' +
-            '</td>' +
-            '<td>' +
-            '<button type="button" class="btn btn-sm q-itin-supplier-remove" title="Remove supplier rate">' +
+            hotelSupplierOptionsHtml(data.supplier_id, data.supplier || data.supplier_name, { allowCreate: true, emptyLabel: 'Select' }) +
+            '</select></div>' +
+            '<div class="q-itin-comm-field q-itin-comm-field-action">' +
+            '<button type="button" class="btn q-itin-supplier-more" title="More options" aria-label="More options">' +
+            '<i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>' +
+            '<button type="button" class="btn q-itin-supplier-remove" title="Remove supplier rate" aria-label="Remove supplier rate">' +
             '<i class="fas fa-trash-alt"></i></button>' +
-            '</td>' +
-            '</tr>';
+            '</div>' +
+            '</div>';
     }
 
     function ensureItinerarySupplierRows() {
@@ -1764,10 +1766,8 @@
     function refreshItinerarySupplierRemoveState() {
         var $rows = $('#qItinerarySupplierRows .q-itin-supplier-row');
         var canRemove = $rows.length > 1;
-        $rows.each(function (i) {
-            var $row = $(this);
-            $row.find('.q-itin-sup-idx').text(String(i + 1));
-            $row.find('.q-itin-supplier-remove').prop('disabled', !canRemove).toggle(canRemove);
+        $rows.each(function () {
+            $(this).find('.q-itin-supplier-remove').prop('disabled', !canRemove);
         });
     }
 
@@ -1778,7 +1778,7 @@
         }
         var $row = $(itinerarySupplierRowHtml(data || {}));
         $wrap.append($row);
-        qInitSupplierSelect2($row.find('.q-itin-supplier'), { placeholder: 'Select supplier' });
+        qInitSupplierSelect2($row.find('.q-itin-supplier'), { placeholder: 'Select' });
         $row.find('.q-itin-supplier').data('prevSupplierVal', $row.find('.q-itin-supplier').val() || '');
         refreshItinerarySupplierRemoveState();
         return $row;
@@ -3888,7 +3888,16 @@
                     updateDayCharCount($ta.closest('.q-day-card'));
                 },
                 onChange: function () {
-                    updateDayCharCount($ta.closest('.q-day-card'));
+                    var $card = $ta.closest('.q-day-card');
+                    updateDayCharCount($card);
+                    var html = readSummernoteHtml($ta);
+                    var parsed = parseDayMetaFromDescription(html);
+                    if (/data-q-day-overnight|<(?:p|div)[^>]*>[\s\S]*?Overnight(?:\s+Stay)?\s*:/i.test(html)) {
+                        $card.find('.q-day-overnight').val(parsed.overnight);
+                    }
+                    if (/data-q-day-meal|<(?:p|div)[^>]*>[\s\S]*?Meals?\s*:/i.test(html)) {
+                        $card.find('.q-day-meal').val(parsed.meal);
+                    }
                     scheduleSyncReturnAirfareInclusion(true);
                 }
             };
@@ -4068,20 +4077,97 @@
         $card.find('.q-day-char-count').text(len + ' / ' + max);
     }
 
-    function syncDayMetaDisplay($card) {
+    function stripDayMetaFromDescription(html) {
+        html = String(html || '');
+        html = html.replace(/<(p|div)([^>]*)\sdata-q-day-overnight(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
+        html = html.replace(/<(p|div)([^>]*)\sdata-q-day-meal(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
+        html = html.replace(/<(p|div)(?:\s[^>]*)?>\s*(?:<(?:strong|b|span)(?:\s[^>]*)?>\s*)?Overnight(?:\s+Stay)?\s*:[\s\S]*?<\/\1>/gi, '');
+        html = html.replace(/<(p|div)(?:\s[^>]*)?>\s*(?:<(?:strong|b|span)(?:\s[^>]*)?>\s*)?Meals?\s*:[\s\S]*?<\/\1>/gi, '');
+        html = html.replace(/(?:\s*<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+$/i, '');
+        return html;
+    }
+
+    function buildDayMetaBlocksHtml(overnight, meal) {
+        var html = '';
+        overnight = String(overnight || '').trim();
+        meal = String(meal || '').trim();
+        if (overnight) {
+            html += '<p data-q-day-overnight="1"><strong>Overnight Stay:</strong> ' + esc(overnight) + '</p>';
+        }
+        if (meal) {
+            html += '<p data-q-day-meal="1"><strong>Meal:</strong> ' + esc(meal) + '</p>';
+        }
+        return html;
+    }
+
+    function parseDayMetaFromDescription(html) {
+        html = String(html || '');
+        var overnight = '';
+        var meal = '';
+        var om = html.match(/<(?:p|div)[^>]*data-q-day-overnight[^>]*>[\s\S]*?(?:<(?:strong|b|span)[^>]*>\s*Overnight(?:\s+Stay)?\s*:?\s*<\/(?:strong|b|span)>\s*)?([^<]+)/i)
+            || html.match(/<(?:p|div)(?:\s[^>]*)?>\s*(?:<(?:strong|b|span)[^>]*>\s*)?Overnight(?:\s+Stay)?\s*:?\s*(?:<\/(?:strong|b|span)>\s*)?([^<]+)/i);
+        if (om && om[1]) {
+            overnight = String(om[1]).replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        var mm = html.match(/<(?:p|div)[^>]*data-q-day-meal[^>]*>[\s\S]*?(?:<(?:strong|b|span)[^>]*>\s*Meals?\s*:?\s*<\/(?:strong|b|span)>\s*)?([^<]+)/i)
+            || html.match(/<(?:p|div)(?:\s[^>]*)?>\s*(?:<(?:strong|b|span)[^>]*>\s*)?Meals?\s*:?\s*(?:<\/(?:strong|b|span)>\s*)?([^<]+)/i);
+        if (mm && mm[1]) {
+            meal = String(mm[1]).replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        return { overnight: overnight, meal: meal };
+    }
+
+    function isDayEditorFocused($card) {
         if (!$card || !$card.length) {
+            return false;
+        }
+        var active = document.activeElement;
+        if (!active) {
+            return false;
+        }
+        var $ta = $card.find('.q-day-textarea');
+        if ($ta.length && $ta[0] === active) {
+            return true;
+        }
+        var $editable = $ta.next('.note-editor').find('.note-editable');
+        if ($editable.length && ($editable[0] === active || $editable[0].contains(active))) {
+            return true;
+        }
+        return false;
+    }
+
+    function syncDayMetaIntoEditor($card, force) {
+        if (!$card || !$card.length) {
+            return;
+        }
+        if (!force && isDayEditorFocused($card)) {
             return;
         }
         var overnight = ($card.find('.q-day-overnight').val() || '').trim();
         var meal = ($card.find('.q-day-meal').val() || '').trim();
-        var $overnightVal = $card.find('.q-day-meta-card[data-meta="overnight"] .q-day-meta-value');
-        var $mealVal = $card.find('.q-day-meta-card[data-meta="meal"] .q-day-meta-value');
-        if (!$overnightVal.hasClass('is-editing')) {
-            $overnightVal.text(overnight || '—').toggleClass('is-empty', !overnight);
+        var $ta = $card.find('.q-day-textarea');
+        if (!$ta.length) {
+            return;
         }
-        if (!$mealVal.hasClass('is-editing')) {
-            $mealVal.text(meal || '—').toggleClass('is-empty', !meal);
+        var current = readSummernoteHtml($ta);
+        var cleaned = stripDayMetaFromDescription(current);
+        var next = cleaned + buildDayMetaBlocksHtml(overnight, meal);
+        var norm = function (h) {
+            return String(h || '').replace(/\s+/g, ' ').trim();
+        };
+        if (norm(next) === norm(current)) {
+            return;
         }
+        if ($.fn.summernote && $ta.data('summernote')) {
+            $ta.summernote('code', next || '<p><br></p>');
+        } else {
+            $ta.val(next);
+        }
+        updateDayCharCount($card);
+    }
+
+    function syncDayMetaDisplay($card) {
+        syncDayMetaIntoEditor($card, true);
     }
 
     var itineraryHotelMetaTimer = null;
@@ -4253,7 +4339,7 @@
         var byDay = buildItineraryHotelMetaByDay($cards.length);
         $cards.each(function () {
             var $card = $(this);
-            if ($card.find('.q-day-meta-value.is-editing').length) {
+            if (isDayEditorFocused($card)) {
                 return;
             }
             var idx = parseInt($card.attr('data-day-index'), 10);
@@ -4263,7 +4349,7 @@
             var meta = byDay[idx] || { overnight: '', meal: '' };
             $card.find('.q-day-overnight').val(meta.overnight || '');
             $card.find('.q-day-meal').val(meta.meal || '');
-            syncDayMetaDisplay($card);
+            syncDayMetaIntoEditor($card, true);
         });
         itineraryPreserveSeed = snapshotItinerary();
         scheduleSyncReturnAirfareInclusion();
@@ -4324,22 +4410,28 @@
     }
 
     function fmtItineraryDayHeading(baseDate, offset, dayNum) {
+        var dayLabel = 'Day ' + dayNum;
         if (!baseDate) {
-            return 'Day ' + dayNum;
+            return dayLabel;
         }
         var iso = normalizeLegacyDateInput(baseDate);
         if (!iso) {
-            return 'Day ' + dayNum;
+            return dayLabel;
         }
         var d = new Date(iso + 'T00:00:00');
         if (isNaN(d.getTime())) {
-            return 'Day ' + dayNum;
+            return dayLabel;
         }
         d.setDate(d.getDate() + offset);
         var dd = String(d.getDate()).padStart(2, '0');
         var mm = String(d.getMonth() + 1).padStart(2, '0');
         var yyyy = d.getFullYear();
-        return dd + '/' + mm + '/' + yyyy + ' | ' + DAY_NAMES[d.getDay()] + ' – Day ' + dayNum;
+        return dayLabel + ' | ' + DAY_NAMES[d.getDay()] + ' | ' + dd + '/' + mm + '/' + yyyy;
+    }
+
+    function fmtItineraryDayHeadingHtml(baseDate, offset, dayNum) {
+        var heading = fmtItineraryDayHeading(baseDate, offset, dayNum);
+        return String(heading || '').replace(/^(Day\s+\d+)/i, '<strong class="q-day-head-day">$1</strong>');
     }
 
     function getItineraryDestinationLabel() {
@@ -4466,7 +4558,7 @@
             }
             var supplierId = parseInt(supplierVal, 10) || 0;
             var supplierName = $.trim($sel.find('option:selected').attr('data-name') || $sel.find('option:selected').text() || '');
-            if (!supplierId || supplierName.indexOf('Create new') === 0 || supplierName === 'Select supplier') {
+            if (!supplierId || supplierName.indexOf('Create new') === 0 || supplierName === 'Select supplier' || supplierName === 'Select') {
                 supplierName = '';
                 supplierId = 0;
             }
@@ -4593,12 +4685,17 @@
                     }
                 }
             }
+            var parsedMeta = parseDayMetaFromDescription(html);
+            var overnightVal = parsedMeta.overnight || ($c.find('.q-day-overnight').val() || '').trim();
+            var mealVal = parsedMeta.meal || ($c.find('.q-day-meal').val() || '').trim();
+            $c.find('.q-day-overnight').val(overnightVal);
+            $c.find('.q-day-meal').val(mealVal);
             data.push({
                 title: $c.find('.q-day-title').val() || '',
                 description: html,
                 image: imageVal,
-                overnight: ($c.find('.q-day-overnight').val() || '').trim(),
-                meal: ($c.find('.q-day-meal').val() || '').trim(),
+                overnight: overnightVal,
+                meal: mealVal,
                 tours: normalizeDayServiceMode($c.find('.q-day-tours').val()),
                 transfers: normalizeDayServiceMode($c.find('.q-day-transfers').val())
             });
@@ -4683,7 +4780,7 @@
             var prev = normalizeItineraryDay(existing[i] || {});
             var overnightVal = prev.overnight || inferDayOvernightValue(prev, destLabel);
             var mealVal = prev.meal || inferDayMealValue(prev);
-            var heading = fmtItineraryDayHeading(baseDate, i, i + 1);
+            var headingHtml = fmtItineraryDayHeadingHtml(baseDate, i, i + 1);
             var imgVal = prev.image || '';
             var imgCountLabel = imgVal ? '1 Image' : '0 Image';
             var dayMenuItems = '<a class="dropdown-item q-view-full-itinerary" href="#"><i class="fas fa-list-ul mr-2"></i>View full itinerary</a>' +
@@ -4750,38 +4847,14 @@
                 '</div>' +
                 '</div>' +
                 '</div>' +
-                '<div class="q-day-meta-row">' +
-                '<div class="q-day-meta-card" data-meta="overnight">' +
-                '<div class="q-day-meta-icon"><i class="fas fa-bed"></i></div>' +
-                '<div class="q-day-meta-text">' +
-                '<span class="q-day-meta-label">Overnight Stay</span>' +
-                '<span class="q-day-meta-value" contenteditable="true" spellcheck="false" role="textbox" tabindex="0"></span>' +
                 '<input type="hidden" class="q-day-overnight">' +
-                '</div>' +
-                '<div class="q-day-meta-actions">' +
-                '<button type="button" class="btn q-day-meta-edit"><i class="fas fa-pen"></i> Edit</button>' +
-                '<button type="button" class="btn q-day-meta-remove"><i class="fas fa-trash-alt"></i> Remove</button>' +
-                '</div>' +
-                '</div>' +
-                '<div class="q-day-meta-card" data-meta="meal">' +
-                '<div class="q-day-meta-icon"><i class="fas fa-utensils"></i></div>' +
-                '<div class="q-day-meta-text">' +
-                '<span class="q-day-meta-label">Meal</span>' +
-                '<span class="q-day-meta-value" contenteditable="true" spellcheck="false" role="textbox" tabindex="0"></span>' +
                 '<input type="hidden" class="q-day-meal">' +
-                '</div>' +
-                '<div class="q-day-meta-actions">' +
-                '<button type="button" class="btn q-day-meta-edit"><i class="fas fa-pen"></i> Edit</button>' +
-                '<button type="button" class="btn q-day-meta-remove"><i class="fas fa-trash-alt"></i> Remove</button>' +
-                '</div>' +
-                '</div>' +
-                '</div>' +
                 '<input type="hidden" class="q-day-image">' +
                 '<input type="hidden" class="q-day-tours" value="' + esc(toursVal) + '">' +
                 '<input type="hidden" class="q-day-transfers" value="' + esc(transfersVal) + '">' +
                 '</div></div>'
             );
-            $card.find('.q-day-head-label').text(heading);
+            $card.find('.q-day-head-label').html(headingHtml);
             $card.find('.q-day-head-sub').text(destLabel || 'Destination');
             $card.find('.q-day-title').val(prev.title || '');
             $card.find('.q-day-textarea').attr('id', editorId).val(prev.description || '');
@@ -5981,7 +6054,9 @@
         days.forEach(function (day, i) {
             day = normalizeItineraryDay(day || {});
             var heading = fmtItineraryDayHeading(baseDate, i, i + 1);
-            var dateOnly = heading.indexOf('–') >= 0 ? heading.split('–')[0].trim() : heading;
+            var dateOnly = heading.indexOf('|') >= 0
+                ? heading.replace(/^Day\s+\d+\s*\|\s*/i, '').trim()
+                : heading;
             var title = (day.title || '').trim() || ('Day ' + (i + 1));
             var desc = stripHtmlText(day.description || '');
             if (desc.length > 180) {
@@ -6094,62 +6169,6 @@
             $('#qFullItineraryModal').modal('hide');
             expandWizardSection(4);
             showItineraryDay(idx, { scroll: true });
-        });
-
-        $(document).on('click', '.q-day-meta-edit', function (e) {
-            e.preventDefault();
-            beginDayMetaEdit($(this).closest('.q-day-meta-card'));
-        });
-
-        $(document).on('focus', '.q-day-meta-value', function () {
-            var $el = $(this);
-            $el.addClass('is-editing');
-            var text = ($el.text() || '').trim();
-            if (text === '—' || text === '-' || text === '–') {
-                try {
-                    var range = document.createRange();
-                    range.selectNodeContents(this);
-                    var sel = window.getSelection();
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                } catch (e) { /* ignore */ }
-            }
-        });
-
-        $(document).on('blur', '.q-day-meta-value', function () {
-            commitDayMetaValue($(this));
-        });
-
-        $(document).on('keydown', '.q-day-meta-value', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                $(this).blur();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                var $el = $(this);
-                var $card = $el.closest('.q-day-card');
-                var kind = $el.closest('.q-day-meta-card').attr('data-meta');
-                var original = kind === 'meal'
-                    ? ($card.find('.q-day-meal').val() || '')
-                    : ($card.find('.q-day-overnight').val() || '');
-                $el.removeClass('is-editing').text(original.trim() || '—').toggleClass('is-empty', !original.trim());
-                $el.blur();
-            }
-        });
-
-        $(document).on('click', '.q-day-meta-remove', function (e) {
-            e.preventDefault();
-            var $card = $(this).closest('.q-day-card');
-            var $meta = $(this).closest('.q-day-meta-card');
-            var kind = $meta.attr('data-meta');
-            if (kind === 'meal') {
-                $card.find('.q-day-meal').val('');
-            } else {
-                $card.find('.q-day-overnight').val('');
-            }
-            $meta.find('.q-day-meta-value').removeClass('is-editing');
-            syncDayMetaDisplay($card);
-            itineraryPreserveSeed = snapshotItinerary();
         });
 
         $(document).on('change input', '[name=destination]', function () {

@@ -1,0 +1,810 @@
+﻿        /* Confirm Tour modal (Book from leads actions) */
+        #confirmTourModal .modal-title {
+            color: #64748b;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        #confirmTourModal .ct-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 0.2rem;
+        }
+
+        #confirmTourModal .ct-subtitle {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.15rem;
+        }
+
+        #confirmTourModal .ct-modal-header {
+            align-items: flex-start;
+        }
+
+        #confirmTourModal .ct-confirm-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.92fr);
+            gap: 1rem;
+            align-items: stretch;
+            margin-bottom: 1.15rem;
+        }
+
+        #confirmTourModal .ct-primary-card,
+        #confirmTourModal .ct-pay-summary {
+            background: #fff;
+            border: 1px solid #e8edf3;
+            border-radius: 16px;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+        }
+
+        #confirmTourModal .ct-primary-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 0;
+            padding: 0.5rem 0.5rem 0.5rem;
+            margin-bottom: 0;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-primary-head {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-primary-avatar {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #ff2d55;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: 0.02em;
+            flex: 0 0 58px;
+        }
+
+        #confirmTourModal .ct-primary-identity {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-primary-line {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.4rem 0.65rem;
+        }
+
+        #confirmTourModal .ct-primary-name {
+            font-size: 1.12rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-primary-badge {
+            display: inline-flex;
+            align-items: center;
+            margin: 0;
+            padding: 0.16rem 0.62rem;
+            border-radius: 999px;
+            background: #ffe4ea;
+            color: #ff2d55;
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        #confirmTourModal .ct-primary-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem 1.25rem;
+            margin-top: 0.32rem;
+            color: #64748b;
+            font-size: 0.86rem;
+        }
+
+        #confirmTourModal .ct-primary-meta i {
+            color: #ff2d55;
+            margin-right: 0.32rem;
+            font-size: 0.78rem;
+        }
+
+        #confirmTourModal .ct-primary-stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.55rem 0.75rem;
+            margin-top: 0.95rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid #e6e8ec;
+        }
+
+        #confirmTourModal .ct-pstat {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-pstat-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #fff1f3;
+            color: #ff2d55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 38px;
+            font-size: 0.86rem;
+        }
+
+        #confirmTourModal .ct-pstat-label {
+            display: block;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            line-height: 1.15;
+        }
+
+        #confirmTourModal .ct-pstat-val {
+            display: block;
+            max-width: 140px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #confirmTourModal .ct-pay-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 1.05rem 1.15rem 1rem;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-pay-head {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        #confirmTourModal .ct-pay-head-icon {
+            width: 16px;
+            height: 16px;
+            color: #ff2d55;
+            display: inline-flex;
+            flex: 0 0 16px;
+        }
+
+        #confirmTourModal .ct-pay-head-icon svg {
+            display: block;
+            width: 16px;
+            height: 16px;
+        }
+
+        #confirmTourModal .ct-pay-figures {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        #confirmTourModal .ct-pay-fig {
+            min-width: 0;
+            padding: 0 0.75rem;
+            border-left: 1px solid #e2e8f0;
+        }
+
+        #confirmTourModal .ct-pay-fig:first-child {
+            padding-left: 0;
+            border-left: 0;
+        }
+
+        #confirmTourModal .ct-pay-label {
+            display: block;
+            margin-bottom: 0.12rem;
+            font-size: 0.74rem;
+            color: #94a3b8;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-pay-val {
+            display: block;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        #confirmTourModal .ct-pay-val.is-due {
+            color: #ff2d55;
+        }
+
+        #confirmTourModal .ct-pay-actions {
+            display: grid;
+            grid-template-columns: 1.15fr 1fr;
+            gap: 0.65rem;
+            margin-top: auto;
+        }
+
+        #confirmTourModal .ct-pay-add,
+        #confirmTourModal .ct-pay-schedule {
+            height: 42px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        #confirmTourModal .ct-pay-add {
+            border: 0;
+            background: #ff2d55;
+            color: #fff;
+        }
+
+        #confirmTourModal .ct-pay-add:hover {
+            background: #e11d48;
+            color: #fff;
+        }
+
+        #confirmTourModal .ct-pay-schedule {
+            border: 1.5px solid #fda4af;
+            background: #fff;
+            color: #ff2d55;
+        }
+
+        #confirmTourModal .ct-pay-schedule:hover {
+            background: #fff1f3;
+            color: #e11d48;
+        }
+
+        #confirmTourModal .ct-primary-edit {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.75rem;
+            margin-bottom: 0.85rem;
+            background: #f8fafc;
+        }
+
+        #confirmTourModal .ct-pax-section {
+            margin-bottom: 1.15rem;
+        }
+
+        #confirmTourModal .ct-pax-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        #confirmTourModal .ct-pax-head-main {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        #confirmTourModal .ct-pax-head-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #ffe4ea;
+            color: #ff2d55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 42px;
+            font-size: 0.95rem;
+        }
+
+        #confirmTourModal .ct-pax-title {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-pax-sub {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.12rem;
+        }
+
+        #confirmTourModal .ct-add-guest-btn {
+            background: #fff;
+            border: 1.5px solid #fda4af;
+            color: #ff2d55;
+            font-weight: 600;
+            border-radius: 10px;
+            white-space: nowrap;
+            padding: 0.4rem 0.85rem;
+        }
+
+        #confirmTourModal .ct-add-guest-btn:hover {
+            background: #fff1f3;
+            border-color: #fb7185;
+            color: #e11d48;
+        }
+
+        #confirmTourModal .ct-add-guest-btn:disabled,
+        #confirmTourModal .ct-add-guest-btn:disabled:hover {
+            background: #fff;
+            border-color: #fda4af;
+            color: #ff2d55;
+            opacity: 0.45;
+        }
+
+        #confirmTourModal .ct-pax-table-wrap {
+            border: 1px solid #e8edf3;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        #confirmTourModal .ct-pax-table {
+            width: 100%;
+            margin: 0;
+            border-collapse: collapse;
+        }
+
+        #confirmTourModal .ct-pax-table th {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: none;
+            letter-spacing: 0;
+            padding: 0.85rem 0.9rem;
+            border-bottom: 1px solid #eef2f6;
+            background: #f8fafc;
+        }
+
+        #confirmTourModal .ct-pax-table th,
+        #confirmTourModal .ct-pax-table td {
+            text-align: left !important;
+        }
+
+        #confirmTourModal .ct-pax-actions {
+            justify-content: flex-start;
+        }
+
+        #confirmTourModal .ct-pax-table td {
+            padding: 0.1rem 0.9rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+
+        #confirmTourModal .ct-pax-table td:first-child {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        #confirmTourModal .ct-pax-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        #confirmTourModal .ct-pax-name {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+
+        #confirmTourModal .ct-pax-relation {
+            display: block;
+            margin-top: 0.1rem;
+            font-size: 0.72rem;
+            color: #64748b;
+        }
+
+        #confirmTourModal .ct-pax-relation.is-primary {
+            color: #e11d48;
+            font-weight: 600;
+        }
+
+        #confirmTourModal .ct-pax-type {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        #confirmTourModal .ct-pax-type.is-adult {
+            background: #ffe4ea;
+            color: #f43f5e;
+        }
+
+        #confirmTourModal .ct-pax-type.is-child {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        #confirmTourModal .ct-pax-type.is-infant {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        #confirmTourModal .ct-pax-passport-no {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        #confirmTourModal .ct-pax-passport-exp {
+            display: block;
+            font-size: 0.72rem;
+            color: #94a3b8;
+        }
+
+        #confirmTourModal .ct-pax-docs {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.28rem 0.7rem;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0284c7;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border: 0;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-pax-docs:hover {
+            background: #bae6fd;
+            color: #0369a1;
+        }
+
+        #confirmTourModal .ct-pax-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        #confirmTourModal .ct-pax-empty td {
+            text-align: center;
+            color: #94a3b8;
+            padding: 1.1rem 0.75rem;
+        }
+
+        #confirmTourModal .ct-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #475569;
+            margin: 0.85rem 0 0.45rem;
+        }
+
+        #confirmTourModal .ct-included-block {
+            margin: 0.35rem 0 0.15rem;
+        }
+
+        #confirmTourModal .ct-included-head {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        #confirmTourModal .ct-included-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: #fff1f3;
+            color: #ff2d55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 42px;
+            font-size: 1rem;
+        }
+
+        #confirmTourModal .ct-included-title {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-included-sub {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.12rem;
+        }
+
+        #confirmTourModal .ct-included {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        #confirmTourModal .ct-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #334155;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.38rem 0.75rem;
+            border-radius: 999px;
+            box-shadow: none;
+            line-height: 1.2;
+        }
+
+        #confirmTourModal .ct-chip[data-key="visa"],
+        #confirmTourModal .ct-chip[data-key="train"] {
+            color: #7c3aed;
+            border-color: #ddd6fe;
+        }
+
+        #confirmTourModal .ct-chip[data-key="hotels"],
+        #confirmTourModal .ct-chip[data-key="flight"] {
+            color: #2563eb;
+            border-color: #bfdbfe;
+        }
+
+        #confirmTourModal .ct-chip[data-key="land_package"],
+        #confirmTourModal .ct-chip[data-key="travel_insurance"] {
+            color: #16a34a;
+            border-color: #bbf7d0;
+        }
+
+        #confirmTourModal .ct-chip[data-key="forex"] {
+            color: #d97706;
+            border-color: #fde68a;
+        }
+
+        #confirmTourModal .ct-chip[data-key="tours"] {
+            color: #e11d48;
+            border-color: #fecdd3;
+        }
+
+        #confirmTourModal .ct-chip[data-key="cruise"],
+        #confirmTourModal .ct-chip[data-key="transfers"] {
+            color: #0284c7;
+            border-color: #bae6fd;
+        }
+
+        #confirmTourModal .ct-chip:hover:not(.active) {
+            background: #f8fafc;
+        }
+
+        #confirmTourModal .ct-chip.active {
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+        }
+
+        #confirmTourModal .ct-chip[data-key="visa"].active,
+        #confirmTourModal .ct-chip[data-key="train"].active {
+            background: #7c3aed;
+            border-color: #7c3aed;
+        }
+
+        #confirmTourModal .ct-chip[data-key="hotels"].active,
+        #confirmTourModal .ct-chip[data-key="flight"].active {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        #confirmTourModal .ct-chip[data-key="land_package"].active,
+        #confirmTourModal .ct-chip[data-key="travel_insurance"].active {
+            background: #16a34a;
+            border-color: #16a34a;
+        }
+
+        #confirmTourModal .ct-chip[data-key="forex"].active {
+            background: #d97706;
+            border-color: #d97706;
+        }
+
+        #confirmTourModal .ct-chip[data-key="tours"].active {
+            background: #e11d48;
+            border-color: #e11d48;
+        }
+
+        #confirmTourModal .ct-chip[data-key="cruise"].active,
+        #confirmTourModal .ct-chip[data-key="transfers"].active {
+            background: #0284c7;
+            border-color: #0284c7;
+        }
+
+        #confirmTourModal .ct-detail-head,
+        #confirmTourModal .ct-detail-row {
+            display: grid;
+            grid-template-columns: 100px 1fr 90px 90px 80px 168px;
+            gap: 0.45rem;
+            align-items: end;
+        }
+
+        #confirmTourModal .ct-detail-head {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.65rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        #confirmTourModal .ct-detail-row {
+            padding: 0.45rem 0;
+            border-bottom: 1px dashed #f1f5f9;
+        }
+
+        #confirmTourModal .ct-detail-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #334155;
+            padding-bottom: 0.35rem;
+        }
+
+        #confirmTourModal .ct-detail-field .form-control {
+            font-size: 0.82rem;
+            padding: 0.3rem 0.45rem;
+            height: calc(1.5em + 0.55rem + 2px);
+            border: 0;
+            border-bottom: 1px dotted #cbd5e1;
+            border-radius: 0;
+            background: transparent;
+        }
+
+        #confirmTourModal .ct-detail-field .form-control:focus {
+            box-shadow: none;
+            border-bottom-color: #3b82f6;
+            background: #f8fafc;
+        }
+
+        #confirmTourModal .ct-balance-wrap {
+            display: flex;
+            justify-content: flex-end;
+            text-align: right;
+            padding-bottom: 0;
+        }
+
+        #confirmTourModal .ct-balance-label {
+            display: block;
+            font-size: 0.72rem;
+            color: #94a3b8;
+        }
+
+        #confirmTourModal .ct-balance-val {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: right;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #334155;
+            border-bottom: 0;
+            padding-bottom: 0.15rem;
+        }
+
+        #confirmTourModal .ct-detail-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding-bottom: 0.2rem;
+        }
+
+        #confirmTourModal .ct-detail-actions .ct-reminders {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.45rem;
+        }
+
+        #confirmTourModal .ct-row-btn {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+            color: #64748b;
+            line-height: 1;
+        }
+
+        #confirmTourModal .ct-row-btn:hover {
+            border-color: #93c5fd;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        #confirmTourModal .ct-row-btn.is-attached {
+            border-color: #86efac;
+            color: #15803d;
+            background: #f0fdf4;
+        }
+
+        #confirmTourModal .ct-row-btn.is-editing {
+            border-color: #93c5fd;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        #confirmTourModal .ct-row-btn.ct-guest-clear:hover,
+        #confirmTourModal .ct-row-btn.ct-remove-row:hover,
+        #confirmTourModal .ct-detail-actions .ct-remove-row:hover {
+            border-color: #fca5a5;
+            color: #dc2626;
+            background: #fef2f2;
+        }
+
+        #confirmTourModal .ct-detail-actions .ct-remove-row {
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+        }
+
+        #confirmTourModal .ct-attach-file {
+            display: none;
+        }
+
+        @media (max-width: 991.98px) {
+            #confirmTourModal .ct-confirm-hero {
+                grid-template-columns: 1fr;
+            }
+
+            #confirmTourModal .ct-primary-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                row-gap: 0.75rem;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            #confirmTourModal .ct-pax-table-wrap {
+                overflow-x: auto;
+            }
+
+            #confirmTourModal .ct-pax-table {
+                min-width: 740px;
+            }
+        }
+
+        #ctTravellerModal {
+            z-index: 1080;
+        }
+
+        @media (max-width: 991.98px) {
+            #confirmTourModal .ct-detail-head {
+                display: none;
+            }
+
+            #confirmTourModal .ct-svc-v2 .ct-detail-head {
+                display: grid;
+            }
+
+            #confirmTourModal .ct-detail-row {
+                grid-template-columns: 1fr;
+                gap: 0.35rem;
+                border: 1px solid #e2e8f0;
+                border-radius: 4px;
+                padding: 0.5rem;
+                margin-bottom: 0.45rem;
+            }
+
+            #confirmTourModal .ct-svc-v2 .ct-detail-row {
+                border: 0;
+                border-radius: 0;
+                margin-bottom: 0;
+            }
+        }
