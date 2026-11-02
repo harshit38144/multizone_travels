@@ -247,12 +247,14 @@
                                                                 <button type="button"
                                                                     class="btn-icon js-q-book <?= $latestTourConfirmed ? 'btn-confirmed' : 'btn-book' ?>"
                                                                     data-id="<?= $latestQuotationId ?>"
+                                                                    data-lead-id="<?= (int) $lead['id'] ?>"
+                                                                    data-quotation-id="<?= $latestQuotationId ?>"
                                                                     title="<?= $latestTourConfirmed ? 'Tour Confirmed' : 'Book' ?>"
                                                                     aria-label="<?= $latestTourConfirmed ? 'Tour Confirmed' : 'Book quotation' ?>">
                                                                     <?php if ($latestTourConfirmed) { ?>
                                                                         <i class="fas fa-check"></i>
                                                                     <?php } else { ?>
-                                                                        <img src="img/booking.png" alt="" class="btn-book-img" width="16" height="16">
+                                                                        <img src="img/booking.png" alt="" class="btn-book-img" width="16" height="16" draggable="false">
                                                                     <?php } ?>
                                                                 </button>
                                                             <?php } ?>

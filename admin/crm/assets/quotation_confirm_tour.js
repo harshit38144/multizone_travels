@@ -1598,35 +1598,225 @@
         }, 2800);
     }
 
+    /* Nested modal stacking: Confirm Tour stays open; children always above it. */
+    var CT_MODAL_Z_BASE = 1050;
+    var CT_MODAL_Z_STEP = 20;
+    var ctParentBodyScroll = 0;
+
+    function ensureConfirmTourOpenStyles() {
+        if (document.getElementById('ctConfirmTourForceStyles')) {
+            return;
+        }
+        $('<style id="ctConfirmTourForceStyles">').text(
+            /* Keep force-open at Bootstrap base z-index so child modals (1080+) can stack above. */
+            '#confirmTourModal.ct-force-open{' +
+            'display:block!important;opacity:1!important;z-index:' + CT_MODAL_Z_BASE + ';padding-right:0!important;}' +
+            '#confirmTourModal.ct-force-open.show{opacity:1!important;}' +
+            '#confirmTourModal.ct-force-open .modal-dialog{transform:none;margin:1.75rem auto;}' +
+            'body.ct-confirm-tour-open{overflow:hidden;}' +
+            '#ctConfirmTourBackdrop{position:fixed;inset:0;z-index:' + (CT_MODAL_Z_BASE - 10) + ';background:rgba(0,0,0,.5);}'
+        ).appendTo(document.head || document.documentElement);
+    }
+
+    function readZ($el) {
+        var z = parseInt(($el && $el.length ? $el.css('z-index') : '') || '', 10);
+        return isNaN(z) ? 0 : z;
+    }
+
+    function restackOpenModals() {
+        var $open = $('.modal.show');
+        if (!$open.length) {
+            return;
+        }
+        var order = $open.toArray().sort(function (a, b) {
+            var ao = parseInt(a.getAttribute('data-ct-stack') || '0', 10) || 0;
+            var bo = parseInt(b.getAttribute('data-ct-stack') || '0', 10) || 0;
+            if (ao !== bo) {
+                return ao - bo;
+            }
+            return 0;
+        });
+        var $backs = $('.modal-backdrop');
+        order.forEach(function (el, idx) {
+            var z = CT_MODAL_Z_BASE + (idx * CT_MODAL_Z_STEP);
+            $(el).css('z-index', z);
+            /* Bootstrap appends one backdrop per modal; pair by index when possible. */
+            if ($backs.eq(idx).length) {
+                $backs.eq(idx).css('z-index', z - 10);
+            }
+        });
+        if ($backs.length > order.length) {
+            $backs.last().css('z-index', CT_MODAL_Z_BASE + ((order.length - 1) * CT_MODAL_Z_STEP) - 10);
+        }
+        var $forceBd = $('#ctConfirmTourBackdrop');
+        if ($forceBd.length && $('#confirmTourModal').hasClass('show')) {
+            var confirmZ = readZ($('#confirmTourModal')) || CT_MODAL_Z_BASE;
+            $forceBd.css('z-index', Math.max(CT_MODAL_Z_BASE - 10, confirmZ - 10));
+        }
+    }
+
+    function ensureNestedModalStacking() {
+        if (window.__ctModalStackBound) {
+            return;
+        }
+        window.__ctModalStackBound = true;
+        ensureConfirmTourOpenStyles();
+
+        $(document).on('show.bs.modal.ctStack', '.modal', function () {
+            var $modal = $(this);
+            if (!$modal.parent().is('body')) {
+                $modal.appendTo('body');
+            }
+            if (this.id !== 'confirmTourModal' && $('#confirmTourModal').hasClass('show')) {
+                ctParentBodyScroll = $('#confirmTourModal .modal-body').scrollTop() || 0;
+            }
+            var next = (parseInt(window.__ctModalStackSeq || '0', 10) || 0) + 1;
+            window.__ctModalStackSeq = next;
+            $modal.attr('data-ct-stack', String(next));
+        });
+
+        $(document).on('shown.bs.modal.ctStack', '.modal', function () {
+            // Run after per-modal shown handlers that hardcode backdrop z-index (1075, etc.).
+            window.setTimeout(function () {
+                restackOpenModals();
+                $('body').addClass('modal-open');
+            }, 0);
+        });
+
+        $(document).on('hidden.bs.modal.ctStack', '.modal', function () {
+            var closedId = this.id || '';
+            $(this).removeAttr('data-ct-stack').css('z-index', '');
+            window.setTimeout(function () {
+                restackOpenModals();
+                if ($('.modal.show').length) {
+                    $('body').addClass('modal-open');
+                    if ($('#confirmTourModal').hasClass('show') && closedId !== 'confirmTourModal') {
+                        $('#confirmTourModal .modal-body').scrollTop(ctParentBodyScroll);
+                    }
+                }
+            }, 0);
+        });
+    }
+
+    function clearConfirmTourForceOpen() {
+        $('#ctConfirmTourBackdrop').remove();
+        $('#confirmTourModal').removeClass('ct-force-open');
+        $('body').removeClass('ct-confirm-tour-open');
+    }
+
+    function forceShowConfirmTourModal() {
+        var $m = $('#confirmTourModal');
+        if (!$m.length) {
+            return false;
+        }
+        ensureNestedModalStacking();
+        ensureConfirmTourOpenStyles();
+        if (!$m.parent().is('body')) {
+            $m.appendTo('body');
+        }
+        try {
+            $m.modal({ backdrop: true, keyboard: true, focus: true, show: true });
+        } catch (errInit) { /* ignore */ }
+        try {
+            $m.modal('show');
+        } catch (errShow) { /* ignore */ }
+
+        // AdminLTE / tab iframe: Bootstrap sometimes never toggles .show — force visible.
+        window.setTimeout(function () {
+            if ($m.hasClass('show')) {
+                clearConfirmTourForceOpen();
+                restackOpenModals();
+                return;
+            }
+            if (!$('#ctConfirmTourBackdrop').length) {
+                $('<div id="ctConfirmTourBackdrop"></div>').on('click', function () {
+                    forceHideConfirmTourModal();
+                }).appendTo('body');
+            }
+            var next = (parseInt(window.__ctModalStackSeq || '0', 10) || 0) + 1;
+            window.__ctModalStackSeq = next;
+            $m.addClass('show ct-force-open')
+                .css('display', 'block')
+                .attr('aria-hidden', 'false')
+                .attr('aria-modal', 'true')
+                .attr('data-ct-stack', String(next));
+            $('body').addClass('modal-open ct-confirm-tour-open');
+            restackOpenModals();
+        }, 80);
+        return true;
+    }
+
+    function forceHideConfirmTourModal() {
+        var $m = $('#confirmTourModal');
+        var wasForce = $m.hasClass('ct-force-open');
+        clearConfirmTourForceOpen();
+        if (wasForce) {
+            $m.removeClass('show ct-force-open').css('display', '').attr('aria-hidden', 'true');
+            if (!$('.modal.show').length) {
+                $('body').removeClass('modal-open');
+                $('.modal-backdrop').remove();
+            }
+            $m.trigger('hidden.bs.modal');
+            return;
+        }
+        try {
+            $m.modal('hide');
+        } catch (errHide) {
+            $m.removeClass('show').css('display', '').attr('aria-hidden', 'true');
+            if (!$('.modal.show').length) {
+                $('body').removeClass('modal-open');
+                $('.modal-backdrop').remove();
+            }
+            $m.trigger('hidden.bs.modal');
+        }
+    }
+
     function openModal(quotationId, $triggerRow, highlightKey) {
+        quotationId = parseInt(quotationId, 10) || 0;
         activeQuotationId = quotationId;
         tourWasConfirmed = !!($triggerRow && $triggerRow.find('.js-q-book.btn-confirmed').length);
         activePackageTotal = null;
         activeCustomerPaid = null;
         activeTripInfo = null;
-        activeRow = $triggerRow;
+        activeRow = $triggerRow && $triggerRow.length ? $triggerRow : null;
+        if (!quotationId) {
+            window.alert('No booking selected to open Confirm Tour.');
+            return;
+        }
         if (!$('#confirmTourModal').length) {
             window.alert('Confirm Tour modal is missing on this page.');
             return;
         }
-        if (!$('#confirmTourModal').parent().is('body')) {
-            $('#confirmTourModal').appendTo('body');
+
+        try {
+            $('#ctQuotationId').val(quotationId);
+            setPrimaryContact('', '', '');
+            setGuestAttachment('', '');
+            hidePrimaryEditPanel();
+            travellersState = [];
+            leadPaxCount = 0;
+            savedGuestsState = [];
+            renderTravellers();
+            clearServiceHighlight();
+            renderRows([]);
+            setPaxSectionCollapsed(true);
+        } catch (prepErr) {
+            // Still open the modal — data load below can recover the UI.
+            if (window.console && console.warn) {
+                console.warn('Confirm Tour prep error', prepErr);
+            }
         }
-        $('#ctQuotationId').val(quotationId);
-        setPrimaryContact('', '', '');
-        setGuestAttachment('', '');
-        hidePrimaryEditPanel();
-        travellersState = [];
-        leadPaxCount = 0;
-        savedGuestsState = [];
-        renderTravellers();
-        clearServiceHighlight();
-        renderRows([]);
-        setPaxSectionCollapsed(true);
-        $('#confirmTourModal').modal('show');
+
+        if (!forceShowConfirmTourModal()) {
+            window.alert('Confirm Tour modal could not be opened.');
+            return;
+        }
 
         $.getJSON('crm/ajax/get_quotation_confirm.php', { id: quotationId })
             .done(function (res) {
+                if (parseInt(activeQuotationId, 10) !== quotationId) {
+                    return;
+                }
                 if (!res || !res.success) {
                     alert((res && res.message) || 'Could not load quotation.');
                     return;
@@ -1662,6 +1852,9 @@
                 }
             })
             .fail(function () {
+                if (parseInt(activeQuotationId, 10) !== quotationId) {
+                    return;
+                }
                 alert('Could not load quotation details.');
             });
     }
@@ -1734,7 +1927,7 @@
                 return match[1] + match[2].toUpperCase() + String(match[3] || '').toLowerCase();
             }).join(' ');
             $guestText.text(guestDisplay);
-            $guestText.attr('title', 'Phone: ' + (mobile || '—') + '\nEmail: ' + (email || '—)');
+            $guestText.attr('title', 'Phone: ' + (mobile || '-') + '\nEmail: ' + (email || '-'));
             var letters = guest.replace(/[^A-Za-z]/g, '');
             var initials = (letters.charAt(0) + letters.charAt(1)).toUpperCase();
             var $initials = activeRow.find('.lead-guest-initials');
@@ -1773,7 +1966,165 @@
         } catch (err) {}
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Leads Book → Yes/No quick confirm (custom overlay; iframe-safe)     */
+    /* Bound immediately so later modal init cannot leave Book dead.       */
+    /* ------------------------------------------------------------------ */
+    var pendingQuickConfirm = { id: 0, $row: $() };
+
+    function ensureQuickConfirmStyles() {
+        if (document.getElementById('ctQuickConfirmStyles')) {
+            return;
+        }
+        $('<style id="ctQuickConfirmStyles">').text(
+            '#ctQuickConfirmOverlay{position:fixed;inset:0;z-index:200000;background:rgba(15,23,42,.45);' +
+            'display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}' +
+            '#ctQuickConfirmCard{width:100%;max-width:420px;background:#fff;border-radius:16px;overflow:hidden;' +
+            'box-shadow:0 20px 50px rgba(15,23,42,.28);text-align:center;padding:1.6rem 1.4rem 1.3rem;' +
+            'font-family:inherit;color:#0f172a}' +
+            '#ctQuickConfirmCard .ct-qc-icon{width:58px;height:58px;margin:0 auto .8rem;border-radius:50%;' +
+            'background:#fff1f2;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:1.5rem}' +
+            '#ctQuickConfirmCard .ct-qc-icon.is-ok{background:#dcfce7;color:#15803d}' +
+            '#ctQuickConfirmCard h5{font-weight:800;margin:0 0 .55rem;font-size:1.15rem}' +
+            '#ctQuickConfirmCard p{color:#64748b;font-size:.92rem;margin:0 0 1rem}' +
+            '#ctQuickConfirmCard .ct-qc-actions{display:flex;justify-content:center;gap:.55rem;flex-wrap:wrap}' +
+            '#ctQuickConfirmCard .ct-qc-btn{min-width:110px;border-radius:10px;font-weight:700;padding:.45rem .9rem;' +
+            'border:1px solid transparent;cursor:pointer;font-size:.92rem;line-height:1.3}' +
+            '#ctQuickConfirmCard .ct-qc-btn:disabled{opacity:.65;cursor:wait}' +
+            '#ctQuickConfirmCard .ct-qc-no{background:#fff;border-color:#cbd5e1;color:#334155}' +
+            '#ctQuickConfirmCard .ct-qc-yes,#ctQuickConfirmCard .ct-qc-show{background:#e11d48;border-color:#e11d48;color:#fff}' +
+            '#ctQuickConfirmCard .ct-qc-ok{background:#fff;border-color:#cbd5e1;color:#334155}'
+        ).appendTo(document.head || document.documentElement);
+    }
+
+    function hideQuickConfirmOverlay() {
+        $('#ctQuickConfirmOverlay').remove();
+    }
+
+    function showQuickConfirmAsk(quotationId, $row) {
+        ensureQuickConfirmStyles();
+        hideQuickConfirmOverlay();
+        pendingQuickConfirm = { id: quotationId, $row: $row };
+        var $overlay = $(
+            '<div id="ctQuickConfirmOverlay" role="dialog" aria-modal="true" aria-labelledby="ctQuickConfirmTitle">' +
+            '<div id="ctQuickConfirmCard">' +
+            '<div class="ct-qc-icon"><i class="fas fa-suitcase-rolling"></i></div>' +
+            '<h5 id="ctQuickConfirmTitle">Confirm Tour</h5>' +
+            '<p>Do you want to confirm this tour?</p>' +
+            '<div class="ct-qc-actions">' +
+            '<button type="button" class="ct-qc-btn ct-qc-no" id="ctQuickConfirmNo">No</button>' +
+            '<button type="button" class="ct-qc-btn ct-qc-yes" id="ctQuickConfirmYes">Yes</button>' +
+            '</div></div></div>'
+        );
+        $(document.body).append($overlay);
+        $('#ctQuickConfirmNo').on('click', function () {
+            hideQuickConfirmOverlay();
+        });
+        $('#ctQuickConfirmYes').on('click', function () {
+            runQuickConfirmTour(pendingQuickConfirm.id, pendingQuickConfirm.$row);
+        });
+        $overlay.on('click', function (ev) {
+            if (ev.target === this) {
+                hideQuickConfirmOverlay();
+            }
+        });
+    }
+
+    function showTourConfirmedDone(quotationId) {
+        ensureQuickConfirmStyles();
+        hideQuickConfirmOverlay();
+        var $overlay = $(
+            '<div id="ctQuickConfirmOverlay" role="dialog" aria-modal="true" aria-labelledby="ctQuickConfirmDoneTitle">' +
+            '<div id="ctQuickConfirmCard">' +
+            '<div class="ct-qc-icon is-ok"><i class="fas fa-check"></i></div>' +
+            '<h5 id="ctQuickConfirmDoneTitle">Tour Confirmed</h5>' +
+            '<div class="ct-qc-actions">' +
+            '<button type="button" class="ct-qc-btn ct-qc-ok" id="ctQuickConfirmOk">OK</button>' +
+            '<button type="button" class="ct-qc-btn ct-qc-show" id="ctQuickConfirmShow">Show Booking</button>' +
+            '</div></div></div>'
+        );
+        $(document.body).append($overlay);
+        $('#ctQuickConfirmOk').on('click', function () {
+            hideQuickConfirmOverlay();
+        });
+        $('#ctQuickConfirmShow').on('click', function () {
+            hideQuickConfirmOverlay();
+            window.location.href = 'crm/bookings.php?highlight=' + encodeURIComponent(String(quotationId || ''));
+        });
+    }
+
+    function runQuickConfirmTour(quotationId, $row) {
+        quotationId = parseInt(quotationId, 10) || 0;
+        if (!quotationId) {
+            return;
+        }
+        activeRow = $row && $row.length ? $row : activeRow;
+        var $yes = $('#ctQuickConfirmYes, #askConfirmTourYes');
+        $yes.prop('disabled', true).text('Confirming…');
+        $.ajax({
+            url: 'crm/ajax/confirm_tour_quick.php',
+            method: 'POST',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: { id: quotationId }
+        })
+            .done(function (res) {
+                hideQuickConfirmOverlay();
+                try { $('#askConfirmTourPopup').modal('hide'); } catch (err) { /* ignore */ }
+                if (!res || !res.success) {
+                    window.alert((res && res.message) || 'Could not confirm tour.');
+                    return;
+                }
+                tourWasConfirmed = true;
+                updateListRow(res);
+                if ($('.crm-leads-ui').length) {
+                    showTourConfirmedDone(quotationId);
+                } else {
+                    window.alert((res && res.message) || 'Tour confirmed.');
+                }
+            })
+            .fail(function (xhr) {
+                var msg = 'Could not confirm tour. Please try again.';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = String(xhr.responseJSON.message);
+                } else if (xhr && xhr.status) {
+                    msg = 'Could not confirm tour (HTTP ' + xhr.status + ').';
+                }
+                window.alert(msg);
+            })
+            .always(function () {
+                $yes.prop('disabled', false).text('Yes');
+            });
+    }
+
+    $(document).off('click.ctQuickBook', '.js-q-book').on('click.ctQuickBook', '.js-q-book', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $btn = $(this);
+        var id = parseInt($btn.attr('data-id') || $btn.data('id'), 10) || 0;
+        var $row = $btn.closest('tr');
+        if (!id) {
+            window.alert('No quotation found to book for this lead.');
+            return;
+        }
+        if ($btn.hasClass('btn-confirmed') || $btn.attr('data-open-confirm') === '1') {
+            openModal(id, $row);
+            return;
+        }
+        showQuickConfirmAsk(id, $row);
+    });
+
+    $(document).on('click', '#askConfirmTourYes', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        runQuickConfirmTour(pendingQuickConfirm.id, pendingQuickConfirm.$row);
+    });
+
+    // Bind stacking ASAP (before any Confirm Tour / child modal opens).
+    ensureNestedModalStacking();
+
     $(function () {
+        ensureNestedModalStacking();
         ensureSupplierSuggestStyles();
 
         var chipsHtml = '';
@@ -1819,88 +2170,6 @@
                 esc(label) + (richChips ? '' : ' +') + '</button>';
         });
         $('#ctIncludedChips').html(chipsHtml);
-
-        function ensureAskConfirmTourPopup() {
-            if ($('#askConfirmTourPopup').length) {
-                return;
-            }
-            $('body').append(
-                '<div class="modal fade" id="askConfirmTourPopup" tabindex="-1" role="dialog" aria-labelledby="askConfirmTourPopupLabel" aria-hidden="true">' +
-                '<div class="modal-dialog modal-dialog-centered" role="document" style="max-width:420px;">' +
-                '<div class="modal-content" style="border:0;border-radius:16px;overflow:hidden;">' +
-                '<div class="modal-body text-center" style="padding:1.6rem 1.4rem 1.3rem;">' +
-                '<div style="width:58px;height:58px;margin:0 auto .8rem;border-radius:50%;background:#fff1f2;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">' +
-                '<i class="fas fa-suitcase-rolling"></i></div>' +
-                '<h5 class="mb-2" id="askConfirmTourPopupLabel" style="font-weight:800;">Confirm Tour</h5>' +
-                '<p class="text-muted mb-3" style="font-size:.92rem;">Do you want to confirm this tour?</p>' +
-                '<button type="button" class="btn btn-outline-secondary" data-dismiss="modal" style="min-width:110px;border-radius:10px;font-weight:700;">No</button>' +
-                '<button type="button" class="btn btn-danger ml-2" id="askConfirmTourYes" style="min-width:110px;border-radius:10px;font-weight:700;background:#e11d48;border-color:#e11d48;">Yes</button>' +
-                '</div></div></div></div>'
-            );
-        }
-
-        var pendingQuickConfirm = { id: 0, $row: $() };
-
-        function runQuickConfirmTour(quotationId, $row) {
-            quotationId = parseInt(quotationId, 10) || 0;
-            if (!quotationId) {
-                return;
-            }
-            activeRow = $row && $row.length ? $row : activeRow;
-            var $yes = $('#askConfirmTourYes');
-            $yes.prop('disabled', true).text('Confirming…');
-            $.ajax({
-                url: 'crm/ajax/confirm_tour_quick.php',
-                method: 'POST',
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                data: { id: quotationId }
-            })
-                .done(function (res) {
-                    $('#askConfirmTourPopup').modal('hide');
-                    if (!res || !res.success) {
-                        alert((res && res.message) || 'Could not confirm tour.');
-                        return;
-                    }
-                    tourWasConfirmed = true;
-                    updateListRow(res);
-                    if ($('.crm-leads-ui').length && $('#tourConfirmedPopup').length) {
-                        $('#tourConfirmedPopup').data('quotationId', quotationId).modal('show');
-                    } else {
-                        alert((res && res.message) || 'Tour confirmed.');
-                    }
-                })
-                .fail(function () {
-                    alert('Could not confirm tour. Please try again.');
-                })
-                .always(function () {
-                    $yes.prop('disabled', false).text('Yes');
-                });
-        }
-
-        $(document).on('click', '.js-q-book', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var $btn = $(this);
-            var id = parseInt($btn.attr('data-id') || $btn.data('id'), 10) || 0;
-            var $row = $btn.closest('tr');
-            if (!id) {
-                return;
-            }
-            // Already confirmed (or bookings page) → open Confirm Tour details.
-            if ($btn.hasClass('btn-confirmed') || $btn.attr('data-open-confirm') === '1') {
-                openModal(id, $row);
-                return;
-            }
-            ensureAskConfirmTourPopup();
-            pendingQuickConfirm = { id: id, $row: $row };
-            $('#askConfirmTourPopup').modal('show');
-        });
-
-        $(document).on('click', '#askConfirmTourYes', function (e) {
-            e.preventDefault();
-            runQuickConfirmTour(pendingQuickConfirm.id, pendingQuickConfirm.$row);
-        });
 
         $(document).on('click', '.js-booking-status-open', function (e) {
             e.preventDefault();
@@ -2031,10 +2300,17 @@
         });
 
         $('#confirmTourModal').on('hidden.bs.modal', function () {
+            clearConfirmTourForceOpen();
             hideSupplierSuggest();
             clearServiceHighlight();
             hidePrimaryEditPanel();
             closeSvcActionMenus();
+        });
+
+        // Force-open fallback: Bootstrap data-dismiss may not fire hide if .modal('show') never bound.
+        $(document).on('click.ctForceDismiss', '#confirmTourModal.ct-force-open [data-dismiss="modal"]', function (e) {
+            e.preventDefault();
+            forceHideConfirmTourModal();
         });
 
         $(document).on('click', '#ctDetailRows .ct-act-more-btn', function (e) {
@@ -5020,7 +5296,7 @@
                                 $('#tourConfirmedPopup').data('quotationId', quotationId).modal('show');
                             });
                         }
-                        $('#confirmTourModal').modal('hide');
+                        forceHideConfirmTourModal();
                     } else {
                         alert((res && res.message) || 'Could not save.');
                     }
@@ -5037,6 +5313,15 @@
     window.CrmConfirmTour = {
         open: function (quotationId, $triggerRow, highlightKey) {
             openModal(quotationId, $triggerRow, highlightKey);
+        },
+        askQuickConfirm: function (quotationId, $triggerRow) {
+            showQuickConfirmAsk(quotationId, $triggerRow);
+        },
+        runQuickConfirm: function (quotationId, $triggerRow) {
+            runQuickConfirmTour(quotationId, $triggerRow);
+        },
+        hide: function () {
+            forceHideConfirmTourModal();
         }
     };
 })(jQuery);

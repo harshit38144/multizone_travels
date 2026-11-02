@@ -1024,10 +1024,14 @@ $boot = json_encode([
         closeBkActionsMenus();
         if (!b) return;
         if (act === 'confirm') {
+            var $row = $('#bkBody tr[data-booking="' + b.id + '"]');
+            if (!$row.length) {
+                $row = $(this).closest('tr');
+            }
             if (window.CrmConfirmTour && typeof window.CrmConfirmTour.open === 'function') {
-                window.CrmConfirmTour.open(b.id, $(this).closest('tr'));
+                window.CrmConfirmTour.open(b.id, $row);
             } else {
-                var $book = $(this).closest('tr').find('.js-q-book').first();
+                var $book = $row.find('.js-q-book').first();
                 if ($book.length) $book.trigger('click');
             }
             return;
@@ -1172,16 +1176,69 @@ $boot = json_encode([
     render();
 })(jQuery);
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=49"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=58"></script>
 <script src="crm/assets/quotation_preview_modal.js?v=1"></script>
 <script>
-(function ($) {
-    // Keep shared modals on body so Bootstrap shows them above AdminLTE chrome / iframe layout.
-    $(function () {
-        $('#confirmTourModal, #askConfirmTourPopup, #tourConfirmedPopup, #ctTravellerModal, #ctPaxDocsModal, #leadQuotationPreviewModal')
-            .appendTo('body');
-    });
-})(jQuery);
+(function () {
+    function moveConfirmModalsToBody() {
+        var ids = [
+            'confirmTourModal',
+            'askConfirmTourPopup',
+            'tourConfirmedPopup',
+            'ctTravellerModal',
+            'ctPaxDocsModal',
+            'leadQuotationPreviewModal'
+        ];
+        ids.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && el.parentNode !== document.body) {
+                document.body.appendChild(el);
+            }
+        });
+    }
+
+    moveConfirmModalsToBody();
+
+    // Capture-phase: open Confirm Tour even after table re-render / iframe jQuery quirks.
+    document.addEventListener('click', function (e) {
+        var target = e.target;
+        if (!target || !target.closest) {
+            return;
+        }
+        var btn = target.closest('.js-q-book');
+        if (!btn || !btn.closest('.bk-page, #bkBody')) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') {
+            e.stopImmediatePropagation();
+        }
+
+        var quotationId = parseInt(btn.getAttribute('data-id') || '0', 10) || 0;
+        var row = btn.closest('tr');
+        if (!quotationId && row) {
+            quotationId = parseInt(row.getAttribute('data-booking') || '0', 10) || 0;
+        }
+        if (!quotationId) {
+            window.alert('No booking found to open Confirm Tour.');
+            return;
+        }
+        if (window.CrmConfirmTour && typeof window.CrmConfirmTour.open === 'function') {
+            window.CrmConfirmTour.open(quotationId, window.jQuery ? window.jQuery(row) : null);
+        } else {
+            window.alert('Confirm Tour is unavailable. Please refresh the page.');
+        }
+    }, true);
+
+    if (window.jQuery) {
+        window.jQuery(function ($) {
+            moveConfirmModalsToBody();
+            // Shared script also binds .js-q-book — avoid double open from bubble phase.
+            $(document).off('click.ctQuickBook', '.js-q-book');
+        });
+    }
+})();
 </script>
 </body>
 </html>

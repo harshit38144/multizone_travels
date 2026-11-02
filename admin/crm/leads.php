@@ -1594,9 +1594,9 @@ foreach ($destinationLookup as $destId => $destName) {
 
         .crm-leads-ui table.crm-leads-table thead th.col-actions,
         .crm-leads-ui table.crm-leads-table tbody td.col-actions {
-            width: 6.25rem !important;
-            min-width: 5.75rem !important;
-            max-width: 6.5rem !important;
+            width: 7.25rem !important;
+            min-width: 6.75rem !important;
+            max-width: 8rem !important;
             padding-left: 0.2rem;
             padding-right: 0.35rem;
             white-space: nowrap;
@@ -5865,7 +5865,7 @@ foreach ($destinationLookup as $destId => $destName) {
         { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 10, minWidth: 100 },
         { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 5, minWidth: 92, maxWidth: 118 },
         { key: 'booking', className: 'col-ld-booking', label: 'Status', locked: false, minWidth: 120, maxWidth: 220, weight: 10 },
-        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '6.25rem', minWidth: 92, maxWidth: 104 }
+        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '7.25rem', minWidth: 108, maxWidth: 128 }
     ];
     var leadsColumnVisibilityState = <?= json_encode($leadsColumnVisibility, JSON_UNESCAPED_UNICODE) ?>;
     var leadsColumnSaveTimer = null;
@@ -8582,18 +8582,205 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=50"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=58"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
-$(function () {
-    if (window.QSupplierMail) {
-        window.QSupplierMail.init({
-            suppliers: window.Q_SUPPLIER_MAIL_CATALOG || [],
-            destinationNameToId: window.Q_DESTINATION_NAME_TO_ID || {},
-            mailTemplate: { subject: '', body_html: '', meta: {} }
+(function () {
+    // Keep Confirm Tour / Book popups on body so Bootstrap shows them above AdminLTE chrome.
+    function moveConfirmModalsToBody() {
+        if (typeof window.jQuery === 'undefined') {
+            return;
+        }
+        window.jQuery('#confirmTourModal, #askConfirmTourPopup, #tourConfirmedPopup, #ctTravellerModal, #ctPaxDocsModal, #leadQuotationPreviewModal')
+            .appendTo(document.body);
+    }
+
+    function ensureLeadsBookStyles() {
+        if (document.getElementById('leadsBookQuickStyles')) {
+            return;
+        }
+        var style = document.createElement('style');
+        style.id = 'leadsBookQuickStyles';
+        style.textContent =
+            '#leadsBookQuickOverlay{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.48);' +
+            'display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}' +
+            '#leadsBookQuickCard{width:100%;max-width:420px;background:#fff;border-radius:16px;' +
+            'box-shadow:0 20px 50px rgba(15,23,42,.3);text-align:center;padding:1.6rem 1.4rem 1.3rem;color:#0f172a}' +
+            '#leadsBookQuickCard .lbq-icon{width:58px;height:58px;margin:0 auto .8rem;border-radius:50%;' +
+            'background:#fff1f2;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:1.5rem}' +
+            '#leadsBookQuickCard .lbq-icon.is-ok{background:#dcfce7;color:#15803d}' +
+            '#leadsBookQuickCard h5{font-weight:800;margin:0 0 .55rem;font-size:1.15rem}' +
+            '#leadsBookQuickCard p{color:#64748b;font-size:.92rem;margin:0 0 1rem}' +
+            '#leadsBookQuickCard .lbq-actions{display:flex;justify-content:center;gap:.55rem;flex-wrap:wrap}' +
+            '#leadsBookQuickCard .lbq-btn{min-width:110px;border-radius:10px;font-weight:700;padding:.45rem .9rem;' +
+            'border:1px solid transparent;cursor:pointer;font-size:.92rem;line-height:1.3;background:#fff}' +
+            '#leadsBookQuickCard .lbq-btn:disabled{opacity:.65;cursor:wait}' +
+            '#leadsBookQuickCard .lbq-no,#leadsBookQuickCard .lbq-ok{border-color:#cbd5e1;color:#334155}' +
+            '#leadsBookQuickCard .lbq-yes,#leadsBookQuickCard .lbq-show{background:#e11d48;border-color:#e11d48;color:#fff}';
+        (document.head || document.documentElement).appendChild(style);
+    }
+
+    function removeLeadsBookOverlay() {
+        var el = document.getElementById('leadsBookQuickOverlay');
+        if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+        }
+    }
+
+    function showLeadsBookDone(quotationId) {
+        ensureLeadsBookStyles();
+        removeLeadsBookOverlay();
+        var overlay = document.createElement('div');
+        overlay.id = 'leadsBookQuickOverlay';
+        overlay.innerHTML =
+            '<div id="leadsBookQuickCard" role="dialog" aria-modal="true">' +
+            '<div class="lbq-icon is-ok"><i class="fas fa-check"></i></div>' +
+            '<h5>Tour Confirmed</h5>' +
+            '<div class="lbq-actions">' +
+            '<button type="button" class="lbq-btn lbq-ok" id="leadsBookQuickOk">OK</button>' +
+            '<button type="button" class="lbq-btn lbq-show" id="leadsBookQuickShow">Show Booking</button>' +
+            '</div></div>';
+        document.body.appendChild(overlay);
+        document.getElementById('leadsBookQuickOk').onclick = function () {
+            removeLeadsBookOverlay();
+        };
+        document.getElementById('leadsBookQuickShow').onclick = function () {
+            removeLeadsBookOverlay();
+            window.location.href = 'crm/bookings.php?highlight=' + encodeURIComponent(String(quotationId || ''));
+        };
+    }
+
+    function runLeadsQuickConfirm(quotationId, row) {
+        var yesBtn = document.getElementById('leadsBookQuickYes');
+        if (yesBtn) {
+            yesBtn.disabled = true;
+            yesBtn.textContent = 'Confirming…';
+        }
+        var body = new FormData();
+        body.append('id', String(quotationId));
+        fetch('crm/ajax/confirm_tour_quick.php', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: body,
+            credentials: 'same-origin'
+        })
+            .then(function (r) {
+                return r.json().then(function (data) {
+                    return { ok: r.ok, data: data };
+                }).catch(function () {
+                    return { ok: false, data: null };
+                });
+            })
+            .then(function (result) {
+                removeLeadsBookOverlay();
+                if (!result.data || !result.data.success) {
+                    window.alert((result.data && result.data.message) || 'Could not confirm tour.');
+                    return;
+                }
+                if (row && row.parentNode) {
+                    row.parentNode.removeChild(row);
+                }
+                showLeadsBookDone(quotationId);
+            })
+            .catch(function () {
+                if (yesBtn) {
+                    yesBtn.disabled = false;
+                    yesBtn.textContent = 'Yes';
+                }
+                window.alert('Could not confirm tour. Please try again.');
+            });
+    }
+
+    function showLeadsBookAsk(quotationId, row) {
+        ensureLeadsBookStyles();
+        removeLeadsBookOverlay();
+        var overlay = document.createElement('div');
+        overlay.id = 'leadsBookQuickOverlay';
+        overlay.innerHTML =
+            '<div id="leadsBookQuickCard" role="dialog" aria-modal="true" aria-labelledby="leadsBookQuickTitle">' +
+            '<div class="lbq-icon"><i class="fas fa-suitcase-rolling"></i></div>' +
+            '<h5 id="leadsBookQuickTitle">Confirm Tour</h5>' +
+            '<p>Do you want to confirm this tour?</p>' +
+            '<div class="lbq-actions">' +
+            '<button type="button" class="lbq-btn lbq-no" id="leadsBookQuickNo">No</button>' +
+            '<button type="button" class="lbq-btn lbq-yes" id="leadsBookQuickYes">Yes</button>' +
+            '</div></div>';
+        document.body.appendChild(overlay);
+        document.getElementById('leadsBookQuickNo').onclick = function () {
+            removeLeadsBookOverlay();
+        };
+        document.getElementById('leadsBookQuickYes').onclick = function () {
+            runLeadsQuickConfirm(quotationId, row);
+        };
+        overlay.addEventListener('click', function (ev) {
+            if (ev.target === overlay) {
+                removeLeadsBookOverlay();
+            }
         });
     }
-});
+
+    // Capture-phase listener: works even if jQuery handlers fail inside the tab iframe.
+    document.addEventListener('click', function (e) {
+        var target = e.target;
+        if (!target || !target.closest) {
+            return;
+        }
+        var btn = target.closest('.js-q-book');
+        if (!btn || !btn.closest('.crm-leads-ui')) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') {
+            e.stopImmediatePropagation();
+        }
+
+        var quotationId = parseInt(btn.getAttribute('data-quotation-id') || btn.getAttribute('data-id') || '0', 10) || 0;
+        var row = btn.closest('tr');
+        var leadId = parseInt(
+            btn.getAttribute('data-lead-id') ||
+            (row && row.getAttribute('data-lead-id')) ||
+            '0',
+            10
+        ) || 0;
+
+        if (!quotationId) {
+            window.alert('No quotation found to book for this lead.');
+            return;
+        }
+
+        // Already confirmed → open full Confirm Tour modal for this quotation/lead.
+        if (btn.classList.contains('btn-confirmed') || btn.getAttribute('data-open-confirm') === '1') {
+            if (window.CrmConfirmTour && typeof window.CrmConfirmTour.open === 'function' && window.jQuery) {
+                window.CrmConfirmTour.open(quotationId, window.jQuery(row));
+            } else {
+                window.alert('Confirm Tour is unavailable. Please refresh the page.');
+            }
+            return;
+        }
+
+        // Unconfirmed Book on Leads: always use local Yes/No overlay + existing quick-confirm API.
+        showLeadsBookAsk(quotationId, row);
+    }, true);
+
+    if (window.jQuery) {
+        window.jQuery(function () {
+            moveConfirmModalsToBody();
+            // Avoid double-handling from the shared script once capture handler owns Book.
+            window.jQuery(document).off('click.ctQuickBook', '.js-q-book');
+
+            if (window.QSupplierMail) {
+                window.QSupplierMail.init({
+                    suppliers: window.Q_SUPPLIER_MAIL_CATALOG || [],
+                    destinationNameToId: window.Q_DESTINATION_NAME_TO_ID || {},
+                    mailTemplate: { subject: '', body_html: '', meta: {} }
+                });
+            }
+        });
+    } else {
+        moveConfirmModalsToBody();
+    }
+})();
 </script>
 
 </body>
