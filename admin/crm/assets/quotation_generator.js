@@ -22,7 +22,12 @@
     function absUrl(u) {
         if (!u) return '';
         if (/^(https?:)?\/\//i.test(u) || /^data:/i.test(u)) return u;
-        return ADMIN_BASE + u.replace(/^\//, '');
+        // Resolve relative to ADMIN_BASE so ../images/... and img/... both work.
+        try {
+            return new URL(String(u).replace(/^\//, ''), ADMIN_BASE).href;
+        } catch (err) {
+            return ADMIN_BASE + String(u).replace(/^\//, '');
+        }
     }
 
     function fmtDayDate(baseStr, offset) {
@@ -11387,7 +11392,7 @@
         var destination = previewVal(p.destination, 'Destination');
         var destTitle = qpFormatDestTitle(destination);
         var logoUrl = absUrl(Q_PREVIEW_META.logo || 'img/MZ_LOGO_1.jpeg');
-        var trustUrl = absUrl(Q_PREVIEW_META.trust_badge || '../images/Capture1.PNG');
+        var trustUrl = absUrl(Q_PREVIEW_META.trust_badge || 'img/19-years-of-trust.png');
         var todayLong = formatPreviewLongDate(new Date().toISOString().slice(0, 10));
         var paxChildren = children > 0 ? String(children) : '0';
         var paxInfants = infants > 0 ? String(infants) : '0';

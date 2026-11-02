@@ -255,7 +255,9 @@ if ($qPreviewOnly && !isset($_GET['mz_embed'])) {
 
 $qPreviewMeta = [
     'logo' => 'img/MZ_LOGO_1.jpeg',
-    'trust_badge' => '../images/Capture1.PNG',
+    // Keep under admin/img (same deploy root as logo). Root ../images/Capture1.PNG
+    // works locally but often missing / case-mismatched on Linux production.
+    'trust_badge' => 'img/19-years-of-trust.png',
     'expert_name' => 'Raju Gupta',
     'expert_title' => 'Holiday Expert',
     'expert_photo' => 'img/holiday-expert.png',
@@ -18204,7 +18206,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=348"></script>
+    <script src="crm/assets/quotation_generator.js?v=349"></script>
     <script src="crm/assets/quotation_flight_search.js?v=35"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
