@@ -4005,8 +4005,8 @@ foreach ($destinationLookup as $destId => $destName) {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 0.55rem 0.75rem;
-            margin-top: 0.95rem;
-            padding-top: 0.9rem;
+            margin-top: 0.25rem;
+            padding-top: 0.25rem;
             border-top: 1px solid #e6e8ec;
         }
 
@@ -4053,7 +4053,7 @@ foreach ($destinationLookup as $destId => $destName) {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            padding: 1.05rem 1.15rem 1rem;
+            padding: 0.25rem 0.65rem;
             min-width: 0;
         }
 
@@ -4180,11 +4180,50 @@ foreach ($destinationLookup as $destId => $destName) {
             margin-bottom: 0.85rem;
         }
 
+        #confirmTourModal .ct-pax-section.is-collapsed .ct-pax-head {
+            margin-bottom: 0;
+        }
+
+        #confirmTourModal .ct-pax-section.is-collapsed .ct-pax-table-wrap {
+            display: none;
+        }
+
         #confirmTourModal .ct-pax-head-main {
             display: flex;
             align-items: center;
             gap: 0.75rem;
             min-width: 0;
+        }
+
+        #confirmTourModal .ct-pax-head-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            flex-shrink: 0;
+        }
+
+        #confirmTourModal .ct-pax-toggle {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border: 1.5px solid #fda4af;
+            border-radius: 10px;
+            background: #fff;
+            color: #ff2d55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        #confirmTourModal .ct-pax-toggle:hover {
+            background: #fff1f3;
+            border-color: #fb7185;
+            color: #e11d48;
+        }
+
+        #confirmTourModal .ct-pax-toggle i {
+            font-size: 0.78rem;
         }
 
         #confirmTourModal .ct-pax-head-icon {
@@ -4385,7 +4424,7 @@ foreach ($destinationLookup as $destId => $destName) {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            margin-bottom: 0.85rem;
+            margin-bottom: 0.15rem;
         }
 
         #confirmTourModal .ct-included-icon {
@@ -4429,7 +4468,7 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #334155;
             font-size: 0.82rem;
             font-weight: 600;
-            padding: 0.38rem 0.75rem;
+            padding: 0.08rem 0.45rem;
             border-radius: 999px;
             box-shadow: none;
             line-height: 1.2;
@@ -5289,7 +5328,7 @@ foreach ($destinationLookup as $destId => $destName) {
                             </div>
                         </div>
 
-                        <div class="ct-pax-section">
+                        <div class="ct-pax-section is-collapsed">
                             <div class="ct-pax-head">
                                 <div class="ct-pax-head-main">
                                     <span class="ct-pax-head-icon" aria-hidden="true"><i class="fas fa-user-friends"></i></span>
@@ -5298,11 +5337,16 @@ foreach ($destinationLookup as $destId => $destName) {
                                         <!-- <div class="ct-pax-sub">Review traveller details and confirm the travellers for this tour.</div> -->
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm ct-add-guest-btn" id="ctAddGuestBtn">
-                                    <i class="fas fa-plus mr-1"></i> Add Traveller
-                                </button>
+                                <div class="ct-pax-head-actions">
+                                    <button type="button" class="btn btn-sm ct-pax-toggle" id="ctPaxToggle" aria-expanded="false" aria-controls="ctPaxTableWrap" title="Show travellers">
+                                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm ct-add-guest-btn" id="ctAddGuestBtn">
+                                        <i class="fas fa-plus mr-1"></i> Add Traveller
+                                    </button>
+                                </div>
                             </div>
-                            <div class="ct-pax-table-wrap">
+                            <div class="ct-pax-table-wrap" id="ctPaxTableWrap">
                                 <table class="ct-pax-table" id="ctPaxTable">
                                     <thead>
                                         <tr>
@@ -7930,6 +7974,20 @@ foreach ($destinationLookup as $destId => $destName) {
         window.location.reload();
     });
 
+    function crmTitleCaseGuestName(name) {
+        name = String(name || '').trim().replace(/\s+/g, ' ');
+        if (!name) {
+            return '';
+        }
+        return name.split(' ').map(function (word) {
+            var match = word.match(/^([^A-Za-z]*)([A-Za-z])(.*)$/);
+            if (!match) {
+                return word;
+            }
+            return match[1] + match[2].toUpperCase() + String(match[3] || '').toLowerCase();
+        }).join(' ');
+    }
+
     $(document).on('crm:lead-guest-updated', function (_e, payload) {
         payload = payload || {};
         var leadId = Number(payload.lead_id || 0);
@@ -7937,6 +7995,7 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
         var name = String(payload.customer_name || '').trim();
+        var displayName = crmTitleCaseGuestName(name);
         var phone = String(payload.customer_phone || '').trim();
         var email = String(payload.customer_email || '').trim();
         for (var i = 0; i < leadRowsData.length; i++) {
@@ -7945,7 +8004,7 @@ foreach ($destinationLookup as $destId => $destName) {
             }
             if (name) {
                 leadRowsData[i].customer_name = name;
-                leadRowsData[i].customer_display_name = name;
+                leadRowsData[i].customer_display_name = displayName;
                 var letters = name.replace(/[^A-Za-z]/g, '');
                 leadRowsData[i].customer_name_letters = (letters.charAt(0) + letters.charAt(1)).toUpperCase();
             }
@@ -7961,7 +8020,7 @@ foreach ($destinationLookup as $destId => $destName) {
         var $row = $('tr[data-lead-id="' + leadId + '"]');
         if ($row.length) {
             if (name) {
-                $row.find('.lead-name-text').text(name)
+                $row.find('.lead-name-text').text(displayName)
                     .attr('title', 'Phone: ' + (phone || '—') + '\nEmail: ' + (email || '—'));
             }
             $row.find('[data-lead-email]').attr('data-lead-email', email);
@@ -8523,7 +8582,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=47"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=50"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 $(function () {

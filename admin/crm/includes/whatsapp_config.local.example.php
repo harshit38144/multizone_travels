@@ -13,7 +13,7 @@
  *   company — Multi Zone Travels
  */
 return [
-    'richautomate_api_key' => 'ra_X6CbQ96ffL8aR8lLnKqN30QD4RRmV8jk27a9lrjl',
+    'richautomate_api_key' => '',
     'template_name' => '',
     'template_language' => 'en_US',
     'template_variables' => ['guest', 'agent', 'company'],

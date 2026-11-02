@@ -255,6 +255,7 @@ if ($qPreviewOnly && !isset($_GET['mz_embed'])) {
 
 $qPreviewMeta = [
     'logo' => 'img/MZ_LOGO_1.jpeg',
+    'trust_badge' => '../images/Capture1.PNG',
     'expert_name' => 'Raju Gupta',
     'expert_title' => 'Holiday Expert',
     'expert_photo' => 'img/holiday-expert.png',
@@ -3076,7 +3077,6 @@ $qWizardSteps = [
             color: #ea580c;
         }
 
-        .q-ai-incl-modal #qAiInclContext,
         .q-ai-incl-modal #qAiInclResult,
         .q-ai-incl-modal #qAiInclNotes {
             border-radius: 10px;
@@ -3084,7 +3084,6 @@ $qWizardSteps = [
             font-size: 0.86rem;
         }
 
-        .q-ai-incl-modal #qAiInclContext:focus,
         .q-ai-incl-modal #qAiInclResult:focus,
         .q-ai-incl-modal #qAiInclNotes:focus {
             border-color: #818cf8;
@@ -3175,6 +3174,54 @@ $qWizardSteps = [
         }
 
         .note-editable .q-ai-incl-doc .q-ai-incl-sec-title {
+            margin: 0 0 0.35rem;
+        }
+
+        .q-ai-excl-doc .q-ai-excl-sec {
+            margin-bottom: 0.85rem;
+        }
+
+        .q-ai-excl-doc .q-ai-excl-sec:last-child {
+            margin-bottom: 0;
+        }
+
+        .q-ai-excl-doc .q-ai-excl-sec-title {
+            margin: 0 0 0.35rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .q-ai-excl-doc .q-ai-excl-sec-title i {
+            width: 1.15rem;
+            text-align: center;
+            color: #be123c;
+            font-size: 0.95rem;
+        }
+
+        .q-ai-excl-doc .q-ai-excl-sec[data-sec="airfare"] .q-ai-excl-sec-title i { color: #2563eb; }
+        .q-ai-excl-doc .q-ai-excl-sec[data-sec="accommodation"] .q-ai-excl-sec-title i { color: #dc2626; }
+        .q-ai-excl-doc .q-ai-excl-sec[data-sec="meals"] .q-ai-excl-sec-title i { color: #ca8a04; }
+        .q-ai-excl-doc .q-ai-excl-sec[data-sec="sightseeing"] .q-ai-excl-sec-title i { color: #ea580c; }
+        .q-ai-excl-doc .q-ai-excl-sec[data-sec="transfers"] .q-ai-excl-sec-title i { color: #0284c7; }
+        .q-ai-excl-doc .q-ai-excl-sec[data-sec="other"] .q-ai-excl-sec-title i { color: #be123c; }
+
+        .q-ai-excl-doc .q-ai-excl-sec ul {
+            margin: 0 0 0 1.35rem;
+            padding: 0;
+            list-style: disc;
+        }
+
+        .q-ai-excl-doc .q-ai-excl-sec li {
+            margin: 0 0 0.18rem;
+            line-height: 1.45;
+            color: #1f2937;
+        }
+
+        .note-editable .q-ai-excl-doc .q-ai-excl-sec-title {
             margin: 0 0 0.35rem;
         }
 
@@ -3977,12 +4024,55 @@ $qWizardSteps = [
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 0rem 0.85rem;
+            gap: 0.35rem 0.75rem;
             margin-bottom: 0;
             padding: 0.55rem 0.75rem;
             background: #fff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
+        }
+
+        .crm-quotation-gen .q-flight-journey-type-wrap {
+            flex: 0 0 auto;
+        }
+
+        .crm-quotation-gen .q-flight-journey-type.is-fixed {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #047857;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-flight-journey-type.is-fixed i {
+            font-size: 0.68rem;
+        }
+
+        .crm-quotation-gen .q-flight-journey-type.is-select {
+            margin: 0;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .crm-quotation-gen .q-flight-journey-type.is-select .f-journey-type {
+            height: 28px;
+            min-width: 96px;
+            padding: 0.15rem 0.45rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            line-height: 1.2;
         }
 
         .crm-quotation-gen .q-flight-journey-route {
@@ -11081,7 +11171,7 @@ $qWizardSteps = [
 
         .qp-doc-head-top {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
             gap: 16px;
             width: 100%;
@@ -11175,6 +11265,53 @@ $qWizardSteps = [
             white-space: nowrap;
         }
 
+        .qp-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: nowrap;
+            gap: 0.65rem;
+            margin-top: 0.45rem;
+            white-space: nowrap;
+        }
+
+        .qp-meta-value,
+        .qp-meta-row .ref {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #0a1329;
+            line-height: 1.25;
+        }
+
+        .qp-meta-sep {
+            width: 1px;
+            height: 0.95rem;
+            background: #d7dee8;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-trust {
+            flex: 0 0 auto;
+            max-width: 150px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+        }
+
+        .qp-trust-img {
+            display: block;
+            width: 130px;
+            max-width: 100%;
+            height: auto;
+            max-height: 66px;
+            object-fit: contain;
+            object-position: right top;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         .qp-route-pills {
             display: flex;
             flex-wrap: wrap;
@@ -11213,77 +11350,6 @@ $qWizardSteps = [
             flex-shrink: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-        }
-
-        .qp-ref-card {
-            background: #ffffff;
-            border: 0;
-            border-radius: 16px;
-            padding: 5px 12px;
-            min-width: 166px;
-            max-width: 240px;
-            font-family: inherit;
-            font-size: 12px;
-            line-height: 1.3;
-            text-align: left;
-            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .qp-ref-card .qp-ref-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 0px 0px 0px 0px;
-            padding: 0 0 3px;
-        }
-
-        .qp-ref-card .qp-ref-row + .qp-ref-row {
-            padding-top: 5px;
-            padding-bottom: 0;
-            border-top: 1px solid #e8ecf1;
-        }
-
-        .qp-ref-card .qp-ref-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .qp-ref-card .qp-ref-ico {
-            color: #d92027;
-            width: 21px;
-            text-align: center;
-            margin-top: 0;
-            flex-shrink: 0;
-            font-size: 1 rem;
-            line-height: 1;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .qp-ref-text {
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .qp-ref-label {
-            font-size: 10px;
-            font-weight: 500;
-            color: #707a8a;
-            margin-bottom: 0;
-            line-height: 1.2;
-        }
-
-        .qp-ref-value,
-        .qp-ref-card .ref {
-            font-weight: 700;
-            color: #0a1329;
-            word-break: break-word;
-            font-size: 11px;
-            line-height: 1.25;
-            letter-spacing: -0.01em;
         }
 
         /* —— Section heads —— */
@@ -11469,6 +11535,34 @@ $qWizardSteps = [
             display: flex;
             flex-direction: column;
             gap: 0;
+        }
+
+        .qp-flight-journey-type {
+            display: inline-flex;
+            align-items: center;
+            align-self: flex-start;
+            margin: 0 0 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            line-height: 1.3;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-flight-journey-type.is-onward {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #047857;
+        }
+
+        .qp-flight-journey-type.is-return {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
         }
 
         .qp-flight-seg-card {
@@ -15046,8 +15140,15 @@ $qWizardSteps = [
                 text-align: center;
             }
 
-            body:not(.q-preview-only) .qp-ref-card {
-                width: 100%;
+            body:not(.q-preview-only) .qp-trust {
+                max-width: 160px;
+                justify-content: center;
+            }
+
+            body:not(.q-preview-only) .qp-meta-row {
+                flex-wrap: wrap;
+                white-space: normal;
+                gap: 0.4rem 0.65rem;
             }
 
             body:not(.q-preview-only) .qp-info-card.qp-cols-3,
@@ -15105,9 +15206,14 @@ $qWizardSteps = [
                 max-width: none;
             }
 
-            body:not(.q-preview-only) .qp-ref-card {
-                width: 100%;
+            body:not(.q-preview-only) .qp-trust {
                 max-width: none;
+                width: 100%;
+                justify-content: center;
+            }
+
+            body:not(.q-preview-only) .qp-trust-img {
+                margin: 0 auto;
             }
 
             body:not(.q-preview-only) .qp-info-cell:last-child {
@@ -17341,6 +17447,10 @@ $qWizardSteps = [
                                     <button type="button" class="btn btn-sm q-ai-incl-inline-btn" id="qAiInclusionsInlineBtn" title="AI Generate inclusions">
                                         <i class="fas fa-magic"></i><span> AI Generate</span>
                                     </button>
+                                    <?php elseif ($field === 'exclusion'): ?>
+                                    <button type="button" class="btn btn-sm q-ai-incl-inline-btn" id="qAiExclusionsInlineBtn" title="AI Generate exclusions">
+                                        <i class="fas fa-magic"></i><span> AI Generate</span>
+                                    </button>
                                     <?php endif; ?>
                                 </div>
                                 <div class="q-terms-item-body q-accordion-body" id="qbody_<?= $field ?>" style="display:none;">
@@ -17672,7 +17782,7 @@ $qWizardSteps = [
                         <div class="q-ai-incl-modal-icon"><i class="fas fa-magic"></i></div>
                         <div>
                             <h5 class="modal-title mb-0" id="qAiInclusionsModalLabel">AI Inclusions Generator</h5>
-                            <p class="q-day-ai-modal-sub mb-0">Review booking context, then generate a professional inclusions list</p>
+                            <p class="q-day-ai-modal-sub mb-0">Add optional instructions, then generate a professional inclusions list</p>
                         </div>
                     </div>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -17682,12 +17792,6 @@ $qWizardSteps = [
                     <div class="alert alert-success d-none py-2 px-3" id="qAiInclSuccess" role="alert"></div>
 
                     <div class="q-ai-incl-chips" id="qAiInclChips" aria-label="Collected booking summary"></div>
-
-                    <div class="form-group">
-                        <label class="q-label" for="qAiInclContext">Booking context <span class="text-muted font-weight-normal">(auto-filled — edit if needed)</span></label>
-                        <textarea class="form-control" id="qAiInclContext" rows="10" placeholder="Guest, tour, flights, hotels, and itinerary details will appear here..."></textarea>
-                        <small class="form-text text-muted">Only services present in this context will be used. Missing sections are skipped — nothing is invented.</small>
-                    </div>
 
                     <div class="form-group mb-0">
                         <label class="q-label" for="qAiInclNotes">Extra instructions <span class="text-muted font-weight-normal">(optional)</span></label>
@@ -17713,6 +17817,55 @@ $qWizardSteps = [
                     </button>
                     <button type="button" class="btn q-day-ai-generate" id="qAiInclGenerate">
                         <i class="fas fa-bolt mr-1"></i> Generate Inclusions
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade q-ai-incl-modal" id="qAiExclusionsModal" tabindex="-1" role="dialog" aria-labelledby="qAiExclusionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="q-day-ai-modal-hd">
+                        <div class="q-ai-incl-modal-icon"><i class="fas fa-magic"></i></div>
+                        <div>
+                            <h5 class="modal-title mb-0" id="qAiExclusionsModalLabel">AI Exclusions Generator</h5>
+                            <p class="q-day-ai-modal-sub mb-0">Add optional instructions, then generate exclusions not already covered in Inclusions</p>
+                        </div>
+                    </div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none py-2 px-3" id="qAiExclError" role="alert"></div>
+                    <div class="alert alert-success d-none py-2 px-3" id="qAiExclSuccess" role="alert"></div>
+
+                    <div class="q-ai-incl-chips" id="qAiExclChips" aria-label="Collected booking summary"></div>
+
+                    <div class="form-group mb-0">
+                        <label class="q-label" for="qAiExclNotes">Extra instructions <span class="text-muted font-weight-normal">(optional)</span></label>
+                        <textarea class="form-control" id="qAiExclNotes" rows="2" placeholder="e.g. Emphasize visa and personal expenses; keep wording formal..."></textarea>
+                    </div>
+
+                    <div class="q-ai-incl-result d-none" id="qAiExclResultWrap">
+                        <div class="q-ai-incl-result-hd">
+                            <strong>Generated exclusions</strong>
+                            <span class="badge badge-light border" id="qAiExclSourceBadge"></span>
+                        </div>
+                        <textarea class="form-control" id="qAiExclResult" rows="8" placeholder="Generated list will appear here for review/edit..."></textarea>
+                        <small class="form-text text-muted">Edit the list before inserting into the Exclusions field. Inclusions are left unchanged.</small>
+                    </div>
+                </div>
+                <div class="modal-footer q-ai-incl-footer">
+                    <button type="button" class="btn btn-light border" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-light border d-none" id="qAiExclRegenerate">
+                        <i class="fas fa-sync-alt mr-1"></i> Regenerate
+                    </button>
+                    <button type="button" class="btn q-ai-incl-use d-none" id="qAiExclUse">
+                        <i class="fas fa-check mr-1"></i> Use / Insert
+                    </button>
+                    <button type="button" class="btn q-day-ai-generate" id="qAiExclGenerate">
+                        <i class="fas fa-bolt mr-1"></i> Generate Exclusions
                     </button>
                 </div>
             </div>
@@ -18051,7 +18204,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=342"></script>
+    <script src="crm/assets/quotation_generator.js?v=348"></script>
     <script src="crm/assets/quotation_flight_search.js?v=35"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

@@ -49,7 +49,7 @@ $boot = json_encode([
     <base href="../">
     <title>All Bookings</title>
     <?php include __DIR__ . '/../includes/header-links.php'; ?>
-    <link rel="stylesheet" href="crm/assets/quotation_confirm_tour_page.css?v=1">
+    <link rel="stylesheet" href="crm/assets/quotation_confirm_tour_page.css?v=2">
     <link rel="stylesheet" href="crm/assets/quotation_preview_modal.css?v=1">
     <style>
         .bk-page { background: #f4f7fb; }
@@ -1172,7 +1172,7 @@ $boot = json_encode([
     render();
 })(jQuery);
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=48"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=49"></script>
 <script src="crm/assets/quotation_preview_modal.js?v=1"></script>
 <script>
 (function ($) {

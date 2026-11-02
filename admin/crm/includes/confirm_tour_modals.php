@@ -125,7 +125,7 @@
                             </div>
                         </div>
 
-                        <div class="ct-pax-section">
+                        <div class="ct-pax-section is-collapsed">
                             <div class="ct-pax-head">
                                 <div class="ct-pax-head-main">
                                     <span class="ct-pax-head-icon" aria-hidden="true"><i class="fas fa-user-friends"></i></span>
@@ -134,11 +134,16 @@
                                         <!-- <div class="ct-pax-sub">Review traveller details and confirm the travellers for this tour.</div> -->
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm ct-add-guest-btn" id="ctAddGuestBtn">
-                                    <i class="fas fa-plus mr-1"></i> Add Traveller
-                                </button>
+                                <div class="ct-pax-head-actions">
+                                    <button type="button" class="btn btn-sm ct-pax-toggle" id="ctPaxToggle" aria-expanded="false" aria-controls="ctPaxTableWrap" title="Show travellers">
+                                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm ct-add-guest-btn" id="ctAddGuestBtn">
+                                        <i class="fas fa-plus mr-1"></i> Add Traveller
+                                    </button>
+                                </div>
                             </div>
-                            <div class="ct-pax-table-wrap">
+                            <div class="ct-pax-table-wrap" id="ctPaxTableWrap">
                                 <table class="ct-pax-table" id="ctPaxTable">
                                     <thead>
                                         <tr>

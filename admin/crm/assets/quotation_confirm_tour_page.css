@@ -297,11 +297,50 @@
             margin-bottom: 0.85rem;
         }
 
+        #confirmTourModal .ct-pax-section.is-collapsed .ct-pax-head {
+            margin-bottom: 0;
+        }
+
+        #confirmTourModal .ct-pax-section.is-collapsed .ct-pax-table-wrap {
+            display: none;
+        }
+
         #confirmTourModal .ct-pax-head-main {
             display: flex;
             align-items: center;
             gap: 0.75rem;
             min-width: 0;
+        }
+
+        #confirmTourModal .ct-pax-head-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            flex-shrink: 0;
+        }
+
+        #confirmTourModal .ct-pax-toggle {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border: 1.5px solid #fda4af;
+            border-radius: 10px;
+            background: #fff;
+            color: #ff2d55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        #confirmTourModal .ct-pax-toggle:hover {
+            background: #fff1f3;
+            border-color: #fb7185;
+            color: #e11d48;
+        }
+
+        #confirmTourModal .ct-pax-toggle i {
+            font-size: 0.78rem;
         }
 
         #confirmTourModal .ct-pax-head-icon {

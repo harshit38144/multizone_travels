@@ -965,17 +965,14 @@ if ($res && mysqli_num_rows($res) > 0) {
             <!-- AI E-Ticket Auto-Fill -->
             <style>
                 .et-ai-box {
-                    border: 1px solid #c7d2fe;
-                    background: linear-gradient(135deg, #eef2ff, #f8fafc);
-                    border-radius: 10px;
-                    padding: 12px 14px;
-                    margin-bottom: 18px;
+                    margin-bottom: 14px;
                 }
 
                 .et-ai-title {
                     font-weight: 700;
-                    font-size: 15px;
-                    color: #312e81;
+                    font-size: 13px;
+                    color: #334155;
+                    margin-bottom: 6px;
                 }
 
                 .et-ai-title i {
@@ -983,59 +980,208 @@ if ($res && mysqli_num_rows($res) > 0) {
                     margin-right: 5px;
                 }
 
-                .et-ai-sub {
-                    font-size: 12px;
-                    color: #64748b;
-                    line-height: 1.4;
-                    margin-top: 2px;
-                    margin-bottom: 10px;
-                }
-
-                .et-ai-drop {
+                .et-ai-field {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    border: 1.5px dashed #a5b4fc;
+                    gap: 10px;
+                    min-height: 42px;
+                    padding: 6px 8px 6px 10px;
+                    background: #f8fafc;
+                    border: 1px solid #d0d7e2;
                     border-radius: 8px;
-                    padding: 11px;
-                    background: #fff;
-                    color: #4338ca;
-                    font-size: 13px;
-                    cursor: pointer;
-                    transition: all .15s;
+                    transition: border-color .15s, background .15s, box-shadow .15s;
                 }
 
-                .et-ai-drop:hover,
-                .et-ai-drop:focus,
-                .et-ai-drop.is-drag {
-                    border-color: #4f46e5;
+                .et-ai-field:hover,
+                .et-ai-field:focus,
+                .et-ai-field:focus-within {
+                    border-color: #94a3b8;
+                    background: #fff;
+                    outline: 0;
+                    box-shadow: 0 0 0 2px rgba(148, 163, 184, .18);
+                }
+
+                .et-ai-field.is-drag,
+                .et-ai-field.is-paste {
+                    border-color: #6366f1;
                     background: #eef2ff;
+                    box-shadow: 0 0 0 2px rgba(99, 102, 241, .18);
+                }
+
+                .et-ai-field.is-busy .et-ai-upload-btn,
+                .et-ai-field.is-busy .et-ai-replace-btn {
+                    pointer-events: none;
+                    opacity: .65;
+                }
+
+                .et-ai-empty {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                    width: 100%;
+                    min-width: 0;
+                }
+
+                .et-ai-field.has-preview .et-ai-empty {
+                    display: none;
+                }
+
+                .et-ai-placeholder {
+                    flex: 1;
+                    min-width: 0;
+                    font-size: 12.5px;
+                    color: #94a3b8;
+                    line-height: 1.35;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .et-ai-upload-btn,
+                .et-ai-replace-btn {
+                    flex-shrink: 0;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    border: 1px solid #c7d2fe;
+                    background: #fff;
+                    color: #4338ca;
+                    border-radius: 6px;
+                    padding: 6px 10px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    line-height: 1.2;
+                    cursor: pointer;
+                    white-space: nowrap;
+                }
+
+                .et-ai-upload-btn:hover,
+                .et-ai-upload-btn:focus,
+                .et-ai-replace-btn:hover,
+                .et-ai-replace-btn:focus {
+                    background: #eef2ff;
+                    border-color: #818cf8;
                     outline: 0;
                 }
 
-                .et-ai-drop i {
-                    font-size: 17px;
+                .et-ai-preview {
+                    display: none;
+                    align-items: center;
+                    gap: 10px;
+                    width: 100%;
+                    min-width: 0;
                 }
 
-                .et-ai-drop.is-busy {
-                    pointer-events: none;
-                    opacity: .55;
+                .et-ai-field.has-preview .et-ai-preview {
+                    display: flex;
+                }
+
+                .et-ai-preview-thumb-wrap {
+                    width: 80px;
+                    height: 80px;
+                    flex-shrink: 0;
+                    border-radius: 6px;
+                    border: 1px solid #e2e8f0;
+                    background: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                }
+
+                .et-ai-preview-thumb {
+                    width: 80px;
+                    height: 80px;
+                    object-fit: contain;
+                    display: block;
+                }
+
+                .et-ai-preview-pdf {
+                    display: none;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 4px;
+                    width: 100%;
+                    height: 100%;
+                    color: #dc2626;
+                    font-size: 11px;
+                    font-weight: 600;
+                }
+
+                .et-ai-preview-pdf i {
+                    font-size: 28px;
+                }
+
+                .et-ai-preview-thumb-wrap.is-pdf .et-ai-preview-thumb {
+                    display: none;
+                }
+
+                .et-ai-preview-thumb-wrap.is-pdf .et-ai-preview-pdf {
+                    display: flex;
+                }
+
+                .et-ai-preview-meta {
+                    flex: 1;
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+
+                .et-ai-preview-name {
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    color: #0f172a;
+                    line-height: 1.3;
+                    word-break: break-word;
+                }
+
+                .et-ai-preview-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex-wrap: wrap;
+                }
+
+                .et-ai-clear-btn {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 6px;
+                    border: 1px solid #e2e8f0;
+                    background: #fff;
+                    color: #64748b;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    padding: 0;
+                    line-height: 1;
+                }
+
+                .et-ai-clear-btn:hover,
+                .et-ai-clear-btn:focus {
+                    border-color: #fca5a5;
+                    color: #dc2626;
+                    background: #fef2f2;
+                    outline: 0;
                 }
 
                 .et-ai-status {
-                    margin-top: 10px;
-                    border-radius: 8px;
-                    padding: 9px 11px;
-                    font-size: 12.5px;
+                    margin-top: 6px;
+                    border-radius: 6px;
+                    padding: 6px 8px;
+                    font-size: 12px;
                     display: flex;
-                    gap: 9px;
+                    gap: 7px;
                     align-items: flex-start;
-                    line-height: 1.45;
+                    line-height: 1.35;
                 }
 
-                .et-ai-status>i {
-                    margin-top: 2px;
+                .et-ai-status > i {
+                    margin-top: 1px;
+                    flex-shrink: 0;
                 }
 
                 .et-ai-status .et-ai-msg {
@@ -1069,14 +1215,14 @@ if ($res && mysqli_num_rows($res) > 0) {
                 }
 
                 .et-ai-progress {
-                    height: 5px;
+                    height: 3px;
                     background: #dbeafe;
-                    border-radius: 4px;
-                    margin-top: 5px;
+                    border-radius: 3px;
+                    margin-top: 4px;
                     overflow: hidden;
                 }
 
-                .et-ai-progress>span {
+                .et-ai-progress > span {
                     display: block;
                     height: 100%;
                     background: #3b82f6;
@@ -1085,28 +1231,34 @@ if ($res && mysqli_num_rows($res) > 0) {
                 }
 
                 .et-ai-list {
-                    margin-top: 5px;
-                    font-size: 12px;
-                }
-
-                .et-ai-list strong {
-                    font-weight: 700;
-                }
-
-                .et-ai-retry {
-                    border: 0;
-                    background: none;
-                    color: inherit;
-                    text-decoration: underline;
-                    font-weight: 600;
-                    padding: 0;
-                    font-size: 12.5px;
+                    margin-top: 3px;
+                    font-size: 11.5px;
+                    opacity: .95;
                 }
 
                 .control-panel-wrapper .et-ai-filled {
                     background: #fefce8;
                     border-color: #facc15;
                     box-shadow: 0 0 0 2px rgba(250, 204, 21, .18);
+                }
+
+                @media (max-width: 576px) {
+                    .et-ai-empty {
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+
+                    .et-ai-placeholder {
+                        white-space: normal;
+                    }
+
+                    .et-ai-upload-btn {
+                        justify-content: center;
+                    }
+
+                    .et-ai-field.has-preview {
+                        align-items: flex-start;
+                    }
                 }
             </style>
 
@@ -1121,18 +1273,39 @@ if ($res && mysqli_num_rows($res) > 0) {
                                 <!-- AI E-Ticket Auto-Fill -->
                                 <div class="et-ai-box" id="etAiBox">
                                     <div class="et-ai-title"><i class="fas fa-magic"></i>Auto-fill from e-ticket</div>
-                                    <div class="et-ai-sub">Upload an airline e-ticket — JPG, JPEG, PNG, WEBP, screenshot,
-                                        scanned ticket or PDF (max 8 MB). Details are read with AI and filled into the
-                                        form below; review and edit them before printing or saving.</div>
-                                    <div class="et-ai-drop" id="etAiDrop" tabindex="0" role="button"
-                                        aria-label="Upload e-ticket">
-                                        <i class="fas fa-plane-departure"></i><span>Drop e-ticket here or
-                                            <u>browse</u></span>
+                                    <div class="et-ai-field" id="etAiDrop" tabindex="0"
+                                        aria-label="Upload, drag and drop, or paste e-ticket">
+                                        <div class="et-ai-empty" id="etAiEmpty">
+                                            <span class="et-ai-placeholder">Upload, drag &amp; drop, or paste e-ticket image (Ctrl + V)</span>
+                                            <button type="button" class="et-ai-upload-btn" id="etAiUploadBtn">
+                                                <i class="fas fa-upload"></i> Upload E-ticket
+                                            </button>
+                                        </div>
+                                        <div class="et-ai-preview" id="etAiPreview" aria-hidden="true">
+                                            <div class="et-ai-preview-thumb-wrap" id="etAiThumbWrap">
+                                                <img class="et-ai-preview-thumb" id="etAiPreviewImg" alt="E-ticket preview">
+                                                <div class="et-ai-preview-pdf" id="etAiPreviewPdf" aria-hidden="true">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                    <span>PDF</span>
+                                                </div>
+                                            </div>
+                                            <div class="et-ai-preview-meta">
+                                                <div class="et-ai-preview-name" id="etAiPreviewName"></div>
+                                                <div class="et-ai-preview-actions">
+                                                    <button type="button" class="et-ai-replace-btn" id="etAiReplaceBtn">
+                                                        <i class="fas fa-sync-alt"></i> Replace
+                                                    </button>
+                                                    <button type="button" class="et-ai-clear-btn" id="etAiClearBtn"
+                                                        title="Remove" aria-label="Remove e-ticket">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <input type="file" id="etAiFile" class="d-none"
                                         accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf">
-                                    <div class="et-ai-status d-none" id="etAiStatus" role="status" aria-live="polite">
-                                    </div>
+                                    <div class="et-ai-status d-none" id="etAiStatus" role="status" aria-live="polite"></div>
                                 </div>
 
                                 <div class="row">
@@ -3188,6 +3361,7 @@ if ($res && mysqli_num_rows($res) > 0) {
             "use strict";
 
             var etAiXhr = null;
+            var etAiPreviewUrl = null;
 
             function esc(v) {
                 return $("<div>").text(v == null ? "" : v).html();
@@ -3195,6 +3369,56 @@ if ($res && mysqli_num_rows($res) > 0) {
 
             function mark(sel) {
                 $(sel).addClass("et-ai-filled");
+            }
+
+            function clearPreview() {
+                if (etAiPreviewUrl) {
+                    try { URL.revokeObjectURL(etAiPreviewUrl); } catch (e) { /* ignore */ }
+                    etAiPreviewUrl = null;
+                }
+                $("#etAiDrop").removeClass("has-preview");
+                $("#etAiThumbWrap").removeClass("is-pdf");
+                $("#etAiPreviewImg").removeAttr("src").show();
+                $("#etAiPreviewPdf").attr("aria-hidden", "true");
+                $("#etAiPreviewName").text("");
+                $("#etAiPreview").attr("aria-hidden", "true");
+                $("#etAiFile").val("");
+            }
+
+            function resetEtAi() {
+                if (etAiXhr) {
+                    try { etAiXhr.abort(); } catch (e) { /* ignore */ }
+                    etAiXhr = null;
+                }
+                clearPreview();
+                setStatus(null);
+            }
+
+            function showPreview(file, fileLabel) {
+                if (etAiPreviewUrl) {
+                    try { URL.revokeObjectURL(etAiPreviewUrl); } catch (e) { /* ignore */ }
+                    etAiPreviewUrl = null;
+                }
+                if (!file) {
+                    clearPreview();
+                    return;
+                }
+                var type = String(file.type || "").toLowerCase();
+                var label = fileLabel || uploadFileName(file);
+                var isPdf = type === "application/pdf" || /\.pdf$/i.test(label);
+                $("#etAiPreviewName").text(label);
+                if (isPdf) {
+                    $("#etAiThumbWrap").addClass("is-pdf");
+                    $("#etAiPreviewImg").removeAttr("src");
+                    $("#etAiPreviewPdf").attr("aria-hidden", "false");
+                } else {
+                    $("#etAiThumbWrap").removeClass("is-pdf");
+                    $("#etAiPreviewPdf").attr("aria-hidden", "true");
+                    etAiPreviewUrl = URL.createObjectURL(file);
+                    $("#etAiPreviewImg").attr("src", etAiPreviewUrl).show();
+                }
+                $("#etAiDrop").addClass("has-preview");
+                $("#etAiPreview").attr("aria-hidden", "false");
             }
 
             function setStatus(state, html) {
@@ -3209,12 +3433,100 @@ if ($res && mysqli_num_rows($res) > 0) {
                 if (!state) {
                     $s.addClass("d-none").empty()
                         .removeClass("is-uploading is-processing is-success is-warning is-error");
+                    $("#etAiDrop").removeClass("is-busy");
                     return;
                 }
                 $s.removeClass("d-none is-uploading is-processing is-success is-warning is-error")
                     .addClass("is-" + state)
                     .html('<i class="' + icons[state] + '"></i><div class="et-ai-msg">' + html + "</div>");
                 $("#etAiDrop").toggleClass("is-busy", state === "uploading" || state === "processing");
+            }
+
+            function openEtAiPicker() {
+                $("#etAiFile").val("").trigger("click");
+            }
+
+            function mimeToExt(mime) {
+                mime = String(mime || "").toLowerCase();
+                if (mime === "image/jpeg" || mime === "image/jpg") {
+                    return "jpg";
+                }
+                if (mime === "image/png") {
+                    return "png";
+                }
+                if (mime === "image/webp") {
+                    return "webp";
+                }
+                if (mime === "application/pdf") {
+                    return "pdf";
+                }
+                return "";
+            }
+
+            function isAllowedEticketFile(file) {
+                if (!file) {
+                    return false;
+                }
+                var type = String(file.type || "").toLowerCase();
+                if (type === "image/jpg") {
+                    type = "image/jpeg";
+                }
+                if (["image/jpeg", "image/png", "image/webp", "application/pdf"].indexOf(type) >= 0) {
+                    return true;
+                }
+                var ext = String(file.name || "").split(".").pop().toLowerCase();
+                return ["jpg", "jpeg", "png", "webp", "pdf"].indexOf(ext) >= 0;
+            }
+
+            function uploadFileName(file) {
+                var name = String((file && file.name) || "").trim();
+                if (name && name.indexOf(".") > 0 && name !== "blob" && name !== "image") {
+                    return name;
+                }
+                var ext = mimeToExt(file && file.type) || "png";
+                return "pasted-eticket." + ext;
+            }
+
+            function fileFromClipboard(e) {
+                var data = (e.originalEvent || e).clipboardData;
+                if (!data) {
+                    return null;
+                }
+                var items = data.items;
+                if (items) {
+                    for (var i = 0; i < items.length; i++) {
+                        if (items[i].type && items[i].type.indexOf("image/") === 0) {
+                            return items[i].getAsFile();
+                        }
+                    }
+                }
+                var files = data.files;
+                if (files && files.length) {
+                    for (var j = 0; j < files.length; j++) {
+                        var type = String(files[j].type || "").toLowerCase();
+                        if (type.indexOf("image/") === 0 || type === "application/pdf") {
+                            return files[j];
+                        }
+                    }
+                }
+                return null;
+            }
+
+            function handlePasteEvent(e, requireImage) {
+                if ($("#etAiDrop").hasClass("is-busy")) {
+                    return false;
+                }
+                var file = fileFromClipboard(e);
+                if (!file) {
+                    if (requireImage) {
+                        e.preventDefault();
+                        setStatus("error", "Clipboard has no image. Copy a ticket screenshot or image, then press Ctrl + V here.");
+                    }
+                    return false;
+                }
+                e.preventDefault();
+                uploadFile(file);
+                return true;
             }
 
             function placeLabel(city, code) {
@@ -3548,27 +3860,21 @@ if ($res && mysqli_num_rows($res) > 0) {
                 var filled = Array.isArray(ticket.filled) ? ticket.filled : [];
 
                 if (!ticket.is_eticket || !filled.length) {
-                    setStatus("warning", esc(res.message || "No details could be read from this file.") +
-                        ' <button type="button" class="et-ai-retry js-et-ai-retry">Upload another file</button>');
+                    setStatus("warning", esc(res.message || "No details could be read from this file."));
                     return;
                 }
 
                 var applied = applyTicket(ticket);
                 var lowConfidence = ticket.confidence === "low";
-                var html = "<strong>E-ticket read from " + esc(fileLabel) + ".</strong> " +
-                    applied.done.length + " detail" + (applied.done.length === 1 ? "" : "s") +
-                    " auto-filled (highlighted). Please review and edit them before printing or saving." +
-                    '<div class="et-ai-list"><strong>Filled:</strong> ' + esc(applied.done.join(", ")) + "</div>";
+                var html = "<strong>" + applied.done.length + " detail" +
+                    (applied.done.length === 1 ? "" : "s") + " filled</strong> from " + esc(fileLabel) +
+                    ". Review highlighted fields before saving.";
                 if (applied.blank.length) {
-                    html += '<div class="et-ai-list"><strong>Left blank (not found on the ticket):</strong> ' +
-                        esc(applied.blank.join(", ")) + "</div>";
+                    html += '<div class="et-ai-list">Left blank: ' + esc(applied.blank.join(", ")) + "</div>";
                 }
                 if (lowConfidence) {
-                    html += '<div class="et-ai-list"><i class="fas fa-exclamation-circle mr-1"></i>' +
-                        "Low read confidence — check every field carefully.</div>";
+                    html += '<div class="et-ai-list">Low confidence — check every field carefully.</div>';
                 }
-                html += '<div class="et-ai-list"><button type="button" class="et-ai-retry js-et-ai-retry">' +
-                    "Upload another e-ticket</button></div>";
 
                 setStatus(lowConfidence || applied.blank.length ? "warning" : "success", html);
             }
@@ -3577,25 +3883,26 @@ if ($res && mysqli_num_rows($res) > 0) {
                 if (!file) {
                     return;
                 }
-                var ext = String(file.name || "").split(".").pop().toLowerCase();
-                if (["jpg", "jpeg", "png", "webp", "pdf"].indexOf(ext) < 0) {
+                if (!isAllowedEticketFile(file)) {
                     setStatus("error", "Only JPG, JPEG, PNG, WEBP or PDF e-tickets are allowed.");
                     return;
                 }
                 if (file.size > 8 * 1024 * 1024) {
-                    setStatus("error", "File size exceeds 8 MB. Please upload a smaller file.");
+                    setStatus("error", "File size exceeds 8 MB. Please use a smaller file.");
                     return;
                 }
                 if (etAiXhr) {
                     try { etAiXhr.abort(); } catch (e) { /* ignore */ }
                 }
 
-                var fileLabel = file.name || "e-ticket";
-                var fd = new FormData();
-                fd.append("file", file);
+                var fileLabel = uploadFileName(file);
+                showPreview(file, fileLabel);
 
-                setStatus("uploading", "Uploading <strong>" + esc(fileLabel) + "</strong>… " +
-                    '<span class="js-et-ai-pct">0%</span><div class="et-ai-progress"><span></span></div>');
+                var fd = new FormData();
+                fd.append("file", file, fileLabel);
+
+                setStatus("uploading", "Uploading… <span class=\"js-et-ai-pct\">0%</span>" +
+                    '<div class="et-ai-progress"><span></span></div>');
 
                 var xhr = new XMLHttpRequest();
                 etAiXhr = xhr;
@@ -3611,15 +3918,13 @@ if ($res && mysqli_num_rows($res) > 0) {
                 };
                 xhr.upload.onload = function () {
                     if (etAiXhr === xhr) {
-                        setStatus("processing", "Reading <strong>" + esc(fileLabel) + "</strong> with AI…" +
-                            '<div class="et-ai-list">This usually takes a few seconds.</div>');
+                        setStatus("processing", "Reading e-ticket with AI…");
                     }
                 };
                 xhr.onerror = function () {
                     if (etAiXhr === xhr) {
                         etAiXhr = null;
-                        setStatus("error", "Upload failed. Check your connection and " +
-                            '<button type="button" class="et-ai-retry js-et-ai-retry">try again</button>.');
+                        setStatus("error", "Upload failed. Check your connection and try again.");
                     }
                 };
                 xhr.onload = function () {
@@ -3631,8 +3936,7 @@ if ($res && mysqli_num_rows($res) > 0) {
                     try { res = JSON.parse(xhr.responseText); } catch (e) { res = null; }
                     if (!res || !res.success) {
                         setStatus("error", esc((res && res.message) ||
-                            ("Could not read the e-ticket (HTTP " + xhr.status + ").")) +
-                            ' <button type="button" class="et-ai-retry js-et-ai-retry">Try again</button>');
+                            ("Could not read the e-ticket (HTTP " + xhr.status + ").")));
                         return;
                     }
                     handleResponse(res, fileLabel);
@@ -3640,15 +3944,25 @@ if ($res && mysqli_num_rows($res) > 0) {
                 xhr.send(fd);
             }
 
-            $(document).on("click keydown", "#etAiDrop", function (e) {
-                if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") {
+            $(document).on("click", "#etAiUploadBtn, #etAiReplaceBtn", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openEtAiPicker();
+            });
+            $(document).on("click", "#etAiClearBtn", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                resetEtAi();
+            });
+            $(document).on("keydown", "#etAiDrop", function (e) {
+                if (e.key !== "Enter" && e.key !== " ") {
+                    return;
+                }
+                if ($(e.target).closest("button").length) {
                     return;
                 }
                 e.preventDefault();
-                $("#etAiFile").val("").trigger("click");
-            });
-            $(document).on("click", "#etAiStatus .js-et-ai-retry", function () {
-                $("#etAiFile").val("").trigger("click");
+                openEtAiPicker();
             });
             $(document).on("change", "#etAiFile", function () {
                 uploadFile(this.files && this.files[0]);
@@ -3670,6 +3984,27 @@ if ($res && mysqli_num_rows($res) > 0) {
                 if (dt && dt.files && dt.files[0]) {
                     uploadFile(dt.files[0]);
                 }
+            });
+            $(document).on("paste", "#etAiBox", function (e) {
+                handlePasteEvent(e, true);
+            });
+            $(document).on("paste", function (e) {
+                if ($(e.target).closest("#etAiBox").length) {
+                    return;
+                }
+                if ($(e.target).closest("input, textarea, select, [contenteditable='true']").length) {
+                    return;
+                }
+                if (!$("#etAiBox").length || !$("#etAiBox").is(":visible")) {
+                    return;
+                }
+                handlePasteEvent(e, false);
+            });
+            $(document).on("focusin", "#etAiDrop", function () {
+                $(this).addClass("is-paste");
+            });
+            $(document).on("focusout", "#etAiDrop", function () {
+                $(this).removeClass("is-paste");
             });
             $(document).on("input change", ".et-ai-filled", function (e) {
                 if (e.originalEvent) {

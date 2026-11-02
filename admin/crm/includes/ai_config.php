@@ -1521,3 +1521,398 @@ function crmAiSuggestInclusions(array $context): array
         'missing' => $instant['missing'] ?? [],
     ];
 }
+
+/**
+ * Canonical exclusion section definitions (label + icon).
+ *
+ * @return array<string, array{label:string,icon:string}>
+ */
+function crmAiExclusionsSectionMeta(): array
+{
+    return [
+        'airfare' => ['label' => 'Airfare', 'icon' => 'fas fa-plane'],
+        'accommodation' => ['label' => 'Accommodation', 'icon' => 'fas fa-hotel'],
+        'meals' => ['label' => 'Meals', 'icon' => 'fas fa-utensils'],
+        'sightseeing' => ['label' => 'Sightseeing & Activities', 'icon' => 'fas fa-ticket-alt'],
+        'transfers' => ['label' => 'Transfers & Transportation', 'icon' => 'fas fa-shuttle-van'],
+        'other' => ['label' => 'Other Exclusions', 'icon' => 'fas fa-ban'],
+    ];
+}
+
+/**
+ * @param array<string, mixed> $sections
+ */
+function crmAiExclusionsSectionsToHtml(array $sections): string
+{
+    $meta = crmAiExclusionsSectionMeta();
+    $html = '';
+
+    foreach ($meta as $key => $info) {
+        $rawItems = $sections[$key] ?? [];
+        if (!is_array($rawItems)) {
+            continue;
+        }
+        $bullets = [];
+        foreach ($rawItems as $item) {
+            if (is_array($item)) {
+                $item = (string) ($item['html'] ?? $item['text'] ?? $item['title'] ?? $item['label'] ?? '');
+            }
+            $formatted = crmAiInclusionsFormatBulletHtml((string) $item);
+            if ($formatted === '') {
+                continue;
+            }
+            $bullets[] = $formatted;
+            if (count($bullets) >= 20) {
+                break;
+            }
+        }
+        if (!$bullets) {
+            continue;
+        }
+
+        $html .= '<div class="q-ai-excl-sec" data-sec="' . htmlspecialchars($key, ENT_QUOTES, 'UTF-8') . '">';
+        $html .= '<p class="q-ai-excl-sec-title">'
+            . '<i class="' . htmlspecialchars($info['icon'], ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></i> '
+            . '<strong>' . htmlspecialchars($info['label'], ENT_QUOTES, 'UTF-8') . '</strong>'
+            . '</p>';
+        $html .= '<ul>';
+        foreach ($bullets as $b) {
+            $html .= '<li>' . $b . '</li>';
+        }
+        $html .= '</ul></div>';
+    }
+
+    if ($html === '') {
+        return '';
+    }
+
+    return '<div data-q-ai-exclusions="1" class="q-ai-excl-doc">' . $html . '</div>';
+}
+
+/**
+ * @param array<string, mixed> $sections
+ * @return array<string, array<int, string>>
+ */
+function crmAiNormalizeExclusionsSections(array $sections): array
+{
+    $aliases = [
+        'airfare' => 'airfare',
+        'air fare' => 'airfare',
+        'flights' => 'airfare',
+        'flight' => 'airfare',
+        'accommodation' => 'accommodation',
+        'hotel' => 'accommodation',
+        'hotels' => 'accommodation',
+        'stay' => 'accommodation',
+        'meals' => 'meals',
+        'meal' => 'meals',
+        'food' => 'meals',
+        'sightseeing' => 'sightseeing',
+        'sightseeing & activities' => 'sightseeing',
+        'activities' => 'sightseeing',
+        'tours' => 'sightseeing',
+        'transfers' => 'transfers',
+        'transportation' => 'transfers',
+        'transport' => 'transfers',
+        'other' => 'other',
+        'other exclusions' => 'other',
+        'misc' => 'other',
+        'miscellaneous' => 'other',
+        'personal' => 'other',
+        'visa' => 'other',
+        'insurance' => 'other',
+    ];
+
+    $out = [
+        'airfare' => [],
+        'accommodation' => [],
+        'meals' => [],
+        'sightseeing' => [],
+        'transfers' => [],
+        'other' => [],
+    ];
+
+    foreach ($sections as $key => $items) {
+        if (!is_array($items)) {
+            continue;
+        }
+        $normKey = $aliases[strtolower(trim((string) $key))] ?? '';
+        if ($normKey === '' || !isset($out[$normKey])) {
+            $normKey = 'other';
+        }
+        foreach ($items as $item) {
+            if (is_array($item)) {
+                $item = (string) ($item['html'] ?? $item['text'] ?? $item['title'] ?? '');
+            }
+            $item = trim((string) $item);
+            if ($item === '') {
+                continue;
+            }
+            $out[$normKey][] = $item;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<string, mixed> $context
+ */
+function crmAiNormalizeExclusionsContext(array $context): array
+{
+    $base = crmAiNormalizeInclusionsContext($context);
+    $inclusionsText = trim((string) ($context['inclusions_text'] ?? $context['inclusion_text'] ?? ''));
+    if ($inclusionsText === '' && !empty($context['inclusions_html'])) {
+        $inclusionsText = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $context['inclusions_html'])) ?? '');
+    }
+    $base['inclusions_text'] = mb_substr($inclusionsText, 0, 8000);
+    $base['tour']['tour_type'] = trim((string) (
+        (is_array($context['tour'] ?? null) ? ($context['tour']['tour_type'] ?? '') : '')
+    ));
+    return $base;
+}
+
+/**
+ * Deterministic exclusions from booking facts + current inclusions (no generic spam).
+ *
+ * @param array<string, mixed> $context
+ */
+function crmAiInstantExclusions(array $context): array
+{
+    $ctx = crmAiNormalizeExclusionsContext($context);
+    $incl = strtolower((string) ($ctx['inclusions_text'] ?? ''));
+    $sections = [
+        'airfare' => [],
+        'accommodation' => [],
+        'meals' => [],
+        'sightseeing' => [],
+        'transfers' => [],
+        'other' => [],
+    ];
+
+    $covered = static function (array $needles) use ($incl): bool {
+        foreach ($needles as $n) {
+            $n = strtolower(trim((string) $n));
+            if ($n !== '' && $incl !== '' && strpos($incl, $n) !== false) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    $hasFlights = !empty($ctx['flights']);
+    if ($hasFlights || $covered(['airfare', 'air fare', 'return airfare', 'air ticket', 'flight'])) {
+        if (!$covered(['excess baggage', 'extra baggage'])) {
+            $sections['airfare'][] = 'Excess baggage charges beyond the free allowance mentioned in the inclusions.';
+        }
+    } else {
+        $sections['airfare'][] = 'Airfare / air tickets (unless specifically mentioned in the inclusions).';
+    }
+
+    if (!$covered(['visa', 'tourist visa'])) {
+        $sections['other'][] = 'Visa fees, immigration charges, and related documentation costs.';
+    }
+
+    if (!$covered(['travel insurance', 'insurance'])) {
+        $sections['other'][] = 'Travel insurance of any kind.';
+    }
+
+    if (!$covered(['tips', 'gratuity', 'porterage', 'porter'])) {
+        $sections['other'][] = 'Tips, porterage, and personal expenses.';
+    }
+
+    $mealCovered = $covered(['breakfast', 'lunch', 'dinner', 'meal plan', 'meals', 'cp', 'map', 'ap']);
+    if (!$mealCovered) {
+        $sections['meals'][] = 'Meals other than those specifically mentioned in the inclusions.';
+    } else {
+        $sections['meals'][] = 'Any meals not listed in the inclusions / meal plan.';
+    }
+
+    if (!$covered(['entrance', 'entry fee', 'monument', 'ticket']) && empty($ctx['itinerary'])) {
+        $sections['sightseeing'][] = 'Entrance fees to monuments, parks, and attractions not mentioned in the inclusions.';
+    } elseif (!$covered(['optional', 'personal sightseeing'])) {
+        $sections['sightseeing'][] = 'Optional tours and activities not mentioned in the inclusions.';
+    }
+
+    if (!$covered(['transfer', 'airport transfer', 'private transportation', 'cab', 'taxi'])) {
+        $sections['transfers'][] = 'Any transfers or transportation not mentioned in the inclusions.';
+    }
+
+    if (!$covered(['gst', 'taxes', 'tcs'])) {
+        $sections['other'][] = 'GST, TCS, and any government taxes not included in the quoted price.';
+    }
+
+    $sections['other'][] = 'Anything not specifically mentioned in the inclusions.';
+
+    $sections = crmAiNormalizeExclusionsSections($sections);
+    $html = crmAiExclusionsSectionsToHtml($sections);
+
+    $flat = [];
+    foreach ($sections as $list) {
+        foreach ($list as $line) {
+            $t = trim(strip_tags((string) $line));
+            if ($t !== '') {
+                $flat[] = $t;
+            }
+        }
+    }
+
+    $missing = [];
+    if (($ctx['tour']['destination'] ?? '') === '') {
+        $missing[] = 'destination';
+    }
+    if ($incl === '') {
+        $missing[] = 'inclusions content';
+    }
+    if (!$ctx['flights'] && !$ctx['hotels'] && !$ctx['itinerary'] && $incl === '') {
+        $missing[] = 'flights/hotels/itinerary/inclusions details';
+    }
+
+    if ($html === '') {
+        return [
+            'ok' => false,
+            'error' => 'Not enough booking data to build exclusions. Add tour details or inclusions first.',
+            'missing' => $missing,
+        ];
+    }
+
+    $message = '';
+    if ($missing) {
+        $message = 'Generated from available data only. Missing: ' . implode(', ', $missing) . '.';
+    }
+
+    return [
+        'ok' => true,
+        'source' => 'instant',
+        'message' => $message,
+        'items' => $flat,
+        'sections' => $sections,
+        'exclusions_html' => $html,
+        'missing' => $missing,
+    ];
+}
+
+/**
+ * @param array<string, mixed> $context
+ */
+function crmAiBuildExclusionsPrompt(array $context): string
+{
+    $ctx = crmAiNormalizeExclusionsContext($context);
+    $facts = json_encode($ctx, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    if ($facts === false) {
+        $facts = '{}';
+    }
+
+    $prompt = "You are a professional travel quotation writer for Multizone Travels (India).\n";
+    $prompt .= "Task: Generate EXCLUSIONS for a quotation. Compare carefully against CURRENT_INCLUSIONS.\n\n";
+    $prompt .= "CRITICAL RULES:\n";
+    $prompt .= "1. Read CURRENT_INCLUSIONS first. Do NOT list anything already included or clearly covered there.\n";
+    $prompt .= "2. Do NOT repeat, rephrase, or contradict inclusion items.\n";
+    $prompt .= "3. Suggest only relevant package exclusions based on booking facts (services present / absent).\n";
+    $prompt .= "4. Avoid generic filler lists that ignore the booking. Prefer specific, professional wording.\n";
+    $prompt .= "5. If airfare/visa/meals/transfers ARE already in inclusions, do not exclude the same items.\n";
+    $prompt .= "6. You may exclude related extras that are typically not covered (e.g. excess baggage when airfare is included).\n\n";
+    $prompt .= "OUTPUT FORMAT (JSON only):\n";
+    $prompt .= "{\n";
+    $prompt .= "  \"sections\": {\n";
+    $prompt .= "    \"airfare\": [\"...\"],\n";
+    $prompt .= "    \"accommodation\": [\"...\"],\n";
+    $prompt .= "    \"meals\": [\"...\"],\n";
+    $prompt .= "    \"sightseeing\": [\"...\"],\n";
+    $prompt .= "    \"transfers\": [\"...\"],\n";
+    $prompt .= "    \"other\": [\"...\"]\n";
+    $prompt .= "  },\n";
+    $prompt .= "  \"notes\": \"optional note\"\n";
+    $prompt .= "}\n\n";
+    $prompt .= "SECTION RULES:\n";
+    $prompt .= "- Use ONLY these section keys: airfare, accommodation, meals, sightseeing, transfers, other.\n";
+    $prompt .= "- Omit empty sections.\n";
+    $prompt .= "- Each section value is an array of HTML-ready bullet strings (only <strong> and <em> tags allowed).\n";
+    $prompt .= "- Keep bullets concise and professional.\n\n";
+    $prompt .= "BOOKING_DATA:\n" . $facts . "\n";
+    $prompt .= "\nCURRENT_INCLUSIONS (do not duplicate these):\n";
+    $prompt .= (($ctx['inclusions_text'] ?? '') !== '' ? $ctx['inclusions_text'] : '(empty — generate cautious exclusions from booking facts only)') . "\n";
+
+    if ($ctx['context_text'] !== '') {
+        $prompt .= "\nEDITOR_CONTEXT:\n" . $ctx['context_text'] . "\n";
+    }
+    if ($ctx['notes'] !== '') {
+        $prompt .= "\nUSER_NOTES:\n" . $ctx['notes'] . "\n";
+    }
+
+    return $prompt;
+}
+
+/**
+ * @param array<string, mixed> $context
+ */
+function crmAiSuggestExclusions(array $context): array
+{
+    $instant = crmAiInstantExclusions($context);
+    if (!crmAiUseGemini()) {
+        if (!$instant['ok']) {
+            return $instant;
+        }
+        $instant['message'] = trim(
+            ($instant['message'] ?? '')
+            . (crmAiGeminiApiKey() === ''
+                ? ' (Gemini key not configured — used booking facts only.)'
+                : ' (Gemini AI disabled in ai_config — used booking facts only. Set use_gemini_ai to true to enable.)')
+        );
+        return $instant;
+    }
+
+    $prompt = crmAiBuildExclusionsPrompt($context);
+    $result = crmAiCallGemini($prompt, 'gemini-3.5-flash-lite', 45, crmAiGeminiModels());
+    if (!$result['ok']) {
+        if (crmAiIsQuotaOrRateError($result['error'] ?? '') && !empty($instant['ok'])) {
+            $instant['message'] = 'Gemini busy / quota reached — exclusions built from booking facts only. Click Generate again in a moment.';
+            return $instant;
+        }
+        if (!empty($instant['ok'])) {
+            $instant['message'] = 'AI unavailable (' . ($result['error'] ?? 'error') . ') — exclusions built from booking facts only.';
+            return $instant;
+        }
+        return $result;
+    }
+
+    $data = is_array($result['data'] ?? null) ? $result['data'] : [];
+    $sections = [];
+    if (!empty($data['sections']) && is_array($data['sections'])) {
+        $sections = $data['sections'];
+    } elseif (!empty($data['items']) && is_array($data['items'])) {
+        $sections = ['other' => $data['items']];
+    } elseif (!empty($data['exclusions']) && is_array($data['exclusions'])) {
+        $sections = ['other' => $data['exclusions']];
+    }
+
+    $sections = crmAiNormalizeExclusionsSections($sections);
+    $html = crmAiExclusionsSectionsToHtml($sections);
+    if ($html === '') {
+        if (!empty($instant['ok'])) {
+            $instant['message'] = 'AI returned empty exclusions — used booking facts instead.';
+            return $instant;
+        }
+        return ['ok' => false, 'error' => 'AI returned an empty exclusions list.'];
+    }
+
+    $flat = [];
+    foreach ($sections as $list) {
+        foreach ($list as $line) {
+            $t = trim(strip_tags((string) $line));
+            if ($t !== '') {
+                $flat[] = $t;
+            }
+        }
+    }
+
+    return [
+        'ok' => true,
+        'source' => 'ai',
+        'message' => trim((string) ($data['notes'] ?? '')),
+        'items' => $flat,
+        'sections' => $sections,
+        'exclusions_html' => $html,
+        'missing' => $instant['missing'] ?? [],
+    ];
+}

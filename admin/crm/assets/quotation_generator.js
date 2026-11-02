@@ -303,9 +303,93 @@
             layover_time: data.layover_time || '',
             layover_at: data.layover_at || '',
             journey_start: data.journey_start ? true : false,
-            journey_label: data.journey_label || '',
+            journey_label: normalizeFlightJourneyType(data.journey_label || data.direction || data.trip_type || '') || (data.journey_label || ''),
             _legacy_type: data._legacy_type || ''
         };
+    }
+
+    function normalizeFlightJourneyType(label) {
+        var s = String(label || '').trim().toLowerCase();
+        if (!s) {
+            return '';
+        }
+        if (s === 'return' || s === 'inbound' || s === 'ret' || s.indexOf('return') === 0) {
+            return 'Return';
+        }
+        if (
+            s === 'onward' ||
+            s === 'outbound' ||
+            s === 'out' ||
+            s === 'departure' ||
+            s === 'flight' ||
+            s.indexOf('onward') === 0 ||
+            s.indexOf('outbound') === 0
+        ) {
+            return 'Onward';
+        }
+        return '';
+    }
+
+    function flightJourneyTypeMarkup(type, isFirst) {
+        var resolved = normalizeFlightJourneyType(type) || (isFirst ? 'Onward' : 'Return');
+        if (isFirst) {
+            return '' +
+                '<span class="q-flight-journey-type is-fixed" title="First flight is Onward by default">' +
+                '<i class="fas fa-plane-departure" aria-hidden="true"></i>' +
+                '<span>Onward</span>' +
+                '<input type="hidden" class="f-journey-type" value="Onward">' +
+                '</span>';
+        }
+        return '' +
+            '<label class="q-flight-journey-type is-select">' +
+            '<span class="sr-only">Flight direction</span>' +
+            '<select class="form-control form-control-sm f-journey-type" aria-label="Flight direction">' +
+            '<option value="Onward"' + (resolved === 'Onward' ? ' selected' : '') + '>Onward</option>' +
+            '<option value="Return"' + (resolved === 'Return' ? ' selected' : '') + '>Return</option>' +
+            '</select>' +
+            '</label>';
+    }
+
+    function syncFlightJourneyCardType($card, type) {
+        if (!$card || !$card.length) {
+            return;
+        }
+        var resolved = normalizeFlightJourneyType(type) || 'Onward';
+        var $rows = $card.find('.q-flight-row');
+        $rows.each(function (idx) {
+            var $row = $(this);
+            $row.find('.f-journey-start').val(idx === 0 ? '1' : '0');
+            $row.find('.f-journey-label').val(idx === 0 ? resolved : '');
+        });
+        var $type = $card.find('.f-journey-type').first();
+        if ($type.length) {
+            $type.val(resolved);
+        }
+    }
+
+    function refreshFlightJourneyTypes() {
+        var $cards = $('#qFlightRows > .q-flight-journey-card');
+        $cards.each(function (index) {
+            var $card = $(this);
+            var isFirst = index === 0;
+            var current = normalizeFlightJourneyType(
+                $card.find('.f-journey-type').val() ||
+                $card.find('.q-flight-row').first().find('.f-journey-label').val() ||
+                ''
+            );
+            if (isFirst) {
+                current = 'Onward';
+            } else if (!current) {
+                current = 'Return';
+            }
+            var $wrap = $card.find('.q-flight-journey-type-wrap');
+            if (!$wrap.length) {
+                $wrap = $('<span class="q-flight-journey-type-wrap"></span>');
+                $card.find('.q-flight-journey-head').prepend($wrap);
+            }
+            $wrap.html(flightJourneyTypeMarkup(current, isFirst));
+            syncFlightJourneyCardType($card, current);
+        });
     }
 
     function parseFlightDateTimeMoment(dateVal, timeVal) {
@@ -383,12 +467,13 @@
         if (current) {
             groups.push(current);
         }
-        if (groups.length === 2 && !groups[0].label && !groups[1].label) {
-            groups[0].label = 'Outbound';
-            groups[1].label = 'Return';
-        } else if (groups.length === 1 && !groups[0].label && groups[0].rows.length > 1) {
-            groups[0].label = 'Flight';
-        }
+        groups.forEach(function (group, index) {
+            if (index === 0) {
+                group.label = 'Onward';
+            } else {
+                group.label = normalizeFlightJourneyType(group.label) || 'Return';
+            }
+        });
         return groups;
     }
 
@@ -400,8 +485,9 @@
         var stops = Math.max(0, segs - 1);
         var stopsLabel = stops === 0 ? 'Non-stop' : (stops + ' stop' + (stops > 1 ? 's' : ''));
         var fare = opts.totalFare || first.fare || '';
+        var label = normalizeFlightJourneyType(opts.label || first.journey_label || '') || 'Onward';
         return {
-            label: opts.label || first.journey_label || 'Flight',
+            label: label,
             from: first.from || '',
             to: last.to || '',
             segments: segs,
@@ -418,8 +504,11 @@
         }
         var summary = buildFlightJourneySummary(rows, opts);
         var $card = $('<div class="q-flight-journey-card"></div>');
+        var isFirstCard = $('#qFlightRows > .q-flight-journey-card').length === 0;
+        var typeLabel = isFirstCard ? 'Onward' : (normalizeFlightJourneyType(summary.label) || 'Return');
         var headHtml = '' +
             '<div class="q-flight-journey-head">' +
+            '<span class="q-flight-journey-type-wrap">' + flightJourneyTypeMarkup(typeLabel, isFirstCard) + '</span>' +
             '<span class="q-flight-journey-route">' + esc(summary.from) + ' → ' + esc(summary.to) + '</span>' +
             '<span class="q-flight-journey-meta">' + esc(summary.stopsLabel) + ' · ' + summary.segments + ' segment' + (summary.segments > 1 ? 's' : '') + '</span>';
         if (summary.fare !== '' && summary.fare != null) {
@@ -435,30 +524,29 @@
         rows.forEach(function (row, idx) {
             if (idx === 0) {
                 row.journey_start = true;
-                if (opts.label) {
-                    row.journey_label = opts.label;
-                }
+                row.journey_label = typeLabel;
+            } else {
+                row.journey_start = false;
+                row.journey_label = '';
             }
             $body.append(flightRowHtml(row, { hideRemove: true }));
         });
         $card.append($body);
         $('#qFlightRows').append($card);
+        refreshFlightJourneyTypes();
     }
 
     function renderFlightList(flights) {
         $('#qFlightRows').empty();
         var groups = groupFlightsForDisplay(flights);
         groups.forEach(function (group) {
-            if (group.rows.length > 1 || group.label) {
-                appendFlightJourneyCard(group.rows, { label: group.label });
-            } else {
-                $('#qFlightRows').append(flightRowHtml(group.rows[0]));
-            }
+            appendFlightJourneyCard(group.rows, { label: group.label });
         });
         renumberFlightRows();
         qInitSupplierSelect2In($('#qFlightRows'));
         initQuotationDatePickers($('#qFlightRows'));
         refreshFlightLayovers();
+        refreshFlightJourneyTypes();
         scheduleSyncReturnAirfareInclusion();
     }
 
@@ -968,12 +1056,30 @@
         return 'Airfare : ' + names.join(' -> ');
     }
 
+    function stripAutoTouristVisaHtml(html) {
+        html = String(html || '');
+        html = html.replace(/<(p|div|li)([^>]*)\sdata-q-auto-tourist-visa(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
+        // Plain/AI duplicates: short "[Destination] Tourist Visa" lines only.
+        html = html.replace(
+            /<(p|li)(?:\s[^>]*)?>\s*(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*([^<]{1,80}?)\s+Tourist\s+Visa\.?(?:\s*<\/(?:strong|b|em|span)>)?\s*<\/\1>/gi,
+            function (full, _tag, destPart) {
+                var t = String(destPart || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                if (!t || /\b(assist|help|process|fee|applic|support|document|insurance)\b/.test(t)) {
+                    return full;
+                }
+                return '';
+            }
+        );
+        return html;
+    }
+
     function stripAutoReturnAirfareHtml(html) {
         html = String(html || '');
         html = html.replace(/<(p|div|li)([^>]*)\sdata-q-auto-return-airfare(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
         html = html.replace(/<(p|div|li)([^>]*)\sdata-q-auto-accommodation(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
         html = html.replace(/<(p|div|li|h[1-6]|ul)([^>]*)\sdata-q-auto-sightseeing(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
         html = html.replace(/<(p|div|li|h[1-6]|ul)([^>]*)\sdata-q-auto-meals(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
+        html = stripAutoTouristVisaHtml(html);
         html = html.replace(/^\s*<(p|li)(?:\s[^>]*)?>\s*(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*Return\s+airfare\s+Ex-[^<]*(?:<\/(?:strong|b|em|span)>\s*)*<\/\1>/i, '');
         html = html.replace(/^\s*<(p|li)(?:\s[^>]*)?>\s*(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*Airfare\s*(?::|Ex-)[^<]*(?:<\/(?:strong|b|em|span)>\s*)*<\/\1>/i, '');
         html = html.replace(/^\s*<(p|li)(?:\s[^>]*)?>\s*\d+\s+nights?\s+accommodation\s+in[\s\S]*?<\/\1>/i, '');
@@ -994,6 +1100,45 @@
             return '';
         }
         return '<p data-q-auto-return-airfare="1">' + esc(text) + '</p>';
+    }
+
+    function getTouristVisaDestinationName() {
+        var raw = String($('[name=destination]').val() || $('#qDestinationInput').val() || '').trim();
+        if (!raw) {
+            return '';
+        }
+        var map = window.Q_DESTINATION_TOUR_TYPE || {};
+        if (map[raw.toLowerCase()] === 'international') {
+            return raw;
+        }
+        var parts = raw.split(/[,;|]+/);
+        var i;
+        for (i = 0; i < parts.length; i++) {
+            var part = String(parts[i] || '').trim();
+            if (part && map[part.toLowerCase()] === 'international') {
+                return part;
+            }
+        }
+        return String(parts[0] || '').trim() || raw;
+    }
+
+    function getAutoTouristVisaInclusionText() {
+        if (typeof isInternationalQuotationTour !== 'function' || !isInternationalQuotationTour()) {
+            return '';
+        }
+        var dest = getTouristVisaDestinationName();
+        if (!dest) {
+            return '';
+        }
+        return dest + ' Tourist Visa';
+    }
+
+    function buildAutoTouristVisaHtml(text) {
+        text = String(text || '').trim();
+        if (!text) {
+            return '';
+        }
+        return '<p data-q-auto-tourist-visa="1">' + esc(text) + '</p>';
     }
 
     function padTourNightsLabel(nights) {
@@ -1277,6 +1422,10 @@
         if (air) {
             parts += buildAutoReturnAirfareHtml(air);
         }
+        var visa = getAutoTouristVisaInclusionText();
+        if (visa) {
+            parts += buildAutoTouristVisaHtml(visa);
+        }
         parts += getAutoAccommodationInclusionHtml();
         parts += getAutoSightseeingInclusionHtml();
         parts += getAutoMealsInclusionHtml();
@@ -1309,28 +1458,7 @@
         return false;
     }
 
-    function syncReturnAirfareInclusion(force) {
-        var $ta = $('#qed_inclusion');
-        if (!$ta.length) {
-            return;
-        }
-        if (!force && isInclusionEditorFocused()) {
-            return;
-        }
-        var current = readSummernoteHtml($ta);
-        // Keep AI-generated inclusions intact until the user regenerates/clears them.
-        if (/data-q-ai-inclusions/i.test(String(current || ''))) {
-            return;
-        }
-        var prefix = buildAutoInclusionPrefixHtml();
-        var cleaned = stripAutoReturnAirfareHtml(current);
-        var next = prefix + cleaned;
-        var norm = function (h) {
-            return String(h || '').replace(/\s+/g, ' ').trim();
-        };
-        if (norm(next) === norm(current)) {
-            return;
-        }
+    function writeInclusionEditorHtml($ta, next) {
         qAutoInclusionSyncing = true;
         try {
             if ($.fn.summernote && $ta.data('summernote')) {
@@ -1343,6 +1471,38 @@
                 qAutoInclusionSyncing = false;
             }, 0);
         }
+    }
+
+    function syncReturnAirfareInclusion(force) {
+        var $ta = $('#qed_inclusion');
+        if (!$ta.length) {
+            return;
+        }
+        if (!force && isInclusionEditorFocused()) {
+            return;
+        }
+        var current = readSummernoteHtml($ta);
+        var norm = function (h) {
+            return String(h || '').replace(/\s+/g, ' ').trim();
+        };
+        // AI docs: still keep tourist visa in sync (no airfare/hotel auto rewrite).
+        if (/data-q-ai-inclusions/i.test(String(current || ''))) {
+            var visaHtml = buildAutoTouristVisaHtml(getAutoTouristVisaInclusionText());
+            var cleanedAi = stripAutoTouristVisaHtml(current);
+            var nextAi = visaHtml + cleanedAi;
+            if (norm(nextAi) === norm(current)) {
+                return;
+            }
+            writeInclusionEditorHtml($ta, nextAi);
+            return;
+        }
+        var prefix = buildAutoInclusionPrefixHtml();
+        var cleaned = stripAutoReturnAirfareHtml(current);
+        var next = prefix + cleaned;
+        if (norm(next) === norm(current)) {
+            return;
+        }
+        writeInclusionEditorHtml($ta, next);
     }
 
     function scheduleSyncReturnAirfareInclusion(force) {
@@ -3822,15 +3982,12 @@
             $('#qFlightRows').empty();
         }
 
-        if (rows.length > 1) {
-            appendFlightJourneyCard(rows);
-        } else {
-            $('#qFlightRows').append(flightRowHtml(rows[0]));
-        }
+        appendFlightJourneyCard(rows);
         qInitSupplierSelect2In($('#qFlightRows'));
         initQuotationDatePickers($('#qFlightRows'));
         renumberFlightRows();
         refreshFlightLayovers();
+        refreshFlightJourneyTypes();
         recalcCosts();
         scheduleSyncReturnAirfareInclusion();
         saveFormDraftToStorage();
@@ -5651,6 +5808,10 @@
             },
             tour: {
                 destination: String($('[name=destination]').val() || '').trim(),
+                tour_type: (typeof isInternationalQuotationTour === 'function' && isInternationalQuotationTour())
+                    ? 'international'
+                    : 'domestic',
+                tourist_visa: getAutoTouristVisaInclusionText(),
                 nights: parseInt($('#q_nights').val(), 10) || 0,
                 tentative_date: String($('#q_tentative_date').val() || '').trim(),
                 package_name: String($('#q_header_text').val() || '').trim()
@@ -5710,6 +5871,10 @@
         lines.push('');
         lines.push('=== TOUR / PACKAGE ===');
         lines.push('Destination: ' + (t.destination || '(not set)'));
+        lines.push('Tour type: ' + (t.tour_type || 'domestic'));
+        if (t.tourist_visa) {
+            lines.push('Required inclusion: ' + t.tourist_visa);
+        }
         lines.push('Nights: ' + (t.nights || 0) + ' (Days: ' + ((parseInt(t.nights, 10) || 0) + 1) + ')');
         if (t.tentative_date) {
             lines.push('Travel date: ' + t.tentative_date);
@@ -5805,10 +5970,10 @@
     function aiInclusionsHtmlToEditableText(html) {
         var $tmp = $('<div>').html(html || '');
         var lines = [];
-        var $secs = $tmp.find('.q-ai-incl-sec');
+        var $secs = $tmp.find('.q-ai-incl-sec, .q-ai-excl-sec');
         if ($secs.length) {
             $secs.each(function () {
-                var title = String($(this).find('.q-ai-incl-sec-title').text() || '').replace(/\s+/g, ' ').trim();
+                var title = String($(this).find('.q-ai-incl-sec-title, .q-ai-excl-sec-title').text() || '').replace(/\s+/g, ' ').trim();
                 if (title) {
                     lines.push(title.toUpperCase());
                 }
@@ -5892,6 +6057,9 @@
             }
             line = line.replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
             if (line) {
+                if (/\btourist\s+visa\b/i.test(line)) {
+                    return;
+                }
                 sections[current].push(line);
             }
         });
@@ -5902,9 +6070,21 @@
             lines.forEach(function (raw) {
                 var line = String(raw || '').replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
                 if (line) {
+                    if (/\btourist\s+visa\b/i.test(line)) {
+                        return;
+                    }
                     sections.other.push(line);
                 }
             });
+        }
+
+        // Ensure international destinations keep a single tourist visa inclusion.
+        var visaLine = getAutoTouristVisaInclusionText();
+        if (visaLine) {
+            sections.other = (sections.other || []).filter(function (item) {
+                return !/\btourist\s+visa\b/i.test(String(item || ''));
+            });
+            sections.other.unshift(visaLine);
         }
 
         var html = '';
@@ -5918,7 +6098,10 @@
             html += '<p class="q-ai-incl-sec-title"><i class="' + info.icon + '" aria-hidden="true"></i> <strong>' + esc(info.label) + '</strong></p>';
             html += '<ul>';
             items.forEach(function (item) {
-                html += '<li>' + esc(item) + '</li>';
+                var liAttrs = /\btourist\s+visa\b/i.test(String(item || ''))
+                    ? ' data-q-auto-tourist-visa="1"'
+                    : '';
+                html += '<li' + liAttrs + '>' + esc(item) + '</li>';
             });
             html += '</ul></div>';
         });
@@ -5940,23 +6123,23 @@
     function openAiInclusionsModal() {
         var ctx = collectAiInclusionsContext();
         refreshAiInclusionsChips(ctx);
-        $('#qAiInclContext').val(formatAiInclusionsContextText(ctx));
         $('#qAiInclNotes').val('');
         resetAiInclusionsResultUi();
         $('#qAiInclGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Inclusions');
         $('#qAiInclusionsModal').modal('show');
         window.setTimeout(function () {
-            $('#qAiInclContext').trigger('focus');
+            $('#qAiInclNotes').trigger('focus');
         }, 350);
     }
 
     function requestAiInclusionsGenerate() {
         var ctx = collectAiInclusionsContext();
-        var contextText = String($('#qAiInclContext').val() || '').trim();
+        // Booking details stay internal — never shown in the modal UI.
+        var contextText = String(formatAiInclusionsContextText(ctx) || '').trim();
         var notes = String($('#qAiInclNotes').val() || '').trim();
 
         if (!contextText) {
-            $('#qAiInclError').removeClass('d-none').text('Booking context is empty. Add guest/tour/hotel/flight/itinerary details first.');
+            $('#qAiInclError').removeClass('d-none').text('Not enough booking details yet. Add guest/tour/hotel/flight/itinerary details first.');
             return;
         }
 
@@ -6020,6 +6203,8 @@
         }
 
         setRichEditorValue('qed_inclusion', html);
+        // Re-apply destination tourist visa (and strip AI duplicates) after insert.
+        scheduleSyncReturnAirfareInclusion(true);
         // Expand inclusion accordion so the user sees the result.
         var $body = $('#qbody_inclusion');
         if ($body.length && !$body.is(':visible')) {
@@ -6027,6 +6212,226 @@
         }
         $('#qAiInclusionsModal').modal('hide');
         $('#qAlert').html('<div class="alert alert-success"><i class="fas fa-check-circle mr-1"></i> AI inclusions inserted into the Inclusions field.</div>');
+        try {
+            saveFormDraftToStorage();
+        } catch (e) { /* ignore */ }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* AI exclusions generator                                             */
+    /* ------------------------------------------------------------------ */
+    var pendingAiExclusionsHtml = '';
+
+    function collectAiExclusionsContext() {
+        var ctx = collectAiInclusionsContext();
+        var inclHtml = '';
+        try {
+            inclHtml = readSummernoteHtml($('#qed_inclusion')) || '';
+        } catch (e) {
+            inclHtml = String($('#qed_inclusion').val() || '');
+        }
+        ctx.inclusions_html = inclHtml;
+        ctx.inclusions_text = stripHtmlText(inclHtml);
+        return ctx;
+    }
+
+    function refreshAiExclusionsChips(ctx) {
+        ctx = ctx || collectAiExclusionsContext();
+        var chips = [];
+        var dest = (ctx.tour && ctx.tour.destination) || '';
+        var nights = (ctx.tour && ctx.tour.nights) || 0;
+        var adults = (ctx.guest && ctx.guest.adults) || 0;
+        var children = (ctx.guest && ctx.guest.children) || 0;
+        var flights = (ctx.flights || []).length;
+        var hotels = (ctx.hotels || []).length;
+        var days = (ctx.itinerary || []).length;
+        var hasIncl = !!(ctx.inclusions_text || '').trim();
+
+        if (dest) {
+            chips.push('<span class="q-ai-chip"><i class="fas fa-map-marker-alt"></i>' + esc(dest) + '</span>');
+        } else {
+            chips.push('<span class="q-ai-chip is-warn"><i class="fas fa-exclamation-circle"></i>No destination</span>');
+        }
+        chips.push('<span class="q-ai-chip"><i class="far fa-calendar-alt"></i>' + nights + 'N / ' + (nights + 1) + 'D</span>');
+        chips.push('<span class="q-ai-chip"><i class="fas fa-users"></i>' + adults + 'A' + (children ? (', ' + children + 'C') : '') + '</span>');
+        chips.push('<span class="q-ai-chip' + (flights ? '' : ' is-warn') + '"><i class="fas fa-plane"></i>' + flights + ' flight' + (flights === 1 ? '' : 's') + '</span>');
+        chips.push('<span class="q-ai-chip' + (hotels ? '' : ' is-warn') + '"><i class="fas fa-hotel"></i>' + hotels + ' hotel' + (hotels === 1 ? '' : 's') + '</span>');
+        chips.push('<span class="q-ai-chip' + (days ? '' : ' is-warn') + '"><i class="fas fa-route"></i>' + days + ' day' + (days === 1 ? '' : 's') + '</span>');
+        chips.push('<span class="q-ai-chip' + (hasIncl ? '' : ' is-warn') + '"><i class="fas fa-check-circle"></i>' + (hasIncl ? 'Inclusions ready' : 'No inclusions yet') + '</span>');
+        $('#qAiExclChips').html(chips.join(''));
+    }
+
+    function aiExclusionsEditableTextToHtml(text) {
+        var meta = {
+            airfare: { label: 'Airfare', icon: 'fas fa-plane' },
+            accommodation: { label: 'Accommodation', icon: 'fas fa-hotel' },
+            meals: { label: 'Meals', icon: 'fas fa-utensils' },
+            sightseeing: { label: 'Sightseeing & Activities', icon: 'fas fa-ticket-alt' },
+            transfers: { label: 'Transfers & Transportation', icon: 'fas fa-shuttle-van' },
+            other: { label: 'Other Exclusions', icon: 'fas fa-ban' }
+        };
+        var order = ['airfare', 'accommodation', 'meals', 'sightseeing', 'transfers', 'other'];
+        var sections = {};
+        order.forEach(function (k) { sections[k] = []; });
+        var current = 'other';
+        var lines = String(text || '').split(/\r?\n/);
+        var hasHeadings = false;
+
+        lines.forEach(function (raw) {
+            var line = String(raw || '').trim();
+            if (!line) {
+                return;
+            }
+            var heading = line.replace(/^[\s#]+/, '');
+            var isHeading = !/^[\s•\-\*]/.test(line)
+                && (
+                    /^(airfare|accommodation|meals|sightseeing|transfers|other)/i.test(heading)
+                    || (/^[A-Z0-9 &]+$/.test(heading) && heading.length < 48)
+                );
+            if (isHeading && !/^•/.test(line)) {
+                hasHeadings = true;
+                current = aiInclusionsSectionKeyFromTitle(heading);
+                return;
+            }
+            line = line.replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
+            if (line) {
+                sections[current].push(line);
+            }
+        });
+
+        if (!hasHeadings) {
+            sections = { airfare: [], accommodation: [], meals: [], sightseeing: [], transfers: [], other: [] };
+            lines.forEach(function (raw) {
+                var line = String(raw || '').replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
+                if (line) {
+                    sections.other.push(line);
+                }
+            });
+        }
+
+        var html = '';
+        order.forEach(function (key) {
+            var items = sections[key] || [];
+            if (!items.length) {
+                return;
+            }
+            var info = meta[key];
+            html += '<div class="q-ai-excl-sec" data-sec="' + key + '">';
+            html += '<p class="q-ai-excl-sec-title"><i class="' + info.icon + '" aria-hidden="true"></i> <strong>' + esc(info.label) + '</strong></p>';
+            html += '<ul>';
+            items.forEach(function (item) {
+                html += '<li>' + esc(item) + '</li>';
+            });
+            html += '</ul></div>';
+        });
+        if (!html) {
+            return '';
+        }
+        return '<div data-q-ai-exclusions="1" class="q-ai-excl-doc">' + html + '</div>';
+    }
+
+    function resetAiExclusionsResultUi() {
+        pendingAiExclusionsHtml = '';
+        $('#qAiExclResult').val('');
+        $('#qAiExclResultWrap').addClass('d-none');
+        $('#qAiExclRegenerate, #qAiExclUse').addClass('d-none');
+        $('#qAiExclSourceBadge').text('');
+        $('#qAiExclError, #qAiExclSuccess').addClass('d-none').text('');
+    }
+
+    function openAiExclusionsModal() {
+        var ctx = collectAiExclusionsContext();
+        refreshAiExclusionsChips(ctx);
+        $('#qAiExclNotes').val('');
+        resetAiExclusionsResultUi();
+        $('#qAiExclGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Exclusions');
+        $('#qAiExclusionsModal').modal('show');
+        window.setTimeout(function () {
+            $('#qAiExclNotes').trigger('focus');
+        }, 350);
+    }
+
+    function requestAiExclusionsGenerate() {
+        var ctx = collectAiExclusionsContext();
+        var contextText = String(formatAiInclusionsContextText(ctx) || '').trim();
+        if (ctx.inclusions_text) {
+            contextText += '\n\n=== CURRENT INCLUSIONS (do not duplicate) ===\n' + ctx.inclusions_text;
+        }
+        var notes = String($('#qAiExclNotes').val() || '').trim();
+
+        if (!contextText && !(ctx.inclusions_text || '').trim()) {
+            $('#qAiExclError').removeClass('d-none').text('Not enough booking details yet. Add tour details or inclusions first.');
+            return;
+        }
+
+        $('#qAiExclError, #qAiExclSuccess').addClass('d-none').text('');
+        var $btn = $('#qAiExclGenerate').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Generating...');
+        $('#qAiExclRegenerate').prop('disabled', true);
+
+        $.ajax({
+            url: absUrl('crm/ajax/ai_suggest_exclusions.php'),
+            type: 'POST',
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: JSON.stringify({
+                context: ctx,
+                context_text: contextText,
+                inclusions_text: ctx.inclusions_text || '',
+                inclusions_html: ctx.inclusions_html || '',
+                notes: notes
+            })
+        }).done(function (res) {
+            if (!(res && res.success && res.exclusions_html)) {
+                $('#qAiExclError').removeClass('d-none').text((res && res.message) ? res.message : 'Could not generate exclusions.');
+                return;
+            }
+            pendingAiExclusionsHtml = res.exclusions_html;
+            $('#qAiExclResult').val(aiInclusionsHtmlToEditableText(res.exclusions_html));
+            $('#qAiExclResultWrap').removeClass('d-none');
+            $('#qAiExclRegenerate, #qAiExclUse').removeClass('d-none');
+            var src = res.source === 'ai' ? 'Gemini AI' : 'Booking facts';
+            if (res.instant_mode) {
+                src += ' (AI off)';
+            }
+            $('#qAiExclSourceBadge').text(src);
+            var okMsg = res.message || 'Exclusions generated from booking details vs current inclusions. Review, then Use / Insert.';
+            $('#qAiExclSuccess').removeClass('d-none').text(okMsg);
+        }).fail(function (xhr) {
+            var msg = 'Could not generate exclusions.';
+            try {
+                var j = JSON.parse(xhr.responseText);
+                if (j && j.message) {
+                    msg = j.message;
+                }
+            } catch (e) { /* ignore */ }
+            $('#qAiExclError').removeClass('d-none').text(msg);
+        }).always(function () {
+            $btn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Exclusions');
+            $('#qAiExclRegenerate').prop('disabled', false);
+        });
+    }
+
+    function applyAiExclusionsToEditor() {
+        var edited = String($('#qAiExclResult').val() || '').trim();
+        var html = edited ? aiExclusionsEditableTextToHtml(edited) : pendingAiExclusionsHtml;
+        if (!html) {
+            $('#qAiExclError').removeClass('d-none').text('Nothing to insert. Generate exclusions first.');
+            return;
+        }
+
+        var existing = (readSummernoteHtml($('#qed_exclusion')) || '').replace(/<[^>]*>/g, '').trim();
+        if (existing && !window.confirm('Replace the current Exclusions content with the AI list?')) {
+            return;
+        }
+
+        setRichEditorValue('qed_exclusion', html);
+        var $body = $('#qbody_exclusion');
+        if ($body.length && !$body.is(':visible')) {
+            $body.closest('.q-terms-item').find('.q-terms-item-head').trigger('click');
+        }
+        $('#qAiExclusionsModal').modal('hide');
+        $('#qAlert').html('<div class="alert alert-success"><i class="fas fa-check-circle mr-1"></i> AI exclusions inserted into the Exclusions field. Inclusions were not changed.</div>');
         try {
             saveFormDraftToStorage();
         } catch (e) { /* ignore */ }
@@ -6213,6 +6618,24 @@
 
         $('#qAiInclusionsModal').on('hidden.bs.modal', function () {
             $('#qAiInclGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Inclusions');
+        });
+
+        $(document).on('click', '#qAiExclusionsInlineBtn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openAiExclusionsModal();
+        });
+
+        $('#qAiExclGenerate, #qAiExclRegenerate').on('click', function () {
+            requestAiExclusionsGenerate();
+        });
+
+        $('#qAiExclUse').on('click', function () {
+            applyAiExclusionsToEditor();
+        });
+
+        $('#qAiExclusionsModal').on('hidden.bs.modal', function () {
+            $('#qAiExclGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Exclusions');
         });
     }
 
@@ -9956,7 +10379,12 @@
             if (!rows.length) {
                 return;
             }
+            var journeyType = normalizeFlightJourneyType(group.label || (rows[0] && rows[0].journey_label) || '');
             html += '<div class="qp-flight-journey">';
+            if (journeyType) {
+                html += '<div class="qp-flight-journey-type' + (journeyType === 'Return' ? ' is-return' : ' is-onward') + '">' +
+                    esc(journeyType) + '</div>';
+            }
             rows.forEach(function (seg, si) {
                 if (si > 0) {
                     html += qpFlightLayoverHtml(rows[si - 1], seg);
@@ -10959,10 +11387,12 @@
         var destination = previewVal(p.destination, 'Destination');
         var destTitle = qpFormatDestTitle(destination);
         var logoUrl = absUrl(Q_PREVIEW_META.logo || 'img/MZ_LOGO_1.jpeg');
+        var trustUrl = absUrl(Q_PREVIEW_META.trust_badge || '../images/Capture1.PNG');
         var todayLong = formatPreviewLongDate(new Date().toISOString().slice(0, 10));
         var paxChildren = children > 0 ? String(children) : '0';
         var paxInfants = infants > 0 ? String(infants) : '0';
         var nightsLabel = nights + ' Nights / ' + days + ' Days';
+        var refNoLabel = 'REF: ' + previewRefNo(p);
 
         var html = '';
 
@@ -10988,21 +11418,15 @@
             '</div>' +
             '<span class="qp-duration-line"></span>' +
             '</div>';
+        html += '<div class="qp-meta-row q-preview-ref-block">' +
+            '<span class="qp-meta-value ref">' + esc(refNoLabel) + '</span>' +
+            '<span class="qp-meta-sep" aria-hidden="true"></span>' +
+            '<span class="qp-meta-value">' + esc(todayLong) + '</span>' +
+            '</div>';
         html += '</div>';
-        html += '<div class="qp-ref-card q-preview-ref-block">';
-        html += '<div class="qp-ref-row">' +
-            '<i class="fas fa-file-alt qp-ref-ico" aria-hidden="true"></i>' +
-            '<div class="qp-ref-text">' +
-            '<div class="qp-ref-label">Reference No.</div>' +
-            '<div class="qp-ref-value ref">REF: ' + esc(previewRefNo(p)) + '</div>' +
-            '</div></div>';
-        html += '<div class="qp-ref-row">' +
-            '<i class="fas fa-calendar-alt qp-ref-ico" aria-hidden="true"></i>' +
-            '<div class="qp-ref-text">' +
-            '<div class="qp-ref-label">Quotation Date</div>' +
-            '<div class="qp-ref-value">' + esc(todayLong) + '</div>' +
-            '</div></div>';
-        html += '</div>';
+        html += '<div class="qp-trust q-preview-trust">' +
+            '<img class="qp-trust-img" src="' + esc(trustUrl) + '" alt="19 Years of Trust">' +
+            '</div>';
         html += '</div>';
         html += buildPreviewHotelRoutePillsHtml(hotelsData, String(p.active_option_id || hotelsData.active_category_id || ''));
         html += '</div>';
@@ -12865,20 +13289,28 @@
         function addFlightSegment(data, opts) {
             opts = opts || {};
             var rowData = data || {};
-            var $target = $('#qFlightRows');
-            var $row = $(flightRowHtml(rowData));
             // "Add Another Segment" continues a journey only when the last card is already a multi-leg connection.
             if (opts.continueJourney) {
                 var $lastJourney = $('#qFlightRows .q-flight-journey-card').last();
                 if ($lastJourney.length && $lastJourney.find('.q-flight-row').length >= 1) {
-                    $target = $lastJourney.find('.q-flight-journey-body').first();
+                    var $row = $(flightRowHtml(rowData, { hideRemove: true }));
                     $row.find('.f-journey-start').val('0');
+                    $row.find('.f-journey-label').val('');
+                    $lastJourney.find('.q-flight-journey-body').first().append($row);
+                    initQuotationDatePickers($row);
+                    qInitSupplierSelect2($row.find('.f-supplier'), { placeholder: 'Select' });
+                    renumberFlightRows();
+                    refreshFlightJourneyTypes();
+                    recalcCosts();
+                    scheduleSyncReturnAirfareInclusion();
+                    return;
                 }
             }
-            $target.append($row);
-            initQuotationDatePickers($row);
-            qInitSupplierSelect2($row.find('.f-supplier'), { placeholder: 'Select' });
+            appendFlightJourneyCard([rowData]);
+            qInitSupplierSelect2In($('#qFlightRows'));
+            initQuotationDatePickers($('#qFlightRows'));
             renumberFlightRows();
+            refreshFlightJourneyTypes();
             recalcCosts();
             scheduleSyncReturnAirfareInclusion();
         }
@@ -12907,6 +13339,7 @@
             qInitSupplierSelect2In($('#qFlightRows'));
             initQuotationDatePickers($('#qFlightRows'));
             renumberFlightRows();
+            refreshFlightJourneyTypes();
             recalcCosts();
             scheduleSyncReturnAirfareInclusion();
         };
@@ -13404,6 +13837,7 @@
         });
         $(document).on('change input', '[name=destination]', function () {
             hideHotelMenus();
+            scheduleSyncReturnAirfareInclusion(true);
         });
         var qHotelCityTimer = null;
         var qHotelNameTimer = null;
@@ -13703,7 +14137,25 @@
             });
             $card.remove();
             renumberFlightRows();
+            refreshFlightJourneyTypes();
             recalcCosts();
+            scheduleSyncReturnAirfareInclusion();
+            saveFormDraftToStorage();
+        });
+
+        $(document).on('change', '#qFlightRows .f-journey-type', function () {
+            var $card = $(this).closest('.q-flight-journey-card');
+            if (!$card.length) {
+                return;
+            }
+            // First flight stays Onward; ignore attempts to change it.
+            if ($card.is($('#qFlightRows > .q-flight-journey-card').first())) {
+                refreshFlightJourneyTypes();
+                return;
+            }
+            syncFlightJourneyCardType($card, $(this).val());
+            scheduleSyncReturnAirfareInclusion();
+            saveFormDraftToStorage();
         });
 
         $(document).on('click', '.q-remove', function (e) {

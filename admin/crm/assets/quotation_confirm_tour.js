@@ -208,7 +208,7 @@
         var t = '#confirmTourModal .ct-svc-table';
         var m = '#confirmTourModal';
         $('<style id="ctVoucherBtnStyles">').text(
-            m + ' .ct-svc-section-head{display:flex;align-items:center;gap:.8rem;margin:1.1rem 0 .7rem}' +
+            m + ' .ct-svc-section-head{display:flex;align-items:center;gap:.8rem;margin:0.2rem 0 0rem}' +
             m + ' .ct-svc-section-icon{font-size:1.55rem;color:#e11d48;width:32px;text-align:center}' +
             m + ' .ct-svc-section-title{font-size:1.08rem;font-weight:700;color:#0f172a;line-height:1.2}' +
             m + ' .ct-svc-section-sub{font-size:.8rem;color:#64748b;margin-top:.1rem}' +
@@ -219,7 +219,7 @@
             t + ' .ct-detail-head{background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:.78rem;font-weight:600;color:#334155;padding-top:.75rem;padding-bottom:.75rem}' +
             t + ' .ct-detail-head>div:nth-child(1){text-align:center}' +
             t + ' #ctDetailRows{counter-reset:ctSvcRow}' +
-            t + ' .ct-detail-row{counter-increment:ctSvcRow;padding-top:.45rem;padding-bottom:.45rem;border-top:1px solid #eef2f7;background:#fff}' +
+            t + ' .ct-detail-row{counter-increment:ctSvcRow;padding-top:.05rem;padding-bottom:.05rem;border-top:1px solid #eef2f7;background:#fff}' +
             t + ' .ct-detail-row:first-child{border-top:0}' +
             t + ' .ct-detail-row:hover{background:#fafcff}' +
             t + ' .ct-row-no{text-align:center;font-size:.84rem;color:#334155}' +
@@ -751,8 +751,30 @@
             '#confirmTourModal .ct-row-btn.is-disabled,#confirmTourModal .ct-row-btn.is-disabled:hover{' +
             'opacity:.4;background:#f1f5f9;border-color:#e2e8f0;color:#94a3b8;pointer-events:none;box-shadow:none}' +
             '#confirmTourModal .ct-add-guest-btn:disabled{opacity:.45;cursor:not-allowed}' +
-            '#confirmTourModal .ct-pax-name.is-empty{font-weight:500;color:#94a3b8}'
+            '#confirmTourModal .ct-pax-name.is-empty{font-weight:500;color:#94a3b8}' +
+            '#confirmTourModal .ct-pax-head-actions{display:inline-flex;align-items:center;gap:.45rem;flex-shrink:0}' +
+            '#confirmTourModal .ct-pax-toggle{width:34px;height:34px;padding:0;border:1.5px solid #fda4af;border-radius:10px;' +
+            'background:#fff;color:#ff2d55;display:inline-flex;align-items:center;justify-content:center;line-height:1}' +
+            '#confirmTourModal .ct-pax-toggle:hover{background:#fff1f3;border-color:#fb7185;color:#e11d48}' +
+            '#confirmTourModal .ct-pax-toggle i{font-size:.78rem}' +
+            '#confirmTourModal .ct-pax-section.is-collapsed .ct-pax-head{margin-bottom:0}' +
+            '#confirmTourModal .ct-pax-section.is-collapsed .ct-pax-table-wrap{display:none}'
         ).appendTo('head');
+    }
+
+    function setPaxSectionCollapsed(collapsed) {
+        var $sec = $('#confirmTourModal .ct-pax-section');
+        var $btn = $('#ctPaxToggle');
+        if (!$sec.length) {
+            return;
+        }
+        collapsed = !!collapsed;
+        $sec.toggleClass('is-collapsed', collapsed);
+        if ($btn.length) {
+            $btn.attr('aria-expanded', collapsed ? 'false' : 'true');
+            $btn.attr('title', collapsed ? 'Show travellers' : 'Hide travellers');
+            $btn.find('i').attr('class', collapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up');
+        }
     }
 
     function ensurePrimaryStats() {
@@ -1600,6 +1622,7 @@
         renderTravellers();
         clearServiceHighlight();
         renderRows([]);
+        setPaxSectionCollapsed(true);
         $('#confirmTourModal').modal('show');
 
         $.getJSON('crm/ajax/get_quotation_confirm.php', { id: quotationId })
@@ -1703,8 +1726,15 @@
         // Leads table row (opened from Status / Book on leads.php)
         var $guestText = activeRow.find('.lead-name-text');
         if ($guestText.length && guest) {
-            $guestText.text(guest);
-            $guestText.attr('title', 'Phone: ' + (mobile || '—') + '\nEmail: ' + (email || '—'));
+            var guestDisplay = guest.replace(/\s+/g, ' ').split(' ').map(function (word) {
+                var match = word.match(/^([^A-Za-z]*)([A-Za-z])(.*)$/);
+                if (!match) {
+                    return word;
+                }
+                return match[1] + match[2].toUpperCase() + String(match[3] || '').toLowerCase();
+            }).join(' ');
+            $guestText.text(guestDisplay);
+            $guestText.attr('title', 'Phone: ' + (mobile || '—') + '\nEmail: ' + (email || '—)');
             var letters = guest.replace(/[^A-Za-z]/g, '');
             var initials = (letters.charAt(0) + letters.charAt(1)).toUpperCase();
             var $initials = activeRow.find('.lead-guest-initials');
@@ -2249,6 +2279,11 @@
         });
 
         bindTravellerScanEvents();
+
+        $(document).on('click', '#ctPaxToggle', function (e) {
+            e.preventDefault();
+            setPaxSectionCollapsed(!$('#confirmTourModal .ct-pax-section').hasClass('is-collapsed'));
+        });
 
         $('#ctAddGuestBtn').on('click', function () {
             if (leadPaxCount > 0 && namedTravellerCount() >= leadPaxCount) {

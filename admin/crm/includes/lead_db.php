@@ -473,6 +473,22 @@ function crmLeadDeletedWhereSql(string $alias = ''): string
     return '(' . $prefix . '`deleted_at` IS NOT NULL)';
 }
 
+/**
+ * Display-only Title Case for guest names (e.g. "MR HIMANSHU" → "Mr Himanshu").
+ * Does not alter stored database values.
+ */
+function crmTitleCaseGuestName(string $name): string
+{
+    $name = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
+    if ($name === '') {
+        return '';
+    }
+    if (function_exists('mb_convert_case') && function_exists('mb_strtolower')) {
+        return mb_convert_case(mb_strtolower($name, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+    }
+    return ucwords(strtolower($name));
+}
+
 function crmFormatCustomerDisplayName(string $name, string $initial = ''): string
 {
     $name = trim($name);
@@ -482,16 +498,16 @@ function crmFormatCustomerDisplayName(string $name, string $initial = ''): strin
 
     $initial = trim($initial);
     if ($initial === '') {
-        return $name;
+        return crmTitleCaseGuestName($name);
     }
 
     $initialKey = strtolower(rtrim($initial, '.'));
     $nameLower = strtolower($name);
     if (strpos($nameLower, $initialKey . ' ') === 0) {
-        return $name;
+        return crmTitleCaseGuestName($name);
     }
 
-    return $initial . ' ' . $name;
+    return crmTitleCaseGuestName($initial . ' ' . $name);
 }
 
 /**
