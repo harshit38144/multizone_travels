@@ -53,6 +53,18 @@ class PayUCheckout
     }
 
     /**
+     * PayU txnid must be ≤ 25 chars (alphanumeric, _ and -).
+     */
+    public static function makeTxnid(string $prefix = 'MZPU'): string
+    {
+        $prefix = preg_replace('/[^A-Za-z0-9]/', '', $prefix) ?: 'MZPU';
+        $prefix = substr($prefix, 0, 4);
+        // e.g. MZPU + ymdHis(12) + 6 hex = 22 chars (under 25)
+        $txnid = $prefix . gmdate('ymdHis') . bin2hex(random_bytes(3));
+        return substr($txnid, 0, 25);
+    }
+
+    /**
      * @param array{name:string,email:string,mobile:string,remarks?:string} $customer
      * @return array<string,string>
      */
@@ -67,21 +79,26 @@ class PayUCheckout
         $key = $this->merchantKey();
         $salt = $this->merchantSalt();
         $amount = number_format($amountInr, 2, '.', '');
-        $firstname = substr(trim($customer['name']), 0, 60);
-        $email = substr(trim($customer['email']), 0, 60);
-        $phone = preg_replace('/\D/', '', (string) ($customer['mobile'] ?? ''));
-        $udf1 = substr($firstname, 0, 255);
-        $udf2 = substr($email, 0, 255);
-        $udf3 = substr($phone, 0, 255);
-        $udf4 = substr(trim((string) ($customer['remarks'] ?? '')), 0, 255);
-        $udf5 = '';
+        $firstname = substr(preg_replace('/\s+/', ' ', trim($customer['name'])) ?: 'Customer', 0, 60);
+        $email = substr(trim($customer['email']), 0, 50);
+        $phone = preg_replace('/\D/', '', (string) ($customer['mobile'] ?? '')) ?: '';
+        if (strlen($phone) === 12 && strpos($phone, '91') === 0) {
+            $phone = substr($phone, 2);
+        } elseif (strlen($phone) === 11 && $phone[0] === '0') {
+            $phone = substr($phone, 1);
+        } elseif (strlen($phone) > 10) {
+            $last10 = substr($phone, -10);
+            $phone = preg_match('/^[6-9]/', $last10) ? $last10 : substr($phone, 0, 10);
+        }
+        $productinfo = substr(preg_replace('/[|\r\n]+/', ' ', trim($productinfo)) ?: 'Payment', 0, 100);
+        $txnid = substr(preg_replace('/[^A-Za-z0-9_-]/', '', $txnid) ?: self::makeTxnid(), 0, 25);
 
+        // Scenario 3 (no UDFs): key|txnid|amount|productinfo|firstname|email|||||||||||SALT
         $hashString = $key . '|' . $txnid . '|' . $amount . '|' . $productinfo . '|'
-            . $firstname . '|' . $email . '|' . $udf1 . '|' . $udf2 . '|' . $udf3 . '|' . $udf4 . '|' . $udf5
-            . '||||||' . $salt;
+            . $firstname . '|' . $email . '|||||||||||' . $salt;
         $hash = strtolower(hash('sha512', $hashString));
 
-        return [
+        $fields = [
             'key' => $key,
             'txnid' => $txnid,
             'amount' => $amount,
@@ -91,14 +108,15 @@ class PayUCheckout
             'phone' => $phone,
             'surl' => $successUrl,
             'furl' => $failureUrl,
-            'udf1' => $udf1,
-            'udf2' => $udf2,
-            'udf3' => $udf3,
-            'udf4' => $udf4,
-            'udf5' => $udf5,
             'hash' => $hash,
-            'service_provider' => 'payu_paisa',
         ];
+
+        // Required by some older PayU India merchant accounts for _payment
+        if (!$this->isSandbox()) {
+            $fields['service_provider'] = 'payu_paisa';
+        }
+
+        return $fields;
     }
 
     /**
@@ -125,11 +143,25 @@ class PayUCheckout
         $udf5 = (string) ($post['udf5'] ?? '');
         $postedHash = strtolower((string) ($post['hash'] ?? ''));
 
+        // Reverse hash (with UDF positions — empty when unused)
         $hashString = $salt . '|' . $status . '||||||' . $udf5 . '|' . $udf4 . '|' . $udf3 . '|' . $udf2 . '|'
             . $udf1 . '|' . $email . '|' . $firstname . '|' . $productinfo . '|' . $amount . '|' . $txnid . '|' . $key;
         $calc = strtolower(hash('sha512', $hashString));
+        if ($postedHash !== '' && hash_equals($calc, $postedHash)) {
+            return true;
+        }
 
-        return $postedHash !== '' && hash_equals($calc, $postedHash);
+        // Some accounts append additionalCharges before salt in reverse hash
+        $additionalCharges = (string) ($post['additionalCharges'] ?? $post['additional_charges'] ?? '');
+        if ($additionalCharges !== '') {
+            $hashWithCharges = $additionalCharges . '|' . $hashString;
+            $calc2 = strtolower(hash('sha512', $hashWithCharges));
+            if (hash_equals($calc2, $postedHash)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

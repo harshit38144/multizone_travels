@@ -42,7 +42,19 @@ function payment_gateway_label(string $gateway): string
 
 function payment_order_prefix_for_gateway(string $gateway): string
 {
-    return payment_normalize_gateway($gateway) === 'payu' ? 'MZPAYU' : 'MZLINK';
+    // PayU txnid max length is 25 — keep prefix short (MZPU…)
+    return payment_normalize_gateway($gateway) === 'payu' ? 'MZPU' : 'MZLINK';
+}
+
+/** True when merchant order id belongs to an admin payment link. */
+function payment_is_link_order_id(string $merchantOrderId): bool
+{
+    return $merchantOrderId !== ''
+        && (
+            strpos($merchantOrderId, 'MZLINK') === 0
+            || strpos($merchantOrderId, 'MZPU') === 0
+            || strpos($merchantOrderId, 'MZPAYU') === 0
+        );
 }
 
 function payment_load_payu_config(): array
@@ -223,7 +235,7 @@ function payment_start_phonepe(array $customer, int $amountPaisa, string $orderP
  * @param array{name:string,email:string,mobile:string,remarks?:string} $customer
  * @return array{ok:bool, txnid?:string, formAction?:string, formFields?:array<string,string>, error?:string}
  */
-function payment_start_payu(array $customer, int $amountPaisa, string $orderPrefix = 'MZPAYU'): array
+function payment_start_payu(array $customer, int $amountPaisa, string $orderPrefix = 'MZPU'): array
 {
     require_once __DIR__ . '/PayUCheckout.php';
 
@@ -237,9 +249,7 @@ function payment_start_payu(array $customer, int $amountPaisa, string $orderPref
         return ['ok' => false, 'error' => 'PayU merchant key and salt are missing. Update includes/payu_config.php.'];
     }
 
-    $txnid = payment_sanitize_order_id(
-        $orderPrefix . '-' . gmdate('YmdHis') . '-' . bin2hex(random_bytes(3))
-    );
+    $txnid = PayUCheckout::makeTxnid($orderPrefix !== '' ? $orderPrefix : 'MZPU');
     $amountInr = $amountPaisa / 100;
     $productinfo = 'Multizone Travels Payment';
     $remarks = trim((string) ($customer['remarks'] ?? ''));
@@ -256,6 +266,8 @@ function payment_start_payu(array $customer, int $amountPaisa, string $orderPref
         $returnUrl,
         $returnUrl
     );
+    // Use the txnid that was actually hashed (may be truncated to 25)
+    $txnid = (string) ($fields['txnid'] ?? $txnid);
 
     return [
         'ok' => true,
@@ -528,7 +540,7 @@ function payment_mark_payment_link_paid(mysqli $conn, string $merchantOrderId): 
         $updated += $markById((int) $ctx['payment_link_id']);
     }
 
-    if ($merchantOrderId !== '' && (strpos($merchantOrderId, 'MZLINK') === 0 || strpos($merchantOrderId, 'MZPAYU') === 0)) {
+    if (payment_is_link_order_id($merchantOrderId)) {
         $stmt = $conn->prepare(
             "UPDATE payment_links SET status = 'paid', paid_at = NOW()
              WHERE merchant_order_id = ? AND status = 'active'"
@@ -784,7 +796,7 @@ function payment_resolve_receipt_details(mysqli $conn, string $merchantOrderId, 
             $mobile = trim((string) ($meta['udf3'] ?? ''));
             $remarks = trim((string) ($meta['udf4'] ?? ''));
             if ($name !== '' || $email !== '') {
-                $source = (strpos($merchantOrderId, 'MZLINK') === 0 || strpos($merchantOrderId, 'MZPAYU') === 0) ? 'payment_link' : 'pay';
+                $source = payment_is_link_order_id($merchantOrderId) ? 'payment_link' : 'pay';
                 $amountPaisa = 0;
                 if (isset($statusJson['amount'])) {
                     $amountPaisa = (int) $statusJson['amount'];
