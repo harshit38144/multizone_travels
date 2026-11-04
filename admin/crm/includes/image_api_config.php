@@ -38,16 +38,28 @@ function crmImageApiJson(array $payload, int $code = 200): void
     exit;
 }
 
-function crmImageSearchPexels(string $query, int $limit): array
+function crmImageSearchPexels(string $query, int $limit, int $page = 1): array
 {
+    $empty = [
+        'images' => [],
+        'page' => max(1, $page),
+        'per_page' => min(30, max(1, $limit)),
+        'total_results' => 0,
+        'has_more' => false,
+    ];
+
     $key = crmImageApiSettings()['pexels_api_key'] ?? '';
     if ($key === '') {
-        return [];
+        return $empty;
     }
+
+    $perPage = min(30, max(1, $limit));
+    $page = max(1, $page);
 
     $url = 'https://api.pexels.com/v1/search?' . http_build_query([
         'query' => $query,
-        'per_page' => min(20, max(1, $limit)),
+        'per_page' => $perPage,
+        'page' => $page,
         'orientation' => 'landscape',
     ]);
 
@@ -63,10 +75,14 @@ function crmImageSearchPexels(string $query, int $limit): array
     curl_close($ch);
 
     if ($raw === false || $code !== 200) {
-        return [];
+        return $empty;
     }
 
     $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        return $empty;
+    }
+
     $photos = $data['photos'] ?? [];
     $out = [];
     foreach ($photos as $photo) {
@@ -80,6 +96,7 @@ function crmImageSearchPexels(string $query, int $limit): array
             continue;
         }
         $out[] = [
+            'id' => (string) ($photo['id'] ?? ''),
             'url' => $urlFull,
             'thumb' => $thumb,
             'title' => (string) ($photo['alt'] ?? $query),
@@ -88,7 +105,19 @@ function crmImageSearchPexels(string $query, int $limit): array
         ];
     }
 
-    return $out;
+    $total = (int) ($data['total_results'] ?? 0);
+    $loadedThrough = ($page - 1) * $perPage + count($out);
+    $hasMore = $total > 0
+        ? ($loadedThrough < $total)
+        : (!empty($data['next_page']) && count($out) >= $perPage);
+
+    return [
+        'images' => $out,
+        'page' => $page,
+        'per_page' => $perPage,
+        'total_results' => $total,
+        'has_more' => $hasMore,
+    ];
 }
 
 function crmImageSearchWikimedia(string $query, int $limit): array
@@ -153,23 +182,57 @@ function crmImageSearchWikimedia(string $query, int $limit): array
     return $out;
 }
 
-function crmImageSearch(string $query, int $limit = 12): array
+function crmImageSearch(string $query, int $limit = 18, int $page = 1): array
 {
     $query = trim(preg_replace('/\s+/', ' ', $query));
+    $page = max(1, $page);
+    $limit = min(30, max(1, $limit));
+
     if ($query === '' || mb_strlen($query) < 2) {
-        return ['images' => [], 'source' => 'none'];
+        return [
+            'images' => [],
+            'source' => 'none',
+            'page' => $page,
+            'per_page' => $limit,
+            'total_results' => 0,
+            'has_more' => false,
+        ];
     }
 
-    $limit = min(20, max(1, $limit));
-    $images = crmImageSearchPexels($query, $limit);
-    $source = 'pexels';
-
-    if (!$images) {
-        $images = crmImageSearchWikimedia($query, $limit);
-        $source = 'wikimedia';
+    $pexels = crmImageSearchPexels($query, $limit, $page);
+    if (!empty($pexels['images'])) {
+        return [
+            'images' => $pexels['images'],
+            'source' => 'pexels',
+            'page' => (int) ($pexels['page'] ?? $page),
+            'per_page' => (int) ($pexels['per_page'] ?? $limit),
+            'total_results' => (int) ($pexels['total_results'] ?? 0),
+            'has_more' => !empty($pexels['has_more']),
+        ];
     }
 
-    return ['images' => $images, 'source' => $source];
+    // Wikimedia has no reliable page API here — only first page.
+    if ($page > 1) {
+        return [
+            'images' => [],
+            'source' => 'wikimedia',
+            'page' => $page,
+            'per_page' => $limit,
+            'total_results' => 0,
+            'has_more' => false,
+        ];
+    }
+
+    $images = crmImageSearchWikimedia($query, $limit);
+
+    return [
+        'images' => $images,
+        'source' => 'wikimedia',
+        'page' => 1,
+        'per_page' => $limit,
+        'total_results' => count($images),
+        'has_more' => false,
+    ];
 }
 
 function crmImageAllowedImportHost(string $host): bool

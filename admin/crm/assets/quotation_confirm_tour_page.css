@@ -122,8 +122,8 @@
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 0.55rem 0.75rem;
-            margin-top: 0.95rem;
-            padding-top: 0.9rem;
+            margin-top: 0.25rem;
+            padding-top: 0.25rem;
             border-top: 1px solid #e6e8ec;
         }
 

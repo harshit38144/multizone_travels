@@ -938,8 +938,66 @@
         return parts.join(' ').toLowerCase();
     }
 
+    /** Stable key for itinerary sameness (airline, flight no., airports, date/time). */
+    function qfsFlightDedupKey(item) {
+        var journey = item.journey || item;
+        var flightsArray = (journey.flights && journey.flights.length > 0)
+            ? journey.flights
+            : [item.primaryFlight || item];
+        var parts = [];
+        flightsArray.forEach(function (f) {
+            var al = f.carrier || f.airline || {};
+            var code = String(al.code || '').toUpperCase().trim();
+            var name = String(al.name || f.airlineName || f.carrierName || '').toUpperCase().trim();
+            var fno = String(f.flightNo || f.flightNumber || '').toUpperCase().replace(/^0+/, '').trim();
+            var depCode = String((f.depDetail && f.depDetail.code) || '').toUpperCase().trim();
+            var arrCode = String((f.arrDetail && f.arrDetail.code) || '').toUpperCase().trim();
+            var dRaw = (f.depDetail && f.depDetail.time) ? f.depDetail.time : (f.departureTime || f.depTime || '');
+            var aRaw = (f.arrDetail && f.arrDetail.time) ? f.arrDetail.time : (f.arrivalTime || f.arrTime || '');
+            var dNorm = (typeof moment === 'function' && moment(dRaw).isValid())
+                ? moment(dRaw).format('YYYY-MM-DD HH:mm')
+                : String(dRaw || '');
+            var aNorm = (typeof moment === 'function' && moment(aRaw).isValid())
+                ? moment(aRaw).format('YYYY-MM-DD HH:mm')
+                : String(aRaw || '');
+            parts.push([code || name, fno, depCode, arrCode, dNorm, aNorm].join('|'));
+        });
+        return parts.join('||');
+    }
+
+    /** Keep one card per identical itinerary — the lowest guest total fare. */
+    function qfsDeduplicateFlightsByLowestFare(list) {
+        var bestByKey = {};
+        var order = [];
+        (list || []).forEach(function (item) {
+            var key = qfsFlightDedupKey(item);
+            if (!key) {
+                key = 'fallback-' + order.length;
+            }
+            var price = parseInt((item._qfsMeta && item._qfsMeta.price), 10);
+            if (isNaN(price) || price < 0) {
+                price = Number.MAX_SAFE_INTEGER;
+            }
+            if (!Object.prototype.hasOwnProperty.call(bestByKey, key)) {
+                bestByKey[key] = item;
+                order.push(key);
+                return;
+            }
+            var existingPrice = parseInt((bestByKey[key]._qfsMeta && bestByKey[key]._qfsMeta.price), 10);
+            if (isNaN(existingPrice) || existingPrice < 0) {
+                existingPrice = Number.MAX_SAFE_INTEGER;
+            }
+            if (price < existingPrice) {
+                bestByKey[key] = item;
+            }
+        });
+        return order.map(function (k) {
+            return bestByKey[k];
+        });
+    }
+
     function qfsPrepareFlightList(list, prefix) {
-        return (list || []).map(function (item, index) {
+        var prepared = (list || []).map(function (item, index) {
             var journey = item.journey || item;
             var flightsArray = (journey.flights && journey.flights.length > 0) ? journey.flights : [item.primaryFlight || item];
             var primaryF = item.primaryFlight || flightsArray[0] || item;
@@ -971,6 +1029,11 @@
             item._qfsMeta.searchText = qfsBuildSearchText(journey, flightsArray, item._qfsMeta);
             return item;
         });
+        prepared = qfsDeduplicateFlightsByLowestFare(prepared);
+        prepared.forEach(function (item, index) {
+            item._qfsId = prefix + '-' + index;
+        });
+        return prepared;
     }
 
     function qfsFlightPassesFilters(item) {

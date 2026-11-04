@@ -317,6 +317,27 @@ $qWizardSteps = [
             --q-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
             --q-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
             --q-shadow-lg: 0 8px 30px rgba(15, 23, 42, 0.08);
+            /* Shared Commercial Details column — Flight / Hotel / Itinerary */
+            --q-commercial-col: clamp(280px, 30%, 380px);
+            --q-commercial-inner: minmax(0, 0.95fr) minmax(0, 1.2fr) 72px;
+            --q-commercial-bg: #fff1f2;
+            --q-commercial-border: #fecdd3;
+        }
+
+        /* Shared Commercial Details column shell (Flight / Hotel / Itinerary) */
+        .crm-quotation-gen .q-commercial-block {
+            min-width: 0;
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--q-commercial-bg);
+        }
+
+        .crm-quotation-gen .q-commercial-fields {
+            display: grid;
+            grid-template-columns: var(--q-commercial-inner);
+            gap: 0.35rem;
+            align-items: center;
+            min-width: 0;
         }
 
         .crm-quotation-gen .content-wrapper > .content {
@@ -1848,7 +1869,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-workspace {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--q-commercial-col);
             gap: 0.75rem;
             margin-bottom: 0.85rem;
             align-items: stretch;
@@ -2297,15 +2318,18 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-itin-suppliers-panel {
-            background: #fff1f2;
-            border: 1px solid #fecdd3;
+            background: var(--q-commercial-bg);
+            border: 1px solid var(--q-commercial-border);
             border-radius: 14px;
             padding: 0;
             box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
             min-width: 0;
+            width: 100%;
+            max-width: 100%;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            justify-self: stretch;
         }
 
         .crm-quotation-gen .q-itinerary-suppliers {
@@ -2360,7 +2384,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-comm-col-labels {
             display: grid;
-            grid-template-columns: 0.95fr 1.2fr 72px;
+            grid-template-columns: var(--q-commercial-inner);
             gap: 0.35rem;
             align-items: center;
             padding: 0.2rem 0.65rem 0.45rem;
@@ -2406,7 +2430,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-supplier-row {
             display: grid;
-            grid-template-columns: 0.95fr 1.2fr 72px;
+            grid-template-columns: var(--q-commercial-inner);
             gap: 0.35rem;
             align-items: center;
             min-width: 0;
@@ -2577,6 +2601,16 @@ $qWizardSteps = [
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            /* Match Search + Selected Package width; leave Commercial Details column clear */
+            width: calc(100% - var(--q-commercial-col) - 0.75rem);
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 1199.98px) {
+            .crm-quotation-gen .q-itin-days {
+                width: 100%;
+            }
         }
 
         .crm-quotation-gen .q-itin-days-actions {
@@ -3107,8 +3141,55 @@ $qWizardSteps = [
         }
 
         .q-ai-incl-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
             flex-wrap: wrap;
-            gap: 0.35rem;
+            gap: 0.5rem;
+        }
+
+        .q-ai-incl-footer .btn {
+            min-height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.88rem;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 0.45rem 1.1rem;
+            line-height: 1.25;
+        }
+
+        /* Generate Inclusions / Exclusions — red CTA (not scoped to day-AI modal) */
+        .q-ai-incl-modal .q-ai-generate-btn,
+        .q-ai-incl-modal .q-day-ai-generate {
+            background: #e11d2e !important;
+            border: 1px solid #e11d2e !important;
+            color: #fff !important;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 0.45rem 1.15rem;
+            box-shadow: 0 2px 8px rgba(225, 29, 46, 0.25);
+        }
+
+        .q-ai-incl-modal .q-ai-generate-btn:hover:not(:disabled),
+        .q-ai-incl-modal .q-day-ai-generate:hover:not(:disabled) {
+            background: #c4121a !important;
+            border-color: #c4121a !important;
+            color: #fff !important;
+        }
+
+        .q-ai-incl-modal .q-ai-generate-btn:focus,
+        .q-ai-incl-modal .q-day-ai-generate:focus {
+            box-shadow: 0 0 0 0.2rem rgba(225, 29, 46, 0.28);
+            color: #fff !important;
+        }
+
+        .q-ai-incl-modal .q-ai-generate-btn:disabled,
+        .q-ai-incl-modal .q-day-ai-generate:disabled {
+            opacity: 0.75;
+            cursor: wait;
+            color: #fff !important;
         }
 
         .q-ai-incl-use {
@@ -3324,7 +3405,7 @@ $qWizardSteps = [
             background: #fff;
             display: flex;
             flex-direction: column;
-            gap: 0.65rem;
+            gap: 0rem;
             height: auto;
             width: 100%;
             align-self: start;
@@ -3566,6 +3647,26 @@ $qWizardSteps = [
             display: none;
         }
 
+        /* When an image is set: hide Upload / Search / Remove until hover (or keyboard focus). */
+        .crm-quotation-gen .q-img-preview-wrap.has-image .q-day-image-actions {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.15s ease, visibility 0.15s ease;
+        }
+
+        .crm-quotation-gen .q-img-preview-wrap.has-image:hover .q-day-image-actions,
+        .crm-quotation-gen .q-img-preview-wrap.has-image:focus-within .q-day-image-actions {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .crm-quotation-gen .q-img-preview-wrap.has-image:hover .q-day-image-overlay,
+        .crm-quotation-gen .q-img-preview-wrap.has-image:focus-within .q-day-image-overlay {
+            background: rgba(15, 23, 42, 0.28);
+        }
+
         .qii-image-search {
             --qii-primary: #0ea5e9;
             --qii-primary-dark: #0284c7;
@@ -3580,38 +3681,112 @@ $qWizardSteps = [
             box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
         }
 
+        .qii-image-search .qii-modal-hd.modal-header,
         .qii-image-search .qii-modal-hd {
-            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-            color: #fff;
-            border: 0;
-            padding: 1rem 1.15rem;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 0.75rem;
+            min-height: 64px;
+            padding: 0.85rem 1.15rem !important;
+            margin: 0;
+            background: #fff !important;
+            color: #0f172a !important;
+            border: 0 !important;
+            border-bottom: 1px solid #eef2f7 !important;
+            position: relative;
+            z-index: 2;
         }
 
         .qii-image-search .qii-hd-main {
-            display: flex;
-            align-items: flex-start;
+            display: flex !important;
+            align-items: center !important;
             gap: 0.75rem;
+            min-width: 0;
+            flex: 1 1 auto;
         }
 
         .qii-image-search .qii-hd-icon {
             width: 40px;
             height: 40px;
             border-radius: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+            color: #fff !important;
+            display: inline-flex !important;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .qii-image-search .qii-hd-icon i {
+            color: #fff !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .qii-image-search .qii-hd-copy {
+            min-width: 0;
+        }
+
+        .qii-image-search .qii-hd-title.modal-title,
+        .qii-image-search .qii-modal-hd .modal-title {
+            font-size: 1.05rem !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+            line-height: 1.25 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
 
         .qii-image-search .qii-hd-sub {
-            font-size: 0.78rem;
-            opacity: 0.9;
+            font-size: 0.78rem !important;
+            color: #64748b !important;
+            opacity: 1 !important;
+            margin-top: 0.12rem;
+            line-height: 1.3;
         }
 
+        .qii-image-search .qii-close-btn.close,
         .qii-image-search .qii-close-btn {
-            color: #fff;
-            opacity: 0.85;
-            text-shadow: none;
+            position: relative !important;
+            z-index: 3;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 36px !important;
+            height: 36px !important;
+            margin: 0 0 0 0.5rem !important;
+            padding: 0 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            background: #f8fafc !important;
+            color: #64748b !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+            float: none !important;
+            font-size: 0.95rem !important;
+            line-height: 1 !important;
+            flex: 0 0 auto;
+        }
+
+        .qii-image-search .qii-close-btn i,
+        .qii-image-search .qii-close-btn span {
+            color: inherit !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            font-size: 0.9rem !important;
+            font-weight: 700 !important;
+            line-height: 1 !important;
+        }
+
+        .qii-image-search .qii-close-btn:hover {
+            color: #0f172a !important;
+            background: #eef2f7 !important;
+            border-color: #cbd5e1 !important;
+            opacity: 1 !important;
         }
 
         .qii-image-search .qii-search-body {
@@ -3650,6 +3825,35 @@ $qWizardSteps = [
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 0.65rem;
+        }
+
+        .qii-image-search .qii-load-more-wrap {
+            display: flex;
+            justify-content: center;
+            margin-top: 0.85rem;
+            padding-top: 0.15rem;
+        }
+
+        .qii-image-search .qii-load-more-btn {
+            min-width: 140px;
+            border: 1px solid #bae6fd;
+            background: #f0f9ff;
+            color: #0369a1;
+            font-weight: 700;
+            font-size: 0.82rem;
+            border-radius: 999px;
+            padding: 0.4rem 1.1rem;
+        }
+
+        .qii-image-search .qii-load-more-btn:hover:not(:disabled) {
+            background: #e0f2fe;
+            border-color: #7dd3fc;
+            color: #0c4a6e;
+        }
+
+        .qii-image-search .qii-load-more-btn:disabled {
+            opacity: 0.75;
+            cursor: wait;
         }
 
         .qii-image-search .qii-img-item {
@@ -3922,7 +4126,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-flight-table-head {
             display: grid;
-            grid-template-columns: minmax(0, 1.78fr) minmax(260px, 0.72fr);
+            grid-template-columns: minmax(0, 1fr) var(--q-commercial-col);
             gap: 0;
             margin: 0 0 0.55rem;
             border: 1px solid #e8ecf1;
@@ -3944,7 +4148,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-flight-head-commercial {
-            background: #fff1f2;
+            background: var(--q-commercial-bg);
         }
 
         .crm-quotation-gen .q-flight-group-title {
@@ -3999,7 +4203,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-flight-col-labels-commercial {
-            grid-template-columns: 0.95fr 1.2fr 72px;
+            grid-template-columns: var(--q-commercial-inner);
         }
 
         .crm-quotation-gen .q-flight-col-labels-commercial > span:first-child {
@@ -4145,7 +4349,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-flight-segment-row {
             display: grid;
-            grid-template-columns: minmax(0, 1.78fr) minmax(260px, 0.72fr);
+            grid-template-columns: minmax(0, 1fr) var(--q-commercial-col);
             gap: 0;
             align-items: stretch;
             min-width: 0;
@@ -4168,7 +4372,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-flight-commercial {
-            grid-template-columns: 0.95fr 1.2fr 72px;
+            grid-template-columns: var(--q-commercial-inner);
         }
 
         .crm-quotation-gen .q-ft-col {
@@ -4725,7 +4929,7 @@ $qWizardSteps = [
             }
             .crm-quotation-gen .q-flight-commercial,
             .crm-quotation-gen .q-flight-col-labels-commercial {
-                grid-template-columns: 1fr 1.2fr 72px;
+                grid-template-columns: var(--q-commercial-inner);
             }
             .crm-quotation-gen .q-ft-col-action {
                 justify-content: flex-end;
@@ -5288,7 +5492,7 @@ $qWizardSteps = [
 
         #qWizardSection3 .q-hotel-table-head {
             display: grid;
-            grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.72fr);
+            grid-template-columns: minmax(0, 1fr) var(--q-commercial-col);
             gap: 0;
             margin: 0 0 0.55rem;
             border: 1px solid #e8ecf1;
@@ -5310,7 +5514,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-head-commercial {
-            background: #fff1f2;
+            background: var(--q-commercial-bg);
         }
 
         #qWizardSection3 .q-hotel-group-title {
@@ -5365,7 +5569,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-col-labels-commercial {
-            grid-template-columns: 0.95fr 1.2fr 72px;
+            grid-template-columns: var(--q-commercial-inner);
         }
 
         #qWizardSection3 .q-hotel-col-labels-commercial > span:first-child {
@@ -5441,7 +5645,7 @@ $qWizardSteps = [
 
         #qWizardSection3 .q-hotel-fields {
             display: grid;
-            grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.72fr);
+            grid-template-columns: minmax(0, 1fr) var(--q-commercial-col);
             gap: 0;
             align-items: stretch;
         }
@@ -5463,7 +5667,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-commercial {
-            grid-template-columns: 0.95fr 1.2fr 72px;
+            grid-template-columns: var(--q-commercial-inner);
         }
 
         #qWizardSection3 .q-hotel-field {
@@ -5475,7 +5679,6 @@ $qWizardSteps = [
         #qWizardSection3 .q-hotel-rate-box {
             display: flex;
             align-items: center;
-            gap: 0.2rem;
             height: 30px;
             min-height: 30px;
             padding: 0 0.55rem;
@@ -5486,11 +5689,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-rate-prefix {
-            color: #e11d2e;
-            font-weight: 800;
-            font-size: 0.82rem;
-            flex-shrink: 0;
-            line-height: 1;
+            display: none !important;
         }
 
         #qWizardSection3 .q-hotel-rate-box .h-rate {
@@ -5504,7 +5703,7 @@ $qWizardSteps = [
             color: #e11d2e !important;
             flex: 1 1 auto;
             min-width: 0;
-            width: 1%;
+            width: 100%;
             text-align: right;
             font-size: 0.8rem !important;
         }
@@ -5574,20 +5773,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-ico {
-            position: absolute;
-            left: 0.55rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #9ca3af;
-            font-size: 0.78rem;
-            z-index: 2;
-            pointer-events: none;
-            width: 1rem;
-            text-align: center;
-        }
-
-        #qWizardSection3 .q-hotel-field-city .q-hotel-ico {
-            color: #e11d2e;
+            display: none !important;
         }
 
         #qWizardSection3 .q-hotel-caret {
@@ -5608,7 +5794,7 @@ $qWizardSteps = [
             border: 0 !important;
             box-shadow: none !important;
             background: transparent !important;
-            padding: 0 1.6rem 0 2rem !important;
+            padding: 0 1.6rem 0 0.55rem !important;
             font-size: 0.8rem !important;
             border-radius: 10px !important;
             color: #0f172a !important;
@@ -5800,7 +5986,7 @@ $qWizardSteps = [
             }
             #qWizardSection3 .q-hotel-commercial,
             #qWizardSection3 .q-hotel-col-labels-commercial {
-                grid-template-columns: 1fr 1.2fr 72px;
+                grid-template-columns: var(--q-commercial-inner);
             }
             #qWizardSection3 .q-hotel-field-action {
                 justify-self: end;
@@ -7434,7 +7620,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-wizard.is-scroll-mode .q-wizard-step {
             display: none;
             scroll-margin-top: var(--q-wizard-scroll-offset, 110px);
-            padding: 0.35rem 0 1.35rem;
+            padding: 0.35rem 0 0.35rem;
             margin-bottom: 0.35rem;
             border-bottom: 1px solid var(--q-border-light);
             animation: none;
@@ -7463,15 +7649,16 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-section-next-bar {
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            justify-content: flex-start;
-            flex: 0 0 auto;
-            width: auto;
-            margin: 0;
-            padding: 0;
+            justify-content: flex-end;
+            width: 100%;
+            margin: 0.75rem 0 0;
+            padding: 0.65rem 0 0;
             border: 0;
+            border-top: 1px solid #eef2f7;
             gap: 0;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-section-next-btn {
@@ -8805,11 +8992,12 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet {
-            --q-price-col: 7.75rem;
-            --q-price-action: 0px;
-            --q-price-gap: 0px;
+            --q-price-col: 6.5rem;
+            --q-price-action: 28px;
+            --q-price-gap: 0.35rem;
             --q-price-trail: calc(var(--q-price-action) + var(--q-price-gap));
             --q-price-pad-right: 0.55rem;
+            --q-price-field-h: 25px;
             --q-body-pad-x: 0.85rem;
             border: 1px solid #e8ecf1;
             border-radius: 16px;
@@ -8967,11 +9155,11 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-row-label,
         .crm-quotation-gen .q-pricing-amount-cell {
-            min-height: 32px;
-            height: 28px;
+            min-height: 25px;
+            height: 27px;
             display: flex;
             align-items: center;
-            margin-bottom: 0rem;
+            margin-bottom: 0.45rem;
         }
 
         .crm-quotation-gen .q-pricing-row-label {
@@ -8979,7 +9167,7 @@ $qWizardSteps = [
             font-size: 0.8rem;
             font-weight: 700;
             line-height: 1.15;
-            padding: 0.45rem 0.55rem;
+            padding: 0rem 0.55rem;
             gap: 0.5rem;
             border-radius: 10px;
             border-left: 3px solid transparent;
@@ -9221,21 +9409,37 @@ $qWizardSteps = [
             font-weight: 700;
         }
 
+        /* Shared price field shell — identical width/height across Pricing rows */
+        .crm-quotation-gen .q-price-field,
+        .crm-quotation-gen .q-pricing-amount-input-wrap,
+        .crm-quotation-gen .q-pricing-option-sheet .q-profit-row .q-sheet-profit-amount,
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-amount,
+        .crm-quotation-gen .q-sheet-profit-block .q-tour-cost-grand-amount,
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-amount {
+            flex: 0 0 var(--q-price-col, 8.5rem);
+            width: var(--q-price-col, 8.5rem);
+            min-width: var(--q-price-col, 8.5rem);
+            max-width: var(--q-price-col, 8.5rem);
+            height: var(--q-price-field-h, 36px);
+            min-height: var(--q-price-field-h, 36px);
+            box-sizing: border-box;
+        }
+
         .crm-quotation-gen .q-pricing-amount-cell .form-control,
         .crm-quotation-gen .q-pricing-amount-cell .cost-input,
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-amount {
             width: 100%;
             max-width: none;
-            height: 28px !important;
-            min-height: 28px !important;
-            padding: 0.2rem 0.55rem 0.2rem 1.25rem !important;
-            font-size: 0.82rem !important;
+            height: var(--q-price-field-h, 36px) !important;
+            min-height: var(--q-price-field-h, 36px) !important;
+            padding: 0rem 0.55rem 0rem 1.35rem !important;
+            font-size: 0.84rem !important;
             line-height: 1.2;
             border-radius: 8px !important;
             border: 1px solid #e5e7eb !important;
-            background: #f3f4f6 !important;
+            background: #fff !important;
             color: #111827 !important;
-            font-weight: 600;
+            font-weight: 700;
             text-align: right;
             font-variant-numeric: tabular-nums;
         }
@@ -9247,9 +9451,11 @@ $qWizardSteps = [
             flex-direction: row;
             align-items: center;
             justify-content: flex-start;
-            min-height: 28px;
-            height: auto;
+            min-height: 40px;
+            height: 40px;
             width: 100%;
+            margin-bottom: 0.45rem;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-pricing-amount-cell.has-supplier {
@@ -9283,49 +9489,48 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-amount-input-wrap {
             position: relative;
-            flex: 0 0 var(--q-price-col, 7.75rem);
-            width: var(--q-price-col, 7.75rem);
-            min-width: var(--q-price-col, 7.75rem);
-            max-width: var(--q-price-col, 7.75rem);
             margin-left: auto;
             display: block;
+        }
+
+        .crm-quotation-gen .q-pricing-amount-action {
+            flex: 0 0 var(--q-price-action, 28px);
+            width: var(--q-price-action, 28px);
+            min-width: var(--q-price-action, 28px);
+            height: var(--q-price-field-h, 36px);
+            margin: 0 0 0 var(--q-price-gap, 0.35rem);
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
             box-sizing: border-box;
         }
 
-        .crm-quotation-gen .q-pricing-amount-cell.has-remove .q-pricing-amount-input-wrap {
-            margin-left: auto;
-        }
-
-        .crm-quotation-gen .q-pricing-amount-action,
-        .crm-quotation-gen .q-pricing-supplier-remove {
-            display: none !important;
-        }
-
-        .crm-quotation-gen .q-pricing-supplier-remove {
+        .crm-quotation-gen .q-pricing-supplier-remove,
+        .crm-quotation-gen .q-profit-clear,
+        .crm-quotation-gen .q-tour-row-remove,
+        .crm-quotation-gen .q-tour-child-remove {
             flex: none;
-            width: 28px;
-            height: 32px;
+            width: 22px;
+            height: 22px;
             padding: 0;
             margin: 0;
-            border: 1px solid transparent;
-            border-radius: 6px;
-            background: transparent;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            background: #f8fafc;
             color: #94a3b8;
             line-height: 1;
             font-size: 0.72rem;
-            display: inline-flex;
+            display: inline-flex !important;
             align-items: center;
             justify-content: center;
             opacity: 1;
             transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
         }
 
-        .crm-quotation-gen .q-pricing-amount-cell:hover .q-pricing-supplier-remove,
-        .crm-quotation-gen .q-pricing-amount-cell:focus-within .q-pricing-supplier-remove {
-            color: #64748b;
-        }
-
-        .crm-quotation-gen .q-pricing-supplier-remove:hover {
+        .crm-quotation-gen .q-pricing-supplier-remove:hover,
+        .crm-quotation-gen .q-profit-clear:hover,
+        .crm-quotation-gen .q-tour-row-remove:hover,
+        .crm-quotation-gen .q-tour-child-remove:hover {
             color: #e11d2e;
             background: #fef2f2;
             border-color: #fecaca;
@@ -9782,51 +9987,33 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-cost-amount {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
             text-align: right;
             font-size: 0.84rem;
             font-weight: 800;
-            color: #0f172a;
+            color: #111827;
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
-            flex: 0 0 6.75rem;
-            width: 6.75rem;
-            min-width: 6.75rem;
-            margin-left: 0.25rem;
+            margin-left: auto;
+            padding: 0 var(--q-price-pad-right, 0.55rem);
+            border: 1px solid #fecdd3;
+            border-radius: 8px;
+            background: #fff1f2;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-tour-cost-action {
-            flex: 0 0 28px;
-            width: 28px;
-            min-width: 28px;
-            height: 28px;
-            margin: 0 0 0 0.15rem;
+            flex: 0 0 var(--q-price-action, 28px);
+            width: var(--q-price-action, 28px);
+            min-width: var(--q-price-action, 28px);
+            height: var(--q-price-field-h, 36px);
+            margin: 0 0 0 var(--q-price-gap, 0.35rem);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .crm-quotation-gen .q-tour-child-remove {
-            flex: none;
-            width: 28px;
-            height: 28px;
-            padding: 0;
-            margin: 0;
-            border: 1px solid transparent;
-            border-radius: 6px;
-            background: transparent;
-            color: #94a3b8;
-            line-height: 1;
-            font-size: 0.72rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-        }
-
-        .crm-quotation-gen .q-tour-child-remove:hover {
-            color: #e11d2e;
-            background: #fef2f2;
-            border-color: #fecaca;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-tour-cost-row.is-summary .q-tour-cost-traveller-name {
@@ -9929,14 +10116,15 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-tour-cost-grand {
             display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.65rem;
-    padding: 0.35rem 1rem;
-    background: #fff5f5;
-    border: 1px solid #f3c6cb;
-    border-radius: 12px;
-    margin-right: 20px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.65rem;
+            padding: 0.35rem 1rem;
+            background: #fff5f5;
+            border: 1px solid #f3c6cb;
+            border-radius: 12px;
+            margin-right: 0;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-tour-cost-grand-left {
@@ -9974,6 +10162,31 @@ $qWizardSteps = [
             text-transform: uppercase;
             color: #c4121a;
             line-height: 1.15;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand .q-tour-cost-grand-label {
+            font-size: 0.88rem;
+            letter-spacing: 0.04em;
+            text-transform: none;
+            font-weight: 800;
+            color: #9f1239;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand .q-tour-cost-grand-amount {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-left: auto;
+            text-align: right;
+            padding: 0 var(--q-price-pad-right, 0.55rem);
+            font-size: 0.84rem;
+            font-weight: 800;
+            line-height: 1;
+            border: 1px solid #fecdd3;
+            border-radius: 8px;
+            background: #fff1f2;
+            color: #c4121a;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-tour-cost-grand-sub {
@@ -10016,9 +10229,11 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-row {
-            padding: 0rem 0.8rem;
+            min-height: 44px;
+            padding: 0.35rem 0.8rem;
             padding-right: var(--q-body-pad-x, 0.85rem);
             flex-wrap: nowrap;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-traveller {
@@ -10072,23 +10287,10 @@ $qWizardSteps = [
             margin: 0 0 0 var(--q-price-gap);
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-action:not(:empty) {
-            flex: 0 0 28px;
-            width: 28px;
-            min-width: 28px;
-            margin-left: 0.15rem;
-        }
-
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-amount {
-            font-size: 0.8rem;
-            flex: 0 0 var(--q-price-col);
-            width: var(--q-price-col);
-            min-width: var(--q-price-col);
-            max-width: var(--q-price-col);
+            font-size: 0.84rem;
             margin-left: auto;
             text-align: right;
-            padding-right: var(--q-price-pad-right);
-            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-tour-cost-amount.is-excluded {
@@ -10097,25 +10299,41 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-wrap {
-            padding-right: calc(var(--q-body-pad-x, 0.85rem) + var(--q-price-trail));
+            padding-right: var(--q-body-pad-x, 0.85rem);
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand {
             margin-right: 0;
-            padding-right: 0;
+            padding: 0.35rem var(--q-body-pad-x, 0.85rem);
             flex-wrap: nowrap;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-left {
+            flex: 1 1 auto;
+            min-width: 0;
+            align-items: center;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-divider {
+            display: none;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-amount {
-            font-size: 0.95rem;
             flex: 0 0 var(--q-price-col);
             width: var(--q-price-col);
             min-width: var(--q-price-col);
             max-width: var(--q-price-col);
+            height: var(--q-price-field-h, 36px);
+            min-height: var(--q-price-field-h, 36px);
             margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
             text-align: right;
-            padding-left: 0;
-            padding-right: var(--q-price-pad-right);
+            padding: 0 var(--q-price-pad-right);
             box-sizing: border-box;
         }
 
@@ -10221,8 +10439,12 @@ $qWizardSteps = [
             flex-direction: row;
             flex-wrap: nowrap;
             gap: 0.5rem;
-            padding-right: var(--q-price-trail);
+            padding-right: 0;
             box-sizing: border-box;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-profit-add-line .q-pricing-amount-action {
+            margin-left: var(--q-price-gap, 0.35rem);
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-add-line .q-profit-line-label {
@@ -10257,27 +10479,40 @@ $qWizardSteps = [
             box-sizing: border-box;
             overflow: visible;
             white-space: nowrap;
-            flex: 0 0 7.75rem;
-            width: 7.75rem;
-            min-width: 7.75rem;
+            flex: 0 0 var(--q-price-col, 8.5rem);
+            width: var(--q-price-col, 8.5rem);
+            min-width: var(--q-price-col, 8.5rem);
         }
 
         .crm-quotation-gen .q-sheet-profit-block .q-tour-cost-grand {
             margin-right: 0;
             width: 100%;
-            padding-right: var(--q-price-trail);
+            padding-right: 0;
             box-sizing: border-box;
+            gap: 0.5rem;
+        }
+
+        .crm-quotation-gen .q-sheet-profit-block .q-tour-cost-grand::after,
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand::after {
+            content: '';
+            flex: 0 0 var(--q-price-action, 28px);
+            width: var(--q-price-action, 28px);
+            min-width: var(--q-price-action, 28px);
+            margin-left: var(--q-price-gap, 0.35rem);
         }
 
         .crm-quotation-gen .q-sheet-profit-block .q-tour-cost-grand-amount {
-            font-size: 0.95rem;
-            flex: 0 0 var(--q-price-col);
-            width: var(--q-price-col);
-            min-width: var(--q-price-col);
-            max-width: var(--q-price-col);
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            font-size: 0.9rem;
             margin-left: auto;
             text-align: right;
-            padding-right: var(--q-price-pad-right);
+            padding: 0 var(--q-price-pad-right);
+            border: 1px solid #fecdd3;
+            border-radius: 8px;
+            background: #fff1f2;
+            color: #c4121a;
             box-sizing: border-box;
         }
 
@@ -10362,21 +10597,22 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-row .q-sheet-profit-amount {
-            flex: 0 0 var(--q-price-col);
-            min-width: var(--q-price-col);
-            max-width: var(--q-price-col);
-            width: var(--q-price-col);
             margin-left: auto;
-            height: 36px;
             font-size: 0.84rem;
-            font-weight: 600;
+            font-weight: 700;
             text-align: right;
             padding: 0.2rem var(--q-price-pad-right);
-            box-sizing: border-box;
             background: #fff;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
             color: #111827;
+            flex: 0 0 var(--q-price-col, 8.5rem);
+            width: var(--q-price-col, 8.5rem);
+            min-width: var(--q-price-col, 8.5rem);
+            max-width: var(--q-price-col, 8.5rem);
+            height: var(--q-price-field-h, 36px);
+            min-height: var(--q-price-field-h, 36px);
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-profit-or {
@@ -10423,21 +10659,17 @@ $qWizardSteps = [
             gap: 0;
         }
 
-        .crm-quotation-gen .q-pricing-custom-label {
+        .crm-quotation-gen .q-pricing-custom-label,
+        .crm-quotation-gen .q-pricing-add-label {
             min-height: 40px;
             height: 40px;
             align-items: center;
             padding-top: 0;
             margin-bottom: 0.45rem;
-            background: transparent !important;
-            border-left-color: transparent !important;
-        }
-
-        .crm-quotation-gen .q-pricing-add-label {
-            min-height: 40px;
-            height: 40px;
-            background: transparent !important;
-            border-left-color: transparent !important;
+            background: #fff5f5 !important;
+            border-left-color: #c4121a !important;
+            border-radius: 10px;
+            box-sizing: border-box;
         }
 
         .crm-quotation-gen .q-pricing-row-label.has-add-cost {
@@ -10542,10 +10774,10 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-pricing-amount-input-wrap {
-            flex: 0 0 var(--q-price-col, 7.75rem);
-            width: var(--q-price-col, 7.75rem);
-            min-width: var(--q-price-col, 7.75rem);
-            max-width: var(--q-price-col, 7.75rem);
+            flex: 0 0 var(--q-price-col, 8.5rem);
+            width: var(--q-price-col, 8.5rem);
+            min-width: var(--q-price-col, 8.5rem);
+            max-width: var(--q-price-col, 8.5rem);
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-remove {
@@ -16994,11 +17226,6 @@ $qWizardSteps = [
                                 </div>
                                 <div class="q-section-accordion-head-actions">
                                     <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
-                                    <div class="q-section-next-bar" data-accordion-ignore>
-                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="1" data-accordion-ignore>
-                                            Next <i class="fas fa-arrow-right ml-1"></i>
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
 
@@ -17120,6 +17347,11 @@ $qWizardSteps = [
                                     </div>
                                 </section>
                             </div>
+                            <div class="q-section-next-bar" data-accordion-ignore>
+                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="1" data-accordion-ignore>
+                                    Next <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
                             </div>
                         </div>
                         </div>
@@ -17133,11 +17365,6 @@ $qWizardSteps = [
                                 </div>
                                 <div class="q-section-accordion-head-actions">
                                     <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
-                                    <div class="q-section-next-bar" data-accordion-ignore>
-                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="2" data-accordion-ignore>
-                                            Next <i class="fas fa-arrow-right ml-1"></i>
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
 
@@ -17193,7 +17420,7 @@ $qWizardSteps = [
                                                 <span><i class="far fa-clock" aria-hidden="true"></i>Arrival</span>
                                             </div>
                                         </div>
-                                        <div class="q-flight-head-commercial">
+                                        <div class="q-flight-head-commercial q-commercial-block">
                                             <div class="q-flight-group-title">
                                                 <i class="fas fa-coins" aria-hidden="true"></i>
                                                 <span>Commercial Details</span>
@@ -17214,6 +17441,11 @@ $qWizardSteps = [
                                     <i class="fas fa-plus mr-1"></i>Add Another Segment
                                 </button>
                             </div>
+                            <div class="q-section-next-bar" data-accordion-ignore>
+                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="2" data-accordion-ignore>
+                                    Next <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
                             </div>
                         </div>
                         </div>
@@ -17228,11 +17460,6 @@ $qWizardSteps = [
                                 </div>
                                 <div class="q-section-accordion-head-actions">
                                     <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
-                                    <div class="q-section-next-bar" data-accordion-ignore>
-                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="3" data-accordion-ignore>
-                                            Next <i class="fas fa-arrow-right ml-1"></i>
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody3" style="display:none;">
@@ -17287,7 +17514,7 @@ $qWizardSteps = [
                                         <span><i class="far fa-calendar-alt" aria-hidden="true"></i>Check-out</span>
                                     </div>
                                 </div>
-                                <div class="q-hotel-head-commercial">
+                                <div class="q-hotel-head-commercial q-commercial-block">
                                     <div class="q-hotel-group-title">
                                         <i class="fas fa-coins" aria-hidden="true"></i>
                                         <span>Commercial Details</span>
@@ -17300,6 +17527,11 @@ $qWizardSteps = [
                                 </div>
                             </div>
                             <div id="qHotelCategories"></div>
+                            <div class="q-section-next-bar" data-accordion-ignore>
+                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="3" data-accordion-ignore>
+                                    Next <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
                             </div>
                         </div>
                         </div>
@@ -17314,11 +17546,6 @@ $qWizardSteps = [
                                 </div>
                                 <div class="q-section-accordion-head-actions">
                                     <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
-                                    <div class="q-section-next-bar" data-accordion-ignore>
-                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="4" data-accordion-ignore>
-                                            Next <i class="fas fa-arrow-right ml-1"></i>
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody4" style="display:none;">
@@ -17385,7 +17612,7 @@ $qWizardSteps = [
                                             </div>
                                         </div>
 
-                                        <div class="q-itinerary-suppliers q-itin-suppliers-panel">
+                                        <div class="q-itinerary-suppliers q-itin-suppliers-panel q-commercial-block">
                                             <div class="q-itin-comm-head">
                                                 <div class="q-itin-comm-group-title">
                                                     <i class="fas fa-coins" aria-hidden="true"></i>
@@ -17405,6 +17632,11 @@ $qWizardSteps = [
                                 </div>
 
                                 <div id="qItineraryDays" class="q-itin-days"></div>
+                            <div class="q-section-next-bar" data-accordion-ignore>
+                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="4" data-accordion-ignore>
+                                    Next <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
                             </div>
                         </div>
                         </div>
@@ -17419,11 +17651,6 @@ $qWizardSteps = [
                                 </div>
                                 <div class="q-section-accordion-head-actions">
                                     <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
-                                    <div class="q-section-next-bar" data-accordion-ignore>
-                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="5" data-accordion-ignore>
-                                            Next <i class="fas fa-arrow-right ml-1"></i>
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody5" style="display:none;">
@@ -17461,6 +17688,11 @@ $qWizardSteps = [
                             </div>
                         <?php endforeach; ?>
                             </div>
+                            <div class="q-section-next-bar" data-accordion-ignore>
+                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="5" data-accordion-ignore>
+                                    Next <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
                             </div>
                         </div>
                         </div>
@@ -17475,11 +17707,6 @@ $qWizardSteps = [
                                 </div>
                                 <div class="q-section-accordion-head-actions">
                                     <span class="q-section-accordion-toggle" aria-hidden="true"><i class="fas fa-chevron-down toggle-icon"></i></span>
-                                    <div class="q-section-next-bar" data-accordion-ignore>
-                                        <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="6" data-accordion-ignore>
-                                            Next <i class="fas fa-arrow-right ml-1"></i>
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody6" style="display:none;">
@@ -17513,6 +17740,11 @@ $qWizardSteps = [
                                 </div>
                             </div>
                         <?php endforeach; ?>
+                            </div>
+                            <div class="q-section-next-bar" data-accordion-ignore>
+                                <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="6" data-accordion-ignore>
+                                    Next <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
                             </div>
                             </div>
                         </div>
@@ -17671,7 +17903,7 @@ $qWizardSteps = [
                                             </div>
                                         </div>
                                         <span class="q-tour-cost-grand-divider" aria-hidden="true"></span>
-                                        <strong class="q-tour-cost-grand-amount" id="qTourCostGrand">INR 0</strong>
+                                        <strong class="q-tour-cost-grand-amount" id="qTourCostGrand">0</strong>
                                     </div>
                                 </div>
                             </div>
@@ -17817,7 +18049,7 @@ $qWizardSteps = [
                     <button type="button" class="btn q-ai-incl-use d-none" id="qAiInclUse">
                         <i class="fas fa-check mr-1"></i> Use / Insert
                     </button>
-                    <button type="button" class="btn q-day-ai-generate" id="qAiInclGenerate">
+                    <button type="button" class="btn q-ai-generate-btn q-day-ai-generate" id="qAiInclGenerate">
                         <i class="fas fa-bolt mr-1"></i> Generate Inclusions
                     </button>
                 </div>
@@ -17866,7 +18098,7 @@ $qWizardSteps = [
                     <button type="button" class="btn q-ai-incl-use d-none" id="qAiExclUse">
                         <i class="fas fa-check mr-1"></i> Use / Insert
                     </button>
-                    <button type="button" class="btn q-day-ai-generate" id="qAiExclGenerate">
+                    <button type="button" class="btn q-ai-generate-btn q-day-ai-generate" id="qAiExclGenerate">
                         <i class="fas fa-bolt mr-1"></i> Generate Exclusions
                     </button>
                 </div>
@@ -18206,9 +18438,9 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=349"></script>
-    <script src="crm/assets/quotation_flight_search.js?v=35"></script>
-    <script src="crm/assets/quotation_itinerary_images.js?v=2"></script>
+    <script src="crm/assets/quotation_generator.js?v=354"></script>
+    <script src="crm/assets/quotation_flight_search.js?v=36"></script>
+    <script src="crm/assets/quotation_itinerary_images.js?v=3"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>
         $(function () {

@@ -4,6 +4,13 @@
 
     var qiiTargetCard = null;
     var qiiSearchTimer = null;
+    var qiiPage = 1;
+    var qiiPerPage = 18;
+    var qiiQuery = '';
+    var qiiHasMore = false;
+    var qiiLoading = false;
+    var qiiImages = [];
+    var qiiSeenKeys = {};
 
     function qiiAbsUrl(u) {
         if (typeof window.qQuotationAbsUrl === 'function') {
@@ -14,8 +21,14 @@
         return u;
     }
 
-    function qiiEsc(text) {
-        return $('<div>').text(text == null ? '' : String(text)).html();
+    function qiiImageKey(img) {
+        if (!img) {
+            return '';
+        }
+        if (img.id) {
+            return 'id:' + String(img.id);
+        }
+        return 'url:' + String(img.url || img.thumb || '');
     }
 
     function qiiUpdatePreview($card, url) {
@@ -50,53 +63,169 @@
         return parts.join(' ').replace(/\s+/g, ' ').trim();
     }
 
-    function qiiRenderResults(images, meta) {
-        var $grid = $('#qiiResultsGrid');
-        var $note = $('#qiiSourceNote');
-        $grid.empty();
-
-        if (meta && meta.source) {
-            var srcLabel = meta.source === 'pexels' ? 'Pexels' : 'Wikimedia Commons';
-            $note.text('Showing results from ' + srcLabel + (meta.query ? ' for "' + meta.query + '"' : '')).show();
-        } else {
-            $note.hide();
-        }
-
-        if (!images || !images.length) {
-            $grid.html('<div class="qii-empty"><i class="fas fa-image"></i>No images found. Try another search term.</div>');
+    function qiiSetLoadMoreVisible(show) {
+        var $wrap = $('#qiiLoadMoreWrap');
+        if (!$wrap.length) {
             return;
         }
+        if (show) {
+            $wrap.prop('hidden', false).show();
+        } else {
+            $wrap.prop('hidden', true).hide();
+        }
+    }
 
-        images.forEach(function (img, idx) {
+    function qiiSetLoadMoreLoading(isLoading) {
+        var $btn = $('#qiiLoadMoreBtn');
+        if (!$btn.length) {
+            return;
+        }
+        qiiLoading = !!isLoading;
+        $btn.prop('disabled', qiiLoading);
+        if (qiiLoading) {
+            $btn.html('<i class="fas fa-circle-notch fa-spin mr-1" aria-hidden="true"></i><span class="qii-load-more-label">Loading…</span>');
+        } else {
+            $btn.html('<span class="qii-load-more-label">Load More</span>');
+        }
+    }
+
+    function qiiAppendImages(images) {
+        var $grid = $('#qiiResultsGrid');
+        var added = [];
+        (images || []).forEach(function (img) {
+            var key = qiiImageKey(img);
+            if (!key || qiiSeenKeys[key]) {
+                return;
+            }
+            qiiSeenKeys[key] = true;
+            var idx = qiiImages.length;
+            qiiImages.push(img);
+            added.push(img);
             var $btn = $('<button type="button" class="qii-img-item"></button>').attr('data-index', idx);
             $('<img class="qii-img-thumb" alt="">').attr('src', img.thumb || img.url).appendTo($btn);
             $('<span class="qii-img-caption"></span>').text(img.title || 'Image').appendTo($btn);
             $grid.append($btn);
         });
-        $grid.data('images', images);
+        $grid.data('images', qiiImages);
+        return added;
     }
 
-    function qiiRunSearch(query) {
-        query = (query || '').trim();
-        if (query.length < 2) {
-            $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
+    function qiiRenderResults(images, meta, append) {
+        var $grid = $('#qiiResultsGrid');
+        var $note = $('#qiiSourceNote');
+        meta = meta || {};
+
+        if (!append) {
+            $grid.empty();
+            qiiImages = [];
+            qiiSeenKeys = {};
+        } else {
+            $grid.find('.qii-empty, .qii-loading').remove();
+        }
+
+        if (meta.source) {
+            var srcLabel = meta.source === 'pexels' ? 'Pexels' : 'Wikimedia Commons';
+            $note.text('Showing results from ' + srcLabel + (meta.query ? ' for "' + meta.query + '"' : '')).show();
+        } else if (!append) {
+            $note.hide();
+        }
+
+        var added = qiiAppendImages(images);
+        qiiHasMore = !!meta.has_more;
+
+        if (!qiiImages.length) {
+            $grid.html('<div class="qii-empty"><i class="fas fa-image"></i>No images found. Try another search term.</div>');
+            qiiSetLoadMoreVisible(false);
             return;
         }
 
-        $('#qiiResultsGrid').html('<div class="qii-loading"><i class="fas fa-circle-notch fa-spin mr-1"></i> Searching...</div>');
-        $('#qiiSourceNote').hide();
+        if (append && !added.length && !qiiHasMore) {
+            qiiSetLoadMoreVisible(false);
+            return;
+        }
 
-        $.getJSON(qiiAbsUrl('crm/ajax/search_itinerary_images.php'), { q: query, limit: 12 })
+        qiiSetLoadMoreVisible(qiiHasMore);
+    }
+
+    function qiiFetchPage(query, page, append) {
+        query = (query || '').trim();
+        page = Math.max(1, parseInt(page, 10) || 1);
+
+        if (query.length < 2) {
+            if (!append) {
+                $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
+                qiiSetLoadMoreVisible(false);
+            }
+            return;
+        }
+
+        if (qiiLoading) {
+            return;
+        }
+
+        qiiLoading = true;
+        if (append) {
+            qiiSetLoadMoreLoading(true);
+        } else {
+            qiiSetLoadMoreVisible(false);
+            $('#qiiResultsGrid').html('<div class="qii-loading"><i class="fas fa-circle-notch fa-spin mr-1"></i> Searching...</div>');
+            $('#qiiSourceNote').hide();
+        }
+
+        $.getJSON(qiiAbsUrl('crm/ajax/search_itinerary_images.php'), {
+            q: query,
+            limit: qiiPerPage,
+            page: page
+        })
             .done(function (res) {
                 if (!res || !res.success) {
-                    qiiRenderResults([], {});
+                    if (!append) {
+                        qiiRenderResults([], {});
+                    } else {
+                        qiiHasMore = false;
+                        qiiSetLoadMoreVisible(false);
+                    }
                     return;
                 }
-                qiiRenderResults(res.images || [], { source: res.source, query: query });
+                qiiPage = parseInt(res.page, 10) || page;
+                qiiQuery = query;
+                qiiRenderResults(res.images || [], {
+                    source: res.source,
+                    query: query,
+                    has_more: !!res.has_more
+                }, !!append);
             })
             .fail(function () {
-                $('#qiiResultsGrid').html('<div class="qii-empty text-danger">Search failed. Please try again.</div>');
+                if (!append) {
+                    $('#qiiResultsGrid').html('<div class="qii-empty text-danger">Search failed. Please try again.</div>');
+                    qiiSetLoadMoreVisible(false);
+                } else {
+                    alert('Could not load more images. Please try again.');
+                }
+            })
+            .always(function () {
+                qiiLoading = false;
+                qiiSetLoadMoreLoading(false);
+                if (!qiiHasMore) {
+                    qiiSetLoadMoreVisible(false);
+                }
             });
+    }
+
+    function qiiRunSearch(query) {
+        qiiPage = 1;
+        qiiHasMore = false;
+        qiiImages = [];
+        qiiSeenKeys = {};
+        qiiFetchPage(query, 1, false);
+    }
+
+    function qiiLoadMore() {
+        if (qiiLoading || !qiiHasMore) {
+            return;
+        }
+        var nextPage = (parseInt(qiiPage, 10) || 1) + 1;
+        qiiFetchPage(qiiQuery || $('#qiiSearchInput').val(), nextPage, true);
     }
 
     function qiiOpenModal($card) {
@@ -107,6 +236,11 @@
         $('#qiiSearchInput').val(query);
         $('#qiiResultsGrid').empty();
         $('#qiiSourceNote').hide();
+        qiiSetLoadMoreVisible(false);
+        qiiPage = 1;
+        qiiHasMore = false;
+        qiiImages = [];
+        qiiSeenKeys = {};
         $('#qiiImageModal').modal('show');
         if (query.length >= 2) {
             qiiRunSearch(query);
@@ -135,6 +269,7 @@
 
         var $card = qiiTargetCard;
         var $grid = $('#qiiResultsGrid');
+        qiiSetLoadMoreVisible(false);
         $grid.html('<div class="qii-loading"><i class="fas fa-circle-notch fa-spin mr-1"></i> Saving image...</div>');
 
         $.ajax({
@@ -191,9 +326,14 @@
             }, 450);
         });
 
+        $('#qiiLoadMoreBtn').on('click', function (e) {
+            e.preventDefault();
+            qiiLoadMore();
+        });
+
         $(document).on('click', '.qii-img-item', function () {
             var idx = parseInt($(this).data('index'), 10);
-            var images = $('#qiiResultsGrid').data('images') || [];
+            var images = $('#qiiResultsGrid').data('images') || qiiImages || [];
             qiiSelectImage(images[idx]);
         });
     });

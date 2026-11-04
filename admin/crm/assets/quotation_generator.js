@@ -545,7 +545,7 @@
         $('#qFlightRows').empty();
         var groups = groupFlightsForDisplay(flights);
         groups.forEach(function (group) {
-            appendFlightJourneyCard(group.rows, { label: group.label });
+                appendFlightJourneyCard(group.rows, { label: group.label });
         });
         renumberFlightRows();
         qInitSupplierSelect2In($('#qFlightRows'));
@@ -2180,7 +2180,6 @@
     function hotelFieldWrap(opts) {
         opts = opts || {};
         var extraClass = opts.extraClass || '';
-        var ico = opts.ico;
         var caret = opts.caret !== false;
         var control = opts.control || '';
         var stepper = !!opts.stepper;
@@ -2194,13 +2193,9 @@
                 '</div>' +
                 '</div>';
         }
-        var icoHtml = ico
-            ? ('<i class="q-hotel-ico fas ' + ico + '" aria-hidden="true"></i>')
-            : '';
         return '' +
-            '<div class="q-hotel-field q-hotel-combo ' + extraClass + (ico ? '' : ' q-hotel-field-no-ico') + '">' +
+            '<div class="q-hotel-field q-hotel-combo ' + extraClass + ' q-hotel-field-no-ico">' +
             '<div class="q-hotel-input-wrap">' +
-            icoHtml +
             control +
             (caret ? '<i class="q-hotel-caret fas fa-chevron-down" aria-hidden="true"></i>' : '') +
             '</div>' +
@@ -2220,51 +2215,43 @@
             '<div class="q-hotel-accom">' +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-city',
-                ico: 'fa-map-marker-alt',
                 menuClass: 'q-hotel-city-menu',
                 control: '<input type="text" class="form-control h-city" value="' + esc(d.city) + '" autocomplete="off" placeholder="City">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-hotel',
-                ico: 'fa-hotel',
                 menuClass: 'q-hotel-name-menu',
                 control: '<input type="text" class="form-control h-name" value="' + esc(d.name) + '" autocomplete="off" placeholder="Hotel">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-room',
-                ico: 'fa-bed',
                 menuClass: 'q-hotel-room-menu',
                 control: '<input type="text" class="form-control h-room" value="' + esc(d.room_type) + '" autocomplete="off" placeholder="Room Type">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-rooms',
-                ico: false,
                 caret: false,
                 stepper: true,
                 control: '<input type="number" min="0" class="form-control h-rooms" value="' + esc(d.rooms !== '' && d.rooms != null ? d.rooms : '0') + '" placeholder="0">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-meal',
-                ico: 'fa-utensils',
                 menuClass: 'q-hotel-meal-menu',
                 control: '<input type="text" class="form-control h-meal" value="' + esc(d.meal_plan) + '" autocomplete="off" placeholder="EP / CP / MAP / AP">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-nts',
-                ico: false,
                 caret: false,
                 stepper: true,
                 control: '<input type="number" min="0" class="form-control h-nights" value="' + esc(d.nights !== '' && d.nights != null ? d.nights : '0') + '" placeholder="0">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-date q-hotel-field-checkin',
-                ico: false,
                 caret: false,
                 control: '<input type="text" class="form-control h-checkin js-q-date-input" value="' + esc(formatDisplayDate(d.checkin)) + '" placeholder="dd/mm/yyyy" autocomplete="off">'
             }) +
             hotelFieldWrap({
                 extraClass: 'q-hotel-field-date q-hotel-field-checkout',
-                ico: false,
                 caret: false,
                 control: '<input type="text" class="form-control h-checkout js-q-date-input" value="' + esc(formatDisplayDate(d.checkout)) + '" placeholder="dd/mm/yyyy" autocomplete="off">'
             }) +
@@ -2272,7 +2259,6 @@
             '<div class="q-hotel-commercial">' +
             '<div class="q-hotel-field q-hotel-field-rate">' +
             '<div class="q-hotel-rate-box">' +
-            '<span class="q-hotel-rate-prefix" aria-hidden="true">₹</span>' +
             '<input type="number" min="0" step="1" inputmode="numeric" class="form-control h-rate" value="' + esc(d.rate) + '" placeholder="0">' +
             '</div></div>' +
             '<div class="q-hotel-field q-hotel-field-supplier">' +
@@ -6772,7 +6758,7 @@
             '<div class="q-pricing-amount-cell has-supplier has-ico has-remove q-custom-cost">' +
             '<span class="q-pricing-row-ico" aria-hidden="true"><i class="fas fa-tag"></i></span>' +
             '<input type="text" class="q-pricing-supplier-name cc-label" placeholder="Cost name" value="' + esc(label) + '" title="' + esc(label) + '" aria-label="Extra cost name">' +
-            '<div class="q-pricing-amount-input-wrap">' +
+            '<div class="q-pricing-amount-input-wrap q-price-field">' +
             '<span class="q-pricing-inr" aria-hidden="true">₹</span>' +
             '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost cc-amount" value="' + esc(amount) + '" placeholder="0" aria-label="Extra cost amount">' +
             '</div>' +
@@ -7069,11 +7055,51 @@
         return supplierName;
     }
 
+    function pricingAirportCodeFromPlace(place) {
+        place = String(place || '').trim();
+        if (!place) {
+            return '';
+        }
+        var paren = place.match(/\(([A-Za-z0-9]{2,4})\)\s*$/);
+        if (paren) {
+            return paren[1].toUpperCase();
+        }
+        if (/^[A-Za-z0-9]{2,4}$/.test(place)) {
+            return place.toUpperCase();
+        }
+        var tokens = place.split(/[\s,\/\-–—]+/).filter(Boolean);
+        var last = tokens.length ? tokens[tokens.length - 1] : '';
+        if (/^[A-Za-z0-9]{2,4}$/.test(last)) {
+            return last.toUpperCase();
+        }
+        return place;
+    }
+
+    function pricingFlightRouteLabel(f) {
+        var fromCode = pricingAirportCodeFromPlace(f && f.from);
+        var toCode = pricingAirportCodeFromPlace(f && f.to);
+        if (fromCode && toCode) {
+            return fromCode + '-' + toCode;
+        }
+        return fromCode || toCode || '';
+    }
+
+    function pricingJoinDetailSupplier(detail, supplier) {
+        detail = String(detail || '').trim();
+        supplier = String(supplier || '').trim();
+        if (detail && supplier) {
+            return detail + ' | ' + supplier;
+        }
+        return detail || supplier || '';
+    }
+
     function pricingSupplierRateEntriesForKey(key, cat) {
         var entries = [];
         if (key === 'flight_train') {
             collectFlights().forEach(function (f, idx) {
-                var name = String((f && f.supplier) || '').trim();
+                var supplier = String((f && f.supplier) || '').trim();
+                var route = pricingFlightRouteLabel(f);
+                var name = pricingJoinDetailSupplier(route, supplier);
                 var rateRaw = f && f.fare;
                 var rateNum = parseFloat(rateRaw);
                 var hasRate = !isNaN(rateNum) && rateNum > 0;
@@ -7091,7 +7117,9 @@
         if (key === 'hotel') {
             var hotels = (cat && Array.isArray(cat.hotels)) ? cat.hotels : [];
             hotels.forEach(function (h, idx) {
-                var name = String((h && (h.hotel_name || h.name || h.supplier || h.supplier_name)) || '').trim();
+                var hotelName = String((h && (h.name || h.hotel_name)) || '').trim();
+                var supplier = String((h && (h.supplier || h.supplier_name)) || '').trim();
+                var name = pricingJoinDetailSupplier(hotelName, supplier);
                 var rateNum = parseFloat(h && h.rate);
                 var hasRate = !isNaN(rateNum) && rateNum > 0;
                 if (!hasRate && !name) {
@@ -7178,7 +7206,7 @@
         if (hasSupplier) {
             html += '<span class="q-pricing-supplier-name" title="' + esc(supplierName) + '">' + esc(supplierName) + '</span>';
         }
-        html += '<div class="q-pricing-amount-input-wrap">';
+        html += '<div class="q-pricing-amount-input-wrap q-price-field">';
         html += '<span class="q-pricing-inr" aria-hidden="true">₹</span>';
         html += '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '" value="' + esc(value) + '" data-user-edited="' + edited + '" placeholder="0">';
         html += '</div>';
@@ -7399,10 +7427,9 @@
             '<span class="q-tour-cost-grand-ico" aria-hidden="true">₹</span>' +
             '<div class="q-tour-cost-grand-text">' +
             '<span class="q-tour-cost-grand-label">Total Cost</span>' +
-            '<span class="q-tour-cost-grand-sub">Before adding profit</span>' +
             '</div></div>' +
             '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
-            '<strong class="q-tour-cost-grand-amount q-sum-total" data-display="total">INR 0</strong>' +
+            '<strong class="q-tour-cost-grand-amount q-sum-total" data-display="total">0</strong>' +
             '</div>';
         html += '<div class="q-profit-line q-profit-add-line">' +
             '<span class="q-profit-line-label">Add Profit</span>' +
@@ -7413,18 +7440,20 @@
             '<span class="q-profit-pct-suffix" aria-hidden="true">%</span>' +
             '</div>' +
             '<span class="q-profit-or">OR</span>' +
-            '<input type="number" step="0.01" min="0" class="form-control form-control-sm q-sheet-profit-amount" placeholder="Amount" value="' + esc(state.profit_amount || '') + '" title="Profit amount">' +
-            '</div>' +
+            '<input type="number" step="0.01" min="0" class="form-control form-control-sm q-sheet-profit-amount q-price-field" placeholder="Amount" value="' + esc(state.profit_amount || '') + '" title="Profit amount">' +
+            '</div></div>' +
+            '<div class="q-pricing-amount-action">' +
+            '<button type="button" class="btn q-profit-clear" title="Clear profit" aria-label="Clear profit">' +
+            '<i class="fas fa-times" aria-hidden="true"></i></button>' +
             '</div></div>';
         html += '<div class="q-tour-cost-grand q-profit-package-line">' +
             '<div class="q-tour-cost-grand-left">' +
             '<span class="q-tour-cost-grand-ico" aria-hidden="true">₹</span>' +
             '<div class="q-tour-cost-grand-text">' +
             '<span class="q-tour-cost-grand-label">Package Total</span>' +
-            '<span class="q-tour-cost-grand-sub">After adding profit</span>' +
             '</div></div>' +
             '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
-            '<strong class="q-tour-cost-grand-amount q-sum-selling" data-display="selling">INR 0</strong>' +
+            '<strong class="q-tour-cost-grand-amount q-sum-selling" data-display="selling">0</strong>' +
             '</div>';
         html += '</div>';
         html += tourCostCardShellHtml(id);
@@ -8035,7 +8064,7 @@
     }
 
     function formatTourMoney(n) {
-        return 'INR ' + money(n);
+        return money(n);
     }
 
     function formatTourRateValue(n) {
@@ -8081,10 +8110,9 @@
             '<span class="q-tour-cost-grand-ico" aria-hidden="true">₹</span>' +
             '<div class="q-tour-cost-grand-text">' +
             '<span class="q-tour-cost-grand-label">Grand Total</span>' +
-            '<span class="q-tour-cost-grand-sub">Total amount to be paid</span>' +
             '</div></div>' +
             '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
-            '<strong class="q-tour-cost-grand-amount q-sheet-tour-grand">INR 0</strong>' +
+            '<strong class="q-tour-cost-grand-amount q-sheet-tour-grand">0</strong>' +
             '</div></div>' +
             '</div>';
     }
@@ -8108,7 +8136,7 @@
         var key = opts.key || '';
         var rate = opts.rate != null ? opts.rate : '';
         var qty = opts.qty != null ? opts.qty : '';
-        var amountText = opts.amountText || 'INR 0';
+        var amountText = opts.amountText || '0';
         var editable = opts.editable !== false;
         var rateReadonly = opts.rateReadonly !== false;
         var qtyEditable = !!opts.qtyEditable;
@@ -8123,7 +8151,9 @@
         var previewOn = opts.previewOn !== false;
         var removable = !!opts.removable;
         var removeIndex = opts.removeIndex != null ? String(opts.removeIndex) : '';
+        var removeKind = opts.removeKind || (removable ? 'child' : '');
         var subtitle = '';
+        var qtyMin = (key === 'adult') ? '0' : '1';
 
         var controlsHtml = '';
         if (!hideMeta && (editable || rateReadonly)) {
@@ -8137,7 +8167,7 @@
                 '<span class="q-tour-cost-meta-mul">×</span>' +
                 (qtyEditable
                     ? '<span class="q-tour-cost-qty-group">' +
-                    '<input type="number" step="1" min="1" class="form-control q-tour-qty-input q-tour-cost-qty-inline" data-tour-qty="' + esc(key) + '" value="' + esc(qty) + '" aria-label="Quantity">' +
+                    '<input type="number" step="1" min="' + qtyMin + '" class="form-control q-tour-qty-input q-tour-cost-qty-inline" data-tour-qty="' + esc(key) + '" value="' + esc(qty) + '" aria-label="Quantity">' +
                     '</span>'
                     : '<span class="q-tour-cost-meta-qty">' + esc(String(qty)) + '</span>') +
                 '</div>';
@@ -8198,11 +8228,14 @@
             (subtitle ? '<span class="q-tour-cost-traveller-sub">' + esc(subtitle) + '</span>' : '') +
             '</div></div>' +
             controlsHtml +
-            '<div class="q-tour-cost-amount" data-tour-amount="' + esc(key) + '">' + esc(amountText) + '</div>' +
+            '<div class="q-tour-cost-amount q-price-field" data-tour-amount="' + esc(key) + '">' + esc(amountText) + '</div>' +
             '<div class="q-tour-cost-action">' +
             (removable
-                ? '<button type="button" class="btn q-tour-child-remove" title="Remove child cost" aria-label="Remove child cost" data-child-index="' + esc(removeIndex) + '">' +
-                '<i class="fas fa-times" aria-hidden="true"></i></button>'
+                ? (removeKind === 'child'
+                    ? '<button type="button" class="btn q-tour-row-remove q-tour-child-remove" title="Remove child cost" aria-label="Remove child cost" data-remove-kind="child" data-child-index="' + esc(removeIndex) + '">' +
+                    '<i class="fas fa-times" aria-hidden="true"></i></button>'
+                    : '<button type="button" class="btn q-tour-row-remove" title="Remove" aria-label="Remove" data-remove-kind="' + esc(removeKind) + '">' +
+                    '<i class="fas fa-times" aria-hidden="true"></i></button>')
                 : '') +
             '</div>' +
             '</div>';
@@ -8319,7 +8352,9 @@
             qtyEditable: true,
             rateReadonly: true,
             editable: true,
-            amountText: 'INR 0'
+            amountText: '0',
+            removable: true,
+            removeKind: 'adult'
         });
         childRows.forEach(function (row, i) {
             html += tourCostRowHtml({
@@ -8333,8 +8368,9 @@
                 qtyEditable: true,
                 rateReadonly: true,
                 editable: true,
-                amountText: 'INR 0',
+                amountText: '0',
                 removable: true,
+                removeKind: 'child',
                 removeIndex: i
             });
         });
@@ -8348,7 +8384,9 @@
                 gstEditable: true,
                 gstPct: gstPct,
             previewOn: !$('#q_hide_gst_note').is(':checked'),
-            amountText: 'INR 0'
+            amountText: '0',
+            removable: true,
+            removeKind: 'gst'
         });
         if (isInternationalQuotationTour()) {
             var tcsPct = parseFloat(qTourCostState.tcs_percent);
@@ -8365,7 +8403,7 @@
                 tcsEditable: true,
                 tcsPct: tcsPct,
                 previewOn: !$('#q_hide_tcs').is(':checked'),
-                amountText: 'INR 0'
+                amountText: '0'
             });
         }
         return html;
@@ -9030,7 +9068,7 @@
 
     $(document).on('change input', '.q-sheet-tour-cost-rows .q-tour-qty-input[data-tour-qty="adult"], #qTourCostRows .q-tour-qty-input[data-tour-qty="adult"]', function () {
         var n = parseInt($(this).val(), 10);
-        if (isNaN(n) || n < 1) n = 1;
+        if (isNaN(n) || n < 0) n = 0;
         $(this).val(String(n));
         $('#q_adults').val(n).trigger('change');
     });
@@ -9112,6 +9150,39 @@
             idx = $(this).closest('.q-tour-cost-row').attr('data-child-index');
         }
         removeTourCostChildAtIndex(idx);
+    });
+
+    $(document).on('click', '.q-tour-row-remove', function (e) {
+        var kind = String($(this).attr('data-remove-kind') || '');
+        if (kind === 'child' || $(this).hasClass('q-tour-child-remove')) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (kind === 'adult') {
+            qTourCostChildQtySync = true;
+            try {
+                $('#q_adults').val(0);
+                $('.q-tour-qty-input[data-tour-qty="adult"]').val(0);
+            } finally {
+                qTourCostChildQtySync = false;
+            }
+            snapshotTourCostFromDom();
+            renderTourCostRows();
+            recalcCosts();
+            saveFormDraftToStorage();
+            return;
+        }
+        if (kind === 'gst') {
+            $('#q_hide_gst_note').prop('checked', true);
+            $('.q-tour-gst-rate-switch').prop('checked', false);
+            $('.q-tour-gst-input').val(0);
+            qTourCostState.gst_percent = 0;
+            snapshotTourCostFromDom();
+            recalcAllTourCostCards();
+            refreshOpenQuotationPreview();
+            saveFormDraftToStorage();
+        }
     });
 
     $(document).on('change input', '#q_adults', function () {
@@ -12800,7 +12871,7 @@
             // except keep Next on every unlocked section before Pricing.
             var $nextBar = $(this).find('.q-section-next-bar');
             if ($nextBar.length) {
-                // Next sits beside the collapse arrow in the section header.
+                // Next sits at the bottom-right of each section body.
                 $nextBar.toggle(unlocked && step < Q_WIZARD_TOTAL);
             }
         });
@@ -13302,9 +13373,9 @@
                     $row.find('.f-journey-start').val('0');
                     $row.find('.f-journey-label').val('');
                     $lastJourney.find('.q-flight-journey-body').first().append($row);
-                    initQuotationDatePickers($row);
-                    qInitSupplierSelect2($row.find('.f-supplier'), { placeholder: 'Select' });
-                    renumberFlightRows();
+            initQuotationDatePickers($row);
+            qInitSupplierSelect2($row.find('.f-supplier'), { placeholder: 'Select' });
+            renumberFlightRows();
                     refreshFlightJourneyTypes();
                     recalcCosts();
                     scheduleSyncReturnAirfareInclusion();
@@ -13434,7 +13505,13 @@
             refreshFlightLayovers();
             if ($(this).hasClass('f-from') || $(this).hasClass('f-to')) {
                 scheduleSyncReturnAirfareInclusion(true);
+                refreshPricingSupplierNames();
             }
+        });
+
+        $(document).on('input change', '.q-hotel-rows .h-name', function () {
+            refreshPricingSupplierNames();
+            saveFormDraftToStorage();
         });
 
         $(document).on('change', '#qFlightRows .f-supplier', function () {
@@ -13790,6 +13867,9 @@
         $(document).on('click', '#qPricingSheetsHost .q-pricing-supplier-remove', function (e) {
             e.preventDefault();
             e.stopPropagation();
+            if ($(this).hasClass('q-custom-cost-remove')) {
+                return;
+            }
             var $cell = $(this).closest('.q-pricing-amount-cell');
             var key = String($cell.attr('data-cost-key') || '');
             var sourceIndex = $cell.attr('data-source-index');
@@ -13801,6 +13881,19 @@
                 return;
             }
             renderPricingSheets({ skipSnapshot: true });
+            recalcCosts();
+            saveFormDraftToStorage();
+        });
+        $(document).on('click', '#qPricingSheetsHost .q-profit-clear', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $sheet = $(this).closest('.q-pricing-option-sheet');
+            if (!$sheet.length) {
+                return;
+            }
+            $sheet.find('.q-sheet-profit-percent, .q-sheet-profit-amount').val('');
+            $sheet.attr('data-profit-source', '');
+            $sheet.find('.q-sheet-profit-percent').trigger('change');
             recalcCosts();
             saveFormDraftToStorage();
         });

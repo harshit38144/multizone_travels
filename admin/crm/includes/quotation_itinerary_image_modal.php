@@ -4,13 +4,15 @@
         <div class="modal-content qii-modal-content">
             <div class="modal-header qii-modal-hd">
                 <div class="qii-hd-main">
-                    <div class="qii-hd-icon"><i class="fas fa-images"></i></div>
-                    <div>
-                        <h5 class="modal-title mb-0" id="qiiImageModalLabel">Search Itinerary Image</h5>
+                    <div class="qii-hd-icon" aria-hidden="true"><i class="fas fa-images"></i></div>
+                    <div class="qii-hd-copy">
+                        <h5 class="modal-title qii-hd-title mb-0" id="qiiImageModalLabel">Search Itinerary Image</h5>
                         <p class="qii-hd-sub mb-0" id="qiiImageModalSub">Find a photo for this day</p>
                     </div>
                 </div>
-                <button type="button" class="close qii-close-btn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="close qii-close-btn" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
             </div>
             <div class="modal-body qii-search-body">
                 <div class="qii-search-bar">
@@ -19,6 +21,11 @@
                 </div>
                 <div class="qii-source-note" id="qiiSourceNote"></div>
                 <div class="qii-results-grid" id="qiiResultsGrid"></div>
+                <div class="qii-load-more-wrap" id="qiiLoadMoreWrap" hidden>
+                    <button type="button" class="btn qii-load-more-btn" id="qiiLoadMoreBtn">
+                        <span class="qii-load-more-label">Load More</span>
+                    </button>
+                </div>
             </div>
             <div class="modal-footer qii-modal-ft">
                 <button type="button" class="btn qii-btn-ghost" data-dismiss="modal">Cancel</button>
