@@ -1,13 +1,52 @@
 <?php
 session_start();
-if ($_SESSION['role'] != '1') {
+if (!isset($_SESSION['role']) || (string) $_SESSION['role'] !== '1') {
 	header('location:index.php');
 	exit;
 }
+
 include __DIR__ . '/connection.php';
 
-// Create table if not exists
-$table_sql = "CREATE TABLE IF NOT EXISTS `homepage_sections` (
+if (!isset($conn) || !($conn instanceof mysqli)) {
+	http_response_code(503);
+	echo 'Database connection unavailable.';
+	exit;
+}
+
+@ini_set('max_execution_time', '60');
+@$conn->set_charset('utf8mb4');
+@$conn->query("SET SESSION wait_timeout=60, innodb_lock_wait_timeout=10");
+
+/**
+ * Soft schema bootstrap — never let migrations hang/crash the page.
+ */
+function mz_hs_query(mysqli $conn, string $sql): ?mysqli_result
+{
+	try {
+		$result = $conn->query($sql);
+		return ($result instanceof mysqli_result) ? $result : null;
+	} catch (Throwable $e) {
+		return null;
+	}
+}
+
+function mz_hs_exec(mysqli $conn, string $sql): bool
+{
+	try {
+		return (bool) $conn->query($sql);
+	} catch (Throwable $e) {
+		return false;
+	}
+}
+
+function mz_hs_column_exists(mysqli $conn, string $column): bool
+{
+	$col = $conn->real_escape_string($column);
+	$res = mz_hs_query($conn, "SHOW COLUMNS FROM `homepage_sections` LIKE '{$col}'");
+	return $res && $res->num_rows > 0;
+}
+
+mz_hs_exec($conn, "CREATE TABLE IF NOT EXISTS `homepage_sections` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `section_key` VARCHAR(50) NOT NULL UNIQUE,
   `section_name` VARCHAR(100) NOT NULL,
@@ -21,82 +60,78 @@ $table_sql = "CREATE TABLE IF NOT EXISTS `homepage_sections` (
   `default_bg_color` VARCHAR(20) DEFAULT 'transparent',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-$conn->query($table_sql);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-// Add new columns to existing table if they are missing
-$check_cols = $conn->query("SHOW COLUMNS FROM `homepage_sections` LIKE 'section_image'");
-if($check_cols->num_rows == 0) {
-    $conn->query("ALTER TABLE `homepage_sections` ADD `section_image` VARCHAR(255) DEFAULT NULL AFTER `bg_color`");
+if (!mz_hs_column_exists($conn, 'section_image')) {
+	mz_hs_exec($conn, "ALTER TABLE `homepage_sections` ADD `section_image` VARCHAR(255) DEFAULT NULL AFTER `bg_color`");
 }
 
-$check_heading = $conn->query("SHOW COLUMNS FROM `homepage_sections` LIKE 'section_heading'");
 $added_headings = false;
-if ($check_heading && $check_heading->num_rows == 0) {
-    $conn->query("ALTER TABLE `homepage_sections` ADD `section_heading` VARCHAR(255) DEFAULT NULL AFTER `section_name`, ADD `section_subheading` VARCHAR(500) DEFAULT NULL AFTER `section_heading`");
-    $added_headings = true;
+if (!mz_hs_column_exists($conn, 'section_heading')) {
+	$added_headings = mz_hs_exec($conn, "ALTER TABLE `homepage_sections` ADD `section_heading` VARCHAR(255) DEFAULT NULL AFTER `section_name`, ADD `section_subheading` VARCHAR(500) DEFAULT NULL AFTER `section_heading`");
 }
 
 /** One-time defaults for headings when columns are added */
 if ($added_headings) {
-    $seed = [
-        'slider' => [null, null],
-        'trust_badges' => [null, null],
-        'group_departures' => ['Group Departures', 'Fixed departure group tours with guaranteed dates'],
-        'categories' => ['Explore by Categories', 'Find your perfect vacation'],
-        'trending_destinations' => ['TRENDING DESTINATIONS', 'Explore our most popular holiday destinations'],
-        'trending_packages' => ['Trending packages', 'Handpicked tours for you'],
-        'features' => ['Why Plan Your Travel With Us?', 'Experience the difference with our exceptional services'],
-        'secondary_features' => ['Travel With Confidence', 'Everything you need for a smooth trip—from the first quote to the flight home.'],
-        'budget_filter' => ['HOLIDAYS FOR EVERY Budget', 'Choose your perfect getaway within your budget range'],
-        'live_counter' => ['Adrenaliverse Live: Journeys In Motion', 'See where the world is travelling right now.'],
-        'instagram_reels' => ['LOVE FROM THE GRAM ❤', 'Real stories from real travellers'],
-        'testimonials' => ['We Care About Our Customers Experience Too', 'Hear directly from travelers who explored with us.'],
-    ];
-    foreach ($seed as $sk => $pair) {
-        $h = $pair[0];
-        $s = $pair[1];
-        $skEsc = mysqli_real_escape_string($conn, $sk);
-        if ($h === null && $s === null) {
-            $conn->query("UPDATE homepage_sections SET section_heading=NULL, section_subheading=NULL WHERE section_key='$skEsc'");
-        } else {
-            $hEsc = $h === null ? 'NULL' : "'" . mysqli_real_escape_string($conn, $h) . "'";
-            $sEsc = $s === null ? 'NULL' : "'" . mysqli_real_escape_string($conn, $s) . "'";
-            $conn->query("UPDATE homepage_sections SET section_heading=$hEsc, section_subheading=$sEsc WHERE section_key='$skEsc'");
-        }
-    }
+	$seed = [
+		'slider' => [null, null],
+		'trust_badges' => [null, null],
+		'group_departures' => ['Group Departures', 'Fixed departure group tours with guaranteed dates'],
+		'categories' => ['Explore by Categories', 'Find your perfect vacation'],
+		'trending_destinations' => ['TRENDING DESTINATIONS', 'Explore our most popular holiday destinations'],
+		'trending_packages' => ['Trending packages', 'Handpicked tours for you'],
+		'features' => ['Why Plan Your Travel With Us?', 'Experience the difference with our exceptional services'],
+		'secondary_features' => ['Travel With Confidence', 'Everything you need for a smooth trip - from the first quote to the flight home.'],
+		'budget_filter' => ['HOLIDAYS FOR EVERY Budget', 'Choose your perfect getaway within your budget range'],
+		'live_counter' => ['Adrenaliverse Live: Journeys In Motion', 'See where the world is travelling right now.'],
+		'instagram_reels' => ['LOVE FROM THE GRAM', 'Real stories from real travellers'],
+		'testimonials' => ['We Care About Our Customers Experience Too', 'Hear directly from travelers who explored with us.'],
+	];
+	foreach ($seed as $sk => $pair) {
+		$h = $pair[0];
+		$s = $pair[1];
+		$skEsc = $conn->real_escape_string($sk);
+		if ($h === null && $s === null) {
+			mz_hs_exec($conn, "UPDATE homepage_sections SET section_heading=NULL, section_subheading=NULL WHERE section_key='$skEsc'");
+		} else {
+			$hEsc = $h === null ? 'NULL' : "'" . $conn->real_escape_string($h) . "'";
+			$sEsc = $s === null ? 'NULL' : "'" . $conn->real_escape_string($s) . "'";
+			mz_hs_exec($conn, "UPDATE homepage_sections SET section_heading=$hEsc, section_subheading=$sEsc WHERE section_key='$skEsc'");
+		}
+	}
 }
 
 // Check if table is empty and insert defaults
-$check_empty = $conn->query("SELECT COUNT(*) as count FROM homepage_sections")->fetch_assoc();
-if ($check_empty['count'] == 0) {
-    $defaults = [
-        "('slider', 'Hero Slider', NULL, NULL, 1, 'transparent', 1, 1, 'transparent')",
-        "('trust_badges', 'Trust Badges Bar', NULL, NULL, 2, '#000000', 1, 1, '#000000')",
-        "('group_departures', 'Group Departures', 'Group Departures', 'Fixed departure group tours with guaranteed dates', 3, '#fff5f5', 1, 0, '#fff5f5')",
-        "('categories', 'Explore by Categories', 'Explore by Categories', 'Find your perfect vacation', 4, '#ffffff', 1, 0, '#ffffff')",
-        "('trending_destinations', 'Trending Destinations', 'TRENDING DESTINATIONS', 'Explore our most popular holiday destinations', 5, 'transparent', 1, 0, 'transparent')",
-        "('trending_packages', 'Trending Packages', 'Trending Packages', 'Handpicked tours for you', 6, '#fcfcfc', 1, 0, '#fcfcfc')",
-        "('features', 'Why Plan Your Travel With Us?', 'Why Plan Your Travel With Us?', 'Experience the difference with our exceptional services', 7, '#ffffff', 1, 0, '#ffffff')",
-        "('secondary_features', 'Secondary Features Strip', 'Travel With Confidence', 'Everything you need for a smooth trip—from the first quote to the flight home.', 8, '#f8fafc', 1, 0, '#f8fafc')",
-        "('budget_filter', 'Budget Filter Section', 'HOLIDAYS FOR EVERY Budget', 'Choose your perfect getaway within your budget range', 9, '#ffffff', 1, 0, '#ffffff')",
-        "('live_counter', 'Adrenaliverse Live: Journeys In Motion', 'Adrenaliverse Live: Journeys In Motion', 'See where the world is travelling right now.', 10, '#ffffff', 1, 0, '#ffffff')",
-        "('instagram_reels', 'Love From The Gram', 'LOVE FROM THE GRAM ❤', 'Real stories from real travellers', 11, '#fdf6f0', 1, 0, '#fdf6f0')",
-        "('testimonials', 'Testimonials', 'We Care About Our Customers Experience Too', 'Hear directly from travelers who explored with us.', 12, '#f4f5f8', 1, 0, '#f4f5f8')"
-    ];
-    $conn->query("INSERT INTO homepage_sections (section_key, section_name, section_heading, section_subheading, display_order, bg_color, is_active, is_locked, default_bg_color) VALUES " . implode(", ", $defaults));
+$check_empty_res = mz_hs_query($conn, "SELECT COUNT(*) as count FROM homepage_sections");
+$check_empty = $check_empty_res ? $check_empty_res->fetch_assoc() : ['count' => 0];
+if ((int) ($check_empty['count'] ?? 0) === 0) {
+	$defaults = [
+		"('slider', 'Hero Slider', NULL, NULL, 1, 'transparent', 1, 1, 'transparent')",
+		"('trust_badges', 'Trust Badges Bar', NULL, NULL, 2, '#000000', 1, 1, '#000000')",
+		"('group_departures', 'Group Departures', 'Group Departures', 'Fixed departure group tours with guaranteed dates', 3, '#fff5f5', 1, 0, '#fff5f5')",
+		"('categories', 'Explore by Categories', 'Explore by Categories', 'Find your perfect vacation', 4, '#ffffff', 1, 0, '#ffffff')",
+		"('trending_destinations', 'Trending Destinations', 'TRENDING DESTINATIONS', 'Explore our most popular holiday destinations', 5, 'transparent', 1, 0, 'transparent')",
+		"('trending_packages', 'Trending Packages', 'Trending Packages', 'Handpicked tours for you', 6, '#fcfcfc', 1, 0, '#fcfcfc')",
+		"('features', 'Why Plan Your Travel With Us?', 'Why Plan Your Travel With Us?', 'Experience the difference with our exceptional services', 7, '#ffffff', 1, 0, '#ffffff')",
+		"('secondary_features', 'Secondary Features Strip', 'Travel With Confidence', 'Everything you need for a smooth trip - from the first quote to the flight home.', 8, '#f8fafc', 1, 0, '#f8fafc')",
+		"('budget_filter', 'Budget Filter Section', 'HOLIDAYS FOR EVERY Budget', 'Choose your perfect getaway within your budget range', 9, '#ffffff', 1, 0, '#ffffff')",
+		"('live_counter', 'Adrenaliverse Live: Journeys In Motion', 'Adrenaliverse Live: Journeys In Motion', 'See where the world is travelling right now.', 10, '#ffffff', 1, 0, '#ffffff')",
+		"('instagram_reels', 'Love From The Gram', 'LOVE FROM THE GRAM', 'Real stories from real travellers', 11, '#fdf6f0', 1, 0, '#fdf6f0')",
+		"('testimonials', 'Testimonials', 'We Care About Our Customers Experience Too', 'Hear directly from travelers who explored with us.', 12, '#f4f5f8', 1, 0, '#f4f5f8')"
+	];
+	mz_hs_exec($conn, "INSERT INTO homepage_sections (section_key, section_name, section_heading, section_subheading, display_order, bg_color, is_active, is_locked, default_bg_color) VALUES " . implode(", ", $defaults));
 }
 
 // Insert new sections for existing installations (INSERT IGNORE skips if section_key already exists)
-$conn->query("INSERT IGNORE INTO homepage_sections (section_key, section_name, section_heading, section_subheading, display_order, bg_color, is_active, is_locked, default_bg_color) VALUES
+mz_hs_exec($conn, "INSERT IGNORE INTO homepage_sections (section_key, section_name, section_heading, section_subheading, display_order, bg_color, is_active, is_locked, default_bg_color) VALUES
     ('live_counter', 'Adrenaliverse Live: Journeys In Motion', 'Adrenaliverse Live: Journeys In Motion', 'See where the world is travelling right now.', 9, '#ffffff', 1, 0, '#ffffff'),
-    ('instagram_reels', 'Love From The Gram', 'LOVE FROM THE GRAM ❤', 'Real stories from real travellers', 10, '#fdf6f0', 1, 0, '#fdf6f0'),
+    ('instagram_reels', 'Love From The Gram', 'LOVE FROM THE GRAM', 'Real stories from real travellers', 10, '#fdf6f0', 1, 0, '#fdf6f0'),
     ('testimonials', 'Testimonials', 'We Care About Our Customers Experience Too', 'Hear directly from travelers who explored with us.', 12, '#f4f5f8', 1, 0, '#f4f5f8')");
 
 // Secondary features strip — own homepage section (order after primary features); shift following rows if newly inserted
-$conn->query("INSERT IGNORE INTO homepage_sections (section_key, section_name, section_heading, section_subheading, display_order, bg_color, is_active, is_locked, default_bg_color) VALUES ('secondary_features', 'Secondary Features Strip', 'Travel With Confidence', 'Everything you need for a smooth trip—from the first quote to the flight home.', 8, '#f8fafc', 1, 0, '#f8fafc')");
-if ($conn->affected_rows === 1) {
-    $conn->query("UPDATE homepage_sections SET display_order = CASE section_key
+mz_hs_exec($conn, "INSERT IGNORE INTO homepage_sections (section_key, section_name, section_heading, section_subheading, display_order, bg_color, is_active, is_locked, default_bg_color) VALUES ('secondary_features', 'Secondary Features Strip', 'Travel With Confidence', 'Everything you need for a smooth trip - from the first quote to the flight home.', 8, '#f8fafc', 1, 0, '#f8fafc')");
+if ((int) $conn->affected_rows === 1) {
+	mz_hs_exec($conn, "UPDATE homepage_sections SET display_order = CASE section_key
         WHEN 'budget_filter' THEN 9
         WHEN 'live_counter' THEN 10
         WHEN 'instagram_reels' THEN 11
@@ -106,9 +141,9 @@ if ($conn->affected_rows === 1) {
 }
 
 // Normalize order if secondary_features exists but budgets still share display_order 8 (partial upgrade)
-$dups = @$conn->query("SELECT COUNT(*) AS c FROM homepage_sections WHERE section_key IN ('secondary_features','budget_filter') AND display_order = 8");
-if ($dups && ($dupRow = $dups->fetch_assoc()) && (int)$dupRow['c'] >= 2) {
-    $conn->query("UPDATE homepage_sections SET display_order = CASE section_key
+$dups = mz_hs_query($conn, "SELECT COUNT(*) AS c FROM homepage_sections WHERE section_key IN ('secondary_features','budget_filter') AND display_order = 8");
+if ($dups && ($dupRow = $dups->fetch_assoc()) && (int) $dupRow['c'] >= 2) {
+	mz_hs_exec($conn, "UPDATE homepage_sections SET display_order = CASE section_key
         WHEN 'budget_filter' THEN 9
         WHEN 'live_counter' THEN 10
         WHEN 'instagram_reels' THEN 11
@@ -121,7 +156,9 @@ $msg = "";
 $msg_type = "success";
 
 $uploadDir = 'uploads/sections/';
-if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+if (!is_dir($uploadDir)) {
+	@mkdir($uploadDir, 0777, true);
+}
 
 // Handle form submission (Update all sections)
 if (isset($_POST['update_sections'])) {
@@ -212,8 +249,18 @@ if (isset($_SESSION['msg'])) {
     unset($_SESSION['msg'], $_SESSION['msg_type']);
 }
 
+// Release session lock before rendering so other admin tabs/iframes are not blocked
+if (session_status() === PHP_SESSION_ACTIVE) {
+	session_write_close();
+}
+
 // Fetch sections
-$sections_query = $conn->query("SELECT * FROM homepage_sections ORDER BY display_order ASC");
+$sections_query = mz_hs_query($conn, "SELECT * FROM homepage_sections ORDER BY display_order ASC");
+if (!$sections_query) {
+	$sections_query = new class {
+		public function fetch_assoc() { return null; }
+	};
+}
 ?>
 
 <!DOCTYPE html>
@@ -473,12 +520,11 @@ $sections_query = $conn->query("SELECT * FROM homepage_sections ORDER BY display
         </div>
 
         <?php include __DIR__ . '/includes/footer-links.php'; ?>
-        
-        <!-- jQuery UI for Drag and Drop -->
-        <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+        <!-- jQuery UI already loaded via footer-links.php -->
 
         <script>
             $(function() {
+                if (!$.fn.sortable) return;
                 // Initialize drag and drop sorting
                 $("#sortable-sections").sortable({
                     handle: ".order-handle",

@@ -464,10 +464,20 @@
       $link.toggleClass('active', !!isActive)
     })
 
-    // Keep tree parents open for active leaf
+    // Keep tree parents open for active leaf; clear slide residue so nested
+    // Page Management items do not overlap CRM / Mail / Payment Links.
     $('.nav-sidebar .nav-link.active').each(function () {
       $(this).parents('.nav-item.has-treeview').addClass('menu-open')
     })
+    if (window.MZSidebarTree && typeof window.MZSidebarTree.fixOpenTreeviewLayout === 'function') {
+      window.MZSidebarTree.fixOpenTreeviewLayout()
+    } else {
+      $('.nav-sidebar .nav-item.menu-open > .nav-treeview').each(function () {
+        this.style.display = 'block'
+        this.style.height = 'auto'
+        this.style.overflow = 'visible'
+      })
+    }
   }
 
   function openTab (path, title, options) {

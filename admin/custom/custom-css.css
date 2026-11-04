@@ -174,6 +174,7 @@ body.sidebar-collapse:not(.sidebar-mini):not(.sidebar-mini-md) .main-sidebar::be
 
 /* Sidebar labels — expanded mode */
 .nav-sidebar .nav-link {
+	display: flex;
 	align-items: center;
 }
 
@@ -186,15 +187,34 @@ body.sidebar-collapse:not(.sidebar-mini):not(.sidebar-mini-md) .main-sidebar::be
 }
 
 body:not(.sidebar-mini.sidebar-collapse) .nav-sidebar.nav-child-indent .nav-treeview .nav-link > p {
-	white-space: normal !important;
+	white-space: nowrap !important;
 	line-height: 1.35;
-	overflow: visible;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .nav-sidebar .nav-link .right {
 	flex-shrink: 0;
 	margin-left: 0.25rem;
 	align-self: center;
+}
+
+/*
+ * AdminLTE slideUp/slideDown can leave inline height/overflow on nested
+ * .nav-treeview, so open Page Management items paint over CRM/Mail below.
+ */
+.nav-sidebar .menu-open > .nav-treeview {
+	display: block !important;
+	height: auto !important;
+	overflow: visible !important;
+}
+
+.nav-sidebar .nav-item {
+	position: relative;
+}
+
+.nav-sidebar .nav-treeview > .nav-item > .nav-link {
+	margin-left: 0;
 }
 
 /*

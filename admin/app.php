@@ -14,6 +14,11 @@ if (!isset($_SESSION['role']) || (string) $_SESSION['role'] !== '1') {
 	exit;
 }
 
+// Shell only needs session for auth; unlock so iframe pages can start sessions promptly
+if (session_status() === PHP_SESSION_ACTIVE) {
+	session_write_close();
+}
+
 $adminWebRoot = defined('ADMIN_WEB_ROOT') ? ADMIN_WEB_ROOT : '/admin';
 $openPath = isset($_GET['open']) ? (string) $_GET['open'] : '';
 // Only allow relative admin *.php paths (optional query string)

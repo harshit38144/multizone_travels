@@ -79,8 +79,15 @@ $crmParentPages = array_merge(
 
   .nav-treeview>.nav-item>.nav-link {
     color: #444 !important;
-    margin-left: 15px;
+    margin-left: 0;
     border-radius: 6px;
+  }
+
+  /* Nested open menus must keep natural height (AdminLTE slide can clip/overlap). */
+  .nav-sidebar .menu-open > .nav-treeview {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .nav-treeview>.nav-item>.nav-link:hover {

@@ -13,7 +13,25 @@
       var inst = $(this).data('lte.treeview')
       if (inst && inst._config) {
         inst._config.accordion = false
+        // Avoid slide animation residue that collapses nested open menus
+        inst._config.animationSpeed = 0
       }
+    })
+  }
+
+  /** Clear jQuery slideUp/slideDown inline styles so open trees keep natural height. */
+  function fixOpenTreeviewLayout ($root) {
+    var $scope = $root && $root.length ? $root : $(SIDEBAR_SELECTOR)
+    $scope.find('.nav-item.menu-open > .nav-treeview').each(function () {
+      this.style.removeProperty('height')
+      this.style.removeProperty('overflow')
+      this.style.removeProperty('padding-top')
+      this.style.removeProperty('padding-bottom')
+      this.style.removeProperty('margin-top')
+      this.style.removeProperty('margin-bottom')
+      this.style.display = 'block'
+      this.style.height = 'auto'
+      this.style.overflow = 'visible'
     })
   }
 
@@ -22,6 +40,7 @@
     $('.nav-sidebar .nav-link.active').each(function () {
       $(this).parents('.nav-item.has-treeview').addClass('menu-open')
     })
+    fixOpenTreeviewLayout()
   }
 
   function rebindSidebarTreeview () {
@@ -43,6 +62,10 @@
 
       e.preventDefault()
       inst.toggle(e)
+      // After toggle (incl. animationSpeed 0), normalize open submenu layout
+      window.setTimeout(function () {
+        fixOpenTreeviewLayout($link.closest(SIDEBAR_SELECTOR))
+      }, 0)
     })
   }
 
@@ -51,4 +74,10 @@
     rebindSidebarTreeview()
     openActiveMenuAncestors()
   })
+
+  // Expose for tab shell sidebar sync
+  window.MZSidebarTree = {
+    fixOpenTreeviewLayout: fixOpenTreeviewLayout,
+    openActiveMenuAncestors: openActiveMenuAncestors
+  }
 })(jQuery)

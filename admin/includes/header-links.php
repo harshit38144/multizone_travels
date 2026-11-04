@@ -138,7 +138,7 @@ $mzAdminWebRoot = defined('ADMIN_WEB_ROOT') ? ADMIN_WEB_ROOT : '/admin';
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
 <!-- Custom CSS last: system UI font stack overrides AdminLTE -->
-<link rel="stylesheet" href="custom/custom-css.css">
+<link rel="stylesheet" href="custom/custom-css.css?v=2">
 <link rel="stylesheet" href="custom/theme.css">
 <link rel="stylesheet" href="<?= htmlspecialchars(function_exists('admin_url') ? admin_url('custom/tabs.css') : 'custom/tabs.css', ENT_QUOTES, 'UTF-8') ?>">
 <?php
