@@ -3390,12 +3390,27 @@ $qWizardSteps = [
             color: #334155;
         }
 
+        .crm-quotation-gen .q-day-editor-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.65rem 1rem;
+            flex-wrap: wrap;
+            margin-top: 0.45rem;
+            min-height: 1.75rem;
+        }
+
         .crm-quotation-gen .q-day-char-count {
             text-align: right;
-            margin-top: 0.35rem;
+            margin-top: 0;
+            margin-left: auto;
             font-size: 0.72rem;
             color: #94a3b8;
             font-weight: 500;
+            flex: 0 0 auto;
+            white-space: nowrap;
+            line-height: 1.2;
+            align-self: center;
         }
 
         .crm-quotation-gen .q-day-image-panel {
@@ -3489,37 +3504,30 @@ $qWizardSteps = [
             color: #b71c1c;
         }
 
-        .crm-quotation-gen .q-day-meta-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        @media (max-width: 767.98px) {
-            .crm-quotation-gen .q-day-meta-row {
-                grid-template-columns: 1fr;
-            }
-
-            .crm-quotation-gen .q-day-nav-btn span {
-                display: none;
-            }
+        .crm-quotation-gen .q-day-meta-items {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.45rem 0.65rem;
+            min-width: 0;
+            flex: 1 1 auto;
         }
 
         .crm-quotation-gen .q-day-meta-card {
             border: 1px solid #e8ecf1;
-            border-radius: 12px;
+            border-radius: 8px;
             background: #fff;
-            padding: 0.75rem 0.85rem;
-            display: flex;
+            padding: 0.28rem 0.55rem 0.28rem 0.35rem;
+            display: inline-flex;
             align-items: center;
-            gap: 0.7rem;
+            gap: 0.4rem;
             min-width: 0;
+            max-width: 100%;
         }
 
         .crm-quotation-gen .q-day-meta-icon {
-            width: 42px;
-            height: 42px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             background: #fdebee;
             color: #c62828;
@@ -3527,35 +3535,49 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex: 0 0 auto;
-            font-size: 0.95rem;
+            font-size: 0.68rem;
         }
 
         .crm-quotation-gen .q-day-meta-text {
             min-width: 0;
             flex: 1 1 auto;
+            display: flex;
+            align-items: baseline;
+            gap: 0.3rem;
+            flex-wrap: wrap;
         }
 
         .crm-quotation-gen .q-day-meta-label {
-            display: block;
-            font-size: 0.72rem;
+            display: inline;
+            font-size: 0.68rem;
             color: #94a3b8;
             font-weight: 500;
             line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .crm-quotation-gen .q-day-meta-label::after {
+            content: ':';
         }
 
         .crm-quotation-gen .q-day-meta-value {
-            display: block;
-            font-size: 0.95rem;
+            display: inline;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #0f172a;
-            line-height: 1.3;
-            margin-top: 0.1rem;
-            min-height: 1.3em;
+            line-height: 1.2;
+            margin-top: 0;
+            min-height: 0;
             outline: none;
             border-radius: 4px;
-            cursor: text;
-            padding: 0.05rem 0.15rem;
-            margin-left: -0.15rem;
+            cursor: default;
+            padding: 0;
+            margin-left: 0;
+            user-select: text;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 12rem;
         }
 
         .crm-quotation-gen .q-day-meta-value.is-empty {
@@ -3563,12 +3585,24 @@ $qWizardSteps = [
             font-weight: 600;
         }
 
-        .crm-quotation-gen .q-day-meta-value.is-editing,
-        .crm-quotation-gen .q-day-meta-value:focus {
-            background: #fff7f7;
-            box-shadow: inset 0 -2px 0 #c62828;
-            color: #0f172a;
-            font-weight: 700;
+        @media (max-width: 767.98px) {
+            .crm-quotation-gen .q-day-editor-footer {
+                align-items: flex-start;
+            }
+
+            .crm-quotation-gen .q-day-meta-items {
+                width: 100%;
+            }
+
+            .crm-quotation-gen .q-day-char-count {
+                margin-left: 0;
+                width: 100%;
+                text-align: right;
+            }
+
+            .crm-quotation-gen .q-day-nav-btn span {
+                display: none;
+            }
         }
 
         .crm-quotation-gen .q-day-meta-actions {
@@ -8994,11 +9028,14 @@ $qWizardSteps = [
         .crm-quotation-gen .q-pricing-option-sheet {
             --q-price-col: 6.5rem;
             --q-price-action: 28px;
-            --q-price-gap: 0.35rem;
+            --q-price-gap: 0.4rem;
+            --q-price-ico: 18px;
             --q-price-trail: calc(var(--q-price-action) + var(--q-price-gap));
             --q-price-pad-right: 0.55rem;
-            --q-price-field-h: 25px;
+            --q-price-field-h: 28px;
+            --q-price-row-h: 34px;
             --q-body-pad-x: 0.85rem;
+            --q-price-grid: var(--q-price-ico) minmax(0, 1.05fr) minmax(0, 1fr) var(--q-price-col) var(--q-price-action);
             border: 1px solid #e8ecf1;
             border-radius: 16px;
             background: #fff;
@@ -9153,13 +9190,12 @@ $qWizardSteps = [
             display: none;
         }
 
-        .crm-quotation-gen .q-pricing-row-label,
-        .crm-quotation-gen .q-pricing-amount-cell {
-            min-height: 25px;
-            height: 27px;
+        .crm-quotation-gen .q-pricing-row-label {
+            min-height: var(--q-price-row-h, 34px);
+            height: var(--q-price-row-h, 34px);
             display: flex;
             align-items: center;
-            margin-bottom: 0.45rem;
+            margin-bottom: 0.4rem;
         }
 
         .crm-quotation-gen .q-pricing-row-label {
@@ -9446,62 +9482,84 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-amount-cell {
             position: relative;
-            gap: 0.45rem;
-            display: flex;
-            flex-direction: row;
+            display: grid;
+            grid-template-columns: var(--q-price-grid);
+            column-gap: var(--q-price-gap, 0.4rem);
             align-items: center;
-            justify-content: flex-start;
-            min-height: 40px;
-            height: 40px;
+            justify-content: stretch;
+            min-height: var(--q-price-row-h, 34px);
+            height: var(--q-price-row-h, 34px);
             width: 100%;
-            margin-bottom: 0.45rem;
+            margin-bottom: 0.4rem;
             box-sizing: border-box;
         }
 
-        .crm-quotation-gen .q-pricing-amount-cell.has-supplier {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
+        .crm-quotation-gen .q-pricing-amount-cell.has-supplier,
+        .crm-quotation-gen .q-pricing-amount-cell.has-ico,
+        .crm-quotation-gen .q-pricing-amount-cell.has-remove {
+            display: grid;
         }
 
         .crm-quotation-gen .q-pricing-row-ico {
-            flex: 0 0 18px;
-            width: 18px;
+            grid-column: 1;
+            width: var(--q-price-ico, 18px);
             color: #6b7280;
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             text-align: center;
             line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
+        .crm-quotation-gen .q-pricing-detail-name,
         .crm-quotation-gen .q-pricing-supplier-name {
-            flex: 1 1 auto;
             min-width: 0;
-            max-width: none;
-            font-size: 0.8rem;
+            max-width: 100%;
+            font-size: 0.78rem;
             font-weight: 600;
             color: #1f2937;
             line-height: 1.2;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            padding: 0 0.15rem 0 0;
+            padding: 0;
+        }
+
+        .crm-quotation-gen .q-pricing-detail-name {
+            grid-column: 2;
+        }
+
+        .crm-quotation-gen .q-pricing-supplier-name {
+            grid-column: 3;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        .crm-quotation-gen .q-pricing-detail-name.is-empty,
+        .crm-quotation-gen .q-pricing-supplier-name.is-empty {
+            visibility: hidden;
         }
 
         .crm-quotation-gen .q-pricing-amount-input-wrap {
+            grid-column: 4;
             position: relative;
-            margin-left: auto;
+            margin-left: 0;
             display: block;
+            justify-self: stretch;
         }
 
         .crm-quotation-gen .q-pricing-amount-action {
-            flex: 0 0 var(--q-price-action, 28px);
+            grid-column: 5;
+            flex: none;
             width: var(--q-price-action, 28px);
             min-width: var(--q-price-action, 28px);
-            height: var(--q-price-field-h, 36px);
-            margin: 0 0 0 var(--q-price-gap, 0.35rem);
+            height: var(--q-price-field-h, 28px);
+            margin: 0;
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
+            justify-self: center;
             box-sizing: border-box;
         }
 
@@ -10726,23 +10784,25 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost {
-            display: flex;
-            margin-bottom: 0.45rem !important;
+            display: grid;
+            grid-template-columns: var(--q-price-grid);
+            column-gap: var(--q-price-gap, 0.4rem);
+            margin-bottom: 0.4rem !important;
             position: relative;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-empty {
-            min-height: 40px;
-            height: 40px;
-            margin-bottom: 0.45rem !important;
+            min-height: var(--q-price-row-h, 34px);
+            height: var(--q-price-row-h, 34px);
+            margin-bottom: 0.4rem !important;
             visibility: hidden;
             pointer-events: none;
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .cc-label {
-            flex: 1 1 auto;
+            grid-column: 2 / 4;
+            width: 100%;
             min-width: 0;
-            width: auto;
             max-width: none;
             height: auto !important;
             min-height: 0 !important;
@@ -10750,9 +10810,9 @@ $qWizardSteps = [
             border-radius: 0 !important;
             background: transparent !important;
             box-shadow: none !important;
-            padding: 0 0.15rem 0 0 !important;
+            padding: 0 !important;
             margin: 0 !important;
-            font-size: 0.8rem !important;
+            font-size: 0.78rem !important;
             font-weight: 600;
             color: #1f2937 !important;
             line-height: 1.2;
@@ -10774,10 +10834,22 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-pricing-amount-input-wrap {
-            flex: 0 0 var(--q-price-col, 8.5rem);
-            width: var(--q-price-col, 8.5rem);
-            min-width: var(--q-price-col, 8.5rem);
-            max-width: var(--q-price-col, 8.5rem);
+            grid-column: 4;
+            flex: none;
+            width: var(--q-price-col, 6.5rem);
+            min-width: var(--q-price-col, 6.5rem);
+            max-width: var(--q-price-col, 6.5rem);
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost .q-pricing-amount-action {
+            grid-column: 5;
+        }
+
+        @media (max-width: 575.98px) {
+            .crm-quotation-gen .q-pricing-option-sheet {
+                --q-price-grid: var(--q-price-ico) minmax(0, 1fr) minmax(0, 0.95fr) var(--q-price-col) var(--q-price-action);
+                --q-price-col: 5.75rem;
+            }
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-custom-cost-remove {
@@ -16681,6 +16753,10 @@ $qWizardSteps = [
             color: var(--q-text-muted) !important;
         }
 
+        [data-theme="dark"] .crm-quotation-gen .q-pricing-detail-name {
+            color: var(--q-text) !important;
+        }
+
         [data-theme="dark"] .crm-quotation-gen .q-pricing-supplier-name {
             color: var(--q-text-muted) !important;
         }
@@ -18438,7 +18514,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=354"></script>
+    <script src="crm/assets/quotation_generator.js?v=360"></script>
     <script src="crm/assets/quotation_flight_search.js?v=36"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=3"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

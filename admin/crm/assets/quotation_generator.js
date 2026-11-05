@@ -4038,13 +4038,13 @@
                 onChange: function () {
                     var $card = $ta.closest('.q-day-card');
                     updateDayCharCount($card);
+                    // Meal / Overnight Stay live in dedicated fields (from Hotel Details).
+                    // Strip any leftover lines from the rich-text body so they stay separate.
                     var html = readSummernoteHtml($ta);
-                    var parsed = parseDayMetaFromDescription(html);
-                    if (/data-q-day-overnight|<(?:p|div)[^>]*>[\s\S]*?Overnight(?:\s+Stay)?\s*:/i.test(html)) {
-                        $card.find('.q-day-overnight').val(parsed.overnight);
-                    }
-                    if (/data-q-day-meal|<(?:p|div)[^>]*>[\s\S]*?Meals?\s*:/i.test(html)) {
-                        $card.find('.q-day-meal').val(parsed.meal);
+                    var cleaned = stripDayMetaFromDescription(html);
+                    if (String(cleaned || '').replace(/\s+/g, ' ') !== String(html || '').replace(/\s+/g, ' ')) {
+                        $ta.summernote('code', cleaned || '<p><br></p>');
+                        updateDayCharCount($card);
                     }
                     scheduleSyncReturnAirfareInclusion(true);
                 }
@@ -4284,6 +4284,31 @@
         return false;
     }
 
+    function stripMetaFromDayEditor($card) {
+        if (!$card || !$card.length) {
+            return;
+        }
+        var $ta = $card.find('.q-day-textarea');
+        if (!$ta.length) {
+            return;
+        }
+        var current = readSummernoteHtml($ta);
+        var cleaned = stripDayMetaFromDescription(current);
+        var norm = function (h) {
+            return String(h || '').replace(/\s+/g, ' ').trim();
+        };
+        if (norm(cleaned) === norm(current)) {
+            return;
+        }
+        if ($.fn.summernote && $ta.data('summernote')) {
+            $ta.summernote('code', cleaned || '<p><br></p>');
+        } else {
+            $ta.val(cleaned);
+        }
+        updateDayCharCount($card);
+    }
+
+    /** Keep Meal / Overnight Stay out of the rich-text body; show in dedicated fields. */
     function syncDayMetaIntoEditor($card, force) {
         if (!$card || !$card.length) {
             return;
@@ -4291,31 +4316,45 @@
         if (!force && isDayEditorFocused($card)) {
             return;
         }
-        var overnight = ($card.find('.q-day-overnight').val() || '').trim();
-        var meal = ($card.find('.q-day-meal').val() || '').trim();
-        var $ta = $card.find('.q-day-textarea');
-        if (!$ta.length) {
-            return;
-        }
-        var current = readSummernoteHtml($ta);
-        var cleaned = stripDayMetaFromDescription(current);
-        var next = cleaned + buildDayMetaBlocksHtml(overnight, meal);
-        var norm = function (h) {
-            return String(h || '').replace(/\s+/g, ' ').trim();
-        };
-        if (norm(next) === norm(current)) {
-            return;
-        }
-        if ($.fn.summernote && $ta.data('summernote')) {
-            $ta.summernote('code', next || '<p><br></p>');
-        } else {
-            $ta.val(next);
-        }
-        updateDayCharCount($card);
+        stripMetaFromDayEditor($card);
+        syncDayMetaDisplay($card);
     }
 
     function syncDayMetaDisplay($card) {
-        syncDayMetaIntoEditor($card, true);
+        if (!$card || !$card.length) {
+            return;
+        }
+        var overnight = ($card.find('.q-day-overnight').val() || '').trim();
+        var meal = ($card.find('.q-day-meal').val() || '').trim();
+        var $mealVal = $card.find('.q-day-meta-card[data-meta="meal"] .q-day-meta-value');
+        var $overnightVal = $card.find('.q-day-meta-card[data-meta="overnight"] .q-day-meta-value');
+        if ($mealVal.length) {
+            $mealVal.text(meal || '—').toggleClass('is-empty', !meal);
+        }
+        if ($overnightVal.length) {
+            $overnightVal.text(overnight || '—').toggleClass('is-empty', !overnight);
+        }
+        stripMetaFromDayEditor($card);
+    }
+
+    function dayMetaFieldsHtml() {
+        return '' +
+            '<div class="q-day-meta-items" title="Synced from Hotel Details by check-in / check-out dates">' +
+            '<div class="q-day-meta-card" data-meta="meal">' +
+            '<span class="q-day-meta-icon" aria-hidden="true"><i class="fas fa-utensils"></i></span>' +
+            '<div class="q-day-meta-text">' +
+            '<span class="q-day-meta-label">Meal</span>' +
+            '<span class="q-day-meta-value is-empty">—</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="q-day-meta-card" data-meta="overnight">' +
+            '<span class="q-day-meta-icon" aria-hidden="true"><i class="fas fa-bed"></i></span>' +
+            '<div class="q-day-meta-text">' +
+            '<span class="q-day-meta-label">Overnight Stay</span>' +
+            '<span class="q-day-meta-value is-empty">—</span>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
     }
 
     var itineraryHotelMetaTimer = null;
@@ -4331,20 +4370,25 @@
 
     function hotelOvernightLabel(hotel) {
         hotel = hotel || {};
-        var city = String(hotel.city || '').trim();
-        if (city) {
-            return city.split(',')[0].trim();
+        var name = String(hotel.name || hotel.hotel_name || '').trim();
+        if (name) {
+            return name;
         }
-        return '';
+        // Fallback only when hotel name is empty
+        var city = String(hotel.city || '').trim();
+        return city ? city.split(',')[0].trim() : '';
     }
 
     function mealLabelForHotelStayDay(mealPlan, roomType, dayOffset, nights) {
+        var raw = String(mealPlan || '').trim();
         var code = String(qpHotelMealCode(mealPlan) || '').toUpperCase();
-        var full = formatItineraryMealFromHotel(mealPlan, roomType);
         nights = parseInt(nights, 10) || 0;
         dayOffset = parseInt(dayOffset, 10) || 0;
 
-        // Checkout morning: breakfast only when the plan includes it (no overnight).
+        // Display the Hotel Details meal plan code (CP / MAP / AP / …) for overnight nights.
+        var display = code || raw;
+
+        // Checkout morning: breakfast only when the plan includes it (no overnight that night).
         if (nights > 0 && dayOffset === nights) {
             if (code === 'EP' || !code) {
                 return '';
@@ -4352,11 +4396,10 @@
             if (code === 'CP' || code === 'MAP' || code === 'AP' || code === 'AI') {
                 return 'Breakfast';
             }
-            return full;
+            return display;
         }
 
-        // Overnight days covered by check-in → night before checkout.
-        return full;
+        return display;
     }
 
     function buildItineraryHotelMetaByDay(totalDays) {
@@ -4487,17 +4530,18 @@
         var byDay = buildItineraryHotelMetaByDay($cards.length);
         $cards.each(function () {
             var $card = $(this);
-            if (isDayEditorFocused($card)) {
-                return;
-            }
             var idx = parseInt($card.attr('data-day-index'), 10);
             if (isNaN(idx) || idx < 0) {
                 idx = 0;
             }
             var meta = byDay[idx] || { overnight: '', meal: '' };
+            // Always derive Meal / Overnight Stay from Hotel Details (never keep manual values).
             $card.find('.q-day-overnight').val(meta.overnight || '');
             $card.find('.q-day-meal').val(meta.meal || '');
-            syncDayMetaIntoEditor($card, true);
+            syncDayMetaDisplay($card);
+            if (!isDayEditorFocused($card)) {
+                stripMetaFromDayEditor($card);
+            }
         });
         itineraryPreserveSeed = snapshotItinerary();
         scheduleSyncReturnAirfareInclusion();
@@ -4833,11 +4877,17 @@
                     }
                 }
             }
-            var parsedMeta = parseDayMetaFromDescription(html);
-            var overnightVal = parsedMeta.overnight || ($c.find('.q-day-overnight').val() || '').trim();
-            var mealVal = parsedMeta.meal || ($c.find('.q-day-meal').val() || '').trim();
-            $c.find('.q-day-overnight').val(overnightVal);
-            $c.find('.q-day-meal').val(mealVal);
+            var overnightVal = ($c.find('.q-day-overnight').val() || '').trim();
+            var mealVal = ($c.find('.q-day-meal').val() || '').trim();
+            // Legacy: pull Meal / Overnight out of description if still embedded
+            if (!overnightVal || !mealVal) {
+                var parsedMeta = parseDayMetaFromDescription(html);
+                overnightVal = overnightVal || parsedMeta.overnight;
+                mealVal = mealVal || parsedMeta.meal;
+                $c.find('.q-day-overnight').val(overnightVal);
+                $c.find('.q-day-meal').val(mealVal);
+            }
+            html = stripDayMetaFromDescription(html);
             data.push({
                 title: $c.find('.q-day-title').val() || '',
                 description: html,
@@ -4926,8 +4976,11 @@
             var editorId = 'q_itin_day_' + rebuildToken + '_' + i;
             itineraryEditorIds.push(editorId);
             var prev = normalizeItineraryDay(existing[i] || {});
-            var overnightVal = prev.overnight || inferDayOvernightValue(prev, destLabel);
-            var mealVal = prev.meal || inferDayMealValue(prev);
+            var descClean = stripDayMetaFromDescription(prev.description || '');
+            var parsedFromDesc = parseDayMetaFromDescription(prev.description || '');
+            // Placeholder until hotel sync overwrites — never invent destination/city defaults.
+            var overnightVal = prev.overnight || parsedFromDesc.overnight || '';
+            var mealVal = prev.meal || parsedFromDesc.meal || '';
             var headingHtml = fmtItineraryDayHeadingHtml(baseDate, i, i + 1);
             var imgVal = prev.image || '';
             var imgCountLabel = imgVal ? '1 Image' : '0 Image';
@@ -4974,7 +5027,10 @@
                 '</div>' +
                 '<div class="q-day-editor-wrap">' +
                 '<textarea class="form-control q-day-textarea"></textarea>' +
+                '<div class="q-day-editor-footer">' +
+                dayMetaFieldsHtml() +
                 '<div class="q-day-char-count">0 / 2000</div>' +
+                '</div>' +
                 '</div>' +
                 '</div>' +
                 '<div class="q-day-image-panel">' +
@@ -5005,7 +5061,7 @@
             $card.find('.q-day-head-label').html(headingHtml);
             $card.find('.q-day-head-sub').text(destLabel || 'Destination');
             $card.find('.q-day-title').val(prev.title || '');
-            $card.find('.q-day-textarea').attr('id', editorId).val(prev.description || '');
+            $card.find('.q-day-textarea').attr('id', editorId).val(descClean || '');
             $card.find('.q-day-overnight').val(overnightVal);
             $card.find('.q-day-meal').val(mealVal);
             $card.find('.q-day-image').val(imgVal);
@@ -5629,23 +5685,17 @@
             $card.find('.q-day-title').val(title);
         }
         var $ta = $card.find('.q-day-textarea');
+        // Strip any Meal / Overnight lines AI may have put in the body;
+        // those fields are always synced from Hotel Details.
+        var cleanedDesc = stripDayMetaFromDescription(description || '');
         if ($.fn.summernote && $ta.data('summernote')) {
-            $ta.summernote('code', description || '');
+            $ta.summernote('code', cleanedDesc || '<p><br></p>');
         } else {
-            $ta.val(description || '');
+            $ta.val(cleanedDesc || '');
         }
-        var overnight = String(day.overnight || day.overnight_stay || '').trim();
-        var meal = String(day.meal || day.meals || '').trim();
-        if (!overnight) {
-            overnight = inferDayOvernightValue({ description: description, overnight: overnight }, getItineraryDestinationLabel());
-        }
-        if (!meal) {
-            meal = inferDayMealValue({ description: description, meal: meal });
-        }
-        $card.find('.q-day-overnight').val(overnight);
-        $card.find('.q-day-meal').val(meal);
         syncDayMetaDisplay($card);
         updateDayCharCount($card);
+        scheduleItineraryMetaFromHotels();
         itineraryPreserveSeed = snapshotItinerary();
         scheduleSyncReturnAirfareInclusion();
     }
@@ -6458,15 +6508,15 @@
             if (desc.length > 180) {
                 desc = desc.slice(0, 180).replace(/\s+\S*$/, '') + '…';
             }
-            var overnight = (day.overnight || '').trim() || inferDayOvernightValue(day, dest);
-            var meal = (day.meal || '').trim() || inferDayMealValue(day);
+            var overnight = (day.overnight || '').trim();
+            var meal = (day.meal || '').trim();
             var dayImage = (day.image || '').trim();
             var metaHtml = '';
             if (overnight) {
-                metaHtml += '<span><i class="fas fa-bed"></i> ' + esc(overnight) + '</span>';
+                metaHtml += '<span><i class="fas fa-bed"></i> Overnight Stay: ' + esc(overnight) + '</span>';
             }
             if (meal) {
-                metaHtml += '<span><i class="fas fa-utensils"></i> ' + esc(meal) + '</span>';
+                metaHtml += '<span><i class="fas fa-utensils"></i> Meal: ' + esc(meal) + '</span>';
             }
             var $item = $(
                 '<button type="button" class="q-full-itin-item' + (i === currentIdx ? ' is-current' : '') + (dayImage ? ' has-photo' : '') + '" data-day-index="' + i + '">' +
@@ -6757,7 +6807,8 @@
         return '' +
             '<div class="q-pricing-amount-cell has-supplier has-ico has-remove q-custom-cost">' +
             '<span class="q-pricing-row-ico" aria-hidden="true"><i class="fas fa-tag"></i></span>' +
-            '<input type="text" class="q-pricing-supplier-name cc-label" placeholder="Cost name" value="' + esc(label) + '" title="' + esc(label) + '" aria-label="Extra cost name">' +
+            '<input type="text" class="q-pricing-detail-name cc-label" placeholder="Cost name" value="' + esc(label) + '" title="' + esc(label) + '" aria-label="Extra cost name">' +
+            '<span class="q-pricing-supplier-name is-empty" aria-hidden="true"></span>' +
             '<div class="q-pricing-amount-input-wrap q-price-field">' +
             '<span class="q-pricing-inr" aria-hidden="true">₹</span>' +
             '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost cc-amount" value="' + esc(amount) + '" placeholder="0" aria-label="Extra cost amount">' +
@@ -7084,6 +7135,64 @@
         return fromCode || toCode || '';
     }
 
+    /** Build IXR-BLR-COK (connecting) or IXR-COK (direct) from journey segments. */
+    function pricingCombinedFlightRouteLabel(segments) {
+        var codes = [];
+        (segments || []).forEach(function (f, i) {
+            var fromCode = pricingAirportCodeFromPlace(f && f.from);
+            var toCode = pricingAirportCodeFromPlace(f && f.to);
+            if (i === 0) {
+                if (fromCode) {
+                    codes.push(fromCode);
+                }
+                if (toCode) {
+                    codes.push(toCode);
+                }
+                return;
+            }
+            if (fromCode && codes.length && codes[codes.length - 1] !== fromCode) {
+                codes.push(fromCode);
+            } else if (fromCode && !codes.length) {
+                codes.push(fromCode);
+            }
+            if (toCode) {
+                codes.push(toCode);
+            }
+        });
+        return codes.join('-');
+    }
+
+    /**
+     * Group flat flight rows into onward/return journeys for Pricing display.
+     * Connecting segments of the same journey become one entry.
+     */
+    function pricingGroupFlightsForPricing(flights) {
+        var groups = [];
+        var current = null;
+        (flights || []).forEach(function (f, idx) {
+            var startNew = !!(f && f.journey_start) || !current;
+            if (!startNew && current && current.items.length) {
+                var prev = current.items[current.items.length - 1].flight;
+                var layMins = calcLayoverMinutesBetweenData(prev, f);
+                if (layMins < 0 || layMins > (24 * 60)) {
+                    startNew = true;
+                }
+            }
+            if (startNew) {
+                if (current) {
+                    groups.push(current);
+                }
+                current = { items: [{ flight: f, index: idx }] };
+            } else {
+                current.items.push({ flight: f, index: idx });
+            }
+        });
+        if (current) {
+            groups.push(current);
+        }
+        return groups;
+    }
+
     function pricingJoinDetailSupplier(detail, supplier) {
         detail = String(detail || '').trim();
         supplier = String(supplier || '').trim();
@@ -7096,20 +7205,38 @@
     function pricingSupplierRateEntriesForKey(key, cat) {
         var entries = [];
         if (key === 'flight_train') {
-            collectFlights().forEach(function (f, idx) {
-                var supplier = String((f && f.supplier) || '').trim();
-                var route = pricingFlightRouteLabel(f);
+            var flights = collectFlights();
+            pricingGroupFlightsForPricing(flights).forEach(function (group) {
+                var segs = (group.items || []).map(function (it) { return it.flight; });
+                if (!segs.length) {
+                    return;
+                }
+                var route = pricingCombinedFlightRouteLabel(segs);
+                var supplier = '';
+                var rateTotal = 0;
+                var hasRate = false;
+                group.items.forEach(function (it) {
+                    var f = it.flight;
+                    var segSupplier = String((f && f.supplier) || '').trim();
+                    if (!supplier && segSupplier) {
+                        supplier = segSupplier;
+                    }
+                    var rateNum = parseFloat(f && f.fare);
+                    if (!isNaN(rateNum) && rateNum > 0) {
+                        rateTotal += rateNum;
+                        hasRate = true;
+                    }
+                });
                 var name = pricingJoinDetailSupplier(route, supplier);
-                var rateRaw = f && f.fare;
-                var rateNum = parseFloat(rateRaw);
-                var hasRate = !isNaN(rateNum) && rateNum > 0;
                 if (!hasRate && !name) {
                     return;
                 }
                 entries.push({
+                    detail: route,
+                    supplier: supplier,
                     name: name,
-                    rate: hasRate ? String(Math.round(rateNum)) : '',
-                    sourceIndex: idx
+                    rate: hasRate ? String(Math.round(rateTotal)) : '',
+                    sourceIndex: group.items[0].index
                 });
             });
             return entries;
@@ -7126,6 +7253,8 @@
                     return;
                 }
                 entries.push({
+                    detail: hotelName,
+                    supplier: supplier,
                     name: name,
                     rate: hasRate ? String(Math.round(rateNum)) : '',
                     sourceIndex: idx
@@ -7144,6 +7273,8 @@
                     return;
                 }
                 entries.push({
+                    detail: '',
+                    supplier: name,
                     name: name,
                     rate: hasRate ? String(Math.round(rateNum)) : '',
                     sourceIndex: idx
@@ -7152,7 +7283,14 @@
             if (!entries.length && $('#q_itinerary_supplier').length) {
                 var legacyName = readPricingSupplierNameFromSelect($('#q_itinerary_supplier'));
                 if (legacyName) {
-                    entries.push({ name: legacyName, rate: '', sourceIndex: 0, legacy: true });
+                    entries.push({
+                        detail: '',
+                        supplier: legacyName,
+                        name: legacyName,
+                        rate: '',
+                        sourceIndex: 0,
+                        legacy: true
+                    });
                 }
             }
             return entries;
@@ -7181,31 +7319,54 @@
         return counts;
     }
 
+    function pricingSplitDetailSupplier(combined) {
+        combined = String(combined || '').trim();
+        if (!combined) {
+            return { detail: '', supplier: '' };
+        }
+        var parts = combined.split(/\s*\|\s*/);
+        if (parts.length >= 2) {
+            return {
+                detail: String(parts[0] || '').trim(),
+                supplier: String(parts.slice(1).join(' | ') || '').trim()
+            };
+        }
+        return { detail: '', supplier: combined };
+    }
+
     function pricingAmountCellHtml(opts) {
         opts = opts || {};
         var key = opts.key || '';
         var value = opts.value != null ? opts.value : '';
         var edited = opts.edited ? '1' : '0';
         var synced = opts.synced ? ' q-cost-synced' : '';
-        var supplierName = String(opts.supplierName || '').trim();
         var icon = String(opts.icon || '').trim();
         var partIndex = opts.partIndex != null ? String(opts.partIndex) : '0';
         var sourceIndex = opts.sourceIndex;
         var hasSource = sourceIndex != null && sourceIndex !== '' && !isNaN(parseInt(sourceIndex, 10));
-        var hasSupplier = !!supplierName;
+        var detail = String(opts.detail != null ? opts.detail : '').trim();
+        var supplier = String(opts.supplier != null ? opts.supplier : '').trim();
+        if (!detail && !supplier) {
+            var split = pricingSplitDetailSupplier(opts.supplierName);
+            detail = split.detail;
+            supplier = split.supplier;
+        }
+        var hasLabel = !!(detail || supplier);
         var removable = !!(opts.removable && hasSource);
+        var titleBits = [detail, supplier].filter(Boolean).join(' | ');
         var html = '<div class="q-pricing-amount-cell' +
-            (hasSupplier ? ' has-supplier' : '') +
+            (hasLabel ? ' has-supplier' : '') +
             (icon ? ' has-ico' : '') +
             (removable ? ' has-remove' : '') +
             '" data-cost-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '"' +
             (removable ? ' data-source-index="' + esc(String(sourceIndex)) + '"' : '') + '>';
-        if (icon) {
-            html += '<span class="q-pricing-row-ico" aria-hidden="true"><i class="' + esc(icon) + '"></i></span>';
-        }
-        if (hasSupplier) {
-            html += '<span class="q-pricing-supplier-name" title="' + esc(supplierName) + '">' + esc(supplierName) + '</span>';
-        }
+        html += '<span class="q-pricing-row-ico" aria-hidden="true">' +
+            (icon ? '<i class="' + esc(icon) + '"></i>' : '') +
+            '</span>';
+        html += '<span class="q-pricing-detail-name' + (detail ? '' : ' is-empty') + '" title="' + esc(detail) + '">' +
+            esc(detail || '') + '</span>';
+        html += '<span class="q-pricing-supplier-name' + (supplier ? '' : ' is-empty') + '" title="' + esc(titleBits || supplier) + '">' +
+            esc(supplier || '') + '</span>';
         html += '<div class="q-pricing-amount-input-wrap q-price-field">';
         html += '<span class="q-pricing-inr" aria-hidden="true">₹</span>';
         html += '<input type="number" step="0.01" class="form-control form-control-sm cost-input q-cost' + synced + '" data-key="' + esc(key) + '" data-part-index="' + esc(partIndex) + '" value="' + esc(value) + '" data-user-edited="' + edited + '" placeholder="0">';
@@ -7262,12 +7423,32 @@
         snapshotPricingSheets();
 
         if (key === 'flight_train') {
-            var $fRow = $('#qFlightRows .q-flight-row').eq(sourceIndex);
+            var $fRows = $('#qFlightRows .q-flight-row');
+            var $fRow = $fRows.eq(sourceIndex);
             if (!$fRow.length) {
                 return false;
             }
-            $fRow.find('.f-fare').val('');
-            clearPricingSupplierSelect($fRow.find('.f-supplier'));
+            // Clear fare/supplier for the whole journey (combined Pricing row), not one segment.
+            var $card = $fRow.closest('.q-flight-journey-card');
+            var $clearRows = $card.length ? $card.find('.q-flight-row') : $fRow;
+            if (!$card.length) {
+                // Legacy flat rows: clear from this index until the next journey_start.
+                $clearRows = $();
+                $fRows.each(function (idx) {
+                    if (idx < sourceIndex) {
+                        return;
+                    }
+                    if (idx > sourceIndex && $(this).find('.f-journey-start').val() === '1') {
+                        return false;
+                    }
+                    $clearRows = $clearRows.add(this);
+                });
+            }
+            $clearRows.each(function () {
+                var $r = $(this);
+                $r.find('.f-fare').val('');
+                clearPricingSupplierSelect($r.find('.f-supplier'));
+            });
             clearPricingKeySyncedEdits(key);
             return true;
         }
@@ -7394,6 +7575,8 @@
                     value: pricingPartValueForRender(state, row.key, i, entry.rate, slots),
                     edited: edited,
                     synced: synced,
+                    detail: entry.detail || '',
+                    supplier: entry.supplier || '',
                     supplierName: entry.name || '',
                     icon: row.icon || '',
                     partIndex: i,
@@ -11816,13 +11999,15 @@
             var itineraryHtml = '';
             itinerary.forEach(function (day, di) {
                 var dayTitle = day && day.title ? String(day.title).trim() : '';
-                var dayDesc = day && day.description ? String(day.description).replace(/<[^>]*>/g, '').trim() : '';
-                if (!dayTitle && !dayDesc) {
+                var descHtml = stripDayMetaFromDescription((day && day.description) || '');
+                var dayDesc = String(descHtml || '').replace(/<[^>]*>/g, '').trim();
+                var overnightPreview = String((day && (day.overnight || day.overnight_stay)) || '').trim();
+                var mealPreview = String((day && (day.meal || day.meals || day.meal_plan)) || '').trim();
+                if (!dayTitle && !dayDesc && !overnightPreview && !mealPreview) {
                     return;
                 }
                 var dateLabel = qpItinDateLabel(p.tentative_date, di);
                 var dayImage = qpExtractDayImage(day);
-                var descHtml = day.description || '';
 
                 itineraryHtml += '<div class="q-preview-day qp-day">';
                 itineraryHtml += '<div class="q-preview-day-head qp-day-head">';
