@@ -23,12 +23,17 @@ if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_errno) {
 try {
     crmEnsureQuotationTables($conn);
 
-    $saveMode = ($_POST['save_mode'] ?? 'publish') === 'draft' ? 'draft' : 'publish';
+    $saveModeRaw = strtolower(trim((string) ($_POST['save_mode'] ?? 'publish')));
+    if (!in_array($saveModeRaw, ['draft', 'autosave', 'publish'], true)) {
+        $saveModeRaw = 'publish';
+    }
+    $saveMode = $saveModeRaw;
     $isDraftSave = $saveMode === 'draft';
-    $wizardStep = max(1, min(6, (int) ($_POST['wizard_step'] ?? 1)));
+    $isAutosave = $saveMode === 'autosave';
+    $wizardStep = max(1, min(7, (int) ($_POST['wizard_step'] ?? 1)));
 
     $guestName = trim($_POST['guest_name'] ?? '');
-    if (!$isDraftSave && $guestName === '') {
+    if (!$isDraftSave && !$isAutosave && $guestName === '') {
         quotationJson(false, 'Guest name is required.');
     }
 
@@ -122,7 +127,8 @@ try {
     $leadIdPost = max(0, (int) ($_POST['lead_id'] ?? 0));
     $editFromVersion = max(0, (int) ($_POST['edit_from_version'] ?? 0));
 
-    $newStatus = $isDraftSave ? 'draft' : 'published';
+    // Autosave keeps the existing status (never demotes published → draft, never publishes).
+    $newStatus = ($isDraftSave || $isAutosave) ? 'draft' : 'published';
 
     if ($id > 0) {
         $currentVersionBeforeSave = 1;
@@ -139,12 +145,16 @@ try {
             $verCheck->close();
         }
 
-        if (!$isDraftSave && $editFromVersion > 0 && $editFromVersion >= $currentVersionBeforeSave) {
+        if ($isAutosave) {
+            $newStatus = ($currentStatus === 'draft') ? 'draft' : 'published';
+        }
+
+        if (!$isDraftSave && !$isAutosave && $editFromVersion > 0 && $editFromVersion >= $currentVersionBeforeSave) {
             quotationJson(false, 'Please open the current quotation version to save changes.');
         }
 
         $wasDraft = $currentStatus === 'draft';
-        $shouldArchive = !$isDraftSave && !$wasDraft;
+        $shouldArchive = !$isDraftSave && !$isAutosave && !$wasDraft;
 
         if ($shouldArchive) {
             crmQuotationArchiveCurrentVersion($conn, $id);
@@ -236,6 +246,18 @@ try {
 
         if ($leadIdPost > 0) {
             crmLeadSyncFeatureStageForLead($conn, $leadIdPost);
+        }
+
+        if ($isAutosave) {
+            quotationJson(true, 'Autosaved.', [
+                'id' => $id,
+                'quotation_uid' => $uid,
+                'status' => $newStatus,
+                'wizard_step' => $wizardStep,
+                'version' => $version,
+                'lead_id' => $savedLeadId,
+                'autosave' => 1,
+            ]);
         }
 
         if ($isDraftSave) {
@@ -346,6 +368,17 @@ try {
 
     if ($leadIdPost > 0) {
         crmLeadSyncFeatureStageForLead($conn, $leadIdPost);
+    }
+
+    if ($isAutosave) {
+        quotationJson(true, 'Autosaved.', [
+            'id' => $newId,
+            'quotation_uid' => $uid,
+            'status' => 'draft',
+            'wizard_step' => $wizardStep,
+            'lead_id' => $leadIdPost,
+            'autosave' => 1,
+        ]);
     }
 
     if ($isDraftSave) {

@@ -1089,12 +1089,6 @@ if (empty($leadSourceOptions)) {
                                 <input type="text" class="form-control js-tp-dest-create-name" name="name"
                                     placeholder="Enter destination name" required>
                             </div>
-                            <div class="form-group">
-                                <label>Slug</label>
-                                <input type="text" class="form-control js-tp-dest-create-slug" name="slug"
-                                    placeholder="auto-generated-slug">
-                                <small class="text-muted">Leave empty to auto-generate from name</small>
-                            </div>
                             <div class="form-row">
                                 <div class="form-group col-md-6">
                                     <label>Country</label>
@@ -1618,6 +1612,16 @@ if (empty($leadSourceOptions)) {
             var $tpDestinationInput = $form.find('.js-tp-destination-input');
             var $tpDestinationMenu = $form.find('.js-tp-destination-menu');
             var $destCreateModal = $form.next('.js-tp-dest-create-modal');
+            if (!$destCreateModal.length) {
+                $destCreateModal = jQuery('.js-tp-dest-create-modal').last();
+            }
+            // Keep nested destination modal above Create Lead; avoid duplicates after form reload
+            if ($destCreateModal.length) {
+                jQuery('.js-tp-dest-create-modal').not($destCreateModal).remove();
+                if ($destCreateModal.parent()[0] !== document.body) {
+                    $destCreateModal.appendTo(document.body);
+                }
+            }
             var $destCreateForm = $destCreateModal.find('.js-tp-dest-create-form');
             var destinationSaveUrl = $form.attr('data-destination-save-url') || 'crm/ajax/save_destination.php';
             var leadSaveUrl = $form.attr('data-save-url') || (isIntake ? '' : 'crm/ajax/save_lead.php');
@@ -2089,11 +2093,16 @@ if (empty($leadSourceOptions)) {
                 $destCreateForm.find('.js-tp-dest-create-tour-type').val(tourType);
                 $destCreateForm.find('.js-tp-dest-create-name').val(prefillName || '');
 
-                if (!$destCreateModal.parent().is('body')) {
-                    $destCreateModal.appendTo('body');
+                if ($destCreateModal.parent()[0] !== document.body) {
+                    $destCreateModal.appendTo(document.body);
                 }
 
-                $destCreateModal.modal('show');
+                $destCreateModal.modal({
+                    backdrop: 'static',
+                    keyboard: true,
+                    show: true,
+                    focus: true
+                });
             }
 
             function registerLeadDestination(dest) {
@@ -2978,12 +2987,24 @@ if (empty($leadSourceOptions)) {
                 });
 
                 if ($destCreateModal.length) {
-                    $destCreateModal.off('.leadDestCreate').on('shown.bs.modal.leadDestCreate', function () {
+                    $destCreateModal.off('.leadDestCreate').on('show.bs.modal.leadDestCreate', function () {
+                        // Ensure stacking above Create Lead before backdrop paints
+                        $destCreateModal.css('z-index', 1080);
+                    }).on('shown.bs.modal.leadDestCreate', function () {
+                        var $backdrop = jQuery('.modal-backdrop').last();
+                        $backdrop.addClass('tp-dest-create-backdrop').css('z-index', 1075);
+                        $destCreateModal.css('z-index', 1080);
+                        jQuery('body').addClass('modal-open');
                         initDestCreateSummernote();
                         $destCreateForm.find('.js-tp-dest-create-name').trigger('focus');
                     }).on('hidden.bs.modal.leadDestCreate', function () {
+                        jQuery('.modal-backdrop.tp-dest-create-backdrop').removeClass('tp-dest-create-backdrop');
                         destroyDestCreateSummernote();
                         resetDestCreateForm();
+                        // Keep Create Lead modal usable / scroll-locked
+                        if (jQuery('#leadFormModal').hasClass('show') || $form.closest('.modal.show').length) {
+                            jQuery('body').addClass('modal-open');
+                        }
                     });
 
                     $destCreateForm.off('.leadDestCreate').on('submit.leadDestCreate', function (e) {

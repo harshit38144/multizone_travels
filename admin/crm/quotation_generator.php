@@ -374,6 +374,27 @@ $qWizardSteps = [
             margin-left: auto;
         }
 
+        .crm-quotation-gen .btn-q-upload-doc {
+            background: #fff;
+            border: 1px solid #e11d2e;
+            color: #e11d2e;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.35rem 0.95rem;
+        }
+
+        .crm-quotation-gen .btn-q-upload-doc:hover,
+        .crm-quotation-gen .btn-q-upload-doc:focus {
+            background: #fff1f2;
+            border-color: #be123c;
+            color: #be123c;
+        }
+
+        .crm-quotation-gen .btn-q-upload-doc:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
         .crm-quotation-gen .btn-q-send-mail {
             background: #16a34a;
             border-color: #16a34a;
@@ -387,6 +408,62 @@ $qWizardSteps = [
             background: #15803d;
             border-color: #15803d;
             color: #fff;
+        }
+
+        #qDocUploadModal .q-doc-upload-drop {
+            border: 1.5px dashed #fecaca;
+            border-radius: 12px;
+            background: #fff8f8;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        #qDocUploadModal .q-doc-upload-drop.is-drag {
+            border-color: #e11d2e;
+            background: #fff1f2;
+        }
+
+        #qDocUploadModal .q-doc-upload-progress {
+            display: none;
+            margin-top: 0.85rem;
+        }
+
+        #qDocUploadModal .q-doc-upload-progress.is-on {
+            display: block;
+        }
+
+        #qDocUploadModal .q-doc-section-check {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem 1rem;
+            margin-bottom: 0.85rem;
+        }
+
+        #qDocUploadModal .q-doc-day-card,
+        #qDocUploadModal .q-doc-list-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.75rem;
+            margin-bottom: 0.65rem;
+            background: #fff;
+        }
+
+        #qDocUploadModal .q-doc-day-card .form-control,
+        #qDocUploadModal .q-doc-list-item .form-control {
+            font-size: 0.85rem;
+        }
+
+        #qDocUploadModal .nav-tabs .nav-link {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        #qDocUploadModal .q-doc-empty {
+            color: #64748b;
+            font-size: 0.88rem;
+            padding: 0.75rem 0;
         }
 
         .q-supplier-mail-modal {
@@ -4257,109 +4334,26 @@ $qWizardSteps = [
             box-shadow: none;
             display: flex;
             flex-direction: column;
-            gap: 0.15rem;
+            gap: 0;
         }
 
-        .crm-quotation-gen .q-flight-journey-head {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 0.35rem 0.75rem;
-            margin-bottom: 0;
-            padding: 0.55rem 0.75rem;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-        }
-
+        /* Journey type kept in DOM for pricing; not shown as a summary row. */
         .crm-quotation-gen .q-flight-journey-type-wrap {
-            flex: 0 0 auto;
-        }
-
-        .crm-quotation-gen .q-flight-journey-type.is-fixed {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.2rem 0.55rem;
-            border-radius: 999px;
-            background: #ecfdf5;
-            border: 1px solid #a7f3d0;
-            color: #047857;
-            font-size: 0.72rem;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-            text-transform: uppercase;
-            line-height: 1.2;
-        }
-
-        .crm-quotation-gen .q-flight-journey-type.is-fixed i {
-            font-size: 0.68rem;
-        }
-
-        .crm-quotation-gen .q-flight-journey-type.is-select {
-            margin: 0;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .crm-quotation-gen .q-flight-journey-type.is-select .f-journey-type {
-            height: 28px;
-            min-width: 96px;
-            padding: 0.15rem 0.45rem;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #1e3a8a;
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 8px;
-            line-height: 1.2;
-        }
-
-        .crm-quotation-gen .q-flight-journey-route {
-            font-size: 0.84rem;
-            font-weight: 700;
-            color: #0f172a;
-            min-width: 0;
-        }
-
-        .crm-quotation-gen .q-flight-journey-meta {
-            font-size: 0.76rem;
-            color: #64748b;
-            font-weight: 600;
-        }
-
-        .crm-quotation-gen .q-flight-journey-fare {
-            margin-left: auto;
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: #e11d2e;
-        }
-
-        .crm-quotation-gen .q-flight-journey-delete {
-            width: 22px;
-            height: 22px;
-            border: 1px solid #fecaca;
-            border-radius: 10px;
-            background: #fff;
-            color: #dc2626;
+            position: absolute;
+            width: 1px;
+            height: 1px;
             padding: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            margin-left: 0.35rem;
-        }
-
-        .crm-quotation-gen .q-flight-journey-delete:hover {
-            background: #fef2f2;
-            border-color: #f87171;
-            color: #b91c1c;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         .crm-quotation-gen .q-flight-journey-body {
             display: flex;
             flex-direction: column;
-            gap: 0.1rem;
+            gap: 0.55rem;
         }
 
         .crm-quotation-gen .q-flight-journey-body .q-flight-segment-card {
@@ -4417,14 +4411,18 @@ $qWizardSteps = [
             width: 100%;
         }
 
-        .crm-quotation-gen .q-ft-col-swap,
-        .crm-quotation-gen .q-ft-col-action {
+        .crm-quotation-gen .q-ft-col-swap {
             align-items: center;
             justify-content: center;
         }
 
         .crm-quotation-gen .q-ft-col-action {
+            display: inline-flex;
+            flex-direction: row;
+            align-items: center;
             justify-content: flex-end;
+            gap: 0.35rem;
+            width: 100%;
         }
 
         .crm-quotation-gen .q-ft-label {
@@ -4651,13 +4649,19 @@ $qWizardSteps = [
         }
         .crm-quotation-gen .select2-container--open .q-supplier-s2-selection.q-supplier-searching {
             position: relative !important;
+            overflow: hidden !important;
         }
         .crm-quotation-gen .select2-container--open .q-supplier-s2-selection .select2-selection__rendered.q-supplier-search-host {
             color: transparent !important;
+            -webkit-text-fill-color: transparent !important;
             text-shadow: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
         .crm-quotation-gen .select2-container--open .q-supplier-s2-selection .select2-selection__rendered.q-supplier-search-host .select2-selection__placeholder {
             color: transparent !important;
+            -webkit-text-fill-color: transparent !important;
+            opacity: 0 !important;
         }
         .crm-quotation-gen .q-supplier-inline-search-field.select2-search__field {
             position: absolute !important;
@@ -4666,21 +4670,24 @@ $qWizardSteps = [
             right: 24px !important;
             bottom: 0 !important;
             width: auto !important;
+            max-width: none !important;
             height: 100% !important;
+            min-height: 0 !important;
             margin: 0 !important;
             border: 0 !important;
             border-radius: 10px !important;
             padding: 0 0.55rem !important;
-            background: transparent !important;
+            background: #fff !important;
             box-shadow: none !important;
             outline: none !important;
             font-size: 0.8rem !important;
             line-height: 1.25 !important;
             color: #0f172a !important;
-            z-index: 2;
+            z-index: 5 !important;
+            box-sizing: border-box !important;
         }
         .crm-quotation-gen .select2-container--open .q-supplier-s2-selection .select2-selection__arrow {
-            z-index: 3;
+            z-index: 6;
         }
         .q-supplier-s2-dropdown .select2-results__option {
             font-size: 0.82rem;
@@ -4801,23 +4808,42 @@ $qWizardSteps = [
             border-color: #fecaca;
         }
 
+        .crm-quotation-gen .q-flight-row-more,
         .crm-quotation-gen .q-flight-remove {
             width: 30px;
             height: 30px;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            background: #fff;
-            color: #dc2626;
             padding: 0;
+            border-radius: 10px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            line-height: 1;
+            font-size: 0.72rem;
             margin-bottom: 0;
+            flex-shrink: 0;
+        }
+
+        .crm-quotation-gen .q-flight-row-more {
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #64748b;
+        }
+
+        .crm-quotation-gen .q-flight-row-more:hover {
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        .crm-quotation-gen .q-flight-remove {
+            border: 1px solid #fecaca;
+            background: #fff;
+            color: #e11d2e;
         }
 
         .crm-quotation-gen .q-flight-remove:hover {
             background: #fef2f2;
             border-color: #fecaca;
+            color: #be123c;
         }
 
         .crm-quotation-gen .q-flight-layover {
@@ -5884,6 +5910,41 @@ $qWizardSteps = [
             padding: 0 1.85rem 0 0.55rem !important;
             color: #0f172a !important;
             font-size: 0.8rem !important;
+        }
+
+        /* While searching, hide selected label so it does not stack under typed text. */
+        #qWizardSection3 .q-hotel-field-supplier .select2-container--open .q-supplier-s2-selection.q-supplier-searching .select2-selection__rendered.q-supplier-search-host,
+        #qWizardSection3 .q-hotel-field-supplier .select2-container--open .select2-selection--single .select2-selection__rendered.q-supplier-search-host {
+            color: transparent !important;
+            -webkit-text-fill-color: transparent !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        #qWizardSection3 .q-hotel-field-supplier .select2-container--open .q-supplier-s2-selection.q-supplier-searching {
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        #qWizardSection3 .q-hotel-field-supplier .q-supplier-inline-search-field.select2-search__field {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            right: 24px !important;
+            bottom: 0 !important;
+            height: 100% !important;
+            background: #fff !important;
+            z-index: 5 !important;
+            font-size: 0.8rem !important;
+            color: #0f172a !important;
+        }
+
+        #qWizardSection3 .q-hotel-row:has(.select2-container--open) {
+            z-index: 60;
+        }
+
+        #qWizardSection3 .q-hotel-field-supplier .select2-container--open {
+            z-index: 70;
         }
 
         #qWizardSection3 .q-hotel-field-supplier .select2-container--default .select2-selection--single .select2-selection__arrow {
@@ -9516,6 +9577,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-pricing-supplier-name {
             min-width: 0;
             max-width: 100%;
+            width: 100%;
             font-size: 0.78rem;
             font-weight: 600;
             color: #1f2937;
@@ -9523,7 +9585,33 @@ $qWizardSteps = [
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            padding: 0;
+            padding: 0.15rem 0.2rem;
+            margin: 0;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            background: transparent;
+            box-shadow: none;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .crm-quotation-gen input.q-pricing-detail-name,
+        .crm-quotation-gen input.q-pricing-supplier-name {
+            cursor: text;
+        }
+
+        .crm-quotation-gen input.q-pricing-detail-name:hover,
+        .crm-quotation-gen input.q-pricing-supplier-name:hover {
+            background: #f8fafc;
+            border-color: #e5e7eb;
+        }
+
+        .crm-quotation-gen input.q-pricing-detail-name:focus,
+        .crm-quotation-gen input.q-pricing-supplier-name:focus {
+            background: #fff;
+            border-color: #fda4af;
+            box-shadow: 0 0 0 2px rgba(196, 18, 26, 0.08);
         }
 
         .crm-quotation-gen .q-pricing-detail-name {
@@ -9538,7 +9626,14 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-detail-name.is-empty,
         .crm-quotation-gen .q-pricing-supplier-name.is-empty {
-            visibility: hidden;
+            opacity: 0.55;
+        }
+
+        .crm-quotation-gen .q-pricing-detail-name.is-empty:focus,
+        .crm-quotation-gen .q-pricing-supplier-name.is-empty:focus,
+        .crm-quotation-gen .q-pricing-detail-name.is-empty:hover,
+        .crm-quotation-gen .q-pricing-supplier-name.is-empty:hover {
+            opacity: 1;
         }
 
         .crm-quotation-gen .q-pricing-amount-input-wrap {
@@ -11019,6 +11114,57 @@ $qWizardSteps = [
             font-size: 0.85rem;
             padding: 0.65rem 0.9rem;
             margin-bottom: 0.85rem;
+        }
+
+        .crm-quotation-gen .q-autosave-bar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin: 0 0 0.65rem;
+            min-height: 1.5rem;
+        }
+
+        .crm-quotation-gen .q-autosave-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.28rem 0.7rem;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 0.75rem;
+            font-weight: 600;
+            line-height: 1.2;
+            transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .crm-quotation-gen .q-autosave-status i {
+            font-size: 0.72rem;
+        }
+
+        .crm-quotation-gen .q-autosave-status.is-pending,
+        .crm-quotation-gen .q-autosave-status.is-saving {
+            border-color: #bfdbfe;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .crm-quotation-gen .q-autosave-status.is-saved {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+            color: #15803d;
+        }
+
+        .crm-quotation-gen .q-autosave-status.is-failed {
+            border-color: #fecaca;
+            background: #fef2f2;
+            color: #b91c1c;
+            cursor: pointer;
+        }
+
+        .crm-quotation-gen .q-autosave-status.is-failed:hover {
+            background: #fee2e2;
         }
 
         .crm-quotation-gen .q-wizard-nav #qWizardNext {
@@ -16378,10 +16524,15 @@ $qWizardSteps = [
         [data-theme="dark"] .crm-quotation-gen .q-flight-add-segment,
         [data-theme="dark"] .crm-quotation-gen .q-flight-btn-outline,
         [data-theme="dark"] .crm-quotation-gen .q-flight-swap,
+        [data-theme="dark"] .crm-quotation-gen .q-flight-row-more,
         [data-theme="dark"] .crm-quotation-gen .q-flight-remove {
             background: var(--mz-theme-bg-elevated, #2a2e38) !important;
             border-color: var(--q-border) !important;
             color: var(--q-text) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-remove {
+            color: #f87171 !important;
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-flight-btn-dark,
@@ -16425,23 +16576,8 @@ $qWizardSteps = [
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-flight-journey-card {
-            background: var(--mz-theme-bg-muted, #323744) !important;
-            border-color: var(--q-border) !important;
-        }
-
-        [data-theme="dark"] .crm-quotation-gen .q-flight-journey-head {
-            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
-            border-color: var(--q-border) !important;
-        }
-
-        [data-theme="dark"] .crm-quotation-gen .q-flight-journey-route {
-            color: var(--q-text) !important;
-        }
-
-        [data-theme="dark"] .crm-quotation-gen .q-flight-journey-delete {
-            background: var(--mz-theme-bg-elevated, #2a2e38) !important;
-            border-color: rgba(248, 113, 113, 0.35) !important;
-            color: #fca5a5 !important;
+            background: transparent !important;
+            border: 0 !important;
         }
 
         /* Hotel / repeat rows */
@@ -17108,6 +17244,10 @@ $qWizardSteps = [
                                     <i class="fas fa-bars" aria-hidden="true"></i>
                                 </button>
                             <?php } ?>
+                            <button type="button" class="btn btn-sm btn-q-upload-doc" id="qUploadDocBtn" title="Upload itinerary, hotel quote, or package document">
+                                <i class="fas fa-file-upload mr-1"></i> Upload Document
+                            </button>
+                            <input type="file" id="qUploadDocFile" class="d-none" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,image/jpeg,image/png,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                             <button type="button" class="btn btn-sm btn-q-send-mail" id="qSendMailBtn">
                                 <i class="fas fa-envelope mr-1"></i> Send Mail
                             </button>
@@ -17266,11 +17406,20 @@ $qWizardSteps = [
                         </div>
                     <?php } ?>
 
-                    <form id="quotationForm" autocomplete="off" onsubmit="return false;" data-save-url="crm/ajax/save_quotation.php" data-show-draft="<?= $showSaveDraft ? '1' : '0' ?>">
+                    <form id="quotationForm" autocomplete="off" onsubmit="return false;" data-save-url="crm/ajax/save_quotation.php" data-show-draft="<?= $showSaveDraft ? '1' : '0' ?>" data-autosave="<?= (!$isArchivedView && !$qPreviewOnly) ? '1' : '0' ?>" data-quotation-status="<?= htmlspecialchars((string) ($quotation['status'] ?? ($prefill['status'] ?? '')), ENT_QUOTES, 'UTF-8') ?>">
                         <input type="hidden" name="id" id="q_id" value="<?= $quotation ? (int) ($quotation['id'] ?? $editId) : '' ?>">
                         <input type="hidden" name="lead_id" id="q_lead_id" value="<?= (int) ($prefill['lead_id'] ?? ($quotation['lead_id'] ?? 0)) ?>">
                         <?php if ($isArchivedView && $viewVersion > 0) { ?>
                             <input type="hidden" name="edit_from_version" id="q_edit_from_version" value="<?= (int) $viewVersion ?>">
+                        <?php } ?>
+
+                        <?php if (!$isArchivedView && !$qPreviewOnly) { ?>
+                        <div class="q-autosave-bar" id="qAutoSaveBar" aria-live="polite">
+                            <span class="q-autosave-status is-idle" id="qAutoSaveStatus">
+                                <i class="fas fa-cloud" aria-hidden="true"></i>
+                                <span class="q-autosave-text">Ready to autosave</span>
+                            </span>
+                        </div>
                         <?php } ?>
 
                         <div class="q-wizard is-scroll-mode" id="qWizard">
@@ -18278,6 +18427,95 @@ $qWizardSteps = [
         </div>
     </div>
 
+    <div class="modal fade" id="qDocUploadModal" tabindex="-1" role="dialog" aria-labelledby="qDocUploadModalLabel" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title mb-0" id="qDocUploadModalLabel"><i class="fas fa-file-upload mr-2"></i>Upload Document</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div id="qDocUploadStepPick">
+                        <p class="text-muted small mb-3">Upload a travel itinerary, hotel quotation, package PDF, Word document, or image. AI will extract itinerary, hotels, inclusions, and exclusions for your review.</p>
+                        <div class="q-doc-upload-drop" id="qDocUploadDrop" tabindex="0" role="button" aria-label="Choose or drop a document">
+                            <div class="mb-2 text-danger"><i class="fas fa-cloud-upload-alt fa-2x"></i></div>
+                            <div class="font-weight-bold text-dark mb-1">Drop file here or click to browse</div>
+                            <div class="text-muted small">JPG, PNG, PDF, DOC, DOCX · max 50 MB</div>
+                        </div>
+                        <div class="q-doc-upload-progress" id="qDocUploadProgress">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="small text-muted" id="qDocUploadProgressLabel">Uploading…</span>
+                                <span class="small font-weight-bold" id="qDocUploadProgressPct">0%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-danger" id="qDocUploadProgressBar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger d-none mt-3 mb-0" id="qDocUploadError"></div>
+                    </div>
+                    <div id="qDocUploadStepReview" class="d-none">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
+                            <p class="text-muted small mb-0" id="qDocUploadReviewHint">Review extracted details. Empty fields were left blank on purpose. Existing quotation data is kept unless a field is empty.</p>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="qDocUploadAgain"><i class="fas fa-redo mr-1"></i>Upload another</button>
+                        </div>
+                        <div class="q-doc-section-check">
+                            <label class="mb-0"><input type="checkbox" class="mr-1" id="qDocApplyItinerary" checked> Itinerary</label>
+                            <label class="mb-0"><input type="checkbox" class="mr-1" id="qDocApplyHotels" checked> Hotels</label>
+                            <label class="mb-0"><input type="checkbox" class="mr-1" id="qDocApplyInclusions" checked> Inclusions</label>
+                            <label class="mb-0"><input type="checkbox" class="mr-1" id="qDocApplyExclusions" checked> Exclusions</label>
+                        </div>
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#qDocTabItinerary" role="tab">Itinerary <span class="badge badge-light" id="qDocCountItinerary">0</span></a></li>
+                            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#qDocTabHotels" role="tab">Hotels <span class="badge badge-light" id="qDocCountHotels">0</span></a></li>
+                            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#qDocTabInclusions" role="tab">Inclusions <span class="badge badge-light" id="qDocCountInclusions">0</span></a></li>
+                            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#qDocTabExclusions" role="tab">Exclusions <span class="badge badge-light" id="qDocCountExclusions">0</span></a></li>
+                        </ul>
+                        <div class="tab-content pt-3">
+                            <div class="tab-pane fade show active" id="qDocTabItinerary" role="tabpanel">
+                                <div id="qDocItineraryList"></div>
+                            </div>
+                            <div class="tab-pane fade" id="qDocTabHotels" role="tabpanel">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0" id="qDocHotelTable">
+                                        <thead>
+                                            <tr>
+                                                <th>City</th>
+                                                <th>Hotel</th>
+                                                <th>Room</th>
+                                                <th>Rooms</th>
+                                                <th>Meal</th>
+                                                <th>Nights</th>
+                                                <th>Check-in</th>
+                                                <th>Check-out</th>
+                                                <th>Rate</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                                <div class="q-doc-empty d-none" id="qDocHotelsEmpty">No hotel rows were found in this document.</div>
+                            </div>
+                            <div class="tab-pane fade" id="qDocTabInclusions" role="tabpanel">
+                                <div id="qDocInclusionsList"></div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="qDocAddInclusion"><i class="fas fa-plus mr-1"></i>Add line</button>
+                            </div>
+                            <div class="tab-pane fade" id="qDocTabExclusions" role="tabpanel">
+                                <div id="qDocExclusionsList"></div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="qDocAddExclusion"><i class="fas fa-plus mr-1"></i>Add line</button>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger d-none mt-3 mb-0" id="qDocApplyError"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger d-none" id="qDocUploadApply"><i class="fas fa-check mr-1"></i>Apply to Quotation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="qHotelOcrModal" tabindex="-1" role="dialog" aria-labelledby="qHotelOcrModalLabel" aria-hidden="true" data-backdrop="static">
         <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
             <div class="modal-content">
@@ -18514,7 +18752,7 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=360"></script>
+    <script src="crm/assets/quotation_generator.js?v=374"></script>
     <script src="crm/assets/quotation_flight_search.js?v=36"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=3"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

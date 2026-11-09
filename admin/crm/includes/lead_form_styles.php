@@ -1280,8 +1280,26 @@ if (!defined('CRM_LEAD_JQUERY_UI_CSS')) {
     z-index: 1065 !important;
 }
 
+/* Nested above Create Lead (1050) and its backdrop; keep form interactive */
 .tp-dest-create-modal {
-    z-index: 1060 !important;
+    z-index: 1080 !important;
+    pointer-events: auto !important;
+}
+.modal-backdrop.tp-dest-create-backdrop {
+    z-index: 1075 !important;
+}
+body.modal-open .tp-dest-create-modal.show {
+    overflow-x: hidden;
+    overflow-y: auto;
+    pointer-events: auto !important;
+}
+.tp-dest-create-modal .modal-dialog,
+.tp-dest-create-modal .modal-content {
+    pointer-events: auto !important;
+}
+.tp-dest-create-modal .note-popover,
+.tp-dest-create-modal .note-dropdown-menu {
+    z-index: 1090 !important;
 }
 .tp-dest-create-modal .tp-dest-create-hd {
     background: linear-gradient(135deg, #6a11cb 0%, #7b5ea7 50%, #a855f7 100%);
