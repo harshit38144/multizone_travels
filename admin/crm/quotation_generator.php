@@ -11567,6 +11567,24 @@ $qWizardSteps = [
             opacity: 0.75;
         }
 
+        #qPreviewModal .qp-btn-download {
+            background: #0f766e;
+            border-color: #0f766e;
+            color: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+
+        #qPreviewModal .qp-btn-download:hover {
+            background: #0d9488;
+            border-color: #0d9488;
+            color: #fff;
+        }
+
+        #qPreviewModal .qp-btn-download:disabled {
+            opacity: 0.75;
+        }
+
         #qPreviewModal .qp-btn-print {
             background: transparent;
             border: 1px solid #c5c5c8;
@@ -13182,6 +13200,25 @@ $qWizardSteps = [
             --qp-itin-muted: #6b7280;
             --qp-itin-line: #e5e7eb;
             font-family: inherit;
+        }
+
+        .qp-sec-tour-end {
+            margin: 0.35rem 0 1rem;
+            text-align: center;
+        }
+        .qp-tour-end-banner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.7rem 1rem;
+        }
+        .qp-tour-end-text {
+            font-size: 0.92rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #b91c1c;
+            line-height: 1.35;
         }
 
         .q-preview-day,
@@ -18682,6 +18719,9 @@ $qWizardSteps = [
                     <button type="button" class="btn qp-btn-save btn-sm" id="qSaveBtn">
                         <i class="fas fa-save mr-1"></i>Save Quotation
                     </button>
+                    <button type="button" class="btn qp-btn-download btn-sm" id="qPreviewDownloadBtn">
+                        <i class="fas fa-download mr-1"></i> Download
+                    </button>
                     <button type="button" class="btn qp-btn-print btn-sm" id="qPreviewPrintBtn">
                         <i class="fas fa-print mr-1"></i> Print
                     </button>
@@ -18752,7 +18792,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=374"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="crm/assets/quotation_generator.js?v=377"></script>
     <script src="crm/assets/quotation_flight_search.js?v=36"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=3"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

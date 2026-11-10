@@ -144,6 +144,22 @@
             window.alert('Could not print preview. Please try again.');
         });
 
+        $('#leadQPreviewDownloadBtn').on('click', function (e) {
+            e.preventDefault();
+            var frame = document.getElementById('leadQPreviewFrame');
+            try {
+                if (frame && frame.contentWindow && typeof frame.contentWindow.qDownloadPreviewPdf === 'function') {
+                    frame.contentWindow.qDownloadPreviewPdf();
+                    return;
+                }
+                if (frame && frame.contentWindow) {
+                    frame.contentWindow.postMessage({ type: 'mz-quotation-preview-download' }, '*');
+                    return;
+                }
+            } catch (err) { /* ignore */ }
+            window.alert('Could not download preview. Please try again.');
+        });
+
         $('#leadQuotationPreviewModal').on('hide.bs.modal', function (e) {
             if (!leadQPreviewDirty) {
                 return;

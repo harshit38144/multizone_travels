@@ -198,11 +198,31 @@
                                                         <?php } ?>
                                                     </select>
                                                 </td>
-                                                <td class="col-ld-booking js-booking-status"<?= ((int) ($lead['latest_quotation_id'] ?? 0) > 0) ? ' data-id="' . (int) $lead['latest_quotation_id'] . '"' : '' ?>>
-                                                    <?= $lead['booking_status_html'] ?? '<span class="ld-book-status-empty">—</span>' ?>
-                                                </td>
                                                 <td class="col-actions">
                                                     <div class="action-btns">
+                                                        <?php
+                                                            $waName = trim((string) ($lead['customer_display_name'] ?? $lead['customer_name'] ?? ''));
+                                                            $waPhone = trim((string) ($lead['customer_phone'] ?? ''));
+                                                            $waLetters = trim((string) ($lead['customer_name_letters'] ?? ''));
+                                                            if ($waLetters === '' && $waName !== '') {
+                                                                $lettersOnly = preg_replace('/[^A-Za-z]/', '', $waName);
+                                                                $waLetters = strtoupper(substr((string) $lettersOnly, 0, 2));
+                                                            }
+                                                            $waDest = trim((string) ($lead['travel_dest_display'] ?? $lead['travel_destination_text'] ?? ''));
+                                                            $waUid = trim((string) ($lead['lead_uid'] ?? ''));
+                                                        ?>
+                                                        <button type="button"
+                                                            class="btn-icon btn-whatsapp js-lead-wa-chat"
+                                                            data-lead-id="<?= (int) $lead['id'] ?>"
+                                                            data-lead-name="<?= htmlspecialchars($waName, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-lead-phone="<?= htmlspecialchars($waPhone, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-lead-letters="<?= htmlspecialchars($waLetters, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-lead-dest="<?= htmlspecialchars($waDest, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-lead-uid="<?= htmlspecialchars($waUid, ENT_QUOTES, 'UTF-8') ?>"
+                                                            title="WhatsApp chat"
+                                                            aria-label="Open WhatsApp chat">
+                                                            <i class="fab fa-whatsapp"></i>
+                                                        </button>
                                                         <?php
                                                             $latestQuotationHref = trim((string) ($lead['latest_quotation_href'] ?? ''));
                                                             $latestQuotationId = (int) ($lead['latest_quotation_id'] ?? 0);

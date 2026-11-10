@@ -92,7 +92,6 @@ function crmLeadsDefaultColumnVisibility(): array
         'source' => true,
         'assign' => true,
         'stage' => true,
-        'booking' => true,
         'actions' => true,
     ];
 }

@@ -35,11 +35,33 @@
     })
   }
 
-  /** On page load only — expand parents of the current page link. */
+  /** On page load only — expand parents of the current page link; close others. */
   function openActiveMenuAncestors () {
-    $('.nav-sidebar .nav-link.active').each(function () {
-      $(this).parents('.nav-item.has-treeview').addClass('menu-open')
+    var $activeLeaves = $('.nav-sidebar .nav-link.active').filter(function () {
+      return !$(this).parent('li').hasClass('has-treeview')
     })
+    var $keepOpen = $()
+    $activeLeaves.each(function () {
+      $keepOpen = $keepOpen.add($(this).parents('.nav-item.has-treeview'))
+    })
+
+    $(SIDEBAR_SELECTOR).find('.nav-item.has-treeview').each(function () {
+      var $li = $(this)
+      var shouldOpen = $keepOpen.filter(this).length > 0
+      $li.toggleClass('menu-open', shouldOpen)
+      var panel = $li.children('.nav-treeview').get(0)
+      if (!panel) return
+      if (shouldOpen) {
+        panel.style.display = 'block'
+        panel.style.height = 'auto'
+        panel.style.overflow = 'visible'
+      } else {
+        panel.style.display = 'none'
+        panel.style.removeProperty('height')
+        panel.style.removeProperty('overflow')
+      }
+    })
+
     fixOpenTreeviewLayout()
   }
 

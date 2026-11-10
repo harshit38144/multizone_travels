@@ -40,7 +40,7 @@ if ($adminFooterPage === 'dashboard.php') :
 <!-- Theme force (after page styles) so dark mode wins over hardcoded light CSS -->
 <link rel="stylesheet" href="custom/theme-force.css">
 <!-- Custom JS -->
-<script src="custom/custom-js.js?v=2"></script>
+<script src="custom/custom-js.js?v=3"></script>
 <script src="custom/theme.js"></script>
 <?php
 if (!function_exists('mz_is_tab_shell')) {
@@ -49,9 +49,9 @@ if (!function_exists('mz_is_tab_shell')) {
 if (mz_is_tab_shell()) :
 ?>
 <link rel="stylesheet" href="custom/tabs.css">
-<script src="custom/tabs.js?v=6"></script>
+<script src="custom/tabs.js?v=7"></script>
 <?php elseif (!mz_is_embed_request()) : ?>
-<script src="custom/tabs.js?v=6"></script>
+<script src="custom/tabs.js?v=7"></script>
 <?php endif; ?>
 
 <!-- DataTables -->

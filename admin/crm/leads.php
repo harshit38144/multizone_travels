@@ -2529,6 +2529,18 @@ foreach ($destinationLookup as $destId => $destName) {
             border-color: #a10e15;
             color: #fff;
         }
+        #leadQuotationPreviewModal .qp-btn-download {
+            background: #0f766e;
+            border-color: #0f766e;
+            color: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+        #leadQuotationPreviewModal .qp-btn-download:hover {
+            background: #0d9488;
+            border-color: #0d9488;
+            color: #fff;
+        }
         #leadQuotationPreviewModal .qp-btn-print {
             background: transparent;
             border: 1px solid #c5c5c8;
@@ -2541,6 +2553,278 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #333;
             border-color: #b0b0b3;
         }
+
+        .crm-leads-ui .action-btns .btn-whatsapp {
+            background: #e8f8ef;
+            border-color: #b7ebc9;
+            color: #128c7e !important;
+        }
+        .crm-leads-ui .action-btns .btn-whatsapp:hover {
+            background: #d1f0de;
+            color: #075e54 !important;
+            border-color: #9ad9b3;
+            box-shadow: 0 1px 3px rgba(18, 140, 126, 0.2);
+        }
+        .crm-leads-ui .action-btns .btn-whatsapp .fab {
+            font-size: 1rem;
+        }
+
+        /* WhatsApp Web-style chat popup */
+        #waChatModal .modal-dialog {
+            max-width: 920px;
+            margin: 1.25rem auto;
+        }
+        #waChatModal .modal-content {
+            border: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.28);
+            height: min(86vh, 720px);
+        }
+        #waChatModal .wa-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #efeae2;
+        }
+        #waChatModal .wa-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0.9rem;
+            background: #075e54;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        #waChatModal .wa-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #128c7e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+            flex-shrink: 0;
+        }
+        #waChatModal .wa-head-meta { min-width: 0; flex: 1; }
+        #waChatModal .wa-head-name {
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #waChatModal .wa-head-sub {
+            font-size: 0.78rem;
+            opacity: 0.88;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #waChatModal .wa-head-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        #waChatModal .wa-icon-btn {
+            width: 36px;
+            height: 36px;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        #waChatModal .wa-icon-btn:hover { background: rgba(255, 255, 255, 0.12); }
+        #waChatModal .wa-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 1.1rem 0.75rem;
+            background-color: #e5ddd5;
+            background-image:
+                linear-gradient(rgba(229, 221, 213,.92), rgba(229, 221, 213,.92)),
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4ccc4' fill-opacity='0.45'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        #waChatModal .wa-day-sep { text-align: center; margin: 0.65rem 0; }
+        #waChatModal .wa-day-sep span {
+            display: inline-block;
+            background: #e1f2fb;
+            color: #54656f;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.28rem 0.7rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 1px rgba(0,0,0,.06);
+        }
+        #waChatModal .wa-empty {
+            text-align: center;
+            color: #667781;
+            font-size: 0.88rem;
+            padding: 2.5rem 1rem;
+        }
+        #waChatModal .wa-bubble-row { display: flex; margin-bottom: 0.35rem; }
+        #waChatModal .wa-bubble-row.is-out { justify-content: flex-end; }
+        #waChatModal .wa-bubble-row.is-in { justify-content: flex-start; }
+        #waChatModal .wa-bubble {
+            max-width: min(72%, 420px);
+            padding: 0.4rem 0.55rem 0.3rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 0.5px rgba(0,0,0,.13);
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        #waChatModal .wa-bubble-row.is-out .wa-bubble {
+            background: #d9fdd3;
+            border-top-right-radius: 0;
+        }
+        #waChatModal .wa-bubble-row.is-in .wa-bubble {
+            background: #fff;
+            border-top-left-radius: 0;
+        }
+        #waChatModal .wa-bubble.is-failed { background: #ffe8e6; }
+        #waChatModal .wa-bubble-text {
+            font-size: 0.9rem;
+            color: #111b21;
+            line-height: 1.4;
+        }
+        #waChatModal .wa-bubble-meta {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.28rem;
+            margin-top: 0.15rem;
+            font-size: 0.68rem;
+            color: #667781;
+        }
+        #waChatModal .wa-bubble-meta .is-err { color: #c62828; }
+        #waChatModal .wa-composer {
+            flex-shrink: 0;
+            background: #f0f2f5;
+            padding: 0.55rem 0.65rem;
+            border-top: 1px solid #d1d7db;
+        }
+        #waChatModal .wa-attach-chip {
+            display: none;
+            align-items: center;
+            gap: 0.45rem;
+            background: #fff;
+            border: 1px solid #d1d7db;
+            border-radius: 8px;
+            padding: 0.35rem 0.55rem;
+            margin-bottom: 0.45rem;
+            font-size: 0.8rem;
+            color: #3b4a54;
+        }
+        #waChatModal .wa-attach-chip.is-on { display: flex; }
+        #waChatModal .wa-attach-chip button {
+            border: 0;
+            background: transparent;
+            color: #8696a0;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        #waChatModal .wa-compose-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.4rem;
+        }
+        #waChatModal .wa-compose-tools {
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+            padding-bottom: 0.2rem;
+        }
+        #waChatModal .wa-tool-btn {
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            color: #54656f;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.15rem;
+        }
+        #waChatModal .wa-tool-btn:hover {
+            background: rgba(0,0,0,.05);
+            color: #111b21;
+        }
+        #waChatModal .wa-input-wrap {
+            flex: 1;
+            background: #fff;
+            border-radius: 24px;
+            padding: 0.45rem 0.9rem;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+        }
+        #waChatModal #waChatInput {
+            width: 100%;
+            border: 0;
+            outline: none;
+            resize: none;
+            max-height: 120px;
+            font-size: 0.92rem;
+            line-height: 1.35;
+            background: transparent;
+            color: #111b21;
+        }
+        #waChatModal .wa-send-btn {
+            width: 44px;
+            height: 44px;
+            border: 0;
+            border-radius: 50%;
+            background: #00a884;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        #waChatModal .wa-send-btn:disabled { opacity: .55; cursor: not-allowed; }
+        #waChatModal .wa-send-btn:not(:disabled):hover { background: #029a78; }
+        #waChatModal .wa-emoji-panel {
+            display: none;
+            background: #fff;
+            border: 1px solid #d1d7db;
+            border-radius: 10px;
+            padding: 0.45rem;
+            margin-bottom: 0.45rem;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+        #waChatModal .wa-emoji-panel.is-open { display: block; }
+        #waChatModal .wa-emoji-grid { display: flex; flex-wrap: wrap; gap: 0.2rem; }
+        #waChatModal .wa-emoji-grid button {
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            font-size: 1.15rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        #waChatModal .wa-emoji-grid button:hover { background: #f0f2f5; }
+        #waChatModal .wa-status-bar {
+            font-size: 0.75rem;
+            color: #667781;
+            padding: 0.2rem 0.35rem 0;
+            min-height: 1.1rem;
+        }
+        #waChatModal .wa-status-bar.is-err { color: #c62828; }
+        #waChatModal .wa-status-bar.is-ok { color: #128c7e; }
+        #waChatModal .wa-file-input { display: none; }
 
         .crm-leads-ui .action-btns .btn-create-quote {
             background: #e3f2fd;
@@ -3607,15 +3891,18 @@ foreach ($destinationLookup as $destId => $destName) {
             word-break: break-word;
         }
 
-        #smsTemplatesModal .sms-tpl-custom-wrap {
+        #smsTemplatesModal .sms-tpl-custom-wrap,
+        #smsTemplatesModal .sms-tpl-work-wrap {
             display: none;
         }
 
-        #smsTemplatesModal .sms-tpl-custom-wrap.is-visible {
+        #smsTemplatesModal .sms-tpl-custom-wrap.is-visible,
+        #smsTemplatesModal .sms-tpl-work-wrap.is-visible {
             display: block;
         }
 
-        #smsTemplatesModal .sms-tpl-custom-wrap label {
+        #smsTemplatesModal .sms-tpl-custom-wrap label,
+        #smsTemplatesModal .sms-tpl-work-wrap label {
             font-weight: 700;
             font-size: 0.82rem;
             color: #334155;
@@ -3637,6 +3924,80 @@ foreach ($destinationLookup as $destId => $destName) {
             outline: none;
             border-color: #2563eb;
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        #smsTemplatesModal .sms-tpl-work-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.65rem 0.75rem;
+        }
+        #smsTemplatesModal .sms-tpl-work-grid .is-full {
+            grid-column: 1 / -1;
+        }
+        @media (max-width: 575.98px) {
+            #smsTemplatesModal .sms-tpl-work-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        #smsTemplatesModal .sms-tpl-work-wrap .form-control,
+        #smsTemplatesModal .sms-tpl-work-wrap select.form-control,
+        #smsTemplatesModal .sms-tpl-work-wrap textarea.form-control {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            min-height: 38px;
+        }
+        #smsTemplatesModal .sms-tpl-work-wrap textarea.form-control {
+            min-height: 88px;
+            resize: vertical;
+        }
+        #smsTemplatesModal .sms-tpl-work-wrap .form-control:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+        #smsTemplatesModal .sms-tpl-type-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+        #smsTemplatesModal .sms-tpl-type-pill {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #475569;
+            border-radius: 999px;
+            padding: 0.28rem 0.7rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #smsTemplatesModal .sms-tpl-type-pill.is-on {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        #smsTemplatesModal .sms-tpl-btn-save {
+            background: #0f766e;
+            border-color: #0f766e;
+            color: #fff;
+        }
+        #smsTemplatesModal .sms-tpl-btn-save:hover {
+            background: #0d9488;
+            border-color: #0d9488;
+            color: #fff;
+        }
+        #smsTemplatesModal .sms-tpl-work-result {
+            margin-top: 0.55rem;
+            font-size: 0.8rem;
+            display: none;
+        }
+        #smsTemplatesModal .sms-tpl-work-result.is-ok {
+            display: block;
+            color: #0f766e;
+        }
+        #smsTemplatesModal .sms-tpl-work-result.is-err {
+            display: block;
+            color: #b91c1c;
         }
 
         #smsTemplatesModal .sms-tpl-meta {
@@ -4875,7 +5236,6 @@ foreach ($destinationLookup as $destId => $destName) {
                                 data-col-source="<?= !empty($leadsColumnVisibility['source']) ? '1' : '0' ?>"
                                 data-col-assign="<?= !empty($leadsColumnVisibility['assign']) ? '1' : '0' ?>"
                                 data-col-stage="<?= !empty($leadsColumnVisibility['stage']) ? '1' : '0' ?>"
-                                data-col-booking="<?= !empty($leadsColumnVisibility['booking']) ? '1' : '0' ?>"
                                 data-col-actions="<?= !empty($leadsColumnVisibility['actions']) ? '1' : '0' ?>">
                                 <thead>
                                     <tr>
@@ -4887,14 +5247,13 @@ foreach ($destinationLookup as $destId => $destName) {
                                         <th class="col-ld-source" data-col-key="source"><span class="ld-th-label">Lead Source</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                         <th class="col-ld-assign" data-col-key="assign"><span class="ld-th-label">Assigned</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                         <th class="col-ld-stage" data-col-key="stage"><span class="ld-th-label">Stage</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
-                                        <th class="col-ld-booking" data-col-key="booking"><span class="ld-th-label">Status</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                         <th class="col-actions" data-col-key="actions"><span class="ld-th-label">Actions</span><span class="ld-col-resizer" title="Drag to resize"></span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($leadRows)) { ?>
                                         <tr>
-                                            <td colspan="10" class="text-center text-muted">No leads found.</td>
+                                            <td colspan="9" class="text-center text-muted">No leads found.</td>
                                         </tr>
                                     <?php } else { ?>
                                         <?php foreach ($leadRows as $lead) {
@@ -5063,10 +5422,6 @@ foreach ($destinationLookup as $destId => $destName) {
                                 <input type="checkbox" class="js-leads-col-toggle" data-col-key="stage"<?= !empty($leadsColumnVisibility['stage']) ? ' checked' : '' ?>>
                                 <span class="leads-col-settings-label">Stage</span>
                             </label>
-                            <label class="leads-col-settings-item">
-                                <input type="checkbox" class="js-leads-col-toggle" data-col-key="booking"<?= !empty($leadsColumnVisibility['booking']) ? ' checked' : '' ?>>
-                                <span class="leads-col-settings-label">Booking Status</span>
-                            </label>
                             <label class="leads-col-settings-item is-locked">
                                 <input type="checkbox" class="js-leads-col-toggle" data-col-key="actions" checked disabled>
                                 <span class="leads-col-settings-label">Actions</span>
@@ -5161,6 +5516,51 @@ foreach ($destinationLookup as $destId => $destName) {
             </div>
         </div>
 
+        <!-- WhatsApp chat modal -->
+        <div class="modal fade" id="waChatModal" tabindex="-1" role="dialog" aria-labelledby="waChatTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="wa-shell">
+                        <div class="wa-header">
+                            <div class="wa-avatar" id="waChatAvatar">WA</div>
+                            <div class="wa-head-meta">
+                                <div class="wa-head-name" id="waChatTitle">WhatsApp</div>
+                                <div class="wa-head-sub" id="waChatSubtitle">Select a lead</div>
+                            </div>
+                            <div class="wa-head-actions">
+                                <button type="button" class="wa-icon-btn" id="waChatRefresh" title="Refresh chat"><i class="fas fa-sync-alt"></i></button>
+                                <a class="wa-icon-btn" id="waChatOpenExternal" href="#" target="_blank" rel="noopener" title="Open in WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                                <button type="button" class="wa-icon-btn" data-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="wa-messages" id="waChatMessages" aria-live="polite"></div>
+                        <div class="wa-composer">
+                            <div class="wa-emoji-panel" id="waChatEmojiPanel" aria-hidden="true">
+                                <div class="wa-emoji-grid" id="waChatEmojiGrid"></div>
+                            </div>
+                            <div class="wa-attach-chip" id="waChatAttachChip">
+                                <i class="fas fa-paperclip"></i>
+                                <span id="waChatAttachName">Attachment</span>
+                                <button type="button" id="waChatAttachClear" title="Remove attachment">&times;</button>
+                            </div>
+                            <div class="wa-compose-row">
+                                <div class="wa-compose-tools">
+                                    <button type="button" class="wa-tool-btn" id="waChatEmojiBtn" title="Emoji"><i class="far fa-smile"></i></button>
+                                    <button type="button" class="wa-tool-btn" id="waChatAttachBtn" title="Attach file"><i class="fas fa-paperclip"></i></button>
+                                    <input type="file" class="wa-file-input" id="waChatFileInput" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.txt,.zip">
+                                </div>
+                                <div class="wa-input-wrap">
+                                    <textarea id="waChatInput" rows="1" placeholder="Type a message" aria-label="Message"></textarea>
+                                </div>
+                                <button type="button" class="wa-send-btn" id="waChatSendBtn" title="Send"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                            <div class="wa-status-bar" id="waChatStatus"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- SMS Templates modal -->
         <div class="modal fade" id="smsTemplatesModal" tabindex="-1" role="dialog" aria-labelledby="smsTemplatesModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered sms-tpl-dialog" role="document">
@@ -5172,22 +5572,106 @@ foreach ($destinationLookup as $destId => $destName) {
                     <div class="sms-tpl-bd">
                         <div class="sms-tpl-meta" id="smsTplLeadMeta"></div>
                         <div class="sms-tpl-tabs" role="tablist">
-                            <button type="button" class="sms-tpl-tab is-active" data-sms-tab="default">Default Message</button>
-                            <button type="button" class="sms-tpl-tab" data-sms-tab="whatsapp">WhatsApp</button>
-                            <button type="button" class="sms-tpl-tab" data-sms-tab="email">Email</button>
-                            <button type="button" class="sms-tpl-tab" data-sms-tab="custom">Custom</button>
+                            <button type="button" class="sms-tpl-tab is-active" data-sms-tab="email">Email</button>
+                            <button type="button" class="sms-tpl-tab" data-sms-tab="followup">Follow-up</button>
+                            <button type="button" class="sms-tpl-tab" data-sms-tab="task">Task</button>
                         </div>
                         <div class="sms-tpl-list" id="smsTplList"></div>
                         <div class="sms-tpl-custom-wrap" id="smsTplCustomWrap">
                             <label for="smsTplCustomText">Custom message</label>
                             <textarea id="smsTplCustomText" placeholder="Write your message…"></textarea>
                         </div>
-                        <div class="sms-tpl-api-box" id="smsTplApiBox">
-                            <label class="sms-tpl-api-session" for="smsTplApiSession">
-                                <input type="checkbox" id="smsTplApiSession">
-                                <span>This guest messaged you in the last 24 hours. Send the selected text instead of the approved template.</span>
-                            </label>
-                            <p class="sms-tpl-api-hint" id="smsTplApiHint"></p>
+                        <div class="sms-tpl-work-wrap" id="smsTplFollowupWrap">
+                            <div class="sms-tpl-work-grid">
+                                <div class="is-full">
+                                    <label>Follow-up Type</label>
+                                    <div class="sms-tpl-type-pills" id="smsTplFollowupTypes">
+                                        <button type="button" class="sms-tpl-type-pill is-on" data-type="call">Call</button>
+                                        <button type="button" class="sms-tpl-type-pill" data-type="whatsapp">WhatsApp</button>
+                                        <button type="button" class="sms-tpl-type-pill" data-type="email">Email</button>
+                                        <button type="button" class="sms-tpl-type-pill" data-type="meeting">Meeting</button>
+                                        <button type="button" class="sms-tpl-type-pill" data-type="other">Other</button>
+                                    </div>
+                                </div>
+                                <div class="is-full">
+                                    <label for="smsTplFollowupTitle">Title</label>
+                                    <input type="text" class="form-control" id="smsTplFollowupTitle" maxlength="200" placeholder="Enter follow-up title">
+                                </div>
+                                <div>
+                                    <label for="smsTplFollowupDate">Date</label>
+                                    <input type="date" class="form-control" id="smsTplFollowupDate">
+                                </div>
+                                <div>
+                                    <label for="smsTplFollowupTime">Time</label>
+                                    <input type="time" class="form-control" id="smsTplFollowupTime">
+                                </div>
+                                <div>
+                                    <label for="smsTplFollowupPriority">Priority</label>
+                                    <select class="form-control" id="smsTplFollowupPriority">
+                                        <option value="high">High</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="low">Low</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="smsTplFollowupReminder">Reminder</label>
+                                    <select class="form-control" id="smsTplFollowupReminder">
+                                        <option value="none">No reminder</option>
+                                        <option value="15m">15 minutes before</option>
+                                        <option value="30m" selected>30 minutes before</option>
+                                        <option value="1h">1 hour before</option>
+                                        <option value="1d">1 day before</option>
+                                    </select>
+                                </div>
+                                <div class="is-full">
+                                    <label for="smsTplFollowupNotes">Notes</label>
+                                    <textarea class="form-control" id="smsTplFollowupNotes" maxlength="500" placeholder="Discussion points or next steps…"></textarea>
+                                </div>
+                            </div>
+                            <div class="sms-tpl-work-result" id="smsTplFollowupResult"></div>
+                        </div>
+                        <div class="sms-tpl-work-wrap" id="smsTplTaskWrap">
+                            <div class="sms-tpl-work-grid">
+                                <div>
+                                    <label for="smsTplTaskType">Task Type</label>
+                                    <select class="form-control" id="smsTplTaskType">
+                                        <option value="general">General</option>
+                                        <option value="prepare_quotation">Prepare Quotation</option>
+                                        <option value="check_payment">Check Payment Status</option>
+                                        <option value="send_itinerary">Send Itinerary</option>
+                                        <option value="collect_documents">Collect Documents</option>
+                                        <option value="call_supplier">Call Supplier</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="smsTplTaskPriority">Priority</label>
+                                    <select class="form-control" id="smsTplTaskPriority">
+                                        <option value="high">High</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="low">Low</option>
+                                    </select>
+                                </div>
+                                <div class="is-full">
+                                    <label for="smsTplTaskTitle">Title</label>
+                                    <input type="text" class="form-control" id="smsTplTaskTitle" maxlength="200" placeholder="Enter task title">
+                                </div>
+                                <div>
+                                    <label for="smsTplTaskDue">Due Date</label>
+                                    <input type="date" class="form-control" id="smsTplTaskDue">
+                                </div>
+                                <div>
+                                    <label for="smsTplTaskTime">Time</label>
+                                    <input type="time" class="form-control" id="smsTplTaskTime">
+                                </div>
+                                <div class="is-full">
+                                    <label for="smsTplTaskNotes">Description / Notes</label>
+                                    <textarea class="form-control" id="smsTplTaskNotes" maxlength="500" placeholder="Add task details…"></textarea>
+                                </div>
+                            </div>
+                            <div class="sms-tpl-work-result" id="smsTplTaskResult"></div>
+                        </div>
+                        <div class="sms-tpl-api-box d-none" id="smsTplApiBox">
                             <div id="smsTplApiResult" class="sms-tpl-api-result" hidden></div>
                         </div>
                     </div>
@@ -5195,6 +5679,8 @@ foreach ($destinationLookup as $destId => $destName) {
                         <button type="button" class="sms-tpl-btn sms-tpl-btn-cancel" data-dismiss="modal">Cancel</button>
                         <div class="sms-tpl-ft-right">
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-email d-none" id="btnSmsTplSendEmail">Send Email</button>
+                            <button type="button" class="sms-tpl-btn sms-tpl-btn-save d-none" id="btnSmsTplSaveFollowup">Save Follow-up</button>
+                            <button type="button" class="sms-tpl-btn sms-tpl-btn-save d-none" id="btnSmsTplSaveTask">Save Task</button>
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-api" id="btnSmsTplSendApi">Send via API</button>
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-wa" id="btnSmsTplSendWhatsApp">Send on WhatsApp</button>
                             <button type="button" class="sms-tpl-btn sms-tpl-btn-sms" id="btnSmsTplSendSms">Send SMS</button>
@@ -5654,6 +6140,9 @@ foreach ($destinationLookup as $destId => $destName) {
                         <button type="button" class="btn btn-success btn-sm d-none" id="leadQPreviewSaveBtn" disabled>
                             <i class="fas fa-save mr-1"></i>Save Changes
                         </button>
+                        <button type="button" class="btn qp-btn-download btn-sm" id="leadQPreviewDownloadBtn">
+                            <i class="fas fa-download mr-1"></i> Download
+                        </button>
                         <button type="button" class="btn qp-btn-print btn-sm" id="leadQPreviewPrintBtn">
                             <i class="fas fa-print mr-1"></i> Print
                         </button>
@@ -5853,8 +6342,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     var LEADS_COL_SAVE_URL = 'crm/ajax/save_leads_column_settings.php';
-    // v2: Status (booking) needs room for multiple service icons; old v1 caps were ~52–72px.
-    var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v2';
+    var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v3';
     var LEADS_TABLE_COLUMNS = [
         { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 18, minWidth: 110 },
         { key: 'guest', className: 'col-ld-guest', label: 'Guest', locked: false, weight: 16, minWidth: 120 },
@@ -5864,8 +6352,7 @@ foreach ($destinationLookup as $destId => $destName) {
         { key: 'source', className: 'col-ld-source', label: 'Lead Source', locked: false, weight: 12, minWidth: 100 },
         { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 10, minWidth: 100 },
         { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 5, minWidth: 92, maxWidth: 118 },
-        { key: 'booking', className: 'col-ld-booking', label: 'Status', locked: false, minWidth: 120, maxWidth: 220, weight: 10 },
-        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '7.25rem', minWidth: 108, maxWidth: 128 }
+        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '9.5rem', minWidth: 132, maxWidth: 168 }
     ];
     var leadsColumnVisibilityState = <?= json_encode($leadsColumnVisibility, JSON_UNESCAPED_UNICODE) ?>;
     var leadsColumnSaveTimer = null;
@@ -5989,7 +6476,7 @@ foreach ($destinationLookup as $destId => $destName) {
     }
 
     function leadsColIsWidthProtected(col) {
-        return !!(col && (col.fixedWidth || col.key === 'actions' || col.key === 'booking'));
+        return !!(col && (col.fixedWidth || col.key === 'actions'));
     }
 
     function leadsEventClientX(e) {
@@ -7294,6 +7781,22 @@ foreach ($destinationLookup as $destId => $destName) {
         window.alert('Could not print preview. Please try again.');
     });
 
+    $('#leadQPreviewDownloadBtn').on('click', function (e) {
+        e.preventDefault();
+        var frame = document.getElementById('leadQPreviewFrame');
+        try {
+            if (frame && frame.contentWindow && typeof frame.contentWindow.qDownloadPreviewPdf === 'function') {
+                frame.contentWindow.qDownloadPreviewPdf();
+                return;
+            }
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({ type: 'mz-quotation-preview-download' }, '*');
+                return;
+            }
+        } catch (err) { /* ignore */ }
+        window.alert('Could not download preview. Please try again.');
+    });
+
     $('#leadQuotationPreviewModal').on('hide.bs.modal', function (e) {
         if (!leadQPreviewDirty) {
             return;
@@ -7374,22 +7877,341 @@ foreach ($destinationLookup as $destId => $destName) {
     $(document).on('click', '.js-lead-action-whatsapp', function (e) {
         e.preventDefault();
         var $wrap = $(this).closest('.lead-actions-more');
-        var phone = ($wrap.attr('data-lead-phone') || '').replace(/\D+/g, '');
-        if (!phone) {
+        openWaChat({
+            leadId: Number($wrap.attr('data-lead-id') || 0),
+            name: '',
+            phone: ($wrap.attr('data-lead-phone') || '').trim(),
+            letters: '',
+            dest: '',
+            uid: ''
+        });
+    });
+
+    var waChatState = {
+        leadId: 0,
+        name: '',
+        phone: '',
+        phoneDigits: '',
+        letters: '',
+        dest: '',
+        uid: '',
+        loading: false,
+        sending: false,
+        attach: null
+    };
+
+    var WA_EMOJI_LIST = [
+        '😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤗', '🙏',
+        '👍', '👎', '👏', '🔥', '✨', '🎉', '❤️', '💯', '✅', '❌',
+        '👋', '🤝', '✈️', '🏨', '🏖️', '🗺️', '📞', '💬', '📎', '📄'
+    ];
+
+    function waChatEsc(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function waChatSetStatus(message, kind) {
+        var $bar = $('#waChatStatus');
+        $bar.removeClass('is-ok is-err').text(message || '');
+        if (kind === 'ok') {
+            $bar.addClass('is-ok');
+        } else if (kind === 'err') {
+            $bar.addClass('is-err');
+        }
+    }
+
+    function waChatRenderHeader() {
+        var name = waChatState.name || 'Guest';
+        var letters = waChatState.letters || name.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'G';
+        var phone = waChatState.phone || waChatState.phoneDigits || 'No phone';
+        var bits = [];
+        if (waChatState.uid) {
+            bits.push(waChatState.uid);
+        }
+        bits.push(phone);
+        if (waChatState.dest) {
+            bits.push(waChatState.dest);
+        }
+        $('#waChatAvatar').text(letters);
+        $('#waChatTitle').text(name);
+        $('#waChatSubtitle').text(bits.join(' · '));
+        if (waChatState.phoneDigits) {
+            $('#waChatOpenExternal').attr('href', 'https://wa.me/' + waChatState.phoneDigits).removeClass('d-none');
+        } else {
+            $('#waChatOpenExternal').attr('href', '#').addClass('d-none');
+        }
+    }
+
+    function waChatRenderMessages(messages) {
+        var $box = $('#waChatMessages').empty();
+        messages = Array.isArray(messages) ? messages : [];
+        if (!messages.length) {
+            $box.html('<div class="wa-empty">No messages yet. Say hello to start the conversation.</div>');
             return;
         }
-        window.open('https://wa.me/' + phone, '_blank', 'noopener');
+        var lastDate = '';
+        var html = '';
+        messages.forEach(function (msg) {
+            var dateLabel = String(msg.date_label || '');
+            if (dateLabel && dateLabel !== lastDate) {
+                lastDate = dateLabel;
+                html += '<div class="wa-day-sep"><span>' + waChatEsc(dateLabel) + '</span></div>';
+            }
+            var isOut = String(msg.direction || 'outbound') !== 'inbound';
+            var status = String(msg.status || '');
+            var failed = status === 'failed';
+            var ticks = '';
+            if (isOut) {
+                if (status === 'accepted') {
+                    ticks = '<i class="fas fa-check-double" title="Accepted"></i>';
+                } else if (status === 'pending' || status === 'unknown') {
+                    ticks = '<i class="fas fa-check" title="Pending"></i>';
+                } else if (failed) {
+                    ticks = '<i class="fas fa-exclamation-circle is-err" title="Failed"></i>';
+                }
+            }
+            html += '<div class="wa-bubble-row ' + (isOut ? 'is-out' : 'is-in') + '">'
+                + '<div class="wa-bubble' + (failed ? ' is-failed' : '') + '">'
+                + '<div class="wa-bubble-text">' + waChatEsc(msg.body || '') + '</div>'
+                + '<div class="wa-bubble-meta"><span>' + waChatEsc(msg.time_label || '') + '</span>' + ticks + '</div>'
+                + '</div></div>';
+        });
+        $box.html(html);
+        $box.scrollTop($box[0].scrollHeight);
+    }
+
+    function waChatBuildEmojiPanel() {
+        var $grid = $('#waChatEmojiGrid').empty();
+        WA_EMOJI_LIST.forEach(function (emoji) {
+            $grid.append($('<button type="button"></button>').text(emoji).attr('data-emoji', emoji));
+        });
+    }
+
+    function waChatInsertEmoji(emoji) {
+        var $input = $('#waChatInput');
+        var el = $input.get(0);
+        var start = el.selectionStart || 0;
+        var end = el.selectionEnd || 0;
+        var val = String($input.val() || '');
+        $input.val(val.slice(0, start) + emoji + val.slice(end));
+        var next = start + emoji.length;
+        el.focus();
+        try { el.setSelectionRange(next, next); } catch (err) {}
+        waChatAutoSizeInput();
+    }
+
+    function waChatAutoSizeInput() {
+        var el = $('#waChatInput').get(0);
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(120, Math.max(24, el.scrollHeight)) + 'px';
+    }
+
+    function waChatClearAttach() {
+        waChatState.attach = null;
+        $('#waChatFileInput').val('');
+        $('#waChatAttachChip').removeClass('is-on');
+        $('#waChatAttachName').text('Attachment');
+    }
+
+    function openWaChat(opts) {
+        opts = opts || {};
+        waChatState.leadId = Number(opts.leadId || 0);
+        waChatState.name = String(opts.name || '').trim();
+        waChatState.phone = String(opts.phone || '').trim();
+        waChatState.phoneDigits = waChatState.phone.replace(/\D+/g, '');
+        waChatState.letters = String(opts.letters || '').trim();
+        waChatState.dest = String(opts.dest || '').trim();
+        waChatState.uid = String(opts.uid || '').trim();
+        waChatClearAttach();
+        $('#waChatInput').val('');
+        waChatAutoSizeInput();
+        $('#waChatEmojiPanel').removeClass('is-open').attr('aria-hidden', 'true');
+        waChatSetStatus('');
+        waChatRenderHeader();
+        $('#waChatMessages').html('<div class="wa-empty"><i class="fas fa-spinner fa-spin mr-1"></i> Loading chat…</div>');
+        $('#waChatModal').modal('show');
+        waChatLoadThread();
+    }
+
+    function waChatLoadThread() {
+        if (!waChatState.leadId || waChatState.loading) return;
+        waChatState.loading = true;
+        $.getJSON('crm/ajax/whatsapp_chat.php', {
+            action: 'list',
+            lead_id: waChatState.leadId
+        }).done(function (res) {
+            waChatState.loading = false;
+            res = res || {};
+            if (!res.success) {
+                waChatSetStatus(res.message || 'Could not load chat.', 'err');
+                return;
+            }
+            var lead = res.lead || {};
+            if (lead.name) waChatState.name = lead.name;
+            if (lead.phone) waChatState.phone = lead.phone;
+            if (lead.phone_digits) waChatState.phoneDigits = lead.phone_digits;
+            if (lead.initials) waChatState.letters = lead.initials;
+            if (lead.lead_uid) waChatState.uid = lead.lead_uid;
+            if (lead.destination && !waChatState.dest) waChatState.dest = lead.destination;
+            waChatRenderHeader();
+            waChatRenderMessages(res.messages || []);
+            var api = res.api || {};
+            if (!api.key_configured) {
+                waChatSetStatus('API key not configured — messages will not deliver until RichAutomate is set up.', 'err');
+            } else {
+                waChatSetStatus('');
+            }
+        }).fail(function () {
+            waChatState.loading = false;
+            waChatSetStatus('Could not load chat. Check your connection and try again.', 'err');
+        });
+    }
+
+    function waChatSend(confirmResend) {
+        if (!waChatState.leadId || waChatState.sending) return;
+        var text = String($('#waChatInput').val() || '').trim();
+        var attach = waChatState.attach;
+        if (!text && !attach) {
+            waChatSetStatus('Type a message or attach a file.', 'err');
+            return;
+        }
+        if (!waChatState.phoneDigits) {
+            waChatSetStatus('This lead does not have a valid phone number.', 'err');
+            return;
+        }
+
+        function doSend(finalText) {
+            waChatState.sending = true;
+            $('#waChatSendBtn').prop('disabled', true);
+            waChatSetStatus('Sending…', '');
+            $.post('crm/ajax/whatsapp_chat.php', {
+                action: 'send',
+                lead_id: waChatState.leadId,
+                message: finalText,
+                confirm_resend: confirmResend ? '1' : '0'
+            }, function (res) {
+                waChatState.sending = false;
+                $('#waChatSendBtn').prop('disabled', false);
+                res = res || {};
+                if (res.needs_confirm) {
+                    waChatSetStatus(res.message || 'Already sent.', 'err');
+                    if (window.confirm(res.message || 'Send this message again?')) {
+                        waChatSend(true);
+                    }
+                    return;
+                }
+                if (res.success) {
+                    $('#waChatInput').val('');
+                    waChatAutoSizeInput();
+                    waChatClearAttach();
+                    waChatRenderMessages(res.messages || []);
+                    waChatSetStatus(res.message || 'Message sent.', 'ok');
+                } else {
+                    if (Array.isArray(res.messages)) waChatRenderMessages(res.messages);
+                    waChatSetStatus(res.message || 'WhatsApp did not accept the message.', 'err');
+                }
+            }, 'json').fail(function (xhr) {
+                waChatState.sending = false;
+                $('#waChatSendBtn').prop('disabled', false);
+                var message = 'Send failed before WhatsApp answered.';
+                if (xhr && xhr.status === 401) message = 'Your session has expired. Sign in again.';
+                waChatSetStatus(message, 'err');
+            });
+        }
+
+        if (attach && attach.file) {
+            waChatSetStatus('Uploading attachment…', '');
+            var fd = new FormData();
+            fd.append('lead_id', String(waChatState.leadId));
+            fd.append('attachment', attach.file);
+            $.ajax({
+                url: 'crm/ajax/upload_lead_attachment.php',
+                method: 'POST',
+                data: fd,
+                processData: false,
+                contentType: false,
+                dataType: 'json'
+            }).done(function (up) {
+                up = up || {};
+                if (!up.success || !up.attachment) {
+                    waChatSetStatus((up && up.message) || 'Attachment upload failed.', 'err');
+                    return;
+                }
+                var fileUrl = String(up.attachment.file_url || '');
+                var fileName = String(up.attachment.original_name || attach.name || 'attachment');
+                var absUrl = fileUrl;
+                if (fileUrl && fileUrl.indexOf('http') !== 0) {
+                    absUrl = window.location.origin + '/' + String(fileUrl).replace(/^\/+/, '');
+                }
+                var combined = text ? (text + '\n\n') : '';
+                combined += 'Attachment: ' + fileName + (absUrl ? ('\n' + absUrl) : '');
+                doSend(combined);
+            }).fail(function () {
+                waChatSetStatus('Attachment upload failed.', 'err');
+            });
+            return;
+        }
+
+        doSend(text);
+    }
+
+    $(document).on('click', '.js-lead-wa-chat', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $btn = $(this);
+        openWaChat({
+            leadId: Number($btn.attr('data-lead-id') || 0),
+            name: $btn.attr('data-lead-name') || '',
+            phone: $btn.attr('data-lead-phone') || '',
+            letters: $btn.attr('data-lead-letters') || '',
+            dest: $btn.attr('data-lead-dest') || '',
+            uid: $btn.attr('data-lead-uid') || ''
+        });
     });
+
+    $('#waChatRefresh').on('click', function () { waChatLoadThread(); });
+    $('#waChatEmojiBtn').on('click', function () {
+        var $panel = $('#waChatEmojiPanel');
+        var open = !$panel.hasClass('is-open');
+        $panel.toggleClass('is-open', open).attr('aria-hidden', open ? 'false' : 'true');
+    });
+    $(document).on('click', '#waChatEmojiGrid button', function () {
+        waChatInsertEmoji(String($(this).attr('data-emoji') || $(this).text() || ''));
+    });
+    $('#waChatAttachBtn').on('click', function () { $('#waChatFileInput').trigger('click'); });
+    $('#waChatFileInput').on('change', function () {
+        var file = this.files && this.files[0] ? this.files[0] : null;
+        if (!file) { waChatClearAttach(); return; }
+        waChatState.attach = { file: file, name: file.name };
+        $('#waChatAttachName').text(file.name);
+        $('#waChatAttachChip').addClass('is-on');
+    });
+    $('#waChatAttachClear').on('click', function () { waChatClearAttach(); });
+    $('#waChatInput').on('input', waChatAutoSizeInput);
+    $('#waChatInput').on('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            waChatSend(false);
+        }
+    });
+    $('#waChatSendBtn').on('click', function () { waChatSend(false); });
+    waChatBuildEmojiPanel();
 
     var smsTplState = {
         leadId: 0,
-        tab: 'default',
+        tab: 'email',
         templateId: '',
         guestName: '',
         guestPhone: '',
         guestEmail: '',
         company: '',
-        agentName: ''
+        agentName: '',
+        followupType: 'call'
     };
 
     function smsTplEsc(value) {
@@ -7416,6 +8238,7 @@ foreach ($destinationLookup as $destId => $destName) {
 
     function smsTplCatalog() {
         return {
+            // Kept for compatibility with existing send/API flows.
             default: [
                 {
                     id: 'phone_not_picked',
@@ -7458,7 +8281,8 @@ foreach ($destinationLookup as $destId => $destName) {
                     subject: 'Missed call regarding your trip — {company}',
                     body: 'Dear {guest},\n\nWe tried to reach you for your trip planning but couldn\'t connect. Please reply to this email or call {agent}.\n\nThanks,\n{company}'
                 }
-            ]
+            ],
+            custom: []
         };
     }
 
@@ -7466,8 +8290,11 @@ foreach ($destinationLookup as $destId => $destName) {
         if (smsTplState.tab === 'custom') {
             return String($('#smsTplCustomText').val() || '').trim();
         }
+        if (smsTplState.tab === 'followup' || smsTplState.tab === 'task') {
+            return '';
+        }
         var catalog = smsTplCatalog();
-        var list = catalog[smsTplState.tab] || [];
+        var list = catalog[smsTplState.tab] || catalog.email || [];
         var selected = null;
         for (var i = 0; i < list.length; i++) {
             if (list[i].id === smsTplState.templateId) {
@@ -7500,18 +8327,88 @@ foreach ($destinationLookup as $destId => $destName) {
         return selected ? smsTplFill(selected.subject || '') : '';
     }
 
+    function smsTplToday() {
+        var d = new Date();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return d.getFullYear() + '-' + m + '-' + day;
+    }
+
+    function smsTplDefaultTime() {
+        var d = new Date();
+        d.setMinutes(d.getMinutes() + 30);
+        var h = String(d.getHours()).padStart(2, '0');
+        var m = String(d.getMinutes()).padStart(2, '0');
+        return h + ':' + m;
+    }
+
+    function smsTplResetWorkForms() {
+        smsTplState.followupType = 'call';
+        $('#smsTplFollowupTypes .sms-tpl-type-pill').removeClass('is-on');
+        $('#smsTplFollowupTypes .sms-tpl-type-pill[data-type="call"]').addClass('is-on');
+        $('#smsTplFollowupTitle').val('Follow-up with ' + (smsTplState.guestName || 'guest'));
+        $('#smsTplFollowupDate').val(smsTplToday());
+        $('#smsTplFollowupTime').val(smsTplDefaultTime());
+        $('#smsTplFollowupPriority').val('medium');
+        $('#smsTplFollowupReminder').val('30m');
+        $('#smsTplFollowupNotes').val('');
+        $('#smsTplFollowupResult').removeClass('is-ok is-err').text('');
+
+        $('#smsTplTaskType').val('general');
+        $('#smsTplTaskTitle').val('Task for ' + (smsTplState.guestName || 'guest'));
+        $('#smsTplTaskDue').val(smsTplToday());
+        $('#smsTplTaskTime').val(smsTplDefaultTime());
+        $('#smsTplTaskPriority').val('medium');
+        $('#smsTplTaskNotes').val('');
+        $('#smsTplTaskResult').removeClass('is-ok is-err').text('');
+    }
+
+    function smsTplShowWorkResult(kind, message, ok) {
+        var $el = kind === 'task' ? $('#smsTplTaskResult') : $('#smsTplFollowupResult');
+        $el.removeClass('is-ok is-err').text(message || '');
+        if (!message) {
+            return;
+        }
+        $el.addClass(ok ? 'is-ok' : 'is-err');
+    }
+
     function smsTplRenderList() {
         var $list = $('#smsTplList');
         var $custom = $('#smsTplCustomWrap');
+        var $follow = $('#smsTplFollowupWrap');
+        var $task = $('#smsTplTaskWrap');
         var isEmail = smsTplState.tab === 'email';
+        var isFollowup = smsTplState.tab === 'followup';
+        var isTask = smsTplState.tab === 'task';
         var isCustom = smsTplState.tab === 'custom';
+        var isWork = isFollowup || isTask;
 
         $('#btnSmsTplSendEmail').toggleClass('d-none', !isEmail);
-        $('#btnSmsTplSendWhatsApp').toggleClass('d-none', isEmail);
-        $('#btnSmsTplSendSms').toggleClass('d-none', isEmail);
-        $('#btnSmsTplSendApi').toggleClass('d-none', isEmail);
-        $('#smsTplApiBox').toggleClass('d-none', isEmail);
+        $('#btnSmsTplSaveFollowup').toggleClass('d-none', !isFollowup);
+        $('#btnSmsTplSaveTask').toggleClass('d-none', !isTask);
+        // Keep existing send/API controls available on Email (and legacy custom) tabs.
+        $('#btnSmsTplSendWhatsApp').toggleClass('d-none', isWork);
+        $('#btnSmsTplSendSms').toggleClass('d-none', isWork);
+        $('#btnSmsTplSendApi').toggleClass('d-none', isWork);
+        // Keep API result available after send; hide the box until there is feedback.
+        if (isWork) {
+            $('#smsTplApiBox').addClass('d-none');
+        }
 
+        $follow.removeClass('is-visible');
+        $task.removeClass('is-visible');
+        $custom.removeClass('is-visible');
+
+        if (isFollowup) {
+            $list.hide().empty();
+            $follow.addClass('is-visible');
+            return;
+        }
+        if (isTask) {
+            $list.hide().empty();
+            $task.addClass('is-visible');
+            return;
+        }
         if (isCustom) {
             $list.hide().empty();
             $custom.addClass('is-visible');
@@ -7521,7 +8418,6 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
 
-        $custom.removeClass('is-visible');
         $list.show();
         var catalog = smsTplCatalog();
         var items = catalog[smsTplState.tab] || [];
@@ -7549,7 +8445,7 @@ foreach ($destinationLookup as $destId => $destName) {
             return;
         }
         smsTplState.leadId = Number(lead.id || 0);
-        smsTplState.tab = 'default';
+        smsTplState.tab = 'email';
         smsTplState.templateId = '';
         smsTplState.guestName = lead.customer_name || lead.customer_display_name || '';
         smsTplState.guestPhone = String(lead.customer_phone || '').trim();
@@ -7558,16 +8454,15 @@ foreach ($destinationLookup as $destId => $destName) {
         smsTplState.agentName = smsTplAgentName || 'Team';
 
         $('#smsTplLeadMeta').text(
-            (lead.lead_uid ? lead.lead_uid + ' Â· ' : '') +
+            (lead.lead_uid ? lead.lead_uid + ' · ' : '') +
             (smsTplState.guestName || 'Guest') +
-            (smsTplState.guestPhone ? ' Â· ' + smsTplState.guestPhone : '')
+            (smsTplState.guestPhone ? ' · ' + smsTplState.guestPhone : '')
         );
         $('#smsTemplatesModal .sms-tpl-tab').removeClass('is-active');
-        $('#smsTemplatesModal .sms-tpl-tab[data-sms-tab="default"]').addClass('is-active');
+        $('#smsTemplatesModal .sms-tpl-tab[data-sms-tab="email"]').addClass('is-active');
         $('#smsTplCustomText').val('');
-        $('#smsTplApiSession').prop('checked', false);
         smsTplShowApiResult('', '');
-        smsTplRenderApiHint();
+        smsTplResetWorkForms();
         smsTplRenderList();
         $('#smsTemplatesModal').modal('show');
     }
@@ -7578,7 +8473,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     $(document).on('click', '#smsTemplatesModal .sms-tpl-tab', function () {
-        var tab = $(this).attr('data-sms-tab') || 'default';
+        var tab = $(this).attr('data-sms-tab') || 'email';
         smsTplState.tab = tab;
         smsTplState.templateId = '';
         $('#smsTemplatesModal .sms-tpl-tab').removeClass('is-active');
@@ -7588,6 +8483,73 @@ foreach ($destinationLookup as $destId => $destName) {
 
     $(document).on('change', '#smsTplList input[name="smsTplRadio"]', function () {
         smsTplState.templateId = String($(this).val() || '');
+    });
+
+    $(document).on('click', '#smsTplFollowupTypes .sms-tpl-type-pill', function () {
+        $('#smsTplFollowupTypes .sms-tpl-type-pill').removeClass('is-on');
+        $(this).addClass('is-on');
+        smsTplState.followupType = String($(this).attr('data-type') || 'call');
+    });
+
+    function smsTplSaveWorkItem(kind) {
+        if (!smsTplState.leadId) {
+            smsTplShowWorkResult(kind, 'Choose a lead first.', false);
+            return;
+        }
+        var isTask = kind === 'task';
+        var title = String($(isTask ? '#smsTplTaskTitle' : '#smsTplFollowupTitle').val() || '').trim();
+        var notes = String($(isTask ? '#smsTplTaskNotes' : '#smsTplFollowupNotes').val() || '').trim();
+        var date = String($(isTask ? '#smsTplTaskDue' : '#smsTplFollowupDate').val() || '').trim();
+        var time = String($(isTask ? '#smsTplTaskTime' : '#smsTplFollowupTime').val() || '').trim() || '10:00';
+        var priority = String($(isTask ? '#smsTplTaskPriority' : '#smsTplFollowupPriority').val() || 'medium');
+        var itemType = isTask
+            ? String($('#smsTplTaskType').val() || 'general')
+            : String(smsTplState.followupType || 'call');
+        if (!title) {
+            smsTplShowWorkResult(kind, (isTask ? 'Task' : 'Follow-up') + ' title is required.', false);
+            return;
+        }
+        if (!date) {
+            smsTplShowWorkResult(kind, (isTask ? 'Due date' : 'Follow-up date') + ' is required.', false);
+            return;
+        }
+        var $btn = $(isTask ? '#btnSmsTplSaveTask' : '#btnSmsTplSaveFollowup');
+        $btn.prop('disabled', true);
+        smsTplShowWorkResult(kind, 'Saving…', true);
+        $.post('crm/ajax/work_items.php', {
+            action: 'save',
+            kind: isTask ? 'task' : 'followup',
+            lead_id: smsTplState.leadId,
+            client_name: smsTplState.guestName || 'Guest',
+            client_phone: smsTplState.guestPhone || '',
+            client_email: smsTplState.guestEmail || '',
+            item_type: itemType,
+            title: title,
+            notes: notes,
+            scheduled_at: date + ' ' + time + ':00',
+            priority: priority,
+            status: 'pending',
+            assigned_name: smsTplState.agentName || '',
+            reminder: isTask ? '30m' : String($('#smsTplFollowupReminder').val() || '30m')
+        }, function (res) {
+            $btn.prop('disabled', false);
+            res = res || {};
+            if (res.success) {
+                smsTplShowWorkResult(kind, res.message || ((isTask ? 'Task' : 'Follow-up') + ' saved.'), true);
+            } else {
+                smsTplShowWorkResult(kind, res.message || 'Could not save.', false);
+            }
+        }, 'json').fail(function () {
+            $btn.prop('disabled', false);
+            smsTplShowWorkResult(kind, 'Could not save. Please try again.', false);
+        });
+    }
+
+    $('#btnSmsTplSaveFollowup').on('click', function () {
+        smsTplSaveWorkItem('followup');
+    });
+    $('#btnSmsTplSaveTask').on('click', function () {
+        smsTplSaveWorkItem('task');
     });
 
     $('#btnSmsTplSendWhatsApp').on('click', function () {
@@ -7604,26 +8566,16 @@ foreach ($destinationLookup as $destId => $destName) {
         window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
     });
 
-    function smsTplRenderApiHint() {
-        var status = whatsappApiStatus || {};
-        var hint = 'Send on WhatsApp opens the chat on this computer. Send via API uses RichAutomate.';
-        if (status.ready && status.template_name) {
-            hint += ' The approved template is ' + status.template_name + ' (' + (status.template_language || 'en_US') + ').';
-        } else if (!status.key_configured) {
-            hint += ' The API key is not configured yet, so Send via API will not deliver.';
-        } else {
-            hint += ' No approved template name is configured yet, so a template send will not run.';
-        }
-        $('#smsTplApiHint').text(hint);
-    }
-
     function smsTplShowApiResult(message, kind) {
+        var $box = $('#smsTplApiBox');
         var $result = $('#smsTplApiResult');
         $result.removeClass('is-ok is-err');
         if (!message) {
             $result.attr('hidden', 'hidden').text('');
+            $box.addClass('d-none');
             return;
         }
+        $box.removeClass('d-none');
         $result.removeAttr('hidden').text(message);
         if (kind === 'ok') {
             $result.addClass('is-ok');
@@ -7634,22 +8586,17 @@ foreach ($destinationLookup as $destId => $destName) {
 
     function smsTplPostApi(confirmResend) {
         var $btn = $('#btnSmsTplSendApi');
-        var mode = $('#smsTplApiSession').is(':checked') ? 'session' : 'template';
         var text = smsTplGetSelectedBody();
         if (!smsTplState.leadId) {
             smsTplShowApiResult('Choose a lead first.', 'err');
-            return;
-        }
-        if (mode === 'session' && !text) {
-            smsTplShowApiResult('Select or write a message before sending.', 'err');
             return;
         }
         $btn.prop('disabled', true);
         smsTplShowApiResult('Sending…', '');
         $.post('crm/ajax/send_whatsapp.php', {
             lead_id: smsTplState.leadId,
-            mode: mode,
-            message: mode === 'session' ? text : '',
+            mode: 'template',
+            message: '',
             confirm_resend: confirmResend ? '1' : '0'
         }, function (res) {
             $btn.prop('disabled', false);
@@ -8582,7 +9529,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=58"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=59"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 (function () {

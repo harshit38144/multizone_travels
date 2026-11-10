@@ -472,6 +472,36 @@ $crmParentPages = array_merge(
                 <p>Leads</p>
               </a>
             </li>
+             <!-- Bookings -->
+             <li class="nav-item has-treeview <?= in_array($page, $bookingsPages, true) ? 'menu-open' : '' ?>">
+              <a href="#" class="nav-link <?= in_array($page, $bookingsPages, true) ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-plane-departure"></i>
+                <p>
+                  Bookings
+                  <i class="right fas fa-angle-left"></i>
+                </p>
+              </a>
+              <ul class="nav nav-treeview">
+                <li class="nav-item">
+                  <a href="crm/bookings.php" class="nav-link <?= ($page == 'crm_bookings') ? 'active' : '' ?>">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Tour Bookings</p>
+                  </a>
+                </li>
+                <!-- <li class="nav-item">
+                  <a href="crm/booking_add.php" class="nav-link <?= ($page == 'crm_booking_add') ? 'active' : '' ?>">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Add New Booking</p>
+                  </a>
+                </li> -->
+                <li class="nav-item">
+                  <a href="crm/hotel_bookings.php" class="nav-link <?= ($page === 'crm_hotel_bookings') ? 'active' : '' ?>">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Hotel Bookings</p>
+                  </a>
+                </li>
+              </ul>
+            </li>
             <li class="nav-item">
               <a href="crm/tasks_followups.php" class="nav-link <?= ($page === 'crm_tasks_followups') ? 'active' : '' ?>">
                 <i class="nav-icon fas fa-clipboard-check"></i>
@@ -493,8 +523,8 @@ $crmParentPages = array_merge(
             
 
             <!-- Masters (CRM) -->
-            <li class="nav-item has-treeview <?= in_array($page, $mastersPages) ? 'menu-open' : '' ?>">
-              <a href="#" class="nav-link <?= in_array($page, $mastersPages) ? 'active' : '' ?>">
+            <li class="nav-item has-treeview <?= in_array($page, $mastersPages, true) ? 'menu-open' : '' ?>">
+              <a href="#" class="nav-link <?= in_array($page, $mastersPages, true) ? 'active' : '' ?>">
                 <i class="nav-icon fas fa-database"></i>
                 <p>
                   Masters
@@ -564,6 +594,13 @@ $crmParentPages = array_merge(
                     <p>Testimonials</p>
                   </a>
                 </li>
+                <!-- <li class="nav-item">
+                  <a href="crm/quotation_terms_master.php"
+                    class="nav-link <= ($page === 'crm_quotation_terms_master') ? 'active' : '' ?>">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Terms &amp; Policies</p>
+                  </a>
+                </li> -->
                 <li class="nav-item">
                   <a href="crm/quotation_terms_master.php"
                     class="nav-link <?= ($page === 'crm_quotation_terms_master') ? 'active' : '' ?>">
@@ -574,70 +611,9 @@ $crmParentPages = array_merge(
               </ul>
             </li>
 
-            <!-- Quotations -->
-            <li class="nav-item has-treeview <?= in_array($page, $quotationsPages, true) ? 'menu-open' : '' ?>">
-              <a href="#" class="nav-link <?= in_array($page, $quotationsPages, true) ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice-dollar"></i>
-                <p>
-                  Quotations
-                  <i class="right fas fa-angle-left"></i>
-                </p>
-              </a>
-              <ul class="nav nav-treeview">
-                <li class="nav-item">
-                  <a href="crm/quotation-generator-list.php"
-                    class="nav-link <?= in_array($page, ['crm_quotation-generator-list', 'crm_quotation_generator'], true) ? 'active' : '' ?>">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Quotations</p>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a href="crm/quotation_templates.php"
-                    class="nav-link <?= ($page == 'crm_quotation_templates') ? 'active' : '' ?>">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Templates</p>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a href="crm/quotation_terms_master.php"
-                    class="nav-link <?= ($page === 'crm_quotation_terms_master') ? 'active' : '' ?>">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Terms &amp; Policies</p>
-                  </a>
-                </li>
-              </ul>
-            </li>
+           
 
-            <!-- Bookings -->
-            <li class="nav-item has-treeview <?= in_array($page, $bookingsPages, true) ? 'menu-open' : '' ?>">
-              <a href="#" class="nav-link <?= in_array($page, $bookingsPages, true) ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-plane-departure"></i>
-                <p>
-                  Bookings
-                  <i class="right fas fa-angle-left"></i>
-                </p>
-              </a>
-              <ul class="nav nav-treeview">
-                <li class="nav-item">
-                  <a href="crm/bookings.php" class="nav-link <?= ($page == 'crm_bookings') ? 'active' : '' ?>">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>All Bookings</p>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a href="crm/booking_add.php" class="nav-link <?= ($page == 'crm_booking_add') ? 'active' : '' ?>">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Add New Booking</p>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a href="crm/hotel_bookings.php" class="nav-link <?= ($page === 'crm_hotel_bookings') ? 'active' : '' ?>">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Hotel Bookings</p>
-                  </a>
-                </li>
-              </ul>
-            </li>
+           
 
             <!-- Customers -->
             <li class="nav-item has-treeview <?= in_array($page, $crmCustomersPages, true) ? 'menu-open' : '' ?>">

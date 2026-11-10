@@ -446,6 +446,45 @@
     els.list.scrollBy({ left: dir * 160, behavior: 'smooth' })
   }
 
+  function pathsMatchSidebar (activePath, linkPath) {
+    if (!activePath || !linkPath) return false
+    if (linkPath === activePath) return true
+    // Allow query/hash variants and nested paths, but require a boundary so
+    // e.g. crm/bookings.php does not match unrelated crm/* pages.
+    return activePath.indexOf(linkPath + '/') === 0 || activePath.indexOf(linkPath + '?') === 0
+  }
+
+  function syncSidebarTreeForActiveLeaves () {
+    var $activeLeaves = $('.nav-sidebar .nav-link.active').filter(function () {
+      return !$(this).parent('li').hasClass('has-treeview')
+    })
+    var $keepOpen = $()
+    $activeLeaves.each(function () {
+      $keepOpen = $keepOpen.add($(this).parents('.nav-item.has-treeview'))
+    })
+
+    $('.nav-sidebar .nav-item.has-treeview').each(function () {
+      var $li = $(this)
+      var shouldOpen = $keepOpen.filter(this).length > 0
+      $li.toggleClass('menu-open', shouldOpen)
+      var panel = $li.children('.nav-treeview').get(0)
+      if (!panel) return
+      if (shouldOpen) {
+        panel.style.display = 'block'
+        panel.style.height = 'auto'
+        panel.style.overflow = 'visible'
+      } else {
+        panel.style.display = 'none'
+        panel.style.removeProperty('height')
+        panel.style.removeProperty('overflow')
+      }
+    })
+
+    if (window.MZSidebarTree && typeof window.MZSidebarTree.fixOpenTreeviewLayout === 'function') {
+      window.MZSidebarTree.fixOpenTreeviewLayout()
+    }
+  }
+
   function updateSidebarActive () {
     var active = findTab(state.activeId)
     var activePath = active ? active.path.split('?')[0] : ''
@@ -460,24 +499,12 @@
       if (!path) return
 
       var linkPath = path.split('?')[0]
-      var isActive = activePath && (linkPath === activePath || activePath.indexOf(linkPath) === 0)
+      var isActive = pathsMatchSidebar(activePath, linkPath)
       $link.toggleClass('active', !!isActive)
     })
 
-    // Keep tree parents open for active leaf; clear slide residue so nested
-    // Page Management items do not overlap CRM / Mail / Payment Links.
-    $('.nav-sidebar .nav-link.active').each(function () {
-      $(this).parents('.nav-item.has-treeview').addClass('menu-open')
-    })
-    if (window.MZSidebarTree && typeof window.MZSidebarTree.fixOpenTreeviewLayout === 'function') {
-      window.MZSidebarTree.fixOpenTreeviewLayout()
-    } else {
-      $('.nav-sidebar .nav-item.menu-open > .nav-treeview').each(function () {
-        this.style.display = 'block'
-        this.style.height = 'auto'
-        this.style.overflow = 'visible'
-      })
-    }
+    // Only keep ancestors of the active leaf open (closes leftover Bookings, etc.).
+    syncSidebarTreeForActiveLeaves()
   }
 
   function openTab (path, title, options) {

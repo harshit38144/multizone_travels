@@ -34,6 +34,9 @@
                         <button type="button" class="btn btn-success btn-sm d-none" id="leadQPreviewSaveBtn" disabled>
                             <i class="fas fa-save mr-1"></i>Save Changes
                         </button>
+                        <button type="button" class="btn qp-btn-download btn-sm" id="leadQPreviewDownloadBtn">
+                            <i class="fas fa-download mr-1"></i> Download
+                        </button>
                         <button type="button" class="btn qp-btn-print btn-sm" id="leadQPreviewPrintBtn">
                             <i class="fas fa-print mr-1"></i> Print
                         </button>

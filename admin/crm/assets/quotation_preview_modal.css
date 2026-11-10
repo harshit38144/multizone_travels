@@ -115,6 +115,18 @@
             border-color: #a10e15;
             color: #fff;
         }
+        #leadQuotationPreviewModal .qp-btn-download {
+            background: #0f766e;
+            border-color: #0f766e;
+            color: #fff;
+            font-weight: 600;
+            padding: 6px 16px;
+        }
+        #leadQuotationPreviewModal .qp-btn-download:hover {
+            background: #0d9488;
+            border-color: #0d9488;
+            color: #fff;
+        }
         #leadQuotationPreviewModal .qp-btn-print {
             background: transparent;
             border: 1px solid #c5c5c8;

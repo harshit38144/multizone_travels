@@ -101,6 +101,45 @@ function crmQuotationGrandTotal(array $row): float
     return (float) $package;
 }
 
+/**
+ * Supplier-facing Confirm Tour Cost: Pricing "TOTAL COST" (before profit / GST).
+ * Prefers the active pricing option total_cost from cost_sheet_json, then the column.
+ */
+function crmQuotationSupplierTotal(array $row): float
+{
+    $column = round((float) ($row['total_cost'] ?? 0));
+    $sheet = $row['cost_sheet_json'] ?? '';
+    if (is_string($sheet) && $sheet !== '') {
+        $decoded = json_decode($sheet, true);
+        if (is_array($decoded)) {
+            $options = $decoded['options'] ?? null;
+            if (is_array($options) && $options) {
+                $activeId = (string) ($decoded['active_option_id'] ?? '');
+                $picked = null;
+                foreach ($options as $opt) {
+                    if (!is_array($opt)) {
+                        continue;
+                    }
+                    if ($activeId !== '' && (string) ($opt['category_id'] ?? '') === $activeId) {
+                        $picked = $opt;
+                        break;
+                    }
+                    if ($picked === null) {
+                        $picked = $opt;
+                    }
+                }
+                if (is_array($picked)) {
+                    $optTotal = round((float) ($picked['total_cost'] ?? 0));
+                    if ($optTotal > 0) {
+                        return (float) $optTotal;
+                    }
+                }
+            }
+        }
+    }
+    return (float) $column;
+}
+
 function crmQuotationConfirmServiceMap()
 {
     return [

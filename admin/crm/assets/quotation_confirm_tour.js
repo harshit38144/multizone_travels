@@ -5,7 +5,8 @@
     var serviceMap = {};
     var activeQuotationId = 0;
     var tourWasConfirmed = false;
-    var activePackageTotal = null;
+    var activePackageTotal = null; // Customer Grand Total (package + GST/TCS)
+    var activeSupplierTotal = null; // Quotation Pricing TOTAL COST (before profit/GST)
     var activeCustomerPaid = null;
     var activeTripInfo = null;
 
@@ -857,12 +858,12 @@
         tripVal('is-destination', trip.destination);
         tripVal('is-travel-date', tripDateLabel(trip.tentative_date));
         tripVal('is-departure', trip.departure_city);
-        var loaded = activePackageTotal !== null && activeCustomerPaid !== null;
+        var custLoaded = activePackageTotal !== null && activeCustomerPaid !== null;
         var custDue = customerDue();
         set('is-total', activePackageTotal === null ? '—' : '\u20B9' + money(activePackageTotal));
         set('is-paid', activeCustomerPaid === null ? '—' : '\u20B9' + money(activeCustomerPaid));
-        set('is-due', loaded ? '\u20B9' + money(custDue) : '—');
-        $stats.find('.ct-pstat.is-due').toggleClass('is-clear', loaded && custDue <= 0);
+        set('is-due', custLoaded ? '\u20B9' + money(custDue) : '—');
+        $stats.find('.ct-pstat.is-due').toggleClass('is-clear', custLoaded && custDue <= 0);
         $stats.find('.ct-pstat.is-paid, .ct-pstat.is-due').attr('title', 'View customer payments');
         var paxN = leadPaxCount > 0 ? leadPaxCount : travellersState.length;
         $stats.find('.ct-pstat.is-pax .js-pstat-val').text(
@@ -870,25 +871,29 @@
                 ? (paxN + (paxN === 1 ? ' Guest' : ' Guests'))
                 : '—'
         );
+        // Customer Payment = Quotation Grand Total (profit + GST/TCS)
         var $pay = $('#ctPaySummary');
         if ($pay.length) {
             $pay.find('.js-pay-total').text(activePackageTotal === null ? '—' : '\u20B9 ' + money(activePackageTotal));
             $pay.find('.js-pay-paid').text(activeCustomerPaid === null ? '—' : '\u20B9 ' + money(activeCustomerPaid));
-            $pay.find('.js-pay-due').text(loaded ? '\u20B9 ' + money(custDue) : '—');
+            $pay.find('.js-pay-due').text(custLoaded ? '\u20B9 ' + money(custDue) : '—');
         }
 
+        // Supplier Payment = Quotation TOTAL COST; paid/due from supplier service rows
+        var supplierTotal = activeSupplierTotal !== null ? activeSupplierTotal : total;
+        var supplierDue = Math.max(0, Math.round((supplierTotal - paid) * 100) / 100);
         var $sum = $('#ctSvcSummary');
         if ($sum.length) {
-            $sum.find('.js-sum-total').text('\u20B9 ' + money2(total));
+            $sum.find('.js-sum-total').text('\u20B9 ' + money2(supplierTotal));
             $sum.find('.js-sum-paid').text('\u20B9 ' + money2(paid));
-            $sum.find('.js-sum-due').text('\u20B9 ' + money2(due));
+            $sum.find('.js-sum-due').text('\u20B9 ' + money2(supplierDue));
             $sum.find('.js-sum-payments').text(String(payments));
         }
         var $foot = $('#ctSvcSummary.ct-foot-pay');
         if ($foot.length) {
-            $foot.find('.js-foot-total').text(activePackageTotal === null ? '—' : '\u20B9 ' + money(activePackageTotal));
-            $foot.find('.js-foot-paid').text(activeCustomerPaid === null ? '—' : '\u20B9 ' + money(activeCustomerPaid));
-            $foot.find('.js-foot-due').text(loaded ? '\u20B9 ' + money(custDue) : '—');
+            $foot.find('.js-foot-total').text(activeSupplierTotal === null && !total ? '—' : '\u20B9 ' + money(supplierTotal));
+            $foot.find('.js-foot-paid').text('\u20B9 ' + money(paid));
+            $foot.find('.js-foot-due').text('\u20B9 ' + money(supplierDue));
         }
     }
 
@@ -1776,6 +1781,7 @@
         activeQuotationId = quotationId;
         tourWasConfirmed = !!($triggerRow && $triggerRow.find('.js-q-book.btn-confirmed').length);
         activePackageTotal = null;
+        activeSupplierTotal = null;
         activeCustomerPaid = null;
         activeTripInfo = null;
         activeRow = $triggerRow && $triggerRow.length ? $triggerRow : null;
@@ -1825,8 +1831,12 @@
                 var q = res.quotation || {};
                 var confirm = res.confirm || {};
                 tourWasConfirmed = parseInt(q.tour_confirmed, 10) === 1;
-                var pkg = parseFloat(q.package_total);
+                // Customer Payment: Grand Total (API package_total is already crmQuotationGrandTotal)
+                var pkg = parseFloat(q.grand_total != null ? q.grand_total : q.package_total);
                 activePackageTotal = isNaN(pkg) ? 0 : pkg;
+                // Supplier Payment: Pricing TOTAL COST (before profit / GST)
+                var cost = parseFloat(q.total_cost);
+                activeSupplierTotal = isNaN(cost) ? 0 : cost;
                 var custPaid = parseFloat(q.customer_paid);
                 activeCustomerPaid = isNaN(custPaid) ? 0 : custPaid;
                 activeTripInfo = {

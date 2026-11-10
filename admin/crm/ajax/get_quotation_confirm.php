@@ -24,7 +24,7 @@ if ($id <= 0) {
 $stmt = $conn->prepare(
     'SELECT `id`, `quotation_uid`, `lead_id`, `guest_name`, `mobile_no`, `email`, `tour_confirmed`, `tour_confirm_json`,
             `flights_json`, `hotels_json`, `cost_sheet_json`, `no_of_adults`, `no_of_children`, `no_of_infants`,
-            `package_total`, `quotation_total`, `cost_sheet_json`, `destination`, `tentative_date`
+            `total_cost`, `package_total`, `quotation_total`, `destination`, `tentative_date`
      FROM `crm_quotations` WHERE `id` = ? LIMIT 1'
 );
 if (!$stmt) {
@@ -154,7 +154,10 @@ qConfirmJson(true, 'OK', [
         'no_of_adults' => (int) ($row['no_of_adults'] ?? 0),
         'no_of_children' => (int) ($row['no_of_children'] ?? 0),
         'no_of_infants' => (int) ($row['no_of_infants'] ?? 0),
+        // Customer Payment uses Grand Total (profit + GST/TCS). Supplier Payment uses TOTAL COST.
         'package_total' => crmQuotationGrandTotal($row),
+        'grand_total' => crmQuotationGrandTotal($row),
+        'total_cost' => crmQuotationSupplierTotal($row),
         'customer_paid' => $customerPaid,
         'destination' => trim((string) ($row['destination'] ?? '')),
         'tentative_date' => $tentativeDate,

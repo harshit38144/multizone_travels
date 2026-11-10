@@ -186,3 +186,42 @@ function crmWhatsappReleaseLeadLock(mysqli $conn, int $leadId): void
     $stmt->execute();
     $stmt->close();
 }
+
+/**
+ * Chronological chat history for a lead (oldest first).
+ *
+ * @return list<array<string, mixed>>
+ */
+function crmWhatsappListLeadMessages(mysqli $conn, int $leadId, int $limit = 200): array
+{
+    if ($leadId <= 0) {
+        return [];
+    }
+    if (!crmWhatsappEnsureTables($conn)) {
+        return [];
+    }
+
+    $limit = max(1, min(500, $limit));
+    $sql = 'SELECT `id`, `lead_id`, `direction`, `phone`, `channel`, `template_name`, `template_language`,
+                   `body_text`, `status`, `provider_message_id`, `error_message`, `created_by_name`, `created_at`, `updated_at`
+            FROM `crm_whatsapp_messages`
+            WHERE `lead_id` = ?
+            ORDER BY `id` ASC
+            LIMIT ' . $limit;
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return [];
+    }
+    $stmt->bind_param('i', $leadId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $rows = [];
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $rows[] = $row;
+        }
+    }
+    $stmt->close();
+
+    return $rows;
+}

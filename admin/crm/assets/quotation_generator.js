@@ -11777,6 +11777,54 @@
             String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0');
     }
 
+    /** Shared sanitized filename for PDF download + print: QTN0514 Mr Satyam Singh x 02 Maldives . 14 Dec */
+    function buildQuotationExportFilename(opts) {
+        opts = opts || {};
+        var withExt = !!opts.withExt;
+        var p = {};
+        try {
+            p = collectPayload() || {};
+        } catch (e) {
+            p = {};
+        }
+        var ref = String(previewRefNo(p) || 'Quotation').trim();
+        var guest = String(p.guest_name || '').trim() || 'Guest';
+        var adults = parseInt(p.no_of_adults, 10);
+        var children = parseInt(p.no_of_children, 10);
+        var infants = parseInt(p.no_of_infants, 10);
+        if (isNaN(adults) || adults < 0) adults = 0;
+        if (isNaN(children) || children < 0) children = 0;
+        if (isNaN(infants) || infants < 0) infants = 0;
+        var total = adults + children + infants;
+        var pax = String(total).padStart(2, '0');
+        var dest = String(p.destination || '').trim() || 'Destination';
+        var travelLabel = '';
+        var d = typeof parsePreviewDate === 'function' ? parsePreviewDate(p.tentative_date) : null;
+        if (d) {
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            travelLabel = d.getDate() + ' ' + months[d.getMonth()];
+        }
+        var name = ref + ' ' + guest + ' x ' + pax + ' ' + dest;
+        if (travelLabel) {
+            name += ' . ' + travelLabel;
+        }
+        name = String(name)
+            .replace(/[\\/:*?"<>|]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\.+$/g, '')
+            .trim();
+        if (!name) {
+            name = 'Quotation';
+        }
+        if (withExt && !/\.pdf$/i.test(name)) {
+            name += '.pdf';
+        }
+        return name;
+    }
+
+    window.buildQuotationExportFilename = buildQuotationExportFilename;
+
     function previewExpertInitial(name) {
         name = (name || '').trim();
         return name ? name.charAt(0).toUpperCase() : 'H';
@@ -13140,6 +13188,15 @@
                 html += qpItinSectionHead();
                 html += itineraryHtml;
                 html += '</div>';
+                var tourEndDest = String(destTitle || destination || '').trim().toUpperCase();
+                if (!tourEndDest || tourEndDest === 'DESTINATION') {
+                    tourEndDest = 'YOUR JOURNEY';
+                }
+                html += '<div class="qp-sec qp-sec-tour-end">' +
+                    '<div class="qp-tour-end-banner" role="note">' +
+                    '<span class="qp-tour-end-text">TOUR ENDS WITH WONDERFUL MEMORIES OF ' +
+                    esc(tourEndDest) + '!</span>' +
+                    '</div></div>';
             }
         }
 
@@ -16470,12 +16527,19 @@
             }
         });
 
+        $('#qPreviewDownloadBtn').on('click', function () {
+            if (typeof window.qDownloadPreviewPdf === 'function') {
+                window.qDownloadPreviewPdf();
+            }
+        });
+
         window.qPrintPreviewOnly = function () {
             var $area = $('#qPreviewPrintArea');
             if (!$area.length || !$area.html()) {
                 return;
             }
             flushPreviewActiveEdit();
+            var exportTitle = buildQuotationExportFilename({ withExt: false });
 
             var $clone = $area.clone();
             $clone.find('.q-preview-editable').each(function () {
@@ -16619,7 +16683,7 @@
             }
             printWin.document.open();
             printWin.document.write(
-                '<!DOCTYPE html><html><head><title>Quotation Preview</title><meta charset="utf-8">' +
+                '<!DOCTYPE html><html><head><title>' + esc(exportTitle) + '</title><meta charset="utf-8">' +
                 '<meta name="viewport" content="width=device-width,initial-scale=1">' +
                 '<link rel="stylesheet" href="' + esc(absUrl('plugins/fontawesome-free/css/all.min.css')) + '">' +
                 '<style>' +
@@ -16799,6 +16863,9 @@
                 '</body></html>'
             );
             printWin.document.close();
+            try {
+                printWin.document.title = exportTitle;
+            } catch (titleErr) { /* ignore */ }
 
             var triggerPrint = function () {
                 try {
@@ -16841,6 +16908,93 @@
                 });
                 window.setTimeout(finish, 6000);
             })();
+        };
+
+        window.qDownloadPreviewPdf = function () {
+            var $area = $('#qPreviewPrintArea');
+            if (!$area.length || !$area.html()) {
+                return;
+            }
+            if (typeof html2pdf === 'undefined') {
+                alert('PDF download is unavailable. Please refresh and try again.');
+                return;
+            }
+            flushPreviewActiveEdit();
+
+            var filename = buildQuotationExportFilename({ withExt: true });
+            var $btn = $('#qPreviewDownloadBtn');
+            var prevHtml = $btn.length ? $btn.html() : '';
+            if ($btn.length) {
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Downloading…');
+            }
+
+            var existing = document.getElementById('qPreviewPdfCaptureStage');
+            if (existing && existing.parentNode) {
+                existing.parentNode.removeChild(existing);
+            }
+
+            var stage = document.createElement('div');
+            stage.id = 'qPreviewPdfCaptureStage';
+            stage.style.cssText = 'position:fixed;left:-20000px;top:0;z-index:-1;width:210mm;background:#fff;overflow:visible;';
+
+            var $clone = $area.clone();
+            $clone.find('.q-preview-editable').each(function () {
+                var $el = $(this);
+                $el.removeAttr('contenteditable')
+                    .removeAttr('spellcheck')
+                    .removeClass('is-editing q-preview-editable q-preview-cell-edit')
+                    .removeAttr('data-q-edit')
+                    .removeAttr('data-q-type')
+                    .removeAttr('data-q-multiline');
+            });
+            var el = $clone.get(0);
+            el.style.width = '210mm';
+            el.style.maxWidth = '210mm';
+            el.style.margin = '0';
+            el.style.boxShadow = 'none';
+            el.style.border = '0';
+            el.style.borderRadius = '0';
+            el.style.background = '#fff';
+            stage.appendChild(el);
+            document.body.appendChild(stage);
+
+            var restoreBtn = function () {
+                if ($btn.length) {
+                    $btn.prop('disabled', false).html(prevHtml || '<i class="fas fa-download mr-1"></i> Download');
+                }
+                if (stage && stage.parentNode) {
+                    stage.parentNode.removeChild(stage);
+                }
+            };
+
+            var opt = {
+                margin: [5, 8, 5, 8],
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    scrollX: 0,
+                    scrollY: 0,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+
+            window.requestAnimationFrame(function () {
+                window.requestAnimationFrame(function () {
+                    html2pdf().set(opt).from(el).save().then(function () {
+                        restoreBtn();
+                    }).catch(function (err) {
+                        console.error('Quotation PDF download failed:', err);
+                        restoreBtn();
+                        alert('Could not download PDF. Please try again.');
+                    });
+                });
+            });
         };
 
         function postQuotationSave(p, saveMode, $btn, btnDefaultHtml, onSuccess) {
@@ -17056,6 +17210,12 @@
             if (data.type === 'mz-quotation-preview-print') {
                 if (typeof window.qPrintPreviewOnly === 'function') {
                     window.qPrintPreviewOnly();
+                }
+                return;
+            }
+            if (data.type === 'mz-quotation-preview-download') {
+                if (typeof window.qDownloadPreviewPdf === 'function') {
+                    window.qDownloadPreviewPdf();
                 }
                 return;
             }

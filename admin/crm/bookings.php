@@ -50,7 +50,7 @@ $boot = json_encode([
     <title>All Bookings</title>
     <?php include __DIR__ . '/../includes/header-links.php'; ?>
     <link rel="stylesheet" href="crm/assets/quotation_confirm_tour_page.css?v=2">
-    <link rel="stylesheet" href="crm/assets/quotation_preview_modal.css?v=1">
+    <link rel="stylesheet" href="crm/assets/quotation_preview_modal.css?v=2">
     <style>
         .bk-page { background: #f4f7fb; }
         .bk-page .content-wrapper, .bk-page .content { background: #f4f7fb; }
@@ -1176,8 +1176,8 @@ $boot = json_encode([
     render();
 })(jQuery);
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=58"></script>
-<script src="crm/assets/quotation_preview_modal.js?v=1"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=59"></script>
+<script src="crm/assets/quotation_preview_modal.js?v=2"></script>
 <script>
 (function () {
     function moveConfirmModalsToBody() {
