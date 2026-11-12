@@ -16676,13 +16676,29 @@
                 '}' +
                 '}';
 
-            var printWin = window.open('', '_blank');
-            if (!printWin) {
-                alert('Please allow pop-ups to print.');
+            // Same-tab print via a hidden iframe (no new tab / about:blank navigation).
+            var existingFrame = document.getElementById('qPreviewPrintFrame');
+            if (existingFrame && existingFrame.parentNode) {
+                existingFrame.parentNode.removeChild(existingFrame);
+            }
+            var printFrame = document.createElement('iframe');
+            printFrame.id = 'qPreviewPrintFrame';
+            printFrame.setAttribute('title', 'Quotation print');
+            printFrame.setAttribute('aria-hidden', 'true');
+            printFrame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+            document.body.appendChild(printFrame);
+
+            var printWin = printFrame.contentWindow;
+            var printDoc = printFrame.contentDocument || (printWin && printWin.document);
+            if (!printWin || !printDoc) {
+                if (printFrame.parentNode) {
+                    printFrame.parentNode.removeChild(printFrame);
+                }
+                alert('Could not prepare print view. Please try again.');
                 return;
             }
-            printWin.document.open();
-            printWin.document.write(
+
+            var printHtml =
                 '<!DOCTYPE html><html><head><title>' + esc(exportTitle) + '</title><meta charset="utf-8">' +
                 '<meta name="viewport" content="width=device-width,initial-scale=1">' +
                 '<link rel="stylesheet" href="' + esc(absUrl('plugins/fontawesome-free/css/all.min.css')) + '">' +
@@ -16860,23 +16876,43 @@
                 printBleedCss +
                 '</style></head><body class="q-preview-print q-preview-only">' +
                 '<div id="qPreviewPrintArea" class="q-preview-doc">' + $clone.html() + '</div>' +
-                '</body></html>'
-            );
-            printWin.document.close();
+                '</body></html>';
+
+            printDoc.open();
+            printDoc.write(printHtml);
+            printDoc.close();
             try {
-                printWin.document.title = exportTitle;
+                printDoc.title = exportTitle;
             } catch (titleErr) { /* ignore */ }
+
+            var cleanedUp = false;
+            var cleanupPrintFrame = function () {
+                if (cleanedUp) return;
+                cleanedUp = true;
+                try {
+                    if (printFrame && printFrame.parentNode) {
+                        printFrame.parentNode.removeChild(printFrame);
+                    }
+                } catch (cleanupErr) { /* ignore */ }
+            };
+            try {
+                printWin.addEventListener('afterprint', cleanupPrintFrame);
+            } catch (afterErr) { /* ignore */ }
+            // Fallback if afterprint is delayed / unsupported
+            window.setTimeout(cleanupPrintFrame, 120000);
 
             var triggerPrint = function () {
                 try {
                     printWin.focus();
                     printWin.print();
-                } catch (err) { /* ignore */ }
+                } catch (err) {
+                    cleanupPrintFrame();
+                }
             };
 
             // Wait for accreditation / logo images to load before printing
             (function waitForPrintImages() {
-                var doc = printWin.document;
+                var doc = printDoc;
                 var imgs = doc ? Array.prototype.slice.call(doc.images || []) : [];
                 if (!imgs.length) {
                     window.setTimeout(triggerPrint, 400);
@@ -17119,6 +17155,149 @@
             });
         }
 
+        function formatInrAmount(n) {
+            n = Math.round((parseFloat(n) || 0) * 100) / 100;
+            try {
+                return '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: n % 1 ? 2 : 0 });
+            } catch (e) {
+                return '₹' + String(n);
+            }
+        }
+
+        function ensureFlightFareConfirmModal() {
+            if ($('#qFlightFareConfirmModal').length) {
+                return;
+            }
+            $('body').append(
+                '<div class="modal fade" id="qFlightFareConfirmModal" tabindex="-1" role="dialog" aria-labelledby="qFlightFareConfirmTitle" aria-hidden="true" data-backdrop="static" data-keyboard="false">' +
+                '<div class="modal-dialog modal-dialog-centered" role="document" style="max-width:520px;">' +
+                '<div class="modal-content" style="border:0;border-radius:14px;overflow:hidden;">' +
+                '<div class="modal-header py-2" style="background:#e11d2e;color:#fff;border:0;">' +
+                '<h5 class="modal-title mb-0" id="qFlightFareConfirmTitle" style="font-weight:700;font-size:1rem;">' +
+                '<i class="fas fa-plane mr-2"></i>Flight Fare Update</h5>' +
+                '<button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity:1;text-shadow:none;">' +
+                '<span aria-hidden="true">&times;</span></button></div>' +
+                '<div class="modal-body" style="padding:1.15rem 1.25rem 0.85rem;">' +
+                '<p class="mb-2" id="qFlightFareConfirmMsg" style="font-size:.95rem;color:#1e293b;line-height:1.45;"></p>' +
+                '<div id="qFlightFareConfirmDetails" class="d-none" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:.65rem .75rem;margin-bottom:.75rem;font-size:.82rem;"></div>' +
+                '<div id="qFlightFareConfirmWarnings" class="d-none alert alert-warning py-2 px-3 mb-2" style="font-size:.8rem;"></div>' +
+                '</div>' +
+                '<div class="modal-footer py-2" style="border-top:1px solid #eef2f7;">' +
+                '<button type="button" class="btn btn-outline-secondary" id="qFlightFareConfirmCancel" style="min-width:110px;border-radius:10px;font-weight:700;" data-dismiss="modal">Cancel</button>' +
+                '<button type="button" class="btn btn-danger" id="qFlightFareConfirmOk" style="min-width:110px;border-radius:10px;font-weight:700;background:#e11d48;border-color:#e11d48;">OK</button>' +
+                '</div></div></div></div>'
+            );
+        }
+
+        function buildFlightFareConfirmContent(result) {
+            result = result || {};
+            var changes = result.changes || [];
+            var warnings = result.warnings || [];
+            var totalDiff = parseFloat(result.totalDiff) || 0;
+            var msg = '';
+            var detailsHtml = '';
+
+            if (!changes.length) {
+                msg = 'Flight rates have not changed. Do you want to proceed with saving this quotation?';
+            } else if (changes.length === 1) {
+                var one = changes[0];
+                var oneDiff = Math.abs(parseFloat(one.diff) || 0);
+                if ((parseFloat(one.diff) || 0) > 0) {
+                    msg = 'Flight rates have increased by ' + formatInrAmount(oneDiff)
+                        + '. The updated flight fares will be applied to this quotation. Do you want to proceed?';
+                } else {
+                    msg = 'Flight rates have decreased by ' + formatInrAmount(oneDiff)
+                        + '. The updated flight fares will be applied to this quotation. Do you want to proceed?';
+                }
+            } else {
+                if (totalDiff > 0) {
+                    msg = 'Flight rates have increased by ' + formatInrAmount(totalDiff)
+                        + ' overall. The updated flight fares will be applied to this quotation. Do you want to proceed?';
+                } else if (totalDiff < 0) {
+                    msg = 'Flight rates have decreased by ' + formatInrAmount(Math.abs(totalDiff))
+                        + ' overall. The updated flight fares will be applied to this quotation. Do you want to proceed?';
+                } else {
+                    msg = 'Some flight fares changed (net difference ' + formatInrAmount(0)
+                        + '). The updated flight fares will be applied to this quotation. Do you want to proceed?';
+                }
+            }
+
+            if (changes.length) {
+                detailsHtml += '<div style="font-weight:700;margin-bottom:.35rem;color:#334155;">Fare comparison</div>';
+                changes.forEach(function (c) {
+                    var diff = parseFloat(c.diff) || 0;
+                    var sign = diff > 0 ? '+' : (diff < 0 ? '−' : '');
+                    var color = diff > 0 ? '#b91c1c' : (diff < 0 ? '#15803d' : '#475569');
+                    detailsHtml += '<div style="display:flex;justify-content:space-between;gap:.75rem;padding:.28rem 0;border-bottom:1px solid #eef2f7;">' +
+                        '<div style="min-width:0;">' +
+                        '<div style="font-weight:700;color:#0f172a;">' + esc(c.label || 'Flight') +
+                        (c.flightNo ? ' <span style="font-weight:600;color:#64748b;">(' + esc(c.flightNo) + ')</span>' : '') +
+                        '</div>' +
+                        '<div style="color:#64748b;">' + esc(c.route || '') + '</div>' +
+                        '<div style="color:#64748b;">' + formatInrAmount(c.oldFare) + ' → ' + formatInrAmount(c.newFare) + '</div>' +
+                        '</div>' +
+                        '<div style="font-weight:800;white-space:nowrap;color:' + color + ';">' +
+                        sign + formatInrAmount(Math.abs(diff)).replace(/^₹/, '₹') +
+                        '</div></div>';
+                });
+                detailsHtml += '<div style="display:flex;justify-content:space-between;padding-top:.45rem;font-weight:800;color:#0f172a;">' +
+                    '<span>Total difference</span><span>' +
+                    (totalDiff > 0 ? '+' : (totalDiff < 0 ? '−' : '')) +
+                    formatInrAmount(Math.abs(totalDiff)) +
+                    '</span></div>';
+            }
+
+            return {
+                message: msg,
+                detailsHtml: detailsHtml,
+                warningsHtml: warnings.length
+                    ? ('<i class="fas fa-exclamation-triangle mr-1"></i>' + esc(warnings.join(' ')))
+                    : ''
+            };
+        }
+
+        function confirmFlightFareRecheck(result) {
+            var deferred = $.Deferred();
+            ensureFlightFareConfirmModal();
+            var content = buildFlightFareConfirmContent(result);
+            $('#qFlightFareConfirmMsg').text(content.message);
+            if (content.detailsHtml) {
+                $('#qFlightFareConfirmDetails').html(content.detailsHtml).removeClass('d-none');
+            } else {
+                $('#qFlightFareConfirmDetails').empty().addClass('d-none');
+            }
+            if (content.warningsHtml) {
+                $('#qFlightFareConfirmWarnings').html(content.warningsHtml).removeClass('d-none');
+            } else {
+                $('#qFlightFareConfirmWarnings').empty().addClass('d-none');
+            }
+
+            var settled = false;
+            var finish = function (ok) {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                $('#qFlightFareConfirmOk').off('click.qFareConfirm');
+                $('#qFlightFareConfirmCancel').off('click.qFareConfirm');
+                $('#qFlightFareConfirmModal').off('hidden.bs.modal.qFareConfirm');
+                $('#qFlightFareConfirmModal').modal('hide');
+                deferred.resolve(!!ok);
+            };
+
+            $('#qFlightFareConfirmOk').off('click.qFareConfirm').on('click.qFareConfirm', function () {
+                finish(true);
+            });
+            $('#qFlightFareConfirmCancel').off('click.qFareConfirm').on('click.qFareConfirm', function () {
+                finish(false);
+            });
+            $('#qFlightFareConfirmModal').off('hidden.bs.modal.qFareConfirm').on('hidden.bs.modal.qFareConfirm', function () {
+                finish(false);
+            });
+            $('#qFlightFareConfirmModal').modal('show');
+            return deferred.promise();
+        }
+
         function saveQuotation($btnOverride, options) {
             options = options || {};
             var previewOnlySave = !!options.previewOnly || isPreviewOnlyMode();
@@ -17141,51 +17320,137 @@
             var btnDefaultHtml = ($btn.length && $btn.is('#qPreviewSaveBtn')) || previewOnlySave
                 ? '<i class="fas fa-save mr-1"></i>Save Changes'
                 : '<i class="fas fa-save mr-1"></i>Save Quotation';
+
+            function restoreSaveButton() {
+                if ($btn.length) {
+                    $btn.prop('disabled', false).html(btnDefaultHtml);
+                }
+                if (previewOnlySave) {
+                    notifyParentPreviewState({ saving: false });
+                }
+            }
+
+            function runPublishSave(payload, flightRecheckResult) {
+                if ($btn.length) {
+                    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+                }
+                if (previewOnlySave) {
+                    notifyParentPreviewState({ saving: true, dirty: true });
+                }
+                postQuotationSave(payload, 'publish', $btn, btnDefaultHtml, function (res) {
+                    setPreviewDirty(false);
+                    if (res.id) {
+                        $('#q_id').val(res.id);
+                    }
+                    saveFormDraftToStorage();
+
+                    // Embedded Leads preview: save in place, do not redirect away.
+                    if (previewOnlySave) {
+                        var previewMsg = res.message || 'Quotation saved.';
+                        if (flightRecheckResult && flightRecheckResult.changed) {
+                            previewMsg += ' Updated flight fares were applied to this quotation.';
+                        }
+                        notifyParentPreviewState({
+                            saved: true,
+                            dirty: false,
+                            message: previewMsg,
+                            id: res.id || null,
+                            version: res.version || null,
+                            quotation_uid: res.quotation_uid || null,
+                            flight_rates_changed: !!(flightRecheckResult && flightRecheckResult.changed)
+                        });
+                        return;
+                    }
+
+                    var successHtml = esc(res.message || 'Quotation saved.');
+                    if (res.quotation_uid) {
+                        successHtml += ' (' + esc(res.quotation_uid) + ')';
+                    }
+                    if (res.version) {
+                        successHtml += ' — now at <strong>v' + esc(String(res.version)) + '</strong>.';
+                    }
+                    if (flightRecheckResult && flightRecheckResult.changed) {
+                        successHtml += '<div class="mt-2 mb-0"><i class="fas fa-plane mr-1"></i>'
+                            + esc('Updated flight fares were applied to this quotation.')
+                            + '</div>';
+                    }
+                    $('#qAlert').html('<div class="alert alert-success">' + successHtml + '</div>');
+                    window.scrollTo(0, 0);
+                    if ($('#qPreviewModal').hasClass('show')) {
+                        $('#qPreviewModal').modal('hide');
+                    }
+                    var savedLeadId = parseInt(res.lead_id, 10) || parseInt($('#q_lead_id').val(), 10) || 0;
+                    var leadsUrl = 'crm/leads.php';
+                    if (savedLeadId > 0) {
+                        leadsUrl += '?highlight=' + encodeURIComponent(String(savedLeadId));
+                    }
+                    window.location.href = absUrl(leadsUrl);
+                });
+            }
+
+            function proceedAfterFlightConfirm(result) {
+                result = result || { changed: false, pendingUpdates: [], warnings: [] };
+                if (result.changed && result.pendingUpdates && result.pendingUpdates.length
+                    && typeof window.qfsApplyPendingFlightRateUpdates === 'function') {
+                    window.qfsApplyPendingFlightRateUpdates(result.pendingUpdates);
+                    try {
+                        if (typeof recalcCosts === 'function') {
+                            recalcCosts();
+                        }
+                    } catch (eRecalc) { /* ignore */ }
+                }
+
+                var nextPayload;
+                try {
+                    nextPayload = collectPayload();
+                } catch (errCollect) {
+                    restoreSaveButton();
+                    alert('Could not prepare quotation data after flight recheck. ' + (errCollect && errCollect.message ? errCollect.message : ''));
+                    return;
+                }
+                if (!nextPayload.guest_name) {
+                    nextPayload.guest_name = p.guest_name;
+                }
+                runPublishSave(nextPayload, result);
+            }
+
+            var existingId = parseInt($('#q_id').val(), 10) || parseInt(p.id, 10) || 0;
+            var hasFlightRows = $('#qFlightRows .q-flight-row').length > 0;
+            var shouldRecheckFlights = existingId > 0
+                && hasFlightRows
+                && typeof window.qfsRecheckQuotationFlightRates === 'function';
+
+            if (!shouldRecheckFlights) {
+                runPublishSave(p, null);
+                return;
+            }
+
             if ($btn.length) {
-                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Checking flights...');
             }
             if (previewOnlySave) {
                 notifyParentPreviewState({ saving: true, dirty: true });
             }
-            postQuotationSave(p, 'publish', $btn, btnDefaultHtml, function (res) {
-                setPreviewDirty(false);
-                if (res.id) {
-                    $('#q_id').val(res.id);
-                }
-                saveFormDraftToStorage();
 
-                // Embedded Leads preview: save in place, do not redirect away.
-                if (previewOnlySave) {
-                    notifyParentPreviewState({
-                        saved: true,
-                        dirty: false,
-                        message: res.message || 'Quotation saved.',
-                        id: res.id || null,
-                        version: res.version || null,
-                        quotation_uid: res.quotation_uid || null
+            window.qfsRecheckQuotationFlightRates()
+                .done(function (result) {
+                    result = result || { changed: false, warnings: [], pendingUpdates: [], changes: [] };
+                    // Keep button in checking/disabled state until user confirms or cancels.
+                    if ($btn.length) {
+                        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Waiting…');
+                    }
+                    confirmFlightFareRecheck(result).done(function (confirmed) {
+                        if (!confirmed) {
+                            restoreSaveButton();
+                            return;
+                        }
+                        proceedAfterFlightConfirm(result);
                     });
-                    return;
-                }
-
-                var successHtml = esc(res.message || 'Quotation saved.');
-                if (res.quotation_uid) {
-                    successHtml += ' (' + esc(res.quotation_uid) + ')';
-                }
-                if (res.version) {
-                    successHtml += ' — now at <strong>v' + esc(String(res.version)) + '</strong>.';
-                }
-                $('#qAlert').html('<div class="alert alert-success">' + successHtml + '</div>');
-                window.scrollTo(0, 0);
-                if ($('#qPreviewModal').hasClass('show')) {
-                    $('#qPreviewModal').modal('hide');
-                }
-                var savedLeadId = parseInt(res.lead_id, 10) || parseInt($('#q_lead_id').val(), 10) || 0;
-                var leadsUrl = 'crm/leads.php';
-                if (savedLeadId > 0) {
-                    leadsUrl += '?highlight=' + encodeURIComponent(String(savedLeadId));
-                }
-                window.location.href = absUrl(leadsUrl);
-            });
+                })
+                .fail(function () {
+                    restoreSaveButton();
+                    window.alert('Could not recheck flight fares. Quotation was not saved. Please try again.');
+                });
         }
 
         window.qSaveQuotation = saveQuotation;

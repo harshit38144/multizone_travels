@@ -2299,4 +2299,403 @@
             qfsRefreshVisibleResults();
         });
     });
+
+    /* ------------------------------------------------------------------ */
+    /* Auto fare recheck when saving an existing quotation as a new version */
+    /* ------------------------------------------------------------------ */
+
+    function qfsCodeFromText(text) {
+        var s = String(text || '').trim().toUpperCase();
+        var m = s.match(/\(([A-Z0-9]{3})\)/);
+        if (m) {
+            return m[1];
+        }
+        if (/^[A-Z]{3}$/.test(s)) {
+            return s;
+        }
+        return '';
+    }
+
+    function qfsCityFromText(text) {
+        return String(text || '').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function qfsNormFlightNo(s) {
+        return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+
+    function qfsParseDepDateYmd(raw) {
+        raw = String(raw || '').trim();
+        if (!raw) {
+            return '';
+        }
+        if (typeof moment === 'function') {
+            var m = moment(raw, ['YYYY-MM-DD', 'DD/MM/YYYY', 'D/M/YYYY', 'DD-MM-YYYY', 'DD/MM/YY'], true);
+            if (m.isValid()) {
+                return m.format('YYYY-MM-DD');
+            }
+            m = moment(raw);
+            if (m.isValid()) {
+                return m.format('YYYY-MM-DD');
+            }
+        }
+        if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+            return raw.slice(0, 10);
+        }
+        return '';
+    }
+
+    function qfsCollectDomJourneyGroups() {
+        var groups = [];
+        var current = null;
+        $('#qFlightRows .q-flight-row').each(function () {
+            var $r = $(this);
+            var start = $r.find('.f-journey-start').val() === '1';
+            var row = {
+                $el: $r,
+                from: String($r.find('.f-from').val() || '').trim(),
+                to: String($r.find('.f-to').val() || '').trim(),
+                name: String($r.find('.f-name').val() || '').trim(),
+                fl_tr_no: String($r.find('.f-fl-no').val() || '').trim(),
+                dep_date: String($r.find('.f-dep-date').val() || '').trim(),
+                dep_time: String($r.find('.f-dep-time').val() || '').trim(),
+                arr_date: String($r.find('.f-arr-date').val() || '').trim(),
+                arr_time: String($r.find('.f-arr-time').val() || '').trim(),
+                fare: String($r.find('.f-fare').val() || '').trim(),
+                hand_baggage: String($r.find('.f-hand-bag').val() || '').trim(),
+                checkin_baggage: String($r.find('.f-checkin-bag').val() || '').trim(),
+                layover_time: String($r.find('.f-layover-time').val() || '').trim(),
+                layover_at: String($r.find('.f-layover-at').val() || '').trim()
+            };
+            if (start || !current) {
+                current = {
+                    $card: $r.closest('.q-flight-journey-card'),
+                    rows: [row]
+                };
+                groups.push(current);
+            } else {
+                current.rows.push(row);
+            }
+        });
+        return groups;
+    }
+
+    function qfsItemFlightNos(item) {
+        var journey = item.journey || item;
+        var flightsArray = (journey.flights && journey.flights.length > 0)
+            ? journey.flights
+            : [item.primaryFlight || item];
+        var nos = [];
+        flightsArray.forEach(function (f) {
+            var al = f.carrier || f.airline || {};
+            var n = qfsNormFlightNo((al.code || '') + (f.flightNo || f.flightNumber || ''));
+            if (n) {
+                nos.push(n);
+            }
+        });
+        return nos;
+    }
+
+    function qfsMatchFlightItem(item, savedNos) {
+        var apiNos = qfsItemFlightNos(item);
+        if (!savedNos.length || !apiNos.length) {
+            return false;
+        }
+        if (savedNos.length === apiNos.length) {
+            var all = true;
+            for (var i = 0; i < savedNos.length; i++) {
+                if (apiNos.indexOf(savedNos[i]) < 0) {
+                    all = false;
+                    break;
+                }
+            }
+            if (all) {
+                return true;
+            }
+        }
+        return apiNos.indexOf(savedNos[0]) >= 0;
+    }
+
+    function qfsItemToFlightData(item) {
+        var journey = item.journey || item;
+        var flightsArray = (journey.flights && journey.flights.length > 0)
+            ? journey.flights
+            : [item.primaryFlight || item];
+        var primaryF = item.primaryFlight || flightsArray[0] || item;
+        var guestFares = (item._qfsMeta && item._qfsMeta.fares)
+            ? item._qfsMeta.fares
+            : qfsJourneyGuestFares(journey, primaryF);
+        var totalFare = (item._qfsMeta && item._qfsMeta.price != null)
+            ? item._qfsMeta.price
+            : qfsGuestTotal(guestFares);
+        var al = primaryF.carrier || primaryF.airline || {};
+        var pFname = al.name || primaryF.airlineName || primaryF.carrierName || 'Airline';
+        var pFno = (al.code || 'FL') + '-' + (primaryF.flightNo || primaryF.flightNumber || '');
+        var first = flightsArray[0] || primaryF;
+        var last = flightsArray[flightsArray.length - 1] || primaryF;
+        var bagInfo = qfsBaggageFromFlightItem(item, primaryF);
+        return {
+            fname: pFname,
+            fno: pFno,
+            tot: totalFare,
+            unit_fare: guestFares.adt,
+            segments: flightsArray,
+            depCity: (first.depDetail && (first.depDetail.name || first.depDetail.city)) || '',
+            arrCity: (last.arrDetail && (last.arrDetail.name || last.arrDetail.city)) || '',
+            depCode: (first.depDetail && first.depDetail.code) || '',
+            arrCode: (last.arrDetail && last.arrDetail.code) || '',
+            hand_baggage: bagInfo.hand_baggage || '',
+            checkin_baggage: bagInfo.checkin_baggage || '',
+            baggage: bagInfo.baggage || ''
+        };
+    }
+
+    function qfsApplyFlightDataToJourney(group, fData, legDate) {
+        var newRows = mapJourneyToQuotationRows(fData, legDate || '');
+        var $rows = group.rows.map(function (r) { return r.$el; });
+        var fareChanged = false;
+        var oldFare = parseFloat(group.rows[0] && group.rows[0].fare);
+        if (isNaN(oldFare)) {
+            oldFare = 0;
+        }
+        var newFare = parseFloat(fData.tot);
+        if (isNaN(newFare)) {
+            newFare = 0;
+        }
+        if (Math.abs(newFare - oldFare) >= 1) {
+            fareChanged = true;
+        }
+
+        if (newRows.length === $rows.length) {
+            newRows.forEach(function (row, i) {
+                var $r = $rows[i];
+                if (!$r || !$r.length) {
+                    return;
+                }
+                if (row.from) {
+                    $r.find('.f-from').val(row.from);
+                }
+                if (row.to) {
+                    $r.find('.f-to').val(row.to);
+                }
+                if (row.name) {
+                    $r.find('.f-name').val(row.name);
+                }
+                if (row.fl_tr_no) {
+                    $r.find('.f-fl-no').val(row.fl_tr_no);
+                }
+                if (row.dep_date) {
+                    $r.find('.f-dep-date').val(row.dep_date);
+                }
+                if (row.dep_time) {
+                    $r.find('.f-dep-time').val(row.dep_time);
+                }
+                if (row.arr_date) {
+                    $r.find('.f-arr-date').val(row.arr_date);
+                }
+                if (row.arr_time) {
+                    $r.find('.f-arr-time').val(row.arr_time);
+                }
+                if (row.hand_baggage) {
+                    $r.find('.f-hand-bag').val(row.hand_baggage);
+                }
+                if (row.checkin_baggage) {
+                    $r.find('.f-checkin-bag').val(row.checkin_baggage);
+                }
+                if (row.layover_time) {
+                    $r.find('.f-layover-time').val(row.layover_time);
+                }
+                if (row.layover_at) {
+                    $r.find('.f-layover-at').val(row.layover_at);
+                }
+                if (i === 0) {
+                    $r.find('.f-fare').val(newFare > 0 ? String(Math.round(newFare * 100) / 100) : (row.fare || '0.00'));
+                } else {
+                    var segFare = parseFloat(row.fare);
+                    $r.find('.f-fare').val(!isNaN(segFare) ? String(segFare) : '0.00');
+                }
+            });
+        } else if (fareChanged && $rows[0] && $rows[0].length) {
+            // Keep existing segment structure; refresh journey total only.
+            $rows[0].find('.f-fare').val(String(Math.round(newFare * 100) / 100));
+        }
+
+        return fareChanged;
+    }
+
+    function qfsSearchSectorFlights(fromCode, toCode, fromCity, toCity, dateYmd, adults, children, infants, isDomestic) {
+        var sectorInfos = [{
+            src: { code: fromCode, name: fromCity || fromCode, city: fromCity || fromCode },
+            dest: { code: toCode, name: toCity || toCode, city: toCity || toCode },
+            date: dateYmd,
+            debug: false
+        }];
+        var payload = qfsBuildViaSearchPayload(sectorInfos, !!isDomestic, adults, children, infants);
+        return qfsAjaxViaSearch(payload).then(function (res) {
+            return qfsParseViaSearchResponse(res);
+        });
+    }
+
+    /**
+     * Compare live fares for every flight journey (does NOT mutate the quotation).
+     * Resolves with comparison details + pendingUpdates for later apply.
+     */
+    window.qfsRecheckQuotationFlightRates = function () {
+        var deferred = $.Deferred();
+        var groups = qfsCollectDomJourneyGroups();
+        if (!groups.length) {
+            deferred.resolve({
+                changed: false,
+                checkedCount: 0,
+                warnings: [],
+                changes: [],
+                pendingUpdates: [],
+                totalOld: 0,
+                totalNew: 0,
+                totalDiff: 0
+            });
+            return deferred.promise();
+        }
+
+        var counts = qfsReadGuestCounts();
+        qfsResultsState.adults = counts.adults;
+        qfsResultsState.children = counts.children;
+        qfsResultsState.infants = counts.infants;
+
+        var isInternational = $('input[name="qfs_flightType"]:checked').val() === 'international';
+        var isDomestic = !isInternational;
+        var warnings = [];
+        var changes = [];
+        var pendingUpdates = [];
+        var checkedCount = 0;
+        var totalOld = 0;
+        var totalNew = 0;
+        var chain = $.Deferred().resolve().promise();
+
+        groups.forEach(function (group, groupIndex) {
+            chain = chain.then(function () {
+                var first = group.rows[0] || {};
+                var last = group.rows[group.rows.length - 1] || first;
+                var fromCode = qfsCodeFromText(first.from);
+                var toCode = qfsCodeFromText(last.to);
+                var fromCity = qfsCityFromText(first.from);
+                var toCity = qfsCityFromText(last.to);
+                var dateYmd = qfsParseDepDateYmd(first.dep_date);
+                var savedNos = group.rows.map(function (r) {
+                    return qfsNormFlightNo(r.fl_tr_no);
+                }).filter(Boolean);
+                var label = String(
+                    (first.$el && first.$el.closest('.q-flight-journey-card').find('.f-journey-label').first().val())
+                    || (groupIndex === 0 ? 'Onward' : 'Return')
+                ).trim() || ('Flight ' + (groupIndex + 1));
+                var route = [fromCode || fromCity || '—', toCode || toCity || '—'].join(' → ');
+                var flightNoLabel = group.rows.map(function (r) {
+                    return String(r.fl_tr_no || '').trim();
+                }).filter(Boolean).join(', ');
+                var oldFare = parseFloat(first.fare);
+                if (isNaN(oldFare)) {
+                    oldFare = 0;
+                }
+
+                if (!fromCode || !toCode || fromCode.length !== 3 || toCode.length !== 3 || !dateYmd) {
+                    warnings.push(label + ': missing route or travel date — fare left unchanged.');
+                    totalOld += oldFare;
+                    totalNew += oldFare;
+                    return;
+                }
+                if (!savedNos.length) {
+                    warnings.push(label + ': no flight number to match — fare left unchanged.');
+                    totalOld += oldFare;
+                    totalNew += oldFare;
+                    return;
+                }
+
+                checkedCount += 1;
+                return qfsSearchSectorFlights(
+                    fromCode, toCode, fromCity, toCity, dateYmd,
+                    counts.adults, counts.children, counts.infants, isDomestic
+                ).then(function (parsed) {
+                    var list = qfsPrepareFlightList((parsed && parsed.flights) || [], 'recheck-' + groupIndex);
+                    var match = null;
+                    for (var i = 0; i < list.length; i++) {
+                        if (qfsMatchFlightItem(list[i], savedNos)) {
+                            match = list[i];
+                            break;
+                        }
+                    }
+                    if (!match) {
+                        warnings.push(label + ': matching flight not found in latest search — fare left unchanged.');
+                        totalOld += oldFare;
+                        totalNew += oldFare;
+                        return;
+                    }
+                    var fData = qfsItemToFlightData(match);
+                    var newFare = parseFloat(fData.tot);
+                    if (isNaN(newFare)) {
+                        newFare = 0;
+                    }
+                    var diff = Math.round((newFare - oldFare) * 100) / 100;
+                    totalOld += oldFare;
+                    totalNew += newFare;
+                    if (Math.abs(diff) >= 1) {
+                        changes.push({
+                            label: label,
+                            route: route,
+                            flightNo: flightNoLabel,
+                            oldFare: oldFare,
+                            newFare: newFare,
+                            diff: diff
+                        });
+                        pendingUpdates.push({
+                            group: group,
+                            fData: fData,
+                            dateYmd: dateYmd
+                        });
+                    }
+                }, function (err) {
+                    if (err && err.statusText === 'abort') {
+                        return;
+                    }
+                    warnings.push(label + ': flight search failed — fare left unchanged.');
+                    totalOld += oldFare;
+                    totalNew += oldFare;
+                });
+            });
+        });
+
+        chain.always(function () {
+            var totalDiff = Math.round((totalNew - totalOld) * 100) / 100;
+            deferred.resolve({
+                changed: changes.length > 0,
+                checkedCount: checkedCount,
+                warnings: warnings,
+                changes: changes,
+                pendingUpdates: pendingUpdates,
+                totalOld: Math.round(totalOld * 100) / 100,
+                totalNew: Math.round(totalNew * 100) / 100,
+                totalDiff: totalDiff
+            });
+        });
+
+        return deferred.promise();
+    };
+
+    /** Apply pending fare updates from a prior qfsRecheckQuotationFlightRates() result. */
+    window.qfsApplyPendingFlightRateUpdates = function (pendingUpdates) {
+        var updated = 0;
+        (pendingUpdates || []).forEach(function (item) {
+            if (!item || !item.group || !item.fData) {
+                return;
+            }
+            if (qfsApplyFlightDataToJourney(item.group, item.fData, item.dateYmd || '')) {
+                updated += 1;
+            }
+        });
+        if (updated > 0) {
+            try {
+                $('#qFlightRows .f-fare').trigger('change');
+            } catch (e) { /* ignore */ }
+        }
+        return updated;
+    };
 })(jQuery);
