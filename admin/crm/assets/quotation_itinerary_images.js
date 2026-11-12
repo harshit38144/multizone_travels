@@ -1,4 +1,4 @@
-/* Itinerary image search (Pexels / Wikimedia) */
+/* Itinerary image search (Pexels / Unsplash / Wikimedia fallback) */
 (function ($) {
     'use strict';
 
@@ -11,6 +11,8 @@
     var qiiLoading = false;
     var qiiImages = [];
     var qiiSeenKeys = {};
+    var qiiProvider = 'pexels';
+    var qiiRequestSeq = 0;
 
     function qiiAbsUrl(u) {
         if (typeof window.qQuotationAbsUrl === 'function') {
@@ -21,14 +23,104 @@
         return u;
     }
 
+    function qiiProviderLabel(source) {
+        source = String(source || qiiProvider || '').toLowerCase();
+        if (source === 'unsplash') return 'Unsplash';
+        if (source === 'pexels') return 'Pexels';
+        if (source === 'wikimedia') return 'Wikimedia Commons';
+        return 'Image library';
+    }
+
+    function qiiSetSourceNote(text) {
+        var $note = $('#qiiSourceNote');
+        if (!$note.length) {
+            return;
+        }
+        var value = String(text || '').trim();
+        if (value) {
+            $note.text(value).removeClass('is-empty').show();
+        } else {
+            $note.html('&nbsp;').addClass('is-empty').show();
+        }
+    }
+
+    function qiiShowSkeleton(count) {
+        count = Math.max(1, parseInt(count, 10) || 6);
+        var html = '';
+        var i;
+        for (i = 0; i < count; i++) {
+            html +=
+                '<div class="qii-skel-card" aria-hidden="true">' +
+                    '<div class="qii-skel-thumb"></div>' +
+                '</div>';
+        }
+        $('#qiiResultsGrid').html(html);
+    }
+
+    function qiiSyncProviderIndicator(animate) {
+        var $switch = $('.qii-provider-switch').first();
+        var $indicator = $switch.find('.qii-provider-indicator');
+        var $active = $switch.find('.qii-provider-btn.is-active').first();
+        if (!$switch.length || !$indicator.length || !$active.length) {
+            return;
+        }
+
+        var switchEl = $switch.get(0);
+        var activeEl = $active.get(0);
+        var switchRect = switchEl.getBoundingClientRect();
+        var activeRect = activeEl.getBoundingClientRect();
+        var left = Math.max(0, activeRect.left - switchRect.left);
+        var width = Math.max(1, activeRect.width);
+
+        if (animate === false) {
+            $indicator.css('transition', 'none');
+        }
+
+        $indicator.css({
+            width: width + 'px',
+            transform: 'translateX(' + left + 'px)'
+        });
+
+        if (animate === false) {
+            // Force reflow, then restore transition for later switches.
+            void $indicator.get(0).offsetWidth;
+            $indicator.css('transition', '');
+        }
+    }
+
+    function qiiSetProvider(provider, opts) {
+        opts = opts || {};
+        provider = String(provider || 'pexels').toLowerCase() === 'unsplash' ? 'unsplash' : 'pexels';
+        var changed = qiiProvider !== provider;
+        qiiProvider = provider;
+
+        $('.qii-provider-btn').each(function () {
+            var isActive = String($(this).data('provider') || '') === provider;
+            $(this).toggleClass('is-active', isActive).attr('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        qiiSyncProviderIndicator(opts.animate !== false);
+
+        if (opts.search !== false && changed) {
+            var q = ($('#qiiSearchInput').val() || '').trim();
+            if (q.length >= 2) {
+                qiiRunSearch(q);
+            } else {
+                $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
+                qiiSetSourceNote('');
+                qiiSetLoadMoreVisible(false);
+            }
+        }
+    }
+
     function qiiImageKey(img) {
         if (!img) {
             return '';
         }
         if (img.id) {
-            return 'id:' + String(img.id);
+            return String(img.source || qiiProvider) + ':id:' + String(img.id);
         }
-        return 'url:' + String(img.url || img.thumb || '');
+        return String(img.source || qiiProvider) + ':url:' + String(img.url || img.thumb || '');
     }
 
     function qiiUpdatePreview($card, url) {
@@ -101,9 +193,16 @@
             var idx = qiiImages.length;
             qiiImages.push(img);
             added.push(img);
-            var $btn = $('<button type="button" class="qii-img-item"></button>').attr('data-index', idx);
-            $('<img class="qii-img-thumb" alt="">').attr('src', img.thumb || img.url).appendTo($btn);
-            $('<span class="qii-img-caption"></span>').text(img.title || 'Image').appendTo($btn);
+
+            var altText = String(img.title || 'Image').trim() || 'Image';
+            var $btn = $('<button type="button" class="qii-img-item"></button>')
+                .attr('data-index', idx)
+                .attr('title', altText)
+                .attr('aria-label', altText);
+            $('<img class="qii-img-thumb" alt="">')
+                .attr('src', img.thumb || img.url)
+                .attr('alt', altText)
+                .appendTo($btn);
             $grid.append($btn);
         });
         $grid.data('images', qiiImages);
@@ -112,7 +211,6 @@
 
     function qiiRenderResults(images, meta, append) {
         var $grid = $('#qiiResultsGrid');
-        var $note = $('#qiiSourceNote');
         meta = meta || {};
 
         if (!append) {
@@ -120,21 +218,30 @@
             qiiImages = [];
             qiiSeenKeys = {};
         } else {
-            $grid.find('.qii-empty, .qii-loading').remove();
+            $grid.find('.qii-empty, .qii-loading, .qii-skel-card').remove();
+        }
+
+        if (meta.error && !(images && images.length) && !append) {
+            qiiSetSourceNote('');
+            $grid.html('<div class="qii-empty text-danger"><i class="fas fa-exclamation-circle"></i>' +
+                $('<div>').text(meta.error).html() + '</div>');
+            qiiSetLoadMoreVisible(false);
+            return;
         }
 
         if (meta.source) {
-            var srcLabel = meta.source === 'pexels' ? 'Pexels' : 'Wikimedia Commons';
-            $note.text('Showing results from ' + srcLabel + (meta.query ? ' for "' + meta.query + '"' : '')).show();
+            var srcLabel = qiiProviderLabel(meta.source);
+            qiiSetSourceNote('Showing results from ' + srcLabel + (meta.query ? ' for "' + meta.query + '"' : ''));
         } else if (!append) {
-            $note.hide();
+            qiiSetSourceNote('');
         }
 
         var added = qiiAppendImages(images);
         qiiHasMore = !!meta.has_more;
 
         if (!qiiImages.length) {
-            $grid.html('<div class="qii-empty"><i class="fas fa-image"></i>No images found. Try another search term.</div>');
+            $grid.html('<div class="qii-empty"><i class="fas fa-image"></i>No images found on ' +
+                qiiProviderLabel(meta.source || qiiProvider) + '. Try another search term.</div>');
             qiiSetLoadMoreVisible(false);
             return;
         }
@@ -154,33 +261,48 @@
         if (query.length < 2) {
             if (!append) {
                 $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
+                qiiSetSourceNote('');
                 qiiSetLoadMoreVisible(false);
             }
             return;
         }
 
-        if (qiiLoading) {
+        // Allow a fresh search / provider switch to interrupt an in-flight request.
+        if (append && qiiLoading) {
             return;
         }
 
         qiiLoading = true;
+        var reqId = ++qiiRequestSeq;
         if (append) {
             qiiSetLoadMoreLoading(true);
         } else {
             qiiSetLoadMoreVisible(false);
-            $('#qiiResultsGrid').html('<div class="qii-loading"><i class="fas fa-circle-notch fa-spin mr-1"></i> Searching...</div>');
-            $('#qiiSourceNote').hide();
+            qiiShowSkeleton(window.matchMedia && window.matchMedia('(max-width: 575px)').matches ? 4 : 6);
+            qiiSetSourceNote('Searching ' + qiiProviderLabel(qiiProvider) + '…');
+            var $panel = $('#qiiResultsPanel');
+            if ($panel.length) {
+                $panel.scrollTop(0);
+            }
         }
 
         $.getJSON(qiiAbsUrl('crm/ajax/search_itinerary_images.php'), {
             q: query,
             limit: qiiPerPage,
-            page: page
+            page: page,
+            provider: qiiProvider
         })
             .done(function (res) {
-                if (!res || !res.success) {
+                if (reqId !== qiiRequestSeq) {
+                    return;
+                }
+                if (!res || (!res.success && !(res.images && res.images.length))) {
                     if (!append) {
-                        qiiRenderResults([], {});
+                        qiiRenderResults([], {
+                            error: (res && res.message) ? res.message : ('Could not search ' + qiiProviderLabel(qiiProvider) + '.'),
+                            source: qiiProvider,
+                            query: query
+                        });
                     } else {
                         qiiHasMore = false;
                         qiiSetLoadMoreVisible(false);
@@ -190,20 +312,29 @@
                 qiiPage = parseInt(res.page, 10) || page;
                 qiiQuery = query;
                 qiiRenderResults(res.images || [], {
-                    source: res.source,
+                    source: res.source || qiiProvider,
                     query: query,
-                    has_more: !!res.has_more
+                    has_more: !!res.has_more,
+                    error: res.message || ''
                 }, !!append);
             })
             .fail(function () {
+                if (reqId !== qiiRequestSeq) {
+                    return;
+                }
                 if (!append) {
-                    $('#qiiResultsGrid').html('<div class="qii-empty text-danger">Search failed. Please try again.</div>');
+                    qiiSetSourceNote('');
+                    $('#qiiResultsGrid').html('<div class="qii-empty text-danger"><i class="fas fa-exclamation-circle"></i>Search failed on ' +
+                        qiiProviderLabel(qiiProvider) + '. Please try again.</div>');
                     qiiSetLoadMoreVisible(false);
                 } else {
                     alert('Could not load more images. Please try again.');
                 }
             })
             .always(function () {
+                if (reqId !== qiiRequestSeq) {
+                    return;
+                }
                 qiiLoading = false;
                 qiiSetLoadMoreLoading(false);
                 if (!qiiHasMore) {
@@ -234,13 +365,19 @@
         var dayHead = ($card.find('.q-day-head').text() || '').trim();
         $('#qiiImageModalSub').text(dayHead ? ('Choose a photo for: ' + dayHead) : 'Choose a photo for this day');
         $('#qiiSearchInput').val(query);
-        $('#qiiResultsGrid').empty();
-        $('#qiiSourceNote').hide();
         qiiSetLoadMoreVisible(false);
         qiiPage = 1;
         qiiHasMore = false;
         qiiImages = [];
         qiiSeenKeys = {};
+        qiiSetProvider(qiiProvider || 'pexels', { search: false, animate: false });
+        if (query.length >= 2) {
+            qiiShowSkeleton(window.matchMedia && window.matchMedia('(max-width: 575px)').matches ? 4 : 6);
+            qiiSetSourceNote('Searching ' + qiiProviderLabel(qiiProvider) + '…');
+        } else {
+            $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
+            qiiSetSourceNote('');
+        }
         $('#qiiImageModal').modal('show');
         if (query.length >= 2) {
             qiiRunSearch(query);
@@ -276,7 +413,11 @@
             url: qiiAbsUrl('crm/ajax/import_itinerary_image.php'),
             type: 'POST',
             dataType: 'json',
-            data: { url: img.url }
+            data: {
+                url: img.url,
+                source: img.source || qiiProvider,
+                download_location: img.download_location || ''
+            }
         }).done(function (res) {
             if (res && res.success && res.url) {
                 $card.find('.q-day-image').val(res.url);
@@ -303,6 +444,20 @@
             var $card = $(this).closest('.q-day-card');
             $card.find('.q-day-image').val('');
             qiiUpdatePreview($card, '');
+        });
+
+        $(document).on('click', '.qii-provider-btn', function (e) {
+            e.preventDefault();
+            this.blur();
+            qiiSetProvider($(this).data('provider'), { search: true });
+        });
+
+        $('#qiiImageModal').on('shown.bs.modal', function () {
+            qiiSyncProviderIndicator(false);
+        });
+
+        $(window).on('resize', function () {
+            qiiSyncProviderIndicator(false);
         });
 
         $('#qiiSearchBtn').on('click', function () {

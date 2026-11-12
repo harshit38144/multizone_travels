@@ -3785,11 +3785,20 @@ $qWizardSteps = [
             --qii-border: #e2e8f0;
         }
 
+        .qii-image-search .qii-modal-dialog {
+            max-height: calc(100vh - 2rem);
+            margin: 1rem auto;
+        }
+
         .qii-image-search .qii-modal-content {
             border: 0;
             border-radius: 14px;
             overflow: hidden;
             box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 2rem);
+            height: min(640px, calc(100vh - 2rem));
         }
 
         .qii-image-search .qii-modal-hd.modal-header,
@@ -3858,6 +3867,19 @@ $qWizardSteps = [
             opacity: 1 !important;
             margin-top: 0.12rem;
             line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .qii-image-search .qii-hd-actions {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: flex-end;
+            gap: 0.55rem;
+            flex: 0 0 auto;
+            margin-left: 0.5rem;
         }
 
         .qii-image-search .qii-close-btn.close,
@@ -3869,7 +3891,7 @@ $qWizardSteps = [
             justify-content: center !important;
             width: 36px !important;
             height: 36px !important;
-            margin: 0 0 0 0.5rem !important;
+            margin: 0 !important;
             padding: 0 !important;
             border: 1px solid #e2e8f0 !important;
             border-radius: 10px !important;
@@ -3900,11 +3922,107 @@ $qWizardSteps = [
             opacity: 1 !important;
         }
 
+        .qii-image-search .qii-modal-hd,
+        .qii-image-search .qii-modal-ft {
+            flex: 0 0 auto;
+        }
+
         .qii-image-search .qii-search-body {
             background: var(--qii-bg);
             padding: 1rem 1.15rem;
-            max-height: 65vh;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .qii-image-search .qii-search-toolbar {
+            flex: 0 0 auto;
+        }
+
+        .qii-image-search .qii-provider-switch {
+            position: relative;
+            display: inline-flex;
+            align-items: stretch;
+            gap: 0;
+            margin: 0;
+            padding: 3px;
+            border: 1px solid var(--qii-border);
+            border-radius: 999px;
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            flex: 0 0 auto;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .qii-image-search .qii-provider-indicator {
+            position: absolute;
+            top: 3px;
+            left: 0;
+            height: calc(100% - 6px);
+            width: 88px;
+            border-radius: 999px;
+            background: var(--qii-primary);
+            box-shadow: 0 4px 10px rgba(14, 165, 233, 0.28);
+            transform: translateX(3px);
+            transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+                        width 260ms cubic-bezier(0.22, 1, 0.36, 1),
+                        background-color 220ms ease,
+                        box-shadow 220ms ease;
+            will-change: transform, width;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .qii-image-search .qii-provider-btn {
+            appearance: none;
+            -webkit-appearance: none;
+            position: relative;
+            z-index: 1;
+            border: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0.45rem 0.95rem;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: color 220ms ease, background-color 220ms ease;
+            min-width: 88px;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .qii-image-search .qii-provider-btn:hover,
+        .qii-image-search .qii-provider-btn:active,
+        .qii-image-search .qii-provider-btn:focus {
+            outline: none !important;
+            box-shadow: none !important;
+            border: 0 !important;
+            background: transparent !important;
+        }
+
+        .qii-image-search .qii-provider-btn:hover {
+            color: #0f172a;
+        }
+
+        .qii-image-search .qii-provider-btn.is-active,
+        .qii-image-search .qii-provider-btn.is-active:hover,
+        .qii-image-search .qii-provider-btn.is-active:focus {
+            color: #fff !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+        .qii-image-search .qii-provider-btn:focus-visible {
+            outline: 2px solid rgba(14, 165, 233, 0.55) !important;
+            outline-offset: 2px;
+            border-radius: 999px;
         }
 
         .qii-image-search .qii-search-bar {
@@ -3930,12 +4048,33 @@ $qWizardSteps = [
             font-size: 0.72rem;
             color: #64748b;
             margin-bottom: 0.55rem;
+            min-height: 1.1rem;
+            line-height: 1.1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .qii-image-search .qii-source-note.is-empty {
+            visibility: hidden;
+        }
+
+        .qii-image-search .qii-results-panel {
+            flex: 1 1 auto;
+            min-height: 320px;
+            height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-right: 0.15rem;
         }
 
         .qii-image-search .qii-results-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 0.65rem;
+            align-content: start;
+            min-height: 100%;
         }
 
         .qii-image-search .qii-load-more-wrap {
@@ -3943,6 +4082,7 @@ $qWizardSteps = [
             justify-content: center;
             margin-top: 0.85rem;
             padding-top: 0.15rem;
+            min-height: 2.4rem;
         }
 
         .qii-image-search .qii-load-more-btn {
@@ -3975,6 +4115,9 @@ $qWizardSteps = [
             background: #fff;
             cursor: pointer;
             text-align: left;
+            display: block;
+            width: 100%;
+            line-height: 0;
             transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
         }
 
@@ -3992,14 +4135,10 @@ $qWizardSteps = [
             background-color: #e2e8f0;
         }
 
-        .qii-image-search .qii-img-caption {
-            display: block;
-            font-size: 0.68rem;
-            color: #475569;
-            padding: 0.35rem 0.45rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .qii-image-search .qii-img-meta,
+        .qii-image-search .qii-img-caption,
+        .qii-image-search .qii-img-author {
+            display: none !important;
         }
 
         .qii-image-search .qii-empty,
@@ -4009,6 +4148,11 @@ $qWizardSteps = [
             padding: 2rem 1rem;
             color: #64748b;
             font-size: 0.85rem;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         .qii-image-search .qii-empty i {
@@ -4016,6 +4160,34 @@ $qWizardSteps = [
             font-size: 1.75rem;
             margin-bottom: 0.5rem;
             opacity: 0.45;
+        }
+
+        .qii-image-search .qii-skel-card {
+            border: 1px solid var(--qii-border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+            pointer-events: none;
+            line-height: 0;
+        }
+
+        .qii-image-search .qii-skel-thumb {
+            display: block;
+            width: 100%;
+            height: 110px;
+            background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 45%, #e2e8f0 90%);
+            background-size: 200% 100%;
+            animation: qiiShimmer 1.25s ease-in-out infinite;
+        }
+
+        .qii-image-search .qii-skel-meta,
+        .qii-image-search .qii-skel-line {
+            display: none !important;
+        }
+
+        @keyframes qiiShimmer {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
         }
 
         .qii-image-search .qii-modal-ft {
@@ -4030,9 +4202,54 @@ $qWizardSteps = [
             font-size: 0.82rem;
         }
 
+        @media (max-width: 767px) {
+            .qii-image-search .qii-modal-hd.modal-header,
+            .qii-image-search .qii-modal-hd {
+                flex-wrap: wrap;
+                align-items: center !important;
+                row-gap: 0.55rem;
+            }
+
+            .qii-image-search .qii-hd-main {
+                flex: 1 1 auto;
+                min-width: 0;
+                max-width: calc(100% - 3.25rem);
+            }
+
+            .qii-image-search .qii-hd-actions {
+                width: 100%;
+                justify-content: flex-start;
+                margin-left: 0;
+                order: 3;
+            }
+
+            .qii-image-search .qii-hd-actions .qii-close-btn {
+                margin-left: auto !important;
+            }
+
+            .qii-image-search .qii-provider-btn {
+                min-width: 76px;
+                padding: 0.4rem 0.75rem;
+                font-size: 0.74rem;
+            }
+        }
+
         @media (max-width: 575px) {
+            .qii-image-search .qii-modal-content {
+                height: min(92vh, calc(100vh - 1rem));
+            }
+
             .qii-image-search .qii-results-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            .qii-image-search .qii-results-panel {
+                min-height: 260px;
+            }
+
+            .qii-image-search .qii-hd-title.modal-title,
+            .qii-image-search .qii-modal-hd .modal-title {
+                font-size: 0.98rem !important;
             }
         }
 
@@ -18795,7 +19012,7 @@ $qWizardSteps = [
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="crm/assets/quotation_generator.js?v=380"></script>
     <script src="crm/assets/quotation_flight_search.js?v=38"></script>
-    <script src="crm/assets/quotation_itinerary_images.js?v=3"></script>
+    <script src="crm/assets/quotation_itinerary_images.js?v=7"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>
         $(function () {

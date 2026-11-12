@@ -7,6 +7,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $url = trim((string) ($_POST['url'] ?? ''));
+$downloadLocation = trim((string) ($_POST['download_location'] ?? ''));
+if ($downloadLocation !== '') {
+    crmImageNotifyUnsplashDownload($downloadLocation);
+}
 $result = crmImageImportFromUrl($url);
 
 if (!$result['ok']) {

@@ -10,4 +10,9 @@ return [
     'use_gemini_ai' => false,
     'instant_mode' => true,
     'pexels_api_key' => '',
+    // Unsplash (https://unsplash.com/oauth/applications) — only access key is used for search.
+    // Never expose secret_key to frontend JS.
+    'unsplash_access_key' => '',
+    'unsplash_secret_key' => '',
+    'unsplash_application_id' => '',
 ];
