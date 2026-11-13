@@ -17414,9 +17414,16 @@
                 runPublishSave(nextPayload, result);
             }
 
+            // Preview Save Quotation must persist finalized quotation flights/pricing only.
+            // Do not fetch temporary search fares or overwrite existing flight details on save.
+            var fromPreviewModal = previewOnlySave
+                || !!options.skipFlightRecheck
+                || ($btn.length && ($btn.is('#qSaveBtn') || $btn.is('#qPreviewSaveBtn')))
+                || $('#qPreviewModal').hasClass('show');
             var existingId = parseInt($('#q_id').val(), 10) || parseInt(p.id, 10) || 0;
             var hasFlightRows = $('#qFlightRows .q-flight-row').length > 0;
-            var shouldRecheckFlights = existingId > 0
+            var shouldRecheckFlights = !fromPreviewModal
+                && existingId > 0
                 && hasFlightRows
                 && typeof window.qfsRecheckQuotationFlightRates === 'function';
 
@@ -17459,7 +17466,10 @@
             flushPreviewActiveEdit();
             window.setTimeout(function () {
                 var $previewBtn = $('#qPreviewSaveBtn');
-                saveQuotation($previewBtn.length ? $previewBtn : $(), { previewOnly: true });
+                saveQuotation($previewBtn.length ? $previewBtn : $(), {
+                    previewOnly: true,
+                    skipFlightRecheck: true
+                });
             }, 80);
         };
 
@@ -17500,7 +17510,7 @@
             e.preventDefault();
             flushPreviewActiveEdit();
             window.setTimeout(function () {
-                saveQuotation($('#qSaveBtn'));
+                saveQuotation($('#qSaveBtn'), { skipFlightRecheck: true });
             }, 80);
         });
         $('#qSaveDraftBtn').on('click', function (e) {
@@ -17511,7 +17521,7 @@
             e.preventDefault();
             flushPreviewActiveEdit();
             window.setTimeout(function () {
-                saveQuotation($('#qPreviewSaveBtn'));
+                saveQuotation($('#qPreviewSaveBtn'), { skipFlightRecheck: true });
             }, 80);
         });
         $('#qPreviewModal').on('hide.bs.modal', function (e) {

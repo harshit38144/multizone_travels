@@ -19010,7 +19010,7 @@ $qWizardSteps = [
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=380"></script>
+    <script src="crm/assets/quotation_generator.js?v=381"></script>
     <script src="crm/assets/quotation_flight_search.js?v=38"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=7"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
