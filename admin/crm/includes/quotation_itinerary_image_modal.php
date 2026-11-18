@@ -11,15 +11,6 @@
                     </div>
                 </div>
                 <div class="qii-hd-actions">
-                    <div class="qii-provider-switch" role="tablist" aria-label="Image search provider">
-                        <span class="qii-provider-indicator" aria-hidden="true"></span>
-                        <button type="button" class="qii-provider-btn is-active" role="tab" aria-selected="true" data-provider="pexels" id="qiiProviderPexels">
-                            Pexels
-                        </button>
-                        <button type="button" class="qii-provider-btn" role="tab" aria-selected="false" data-provider="unsplash" id="qiiProviderUnsplash">
-                            Unsplash
-                        </button>
-                    </div>
                     <button type="button" class="close qii-close-btn" data-dismiss="modal" aria-label="Close">
                         <i class="fas fa-times" aria-hidden="true"></i>
                     </button>
@@ -36,9 +27,10 @@
                 <div class="qii-results-panel" id="qiiResultsPanel">
                     <div class="qii-results-grid" id="qiiResultsGrid"></div>
                     <div class="qii-load-more-wrap" id="qiiLoadMoreWrap" hidden>
-                        <button type="button" class="btn qii-load-more-btn" id="qiiLoadMoreBtn">
-                            <span class="qii-load-more-label">Load More</span>
-                        </button>
+                        <div class="qii-infinite-loading" id="qiiInfiniteLoading" aria-live="polite">
+                            <i class="fas fa-circle-notch fa-spin mr-1" aria-hidden="true"></i>
+                            <span>Loading more images…</span>
+                        </div>
                     </div>
                 </div>
             </div>

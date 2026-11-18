@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../includes/lead_db.php';
+require_once __DIR__ . '/../includes/lead_quotation_prefill.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -125,26 +126,38 @@ if (!$stmt->execute()) {
 }
 $stmt->close();
 
-// Keep linked quotations' guest counts aligned with the lead Guests field
-$tpAdults = max(0, (int) ($_POST['tp_adults'] ?? 0));
-$tpChildren = max(0, (int) ($_POST['tp_children'] ?? 0));
-$tpInfants = max(0, (int) ($_POST['tp_infants'] ?? 0));
-if ($tpAdults < 1) {
-    $tpAdults = 1;
+// Keep linked quotations' lead-related guest/tour fields aligned with the lead.
+$leadRow = crmLeadFetchById($conn, $leadId, false);
+$destinationLookup = crmQuotationDestinationLookup($conn);
+$leadPrefill = $leadRow ? crmLeadRowToQuotationPrefill($leadRow, $destinationLookup) : [];
+$syncedQuotations = 0;
+if (!empty($leadPrefill)) {
+    $syncedQuotations = crmSyncLinkedQuotationsFromLead($conn, $leadId, $leadPrefill);
 }
-$syncStmt = $conn->prepare('UPDATE `crm_quotations` SET `no_of_adults` = ?, `no_of_children` = ?, `no_of_infants` = ? WHERE `lead_id` = ?');
-if ($syncStmt) {
-    $syncStmt->bind_param('iiii', $tpAdults, $tpChildren, $tpInfants, $leadId);
-    $syncStmt->execute();
-    $syncStmt->close();
+
+$sidebar = null;
+if ($leadRow) {
+    $sidebar = crmLeadRowToSidebarPanel($conn, $leadRow, $destinationLookup);
 }
 
 updateLeadJson(true, 'Lead updated successfully.', [
     'lead' => [
         'id' => $leadId,
         'customer_name' => $customerName,
-        'no_of_adults' => $tpAdults,
-        'no_of_children' => $tpChildren,
-        'no_of_infants' => $tpInfants,
+        'customer_phone' => $customerPhone,
+        'customer_email' => $customerEmail,
+        'guest_name' => (string) ($leadPrefill['guest_name'] ?? $customerName),
+        'mobile_no' => (string) ($leadPrefill['mobile_no'] ?? $customerPhone),
+        'email' => (string) ($leadPrefill['email'] ?? $customerEmail),
+        'reference_name' => (string) ($leadPrefill['reference_name'] ?? $referredBy),
+        'destination' => (string) ($leadPrefill['destination'] ?? ''),
+        'tentative_date' => (string) ($leadPrefill['tentative_date'] ?? ''),
+        'no_of_adults' => (int) ($leadPrefill['no_of_adults'] ?? 1),
+        'no_of_children' => (int) ($leadPrefill['no_of_children'] ?? 0),
+        'no_of_infants' => (int) ($leadPrefill['no_of_infants'] ?? 0),
+        'children_ages' => array_values($leadPrefill['children_ages'] ?? []),
+        'no_of_nights' => (int) ($leadPrefill['no_of_nights'] ?? 0),
     ],
+    'sidebar' => $sidebar,
+    'synced_quotations' => $syncedQuotations,
 ]);

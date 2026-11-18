@@ -1944,8 +1944,8 @@ if (empty($leadSourceOptions)) {
                     .on('hidden.bs.modal.mzLeadSource', function () {
                         showSourceError('');
                         $sourceSubmit.prop('disabled', false);
-                        // Keep Create Lead modal usable
-                        if (jQuery('#leadFormModal').hasClass('show')) {
+                        // Keep parent Create/Edit Lead modal usable
+                        if (jQuery('#leadFormModal').hasClass('show') || jQuery('#qLeadFormModal').hasClass('show') || $form.closest('.modal.show').length) {
                             jQuery('body').addClass('modal-open');
                         }
                     });
@@ -4488,7 +4488,7 @@ if (empty($leadSourceOptions)) {
 
                     jQuery(document).trigger('crm:lead-created', [response]);
 
-                    // Notify open quotation tabs so Adults/Children refresh from lead Guests
+                    // Notify open quotation tabs so guest/tour fields refresh from the lead
                     try {
                         var syncedLeadId = 0;
                         if (response.lead && response.lead.id) {
@@ -4497,14 +4497,15 @@ if (empty($leadSourceOptions)) {
                         if (!syncedLeadId) {
                             syncedLeadId = parseInt($form.find('[name="lead_id"]').val(), 10) || 0;
                         }
-                        var syncedAdults = (response.lead && response.lead.no_of_adults != null)
-                            ? parseInt(response.lead.no_of_adults, 10)
+                        var leadResp = response.lead || {};
+                        var syncedAdults = (leadResp.no_of_adults != null)
+                            ? parseInt(leadResp.no_of_adults, 10)
                             : parseInt($form.find('[name="tp_adults"]').val(), 10);
-                        var syncedChildren = (response.lead && response.lead.no_of_children != null)
-                            ? parseInt(response.lead.no_of_children, 10)
+                        var syncedChildren = (leadResp.no_of_children != null)
+                            ? parseInt(leadResp.no_of_children, 10)
                             : parseInt($form.find('[name="tp_children"]').val(), 10);
-                        var syncedInfants = (response.lead && response.lead.no_of_infants != null)
-                            ? parseInt(response.lead.no_of_infants, 10)
+                        var syncedInfants = (leadResp.no_of_infants != null)
+                            ? parseInt(leadResp.no_of_infants, 10)
                             : parseInt($form.find('[name="tp_infants"]').val(), 10);
                         if (isNaN(syncedAdults) || syncedAdults < 1) {
                             syncedAdults = 1;
@@ -4515,14 +4516,29 @@ if (empty($leadSourceOptions)) {
                         if (isNaN(syncedInfants) || syncedInfants < 0) {
                             syncedInfants = 0;
                         }
+                        var syncedAges = Array.isArray(leadResp.children_ages) ? leadResp.children_ages.slice() : [];
+                        if (!syncedAges.length) {
+                            $form.find('input[name="tp_children_ages[]"]').each(function () {
+                                var ageVal = parseInt(jQuery(this).val(), 10);
+                                syncedAges.push(isNaN(ageVal) || ageVal < 0 ? 0 : ageVal);
+                            });
+                        }
                         if (syncedLeadId > 0) {
                             var paxMsg = {
                                 type: 'mz-data-changed',
                                 resource: 'leads',
                                 lead_id: syncedLeadId,
+                                guest_name: leadResp.guest_name || leadResp.customer_name || ($form.find('[name="customer_name"]').val() || ''),
+                                mobile_no: leadResp.mobile_no || leadResp.customer_phone || ($form.find('[name="customer_phone"]').val() || ''),
+                                email: leadResp.email != null ? leadResp.email : (leadResp.customer_email != null ? leadResp.customer_email : ($form.find('[name="customer_email"]').val() || '')),
+                                reference_name: leadResp.reference_name || ($form.find('[name="referred_by"]').val() || ''),
+                                destination: leadResp.destination || '',
+                                tentative_date: leadResp.tentative_date || '',
                                 no_of_adults: syncedAdults,
                                 no_of_children: syncedChildren,
                                 no_of_infants: syncedInfants,
+                                children_ages: syncedAges,
+                                sidebar: response.sidebar || null,
                                 at: Date.now()
                             };
                             if (window.parent && window.parent !== window) {
@@ -4530,12 +4546,27 @@ if (empty($leadSourceOptions)) {
                             } else {
                                 window.postMessage(paxMsg, '*');
                             }
+                            try {
+                                window.localStorage.setItem('crm_lead_sync', JSON.stringify(paxMsg));
+                            } catch (eLs) { /* ignore */ }
+                            try {
+                                if (window.BroadcastChannel) {
+                                    var bc = new BroadcastChannel('crm_lead_sync');
+                                    bc.postMessage(paxMsg);
+                                    bc.close();
+                                }
+                            } catch (eBc) { /* ignore */ }
                         }
                     } catch (ePaxSync) { /* ignore */ }
 
                     if ($form.is('#leadCreateFormModal')) {
                         window.setTimeout(function () {
-                            jQuery('#leadFormModal').modal('hide');
+                            var $parentModal = $form.closest('.modal');
+                            if ($parentModal.length) {
+                                $parentModal.modal('hide');
+                            } else {
+                                jQuery('#leadFormModal').modal('hide');
+                            }
                         }, $form.attr('data-intake-approve-flow') === '1' ? 0 : 500);
                     }
                 }).fail(function (xhr) {

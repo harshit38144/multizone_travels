@@ -2565,6 +2565,17 @@ foreach ($destinationLookup as $destId => $destName) {
             border-color: #9ad9b3;
             box-shadow: 0 1px 3px rgba(18, 140, 126, 0.2);
         }
+        .crm-leads-ui .action-btns .btn-edit {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+            color: #4338ca !important;
+        }
+        .crm-leads-ui .action-btns .btn-edit:hover {
+            background: #e0e7ff;
+            color: #3730a3 !important;
+            border-color: #a5b4fc;
+            box-shadow: 0 1px 3px rgba(67, 56, 202, 0.18);
+        }
         .crm-leads-ui .action-btns .btn-whatsapp .fab {
             font-size: 1rem;
         }
@@ -7862,6 +7873,20 @@ foreach ($destinationLookup as $destId => $destName) {
                 openLeadEditModal(leadId);
             }, 220);
         }
+    });
+
+    $(document).on('click', '.js-lead-edit-btn', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var leadId = Number($(this).attr('data-lead-id') || 0);
+        if (leadId < 1) {
+            return;
+        }
+        // Close the more-actions dropdown if Edit was chosen from there.
+        $(this).closest('.lead-actions-more').removeClass('show')
+            .find('.lead-actions-menu').removeClass('show');
+        $(this).closest('.lead-actions-more').find('.js-lead-actions-toggle').attr('aria-expanded', 'false');
+        openLeadEditModal(leadId);
     });
 
     $(document).on('click', '.js-lead-action-email', function (e) {

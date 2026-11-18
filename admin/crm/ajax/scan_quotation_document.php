@@ -107,33 +107,73 @@ try {
     @ini_set('max_execution_time', '300');
     @set_time_limit(300);
 
+    $stage = 'extracting';
     $ocr = qdocExtract((string) $file['tmp_name'], $mime, $ext);
     if (empty($ocr['ok'])) {
         $err = trim((string) ($ocr['error'] ?? ''));
         if ($err === '') {
             $err = 'The document could not be read. Please try a clearer PDF or image.';
         }
-        qdocJson(false, $err);
-    }
-
-    $result = $ocr['result'];
-    $hasAny = !empty($result['itinerary'])
-        || !empty($result['hotels'])
-        || !empty($result['inclusions'])
-        || !empty($result['exclusions']);
-
-    if (!$hasAny) {
-        qdocJson(true, 'No itinerary, hotel, inclusion, or exclusion details could be read. Fill the sections manually.', [
-            'data' => $result,
-            'file_name' => $origName,
+        qdocJson(false, $err, [
+            'stage' => $stage,
+            'http_code' => (int) ($ocr['http_code'] ?? 0),
+            'elapsed_ms' => (int) ($ocr['elapsed_ms'] ?? 0),
         ]);
     }
 
-    qdocJson(true, 'Document details were read. Review and edit them before applying to the quotation.', [
+    $result = $ocr['result'];
+    if (!qdocHasContent($result)) {
+        qdocJson(true, 'No itinerary, hotel, inclusion, or exclusion details could be read. Fill the sections manually.', [
+            'data' => $result,
+            'file_name' => $origName,
+            'stage' => 'extracting',
+            'rephrased' => false,
+            'model' => (string) ($ocr['model'] ?? ''),
+        ]);
+    }
+
+    // Second pass: professional rephrase (text-only). Keep extracted data if rephrase fails.
+    $stage = 'rephrasing';
+    $extractResult = $result;
+    $rephrase = qdocRephraseExtracted($result);
+    $rephrased = !empty($rephrase['rephrased']);
+    if ($rephrased && !empty($rephrase['result']) && is_array($rephrase['result']) && qdocHasContent($rephrase['result'])) {
+        $result = $rephrase['result'];
+    } else {
+        $rephrased = false;
+        $result = $extractResult;
+    }
+
+    // Final safety: never claim success-with-review if payload is empty.
+    if (!qdocHasContent($result)) {
+        qdocJson(true, 'No itinerary, hotel, inclusion, or exclusion details could be read. Fill the sections manually.', [
+            'data' => $result,
+            'file_name' => $origName,
+            'stage' => 'extracting',
+            'rephrased' => false,
+            'model' => (string) ($ocr['model'] ?? ''),
+        ]);
+    }
+
+    $msg = $rephrased
+        ? 'Document details were extracted and professionally rephrased. Review and edit them before applying.'
+        : 'Document details were read. AI rephrasing was skipped or failed, so the original extracted text is shown for review.';
+    if (!$rephrased && !empty($rephrase['error'])) {
+        $msg .= ' (' . $rephrase['error'] . ')';
+    }
+
+    qdocJson(true, $msg, [
         'data' => $result,
         'file_name' => $origName,
-        'model' => (string) ($ocr['model'] ?? ''),
+        'model' => (string) ($rephrased ? ($rephrase['model'] ?? '') : ($ocr['model'] ?? '')),
+        'extract_model' => (string) ($ocr['model'] ?? ''),
+        'rephrased' => $rephrased,
+        'stage' => $rephrased ? 'ready' : 'extracted',
+        'elapsed_ms' => (int) ($ocr['elapsed_ms'] ?? 0) + (int) ($rephrase['elapsed_ms'] ?? 0),
     ]);
 } catch (Throwable $e) {
-    qdocJson(false, 'Document reading failed: ' . $e->getMessage());
+    if (function_exists('crmAiLog')) {
+        crmAiLog('qdoc_endpoint_exception', ['error' => $e->getMessage()]);
+    }
+    qdocJson(false, 'Document reading failed. Please try again with a clearer PDF or image.');
 }

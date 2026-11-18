@@ -51,7 +51,7 @@ if (crmAiUseGemini()) {
             . $variety;
 
         // One primary model + short timeout so local Apache (often no cURL) fails fast into fallback.
-        $result = crmAiCallGemini($prompt, 'gemini-3.5-flash-lite', 12, ['gemini-3.5-flash-lite']);
+        $result = crmAiCallGemini($prompt, 'gemini-3.5-flash-lite', 12, ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']);
         if (!empty($result['ok'])) {
             $parsed = $result['data'] ?? [];
             $rawSuggestions = [];

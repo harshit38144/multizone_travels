@@ -223,6 +223,13 @@
                                                             aria-label="Open WhatsApp chat">
                                                             <i class="fab fa-whatsapp"></i>
                                                         </button>
+                                                        <button type="button"
+                                                            class="btn-icon btn-edit js-lead-edit-btn"
+                                                            data-lead-id="<?= (int) $lead['id'] ?>"
+                                                            title="Edit Lead"
+                                                            aria-label="Edit lead">
+                                                            <i class="fas fa-pen"></i>
+                                                        </button>
                                                         <?php
                                                             $latestQuotationHref = trim((string) ($lead['latest_quotation_href'] ?? ''));
                                                             $latestQuotationId = (int) ($lead['latest_quotation_id'] ?? 0);
@@ -301,6 +308,9 @@
                                                                     class="dropdown-item js-lead-action-message"
                                                                     data-lead-id="<?= (int) $lead['id'] ?>">
                                                                     <i class="far fa-comment-dots mr-2 text-primary"></i> Message
+                                                                </button>
+                                                                <button type="button" class="dropdown-item js-lead-edit-btn" data-lead-id="<?= (int) $lead['id'] ?>">
+                                                                    <i class="fas fa-pen mr-2 text-muted"></i> Edit Lead
                                                                 </button>
                                                                 <button type="button" class="dropdown-item js-lead-action-preview" data-lead-id="<?= (int) $lead['id'] ?>">
                                                                     <i class="far fa-eye mr-2 text-muted"></i> Preview Lead

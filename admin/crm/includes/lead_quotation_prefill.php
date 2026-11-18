@@ -19,6 +19,89 @@ function crmQuotationDestinationLookup(mysqli $conn): array
 }
 
 /**
+ * Overlay latest lead guest/tour fields onto quotation prefill.
+ * Preserves quotation-specific data (itinerary, hotels, flights, pricing, terms, etc.).
+ *
+ * @param array<string,mixed> $prefill
+ * @param array<string,mixed> $leadPrefill from crmLeadRowToQuotationPrefill()
+ * @return array<string,mixed>
+ */
+function crmQuotationMergeLiveLeadPrefill(array $prefill, array $leadPrefill): array
+{
+    if (empty($leadPrefill)) {
+        return $prefill;
+    }
+
+    if (!empty($leadPrefill['lead_id'])) {
+        $prefill['lead_id'] = (int) $leadPrefill['lead_id'];
+    }
+    if (!empty($leadPrefill['lead_uid'])) {
+        $prefill['lead_uid'] = (string) $leadPrefill['lead_uid'];
+    }
+
+    $stringFields = [
+        'guest_name',
+        'mobile_no',
+        'email',
+        'reference_name',
+        'destination',
+        'departure_city',
+        'departure_airport_code',
+        'tentative_date',
+    ];
+    foreach ($stringFields as $field) {
+        if (!array_key_exists($field, $leadPrefill)) {
+            continue;
+        }
+        $value = trim((string) $leadPrefill[$field]);
+        if ($value === '' || $value === '—' || $value === '0000-00-00') {
+            continue;
+        }
+        if ($field === 'departure_airport_code') {
+            $value = strtoupper($value);
+        }
+        $prefill[$field] = $value;
+    }
+
+    if (isset($leadPrefill['no_of_adults'])) {
+        $prefill['no_of_adults'] = max(1, (int) $leadPrefill['no_of_adults']);
+    }
+    if (isset($leadPrefill['no_of_children'])) {
+        $prefill['no_of_children'] = max(0, (int) $leadPrefill['no_of_children']);
+    }
+    if (isset($leadPrefill['no_of_infants'])) {
+        $prefill['no_of_infants'] = max(0, (int) $leadPrefill['no_of_infants']);
+    }
+    if (isset($leadPrefill['children_ages']) && is_array($leadPrefill['children_ages'])) {
+        $ages = array_values($leadPrefill['children_ages']);
+        $prefill['children_ages'] = $ages;
+
+        // Keep cost_sheet.tour_cost ages in sync so JS applyTourCostState
+        // does not overwrite live lead ages with a stale quotation snapshot.
+        if (!isset($prefill['cost_sheet']) || !is_array($prefill['cost_sheet'])) {
+            $prefill['cost_sheet'] = [];
+        }
+        if (!isset($prefill['cost_sheet']['tour_cost']) || !is_array($prefill['cost_sheet']['tour_cost'])) {
+            $prefill['cost_sheet']['tour_cost'] = [];
+        }
+        $prefill['cost_sheet']['tour_cost']['children_ages'] = $ages;
+        $existingQtys = $prefill['cost_sheet']['tour_cost']['child_qtys'] ?? [];
+        if (!is_array($existingQtys)) {
+            $existingQtys = [];
+        }
+        $alignedQtys = [];
+        foreach ($ages as $idx => $_age) {
+            $alignedQtys[] = isset($existingQtys[$idx]) ? max(1, (int) $existingQtys[$idx]) : 1;
+        }
+        $prefill['cost_sheet']['tour_cost']['child_qtys'] = $alignedQtys;
+    }
+
+    // Intentionally do not sync no_of_nights — that drives itinerary/hotel day structure.
+
+    return $prefill;
+}
+
+/**
  * Map a crm_leads row to quotation_generator guest/tour prefill fields.
  */
 function crmLeadRowToQuotationPrefill(array $row, array $destinationLookup = []): array
@@ -56,8 +139,8 @@ function crmLeadRowToQuotationPrefill(array $row, array $destinationLookup = [])
 
     $tentativeDate = '';
     if (!empty($payload['tp_travel_date'])) {
-        $ts = strtotime((string) $payload['tp_travel_date']);
-        if ($ts !== false) {
+        $ts = crmLeadParseDateTimestamp((string) $payload['tp_travel_date']);
+        if ($ts !== null) {
             $tentativeDate = date('Y-m-d', $ts);
         }
     }
@@ -122,6 +205,131 @@ function crmLeadRowToQuotationPrefill(array $row, array $destinationLookup = [])
         'no_of_infants' => $infants,
         'children_ages' => $childAgesNormalized,
     ];
+}
+
+/**
+ * Push latest lead guest/tour fields onto every linked quotation.
+ * Preserves quotation-specific data (itinerary, hotels, flights, pricing, terms).
+ *
+ * @param array<string,mixed> $leadPrefill from crmLeadRowToQuotationPrefill()
+ * @return int number of quotations updated
+ */
+function crmSyncLinkedQuotationsFromLead(mysqli $conn, int $leadId, array $leadPrefill): int
+{
+    if ($leadId <= 0 || empty($leadPrefill)) {
+        return 0;
+    }
+
+    require_once __DIR__ . '/quotation_db.php';
+    crmEnsureQuotationTables($conn);
+
+    $guestName = trim((string) ($leadPrefill['guest_name'] ?? ''));
+    $mobileNo = trim((string) ($leadPrefill['mobile_no'] ?? ''));
+    $email = trim((string) ($leadPrefill['email'] ?? ''));
+    $referenceName = trim((string) ($leadPrefill['reference_name'] ?? ''));
+    $destination = trim((string) ($leadPrefill['destination'] ?? ''));
+    $tentativeDate = trim((string) ($leadPrefill['tentative_date'] ?? ''));
+    if ($tentativeDate === '' || $tentativeDate === '0000-00-00') {
+        $tentativeDate = null;
+    }
+    $adults = max(1, (int) ($leadPrefill['no_of_adults'] ?? 1));
+    $children = max(0, (int) ($leadPrefill['no_of_children'] ?? 0));
+    $infants = max(0, (int) ($leadPrefill['no_of_infants'] ?? 0));
+    $childAges = [];
+    if (isset($leadPrefill['children_ages']) && is_array($leadPrefill['children_ages'])) {
+        foreach ($leadPrefill['children_ages'] as $age) {
+            $childAges[] = max(0, (int) $age);
+        }
+    }
+    if ($children > 0) {
+        while (count($childAges) < $children) {
+            $childAges[] = 0;
+        }
+        $childAges = array_slice($childAges, 0, $children);
+    } else {
+        $childAges = [];
+    }
+
+    $select = $conn->prepare('SELECT `id`, `cost_sheet_json` FROM `crm_quotations` WHERE `lead_id` = ?');
+    if (!$select) {
+        return 0;
+    }
+    $select->bind_param('i', $leadId);
+    $select->execute();
+    $res = $select->get_result();
+    $rows = [];
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $rows[] = $row;
+        }
+    }
+    $select->close();
+
+    $updated = 0;
+    foreach ($rows as $row) {
+        $qid = (int) ($row['id'] ?? 0);
+        if ($qid <= 0) {
+            continue;
+        }
+
+        $costSheet = [];
+        if (!empty($row['cost_sheet_json'])) {
+            $decoded = json_decode((string) $row['cost_sheet_json'], true);
+            if (is_array($decoded)) {
+                $costSheet = $decoded;
+            }
+        }
+        if (!isset($costSheet['tour_cost']) || !is_array($costSheet['tour_cost'])) {
+            $costSheet['tour_cost'] = [];
+        }
+        $costSheet['tour_cost']['children_ages'] = $childAges;
+        $existingQtys = $costSheet['tour_cost']['child_qtys'] ?? [];
+        if (!is_array($existingQtys)) {
+            $existingQtys = [];
+        }
+        $alignedQtys = [];
+        foreach ($childAges as $idx => $_age) {
+            $alignedQtys[] = isset($existingQtys[$idx]) ? max(1, (int) $existingQtys[$idx]) : 1;
+        }
+        $costSheet['tour_cost']['child_qtys'] = $alignedQtys;
+        $costSheetJson = json_encode($costSheet, JSON_UNESCAPED_UNICODE);
+        if ($costSheetJson === false) {
+            $costSheetJson = (string) ($row['cost_sheet_json'] ?? '{}');
+        }
+
+        $tentativeDateValue = $tentativeDate !== null ? (string) $tentativeDate : '';
+        $upd = $conn->prepare(
+            'UPDATE `crm_quotations` SET
+                `guest_name` = ?, `mobile_no` = ?, `email` = ?, `reference_name` = ?,
+                `destination` = ?, `tentative_date` = NULLIF(?, \'\'),
+                `no_of_adults` = ?, `no_of_children` = ?, `no_of_infants` = ?,
+                `cost_sheet_json` = ?
+             WHERE `id` = ?'
+        );
+        if (!$upd) {
+            continue;
+        }
+        $upd->bind_param(
+            'ssssssiiisi',
+            $guestName,
+            $mobileNo,
+            $email,
+            $referenceName,
+            $destination,
+            $tentativeDateValue,
+            $adults,
+            $children,
+            $infants,
+            $costSheetJson,
+            $qid
+        );
+        if ($upd->execute()) {
+            $updated++;
+        }
+        $upd->close();
+    }
+
+    return $updated;
 }
 
 function crmLeadServiceLabelMap(): array

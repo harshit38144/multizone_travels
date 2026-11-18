@@ -5,7 +5,11 @@ $embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 
 if ($embed) {
     header('Content-Type: text/html; charset=UTF-8');
-    $leadFormScope = '#leadFormModal .crm-lead-form-embed';
+    $embedScope = trim((string) ($_GET['scope'] ?? ''));
+    if ($embedScope === '' || !preg_match('/^[A-Za-z][A-Za-z0-9_-]*$/', $embedScope)) {
+        $embedScope = 'leadFormModal';
+    }
+    $leadFormScope = '#' . $embedScope . ' .crm-lead-form-embed';
     include __DIR__ . '/includes/lead_form_styles.php';
     echo '<div class="crm-lead-form-embed">';
     $leadFormInModal = true;

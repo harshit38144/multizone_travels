@@ -78,6 +78,7 @@ function crmAiJsonResponse(array $payload, int $code = 200): void
 
 /**
  * Preferred Gemini models (tried in order on overload / unavailability).
+ * Keep IDs aligned with current Google AI Studio availability for new API keys.
  *
  * @return list<string>
  */
@@ -85,10 +86,86 @@ function crmAiGeminiModels(): array
 {
     return [
         'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-3.8-flash',
         'gemini-3.5-flash',
-        'gemini-3.6-flash',
-        'gemini-3.7-flash',
     ];
+}
+
+/**
+ * Short model queue for full itinerary generation (speed over exhaustive fallback).
+ *
+ * @return list<string>
+ */
+function crmAiGeminiItineraryModels(): array
+{
+    return [
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+    ];
+}
+
+/**
+ * Multimodal / document models (prefer working lite, then fuller flash with retry).
+ *
+ * @return list<string>
+ */
+function crmAiGeminiDocumentModels(): array
+{
+    return [
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-3.8-flash',
+        'gemini-3.5-flash',
+    ];
+}
+
+/**
+ * True only for real overload / rate-limit responses (not model-not-found).
+ */
+function crmAiIsBusyOverloadError(string $error): bool
+{
+    $error = strtolower($error);
+    $needles = [
+        'high demand',
+        'try again later',
+        'temporarily',
+        'overloaded',
+        'resource exhausted',
+        'rate limit',
+        'rate-limit',
+        'quota',
+        '429',
+        '503',
+    ];
+    // Model retirement / not-found must NOT be treated as "busy".
+    if (strpos($error, 'no longer available') !== false
+        || strpos($error, 'not found') !== false
+        || strpos($error, 'update your code') !== false
+    ) {
+        return false;
+    }
+    foreach ($needles as $needle) {
+        if (strpos($error, $needle) !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Lightweight AI debug logger (response times / errors).
+ */
+function crmAiLog(string $event, array $context = []): void
+{
+    $line = '[crm-ai] ' . $event;
+    if ($context) {
+        $encoded = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (is_string($encoded) && $encoded !== '') {
+            $line .= ' ' . $encoded;
+        }
+    }
+    error_log($line);
 }
 
 function crmAiIsTransientGeminiError(string $error): bool
@@ -203,13 +280,20 @@ function crmAiHttpPostJson(string $url, string $body, array $headers, int $timeo
 
 /**
  * Single-model request (no fallbacks).
+ *
+ * @param array<string, mixed> $generationConfig
  */
-function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds = 12): array
+function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds = 12, array $generationConfig = []): array
 {
     $apiKey = crmAiGeminiApiKey();
     if ($apiKey === '') {
         return ['ok' => false, 'error' => 'Gemini API key is not configured.'];
     }
+
+    $genConfig = array_merge([
+        'temperature' => 0.65,
+        'responseMimeType' => 'application/json',
+    ], $generationConfig);
 
     // Prefer header auth (works for classic AIza… keys and newer AI Studio keys).
     $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent';
@@ -217,12 +301,10 @@ function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds 
         'contents' => [
             ['parts' => [['text' => $prompt]]],
         ],
-        'generationConfig' => [
-            'temperature' => 0.65,
-            'responseMimeType' => 'application/json',
-        ],
+        'generationConfig' => $genConfig,
     ], JSON_UNESCAPED_UNICODE);
 
+    $started = microtime(true);
     $transport = crmAiHttpPostJson(
         $url,
         $body,
@@ -236,7 +318,7 @@ function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds 
     $httpCode = (int) ($transport['http_code'] ?? 0);
     $transportErr = (string) ($transport['error'] ?? '');
 
-    // Fallback: retry with ?key= (works for both legacy AIza… and new AQ. auth keys).
+    // Fallback: retry with ?key= only when auth clearly failed (avoid doubling every request).
     if ($raw === null || $httpCode === 401 || $httpCode === 403) {
         $urlQs = $url . '?key=' . urlencode($apiKey);
         $transport = crmAiHttpPostJson(
@@ -250,6 +332,8 @@ function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds 
         $transportErr = (string) ($transport['error'] ?? $transportErr);
     }
 
+    $elapsedMs = (int) round((microtime(true) - $started) * 1000);
+
     if ($raw === null || $httpCode !== 200) {
         $msg = $transportErr !== '' ? $transportErr : ('Gemini request failed (HTTP ' . $httpCode . ')');
         if ($raw) {
@@ -258,29 +342,45 @@ function crmAiCallGeminiOnce(string $prompt, string $model, int $timeoutSeconds 
                 $msg = (string) $errData['error']['message'];
             }
         }
-        return ['ok' => false, 'error' => $msg, 'http_code' => $httpCode];
+        crmAiLog('gemini_once_fail', [
+            'model' => $model,
+            'http_code' => $httpCode,
+            'ms' => $elapsedMs,
+            'error' => $msg,
+        ]);
+        return ['ok' => false, 'error' => $msg, 'http_code' => $httpCode, 'elapsed_ms' => $elapsedMs];
     }
 
     $data = json_decode($raw, true);
     $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
     if ($text === '') {
-        return ['ok' => false, 'error' => 'Empty response from AI.'];
+        crmAiLog('gemini_once_empty', ['model' => $model, 'ms' => $elapsedMs]);
+        return ['ok' => false, 'error' => 'Empty response from AI.', 'elapsed_ms' => $elapsedMs];
     }
 
     $parsed = json_decode($text, true);
     if (!is_array($parsed)) {
-        return ['ok' => false, 'error' => 'Could not parse AI response.'];
+        // Some responses wrap JSON in fences or prose — extract first object/array.
+        if (preg_match('/\{[\s\S]*\}|\[[\s\S]*\]/', $text, $m)) {
+            $parsed = json_decode($m[0], true);
+        }
+    }
+    if (!is_array($parsed)) {
+        crmAiLog('gemini_once_parse_fail', ['model' => $model, 'ms' => $elapsedMs]);
+        return ['ok' => false, 'error' => 'Could not parse AI response.', 'elapsed_ms' => $elapsedMs];
     }
 
-    return ['ok' => true, 'data' => $parsed, 'model' => $model];
+    crmAiLog('gemini_once_ok', ['model' => $model, 'ms' => $elapsedMs]);
+    return ['ok' => true, 'data' => $parsed, 'model' => $model, 'elapsed_ms' => $elapsedMs];
 }
 
 /**
  * Call Gemini with automatic model fallbacks + short retries on overload.
  *
  * @param list<string>|null $models
+ * @param array<string, mixed> $options max_attempts_per_model, sleep_us, generation_config
  */
-function crmAiCallGemini(string $prompt, string $model = 'gemini-3.5-flash-lite', int $timeoutSeconds = 12, ?array $models = null): array
+function crmAiCallGemini(string $prompt, string $model = 'gemini-3.5-flash-lite', int $timeoutSeconds = 12, ?array $models = null, array $options = []): array
 {
     $queue = [];
     if (is_array($models) && $models) {
@@ -308,30 +408,69 @@ function crmAiCallGemini(string $prompt, string $model = 'gemini-3.5-flash-lite'
         $unique[] = $m;
     }
 
+    $maxAttempts = max(1, (int) ($options['max_attempts_per_model'] ?? 2));
+    $sleepUs = max(0, (int) ($options['sleep_us'] ?? 450000));
+    $generationConfig = is_array($options['generation_config'] ?? null)
+        ? $options['generation_config']
+        : [];
+
     $lastError = 'Gemini request failed.';
+    $totalMs = 0;
     foreach ($unique as $tryModel) {
-        for ($attempt = 1; $attempt <= 2; $attempt++) {
-            $result = crmAiCallGeminiOnce($prompt, $tryModel, $timeoutSeconds);
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $result = crmAiCallGeminiOnce($prompt, $tryModel, $timeoutSeconds, $generationConfig);
+            $totalMs += (int) ($result['elapsed_ms'] ?? 0);
             if (!empty($result['ok'])) {
+                $result['elapsed_ms'] = $totalMs;
                 return $result;
             }
             $lastError = (string) ($result['error'] ?? $lastError);
+            $httpCode = (int) ($result['http_code'] ?? 0);
             $transient = crmAiIsTransientGeminiError($lastError)
-                || in_array((int) ($result['http_code'] ?? 0), [429, 503, 404], true);
+                || in_array($httpCode, [429, 503, 404], true);
             if (!$transient) {
                 // Auth / hard failure — no point hopping models forever.
-                if (in_array((int) ($result['http_code'] ?? 0), [401, 403], true)) {
-                    return ['ok' => false, 'error' => $lastError];
+                if (in_array($httpCode, [401, 403], true)) {
+                    return ['ok' => false, 'error' => $lastError, 'elapsed_ms' => $totalMs];
                 }
                 break;
             }
-            if ($attempt < 2) {
-                usleep(450000);
+            // Only sleep on rate-limit/overload — skip delay for model-not-found.
+            if ($attempt < $maxAttempts && in_array($httpCode, [429, 503], true) && $sleepUs > 0) {
+                usleep($sleepUs);
             }
         }
     }
 
-    return ['ok' => false, 'error' => $lastError];
+    return ['ok' => false, 'error' => $lastError, 'elapsed_ms' => $totalMs];
+}
+
+/**
+ * Fast Gemini call for full itinerary: lite models, one attempt each, capped output.
+ *
+ * @param list<string>|null $models
+ */
+function crmAiCallGeminiItinerary(string $prompt, int $totalDays = 5, int $timeoutSeconds = 20, ?array $models = null): array
+{
+    $totalDays = max(1, min(21, $totalDays));
+    // ~120–160 tokens/day for compact bullets + titles.
+    $maxTokens = min(3072, max(768, $totalDays * 160));
+
+    return crmAiCallGemini(
+        $prompt,
+        'gemini-3.5-flash-lite',
+        $timeoutSeconds,
+        $models ?: crmAiGeminiItineraryModels(),
+        [
+            'max_attempts_per_model' => 1,
+            'sleep_us' => 0,
+            'generation_config' => [
+                'temperature' => 0.4,
+                'maxOutputTokens' => $maxTokens,
+                'responseMimeType' => 'application/json',
+            ],
+        ]
+    );
 }
 
 function crmAiSanitizeItineraryHtml(string $html): string
@@ -389,35 +528,34 @@ function crmAiBuildItineraryPrompt(
     int $adults,
     int $children,
     string $startDate,
-    string $notes
+    string $notes,
+    string $contextBrief = ''
 ): string {
-    $travelers = $adults . ' adult' . ($adults !== 1 ? 's' : '');
-    if ($children > 0) {
-        $travelers .= ', ' . $children . ' child' . ($children !== 1 ? 'ren' : '');
+    $travelers = $adults . 'A' . ($children > 0 ? ('/' . $children . 'C') : '');
+    $notes = trim(preg_replace('/\s+/', ' ', $notes));
+    if (strlen($notes) > 500) {
+        $notes = substr($notes, 0, 500) . '…';
+    }
+    $contextBrief = trim($contextBrief);
+    if (strlen($contextBrief) > 700) {
+        $contextBrief = substr($contextBrief, 0, 700) . '…';
     }
 
-    $prompt = "You are a professional travel itinerary writer for an Indian travel agency (Multizone Travels).\n";
-    $prompt .= "Create a detailed, realistic day-wise tour itinerary.\n\n";
-    $prompt .= "Destination: {$destination}\n";
-    $prompt .= "Duration: {$totalDays} days ({$nights} nights)\n";
-    $prompt .= "Travelers: {$travelers}\n";
+    // Compact prompt = lower latency / fewer output tokens.
+    $prompt = "Travel agency itinerary writer. Return ONLY JSON.\n";
+    $prompt .= "Dest: {$destination} | {$totalDays}D/{$nights}N | Pax: {$travelers}";
     if ($startDate !== '') {
-        $prompt .= "Trip start date: {$startDate}\n";
+        $prompt .= " | Start: {$startDate}";
+    }
+    $prompt .= "\n";
+    if ($contextBrief !== '') {
+        $prompt .= "Context: {$contextBrief}\n";
     }
     if ($notes !== '') {
-        $prompt .= "Special preferences: {$notes}\n";
+        $prompt .= "Notes: {$notes}\n";
     }
-    $prompt .= "\nReturn ONLY valid JSON with this exact structure:\n";
-    $prompt .= "{\"days\":[{\"title\":\"Short day title\",\"description\":\"<ul><li>Activity</li></ul>\"}]}\n\n";
-    $prompt .= "Rules:\n";
-    $prompt .= "- Provide exactly {$totalDays} day objects in the days array.\n";
-    $prompt .= "- Day 1: include arrival, hotel check-in, light sightseeing if appropriate.\n";
-    $prompt .= "- Last day: include check-out and departure/transfers.\n";
-    $prompt .= "- Middle days: cover famous landmarks, local experiences, culture, and cuisine for {$destination}.\n";
-    $prompt .= "- description must be HTML using only <ul> and <li> tags, 4-6 bullet points per day.\n";
-    $prompt .= "- Titles must be concise (under 55 characters).\n";
-    $prompt .= "- Write practical plans suitable for Indian holiday travelers.\n";
-    $prompt .= "- Do not include prices or hotel names unless generic (e.g. 'check in at hotel').\n";
+    $prompt .= "Schema: {\"days\":[{\"title\":\"...\",\"description\":\"<ul><li>...</li></ul>\"}]}\n";
+    $prompt .= "Rules: exactly {$totalDays} days; day1 arrival+check-in; last day checkout+departure; middle days unique sightseeing for {$destination}; 3-4 short <li> bullets/day; titles <50 chars; no prices/brand hotels; no duplicate activities.\n";
 
     return $prompt;
 }
@@ -614,7 +752,8 @@ function crmAiSuggestItinerary(
     int $adults,
     int $children,
     string $startDate,
-    string $notes
+    string $notes,
+    string $contextBrief = ''
 ): array {
     $destination = trim($destination);
     if ($destination === '') {
@@ -635,27 +774,65 @@ function crmAiSuggestItinerary(
         return crmAiInstantItinerary($destination, $totalDays, $notes);
     }
 
-    $prompt = crmAiBuildItineraryPrompt($destination, $totalDays, $nights, $adults, $children, $startDate, $notes);
-    $result = crmAiCallGemini($prompt);
+    $started = microtime(true);
+    $prompt = crmAiBuildItineraryPrompt(
+        $destination,
+        $totalDays,
+        $nights,
+        $adults,
+        $children,
+        $startDate,
+        $notes,
+        $contextBrief
+    );
+    // Single optimized request for all days (lite model, capped tokens, no retry spam).
+    $timeout = min(28, max(14, 10 + ($totalDays * 2)));
+    $result = crmAiCallGeminiItinerary($prompt, $totalDays, $timeout);
+    $elapsedMs = (int) round((microtime(true) - $started) * 1000);
+
     if (!$result['ok']) {
+        crmAiLog('itinerary_fail', [
+            'destination' => $destination,
+            'days' => $totalDays,
+            'ms' => $elapsedMs,
+            'error' => (string) ($result['error'] ?? ''),
+        ]);
         if (crmAiIsQuotaOrRateError($result['error'] ?? '')) {
             $instant = crmAiInstantItinerary($destination, $totalDays, $notes);
             $instant['message'] = 'Gemini quota reached — instant destination itinerary applied.';
+            $instant['elapsed_ms'] = $elapsedMs;
             return $instant;
         }
+        $result['elapsed_ms'] = $elapsedMs;
         return $result;
     }
 
     $daysRaw = $result['data']['days'] ?? $result['data']['itinerary'] ?? [];
     if (!is_array($daysRaw) || !$daysRaw) {
+        crmAiLog('itinerary_invalid_payload', [
+            'destination' => $destination,
+            'days' => $totalDays,
+            'ms' => $elapsedMs,
+            'model' => (string) ($result['model'] ?? ''),
+        ]);
         $instant = crmAiInstantItinerary($destination, $totalDays, $notes);
         $instant['message'] = 'AI response invalid — instant destination itinerary applied.';
+        $instant['elapsed_ms'] = $elapsedMs;
         return $instant;
     }
+
+    crmAiLog('itinerary_ok', [
+        'destination' => $destination,
+        'days' => $totalDays,
+        'ms' => $elapsedMs,
+        'model' => (string) ($result['model'] ?? ''),
+    ]);
 
     return [
         'ok' => true,
         'source' => 'ai',
+        'model' => (string) ($result['model'] ?? ''),
+        'elapsed_ms' => $elapsedMs,
         'itinerary' => crmAiNormalizeItineraryDays($daysRaw, $totalDays),
     ];
 }

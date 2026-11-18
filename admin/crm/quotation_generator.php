@@ -107,6 +107,10 @@ if (!$quotation && $leadId > 0) {
     if ($sidebarLeadId <= 0) {
         $sidebarLeadId = crmQuotationResolveLeadId($conn, $quotation);
     }
+    // Allow opening Edit Quotation with ?id=…&lead_id=… to resolve the linked lead.
+    if ($sidebarLeadId <= 0 && $leadId > 0) {
+        $sidebarLeadId = $leadId;
+    }
     if ($sidebarLeadId > 0 && $editId > 0 && (int) ($currentQuotation['lead_id'] ?? 0) <= 0) {
         crmQuotationPersistLeadLink($conn, $editId, $sidebarLeadId);
         $quotation['lead_id'] = $sidebarLeadId;
@@ -118,31 +122,14 @@ if (!$quotation && $leadId > 0) {
         }
     }
     if ($sidebarLeadId > 0) {
+        // Always fetch the latest lead row from DB (no session/cache).
         $leadRow = crmLeadFetchById($conn, $sidebarLeadId, false);
     }
-    // Prefer live lead guest counts so Edit Lead → Edit Quotation stays in sync
+    // Sync live lead guest/tour fields into the form when editing a quotation.
+    // Keeps itinerary / hotels / flights / pricing / terms from the quotation record.
     if ($leadRow && !$isArchivedView && !empty($prefill)) {
         $leadGuestPrefill = crmLeadRowToQuotationPrefill($leadRow, $destinationLookup);
-        if (isset($leadGuestPrefill['no_of_adults'])) {
-            $prefill['no_of_adults'] = max(1, (int) $leadGuestPrefill['no_of_adults']);
-        }
-        if (isset($leadGuestPrefill['no_of_children'])) {
-            $prefill['no_of_children'] = max(0, (int) $leadGuestPrefill['no_of_children']);
-        }
-        if (isset($leadGuestPrefill['no_of_infants'])) {
-            $prefill['no_of_infants'] = max(0, (int) $leadGuestPrefill['no_of_infants']);
-        }
-        if (isset($leadGuestPrefill['children_ages']) && is_array($leadGuestPrefill['children_ages'])) {
-            $prefill['children_ages'] = array_values($leadGuestPrefill['children_ages']);
-        }
-        $leadDepCity = trim((string) ($leadGuestPrefill['departure_city'] ?? ''));
-        if ($leadDepCity !== '' && $leadDepCity !== '—') {
-            $prefill['departure_city'] = $leadDepCity;
-        }
-        $leadDepCode = strtoupper(trim((string) ($leadGuestPrefill['departure_airport_code'] ?? '')));
-        if ($leadDepCode !== '') {
-            $prefill['departure_airport_code'] = $leadDepCode;
-        }
+        $prefill = crmQuotationMergeLiveLeadPrefill($prefill, $leadGuestPrefill);
     }
 }
 
@@ -374,6 +361,22 @@ $qWizardSteps = [
             margin-left: auto;
         }
 
+        .crm-quotation-gen .btn-q-edit-lead {
+            background: #fff;
+            border: 1px solid #334155;
+            color: #334155;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.35rem 0.95rem;
+        }
+
+        .crm-quotation-gen .btn-q-edit-lead:hover,
+        .crm-quotation-gen .btn-q-edit-lead:focus {
+            background: #f8fafc;
+            border-color: #0f172a;
+            color: #0f172a;
+        }
+
         .crm-quotation-gen .btn-q-upload-doc {
             background: #fff;
             border: 1px solid #e11d2e;
@@ -410,6 +413,81 @@ $qWizardSteps = [
             color: #fff;
         }
 
+        #qLeadFormModal .lead-form-dialog {
+            max-width: 1180px;
+            width: calc(100% - 1.5rem);
+            max-height: calc(100vh - 1.5rem);
+            margin: 0.75rem auto;
+            display: flex;
+            align-items: stretch;
+        }
+        #qLeadFormModal .modal-content.lead-form-shell {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.22);
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 1.5rem);
+            overflow: hidden;
+            min-height: 0;
+        }
+        #qLeadFormModal .modal-header.lead-form-hd {
+            flex: 0 0 auto;
+            background: #e11d2e;
+            color: #fff;
+            border: none;
+            padding: 0.95rem 1.25rem;
+            border-radius: 12px 12px 0 0;
+        }
+        #qLeadFormModal .modal-header.lead-form-hd .modal-title {
+            font-weight: 700;
+            font-size: 1.15rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+        #qLeadFormModal .modal-header.lead-form-hd .modal-title i {
+            font-size: 1.05rem;
+        }
+        #qLeadFormModal .modal-header.lead-form-hd .close {
+            color: #fff;
+            text-shadow: none;
+            opacity: 0.95;
+            font-size: 1.6rem;
+            font-weight: 400;
+            padding: 0.75rem 1.1rem;
+            margin: -0.75rem -1rem -0.75rem auto;
+        }
+        #qLeadFormModal .modal-header.lead-form-hd .close:hover {
+            opacity: 1;
+            color: #fff;
+        }
+        #qLeadFormModal .modal-body.lead-form-bd {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 1.1rem 1.25rem 1.15rem;
+            background: #f5f6f8;
+        }
+        #qLeadFormModal .lead-form-loading {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6c757d;
+        }
+        #qLeadFormModal .lead-form-loading i {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            color: #e11d2e;
+        }
+        #qLeadFormModal .lead-form-error {
+            padding: 2rem;
+            text-align: center;
+            color: #dc3545;
+        }
+
         #qDocUploadModal .q-doc-upload-drop {
             border: 1.5px dashed #fecaca;
             border-radius: 12px;
@@ -434,36 +512,432 @@ $qWizardSteps = [
             display: block;
         }
 
+        #qDocUploadModal.q-doc-modal .modal-dialog {
+            max-width: min(1180px, 96vw);
+            margin: 0.65rem auto;
+        }
+
+        #qDocUploadModal.q-doc-modal .modal-content {
+            border: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            max-height: calc(100vh - 1.3rem);
+        }
+
+        #qDocUploadModal.q-doc-modal .modal-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e8ecf1;
+            align-items: flex-start;
+        }
+
+        #qDocUploadModal .q-doc-hd-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        #qDocUploadModal .q-doc-hd-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #eff6ff;
+            color: #2563eb;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        #qDocUploadModal .q-doc-hd-copy {
+            min-width: 0;
+        }
+
+        #qDocUploadModal .q-doc-hd-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 0;
+            color: #0f172a;
+        }
+
+        #qDocUploadModal .q-doc-hd-file {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin: 0.15rem 0 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        #qDocUploadModal .q-doc-hd-sub {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin: 0.1rem 0 0;
+        }
+
+        #qDocUploadModal .q-doc-hd-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex: 0 0 auto;
+            margin-left: 0.5rem;
+        }
+
+        #qDocUploadModal.q-doc-modal .modal-body {
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        #qDocUploadModal #qDocUploadStepPick {
+            padding: 1rem 1.1rem;
+            overflow: auto;
+        }
+
+        #qDocUploadModal #qDocUploadStepReview {
+            display: none;
+            flex-direction: column;
+            min-height: 0;
+            flex: 1 1 auto;
+            height: min(78vh, 820px);
+        }
+
+        #qDocUploadModal #qDocUploadStepReview:not(.d-none) {
+            display: flex;
+        }
+
+        #qDocUploadModal #qDocUploadStepPick.d-none {
+            display: none !important;
+        }
+
+        #qDocUploadModal .q-doc-review-toolbar {
+            padding: 0.55rem 1rem;
+            border-bottom: 1px solid #e8ecf1;
+            background: #fff;
+            flex: 0 0 auto;
+        }
+
         #qDocUploadModal .q-doc-section-check {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.65rem 1rem;
-            margin-bottom: 0.85rem;
+            gap: 0.35rem 0.85rem;
+            margin: 0;
+            align-items: center;
         }
 
-        #qDocUploadModal .q-doc-day-card,
-        #qDocUploadModal .q-doc-list-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 0.75rem;
-            margin-bottom: 0.65rem;
-            background: #fff;
-        }
-
-        #qDocUploadModal .q-doc-day-card .form-control,
-        #qDocUploadModal .q-doc-list-item .form-control {
-            font-size: 0.85rem;
-        }
-
-        #qDocUploadModal .nav-tabs .nav-link {
-            font-size: 0.85rem;
+        #qDocUploadModal .q-doc-section-check label {
+            font-size: 0.8rem;
             font-weight: 600;
+            color: #334155;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        #qDocUploadModal .q-doc-review-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto;
+            padding: 0.55rem 1rem 0.85rem;
+            background: #f8fafc;
+        }
+
+        #qDocUploadModal .q-doc-sec {
+            background: #fff;
+            border: 1px solid #e8ecf1;
+            border-radius: 10px;
+            margin-bottom: 0.65rem;
+            overflow: hidden;
+        }
+
+        #qDocUploadModal .q-doc-sec-hd {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.7rem;
+            background: #fff;
+            border-bottom: 1px solid #eef2f7;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #qDocUploadModal .q-doc-sec-hd:hover {
+            background: #f8fafc;
+        }
+
+        #qDocUploadModal .q-doc-sec-title {
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        #qDocUploadModal .q-doc-sec-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.4rem;
+            height: 1.25rem;
+            padding: 0 0.4rem;
+            border-radius: 999px;
+            background: #fee2e2;
+            color: #b91c1c;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        #qDocUploadModal .q-doc-sec-toggle {
+            margin-left: auto;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            transition: transform 0.15s ease;
+        }
+
+        #qDocUploadModal .q-doc-sec.is-collapsed .q-doc-sec-toggle {
+            transform: rotate(-90deg);
+        }
+
+        #qDocUploadModal .q-doc-sec.is-collapsed .q-doc-sec-body {
+            display: none;
+        }
+
+        #qDocUploadModal .q-doc-sec-body {
+            padding: 0.45rem 0.65rem 0.55rem;
         }
 
         #qDocUploadModal .q-doc-empty {
-            color: #64748b;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            padding: 0.35rem 0.15rem;
+            margin: 0;
+        }
+
+        #qDocUploadModal .q-doc-day-row {
+            display: grid;
+            grid-template-columns: 3.1rem minmax(0, 1fr) auto;
+            gap: 0.35rem 0.55rem;
+            align-items: start;
+            padding: 0.45rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        #qDocUploadModal .q-doc-day-row:last-child {
+            border-bottom: 0;
+        }
+
+        #qDocUploadModal .q-doc-day-num {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #c62828;
+            letter-spacing: 0.02em;
+            padding-top: 0.45rem;
+        }
+
+        #qDocUploadModal .q-doc-day-main {
+            min-width: 0;
+        }
+
+        #qDocUploadModal .q-doc-day-title {
+            border: 0;
+            border-bottom: 1px solid transparent;
+            border-radius: 0;
+            padding: 0.2rem 0;
             font-size: 0.88rem;
-            padding: 0.75rem 0;
+            font-weight: 700;
+            color: #0f172a;
+            background: transparent;
+            width: 100%;
+            box-shadow: none !important;
+        }
+
+        #qDocUploadModal .q-doc-day-title:hover,
+        #qDocUploadModal .q-doc-day-title:focus {
+            border-bottom-color: #fecaca;
+            background: #fffafa;
+        }
+
+        #qDocUploadModal .q-doc-day-desc {
+            margin-top: 0.2rem;
+        }
+
+        #qDocUploadModal .q-doc-day-desc .note-editor.note-frame {
+            border: 1px solid #e8ecf1;
+            border-radius: 8px;
+            margin: 0;
+        }
+
+        #qDocUploadModal .q-doc-day-desc .note-toolbar {
+            padding: 0.2rem 0.35rem;
+            background: #f8fafc;
+        }
+
+        #qDocUploadModal .q-doc-day-desc .note-editable {
+            min-height: 72px !important;
+            max-height: 160px;
+            overflow: auto;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            padding: 0.4rem 0.55rem !important;
+        }
+
+        #qDocUploadModal .q-doc-day-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.35rem;
+            margin-top: 0.35rem;
+        }
+
+        #qDocUploadModal .q-doc-inline-field {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-width: 0;
+        }
+
+        #qDocUploadModal .q-doc-inline-field > span {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            flex: 0 0 auto;
+        }
+
+        #qDocUploadModal .q-doc-inline-field .form-control {
+            border: 0;
+            border-bottom: 1px solid #e8ecf1;
+            border-radius: 0;
+            padding: 0.15rem 0;
+            font-size: 0.8rem;
+            background: transparent;
+            height: auto;
+            box-shadow: none !important;
+        }
+
+        #qDocUploadModal .q-doc-day-remove,
+        #qDocUploadModal .q-doc-line-remove,
+        #qDocUploadModal .q-doc-h-remove {
+            color: #ef4444;
+            padding: 0.15rem 0.3rem;
+            line-height: 1;
+        }
+
+        #qDocUploadModal .q-doc-hotel-table {
+            margin: 0;
+            font-size: 0.78rem;
+        }
+
+        #qDocUploadModal .q-doc-hotel-table th {
+            background: #f8fafc;
+            border-top: 0;
+            border-color: #e8ecf1;
+            color: #64748b;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            padding: 0.35rem 0.4rem;
+        }
+
+        #qDocUploadModal .q-doc-hotel-table td {
+            border-color: #eef2f7;
+            padding: 0.25rem 0.3rem;
+            vertical-align: middle;
+        }
+
+        #qDocUploadModal .q-doc-hotel-table .form-control,
+        #qDocUploadModal .q-doc-hotel-table .custom-select,
+        #qDocUploadModal .q-doc-hotel-table select {
+            border: 0;
+            background: transparent;
+            padding: 0.15rem 0.2rem;
+            font-size: 0.78rem;
+            height: auto;
+            box-shadow: none !important;
+            min-width: 0;
+        }
+
+        #qDocUploadModal .q-doc-hotel-table .form-control:focus,
+        #qDocUploadModal .q-doc-hotel-table select:focus {
+            background: #fff7f7;
+        }
+
+        #qDocUploadModal .q-doc-line-row {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.28rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        #qDocUploadModal .q-doc-line-row:last-child {
+            border-bottom: 0;
+        }
+
+        #qDocUploadModal .q-doc-line-row .q-doc-line-text {
+            border: 0;
+            border-bottom: 1px solid transparent;
+            border-radius: 0;
+            padding: 0.2rem 0;
+            font-size: 0.82rem;
+            background: transparent;
+            box-shadow: none !important;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        #qDocUploadModal .q-doc-line-row .q-doc-line-text:hover,
+        #qDocUploadModal .q-doc-line-row .q-doc-line-text:focus {
+            border-bottom-color: #fecaca;
+            background: #fffafa;
+        }
+
+        #qDocUploadModal .q-doc-add-btn {
+            margin-top: 0.35rem;
+            border: 0;
+            background: transparent;
+            color: #c62828;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.15rem 0;
+        }
+
+        #qDocUploadModal .q-doc-add-btn:hover {
+            color: #9f1d1d;
+            text-decoration: underline;
+        }
+
+        #qDocUploadModal.q-doc-modal .modal-footer {
+            border-top: 1px solid #e8ecf1;
+            padding: 0.65rem 1rem;
+            background: #fff;
+            position: sticky;
+            bottom: 0;
+            z-index: 2;
+        }
+
+        #qDocUploadModal #qDocApplyError {
+            margin: 0 1rem 0.55rem;
+        }
+
+        @media (max-width: 767.98px) {
+            #qDocUploadModal .q-doc-day-row {
+                grid-template-columns: 2.6rem minmax(0, 1fr);
+            }
+            #qDocUploadModal .q-doc-day-row .q-doc-day-remove {
+                grid-column: 2;
+                justify-self: end;
+            }
+            #qDocUploadModal .q-doc-day-meta {
+                grid-template-columns: 1fr;
+            }
+            #qDocUploadModal #qDocUploadStepReview {
+                height: min(82vh, 900px);
+            }
         }
 
         .q-supplier-mail-modal {
@@ -1952,6 +2426,21 @@ $qWizardSteps = [
             align-items: stretch;
         }
 
+        .crm-quotation-gen .q-itin-pkg-search-card .q-itin-pkg-card-hd {
+            align-items: center;
+        }
+
+        .crm-quotation-gen .q-itin-pkg-search-card .q-itin-ai-suggest-btn {
+            flex: 0 0 auto;
+            margin-left: auto;
+            height: 30px;
+            min-height: 30px;
+            padding: 0 0.7rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            box-shadow: 0 2px 8px rgba(198, 40, 40, 0.16);
+        }
+
         @media (max-width: 1199.98px) {
             .crm-quotation-gen .q-itin-workspace {
                 grid-template-columns: 1fr 1fr;
@@ -1964,6 +2453,13 @@ $qWizardSteps = [
         @media (max-width: 767.98px) {
             .crm-quotation-gen .q-itin-workspace {
                 grid-template-columns: 1fr;
+            }
+            .crm-quotation-gen .q-itin-pkg-search-card .q-itin-pkg-card-hd {
+                flex-wrap: wrap;
+                gap: 0.45rem;
+            }
+            .crm-quotation-gen .q-itin-pkg-search-card .q-itin-ai-suggest-btn {
+                margin-left: 0;
             }
             .crm-quotation-gen .q-itin-suppliers-panel {
                 grid-column: auto;
@@ -2978,7 +3474,8 @@ $qWizardSteps = [
             }
         }
 
-        .crm-quotation-gen .q-day-ai-btn {
+        .crm-quotation-gen .q-day-ai-btn,
+        .crm-quotation-gen .q-itin-ai-suggest-btn {
             flex: 0 0 auto;
             border-radius: 10px;
             border: 0;
@@ -2993,6 +3490,23 @@ $qWizardSteps = [
             min-height: 30px;
             padding: 0 0.65rem;
             line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-itin-ai-suggest-btn {
+            white-space: nowrap;
+        }
+
+        .crm-quotation-gen .q-itin-ai-suggest-btn:hover:not(:disabled),
+        .crm-quotation-gen .q-itin-ai-suggest-btn:focus:not(:disabled) {
+            background: #b71c1c;
+            color: #fff;
+            outline: none;
+            box-shadow: 0 2px 8px rgba(198, 40, 40, 0.28);
+        }
+
+        .crm-quotation-gen .q-itin-ai-suggest-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
         }
 
         .crm-quotation-gen .q-day-add-btn {
@@ -3155,6 +3669,195 @@ $qWizardSteps = [
         .q-ai-incl-modal .modal-title {
             font-size: 1rem;
             font-weight: 700;
+        }
+
+        /* Reusable CRM confirm modal (also used by AI itinerary replace) */
+        #qCrmConfirmModal.q-crm-confirm-modal,
+        #qAiItineraryConfirmModal.q-ai-itin-confirm-modal {
+            position: fixed !important;
+            inset: 0 !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 1rem !important;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+            overflow-x: hidden;
+            overflow-y: auto;
+            transform: none !important;
+        }
+
+        #qCrmConfirmModal.q-crm-confirm-modal.show,
+        #qAiItineraryConfirmModal.q-ai-itin-confirm-modal.show {
+            display: flex !important;
+        }
+
+        .q-crm-confirm-modal .modal-dialog,
+        .q-ai-itin-confirm-modal .modal-dialog {
+            position: relative;
+            max-width: 440px;
+            width: calc(100% - 2rem);
+            margin: 0 auto;
+            pointer-events: auto;
+            transform: none !important;
+        }
+
+        .q-crm-confirm-modal .modal-content,
+        .q-ai-itin-confirm-modal .modal-content {
+            border: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+        }
+
+        .q-crm-confirm-modal .modal-body,
+        .q-ai-itin-confirm-modal .modal-body {
+            padding: 1.6rem 1.5rem 1.1rem;
+            text-align: center;
+        }
+
+        .q-crm-confirm-icon,
+        .q-ai-itin-confirm-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: #fffbeb;
+            color: #d97706;
+        }
+
+        .q-crm-confirm-modal.is-danger .q-crm-confirm-icon {
+            background: #fef2f2;
+            color: #c62828;
+        }
+
+        .q-crm-confirm-title,
+        .q-ai-itin-confirm-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.4rem;
+        }
+
+        .q-crm-confirm-msg,
+        .q-ai-itin-confirm-msg {
+            font-size: 0.9rem;
+            color: #475569;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .q-crm-confirm-modal .modal-footer,
+        .q-ai-itin-confirm-modal .modal-footer {
+            border-top: 0;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0 1.5rem 1.4rem;
+            flex-wrap: wrap;
+        }
+
+        .q-crm-confirm-modal .modal-footer .btn,
+        .q-ai-itin-confirm-modal .modal-footer .btn {
+            min-width: 120px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .q-crm-confirm-ok,
+        .q-ai-itin-confirm-ok {
+            background: #c62828;
+            border-color: #c62828;
+            color: #fff;
+        }
+
+        .q-crm-confirm-ok:hover,
+        .q-crm-confirm-ok:focus,
+        .q-ai-itin-confirm-ok:hover,
+        .q-ai-itin-confirm-ok:focus {
+            background: #b71c1c;
+            border-color: #b71c1c;
+            color: #fff;
+        }
+
+        #qCrmToastWrap {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1200;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: min(360px, calc(100vw - 2rem));
+            pointer-events: none;
+        }
+
+        .q-crm-toast {
+            pointer-events: auto;
+            padding: 0.7rem 0.95rem;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.86rem;
+            font-weight: 600;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2);
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .q-crm-toast.show {
+            opacity: 1;
+            transform: none;
+        }
+
+        .q-crm-toast.is-success {
+            background: #16a34a;
+        }
+
+        .q-crm-toast.is-error {
+            background: #dc2626;
+        }
+
+        .q-crm-toast.is-info {
+            background: #2563eb;
+        }
+
+        .q-crm-toast i {
+            margin-top: 0.1rem;
+        }
+
+        [data-theme="dark"] .q-crm-confirm-title,
+        [data-theme="dark"] .q-ai-itin-confirm-title {
+            color: var(--q-text, #e2e8f0);
+        }
+
+        [data-theme="dark"] .q-crm-confirm-msg,
+        [data-theme="dark"] .q-ai-itin-confirm-msg {
+            color: var(--q-muted, #94a3b8);
+        }
+
+        [data-theme="dark"] .q-crm-confirm-icon,
+        [data-theme="dark"] .q-ai-itin-confirm-icon {
+            background: rgba(217, 119, 6, 0.18);
+            color: #fbbf24;
+        }
+
+        [data-theme="dark"] .q-crm-confirm-modal.is-danger .q-crm-confirm-icon {
+            background: rgba(198, 40, 40, 0.2);
+            color: #f87171;
         }
 
         .q-ai-incl-chips {
@@ -3647,14 +4350,25 @@ $qWizardSteps = [
             min-height: 0;
             outline: none;
             border-radius: 4px;
-            cursor: default;
-            padding: 0;
+            cursor: text;
+            padding: 0.05rem 0.2rem;
             margin-left: 0;
             user-select: text;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             max-width: 12rem;
+        }
+
+        .crm-quotation-gen .q-day-meta-card:hover .q-day-meta-value {
+            background: #fff7ed;
+        }
+
+        .crm-quotation-gen .q-day-meta-value.is-editing {
+            background: #fff;
+            box-shadow: inset 0 0 0 1px #fdba74;
+            white-space: normal;
+            overflow: visible;
         }
 
         .crm-quotation-gen .q-day-meta-value.is-empty {
@@ -4085,26 +4799,13 @@ $qWizardSteps = [
             min-height: 2.4rem;
         }
 
-        .qii-image-search .qii-load-more-btn {
-            min-width: 140px;
-            border: 1px solid #bae6fd;
-            background: #f0f9ff;
-            color: #0369a1;
-            font-weight: 700;
+        .qii-image-search .qii-infinite-loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: #64748b;
             font-size: 0.82rem;
-            border-radius: 999px;
-            padding: 0.4rem 1.1rem;
-        }
-
-        .qii-image-search .qii-load-more-btn:hover:not(:disabled) {
-            background: #e0f2fe;
-            border-color: #7dd3fc;
-            color: #0c4a6e;
-        }
-
-        .qii-image-search .qii-load-more-btn:disabled {
-            opacity: 0.75;
-            cursor: wait;
+            font-weight: 600;
         }
 
         .qii-image-search .qii-img-item {
@@ -8002,6 +8703,11 @@ $qWizardSteps = [
             .crm-quotation-gen .q-section-accordion-head-actions {
                 gap: 0.3rem;
             }
+
+            .crm-quotation-gen .q-itin-ai-suggest-btn {
+                font-size: 0.7rem;
+                padding: 0 0.5rem;
+            }
             .crm-quotation-gen .q-section-next-btn {
                 padding: 0.3rem 0.55rem;
                 font-size: 0.72rem;
@@ -11496,26 +12202,8 @@ $qWizardSteps = [
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
         }
 
-        .crm-quotation-gen #qSuggestAIItinerary {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border: 0;
-            color: #fff;
-            font-weight: 700;
-            font-size: 0.8125rem;
-            padding: 0.45rem 1.1rem;
-            border-radius: 999px;
-            box-shadow: 0 3px 12px rgba(16, 185, 129, 0.28);
-            transition: transform 0.12s, box-shadow 0.12s;
-        }
-
-        .crm-quotation-gen #qSuggestAIItinerary:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 5px 16px rgba(16, 185, 129, 0.35);
-            color: #fff;
-        }
-
-        .crm-quotation-gen #qSuggestAIItinerary:disabled {
-            opacity: 0.7;
+        .crm-quotation-gen .q-itin-section .q-ai-suggest {
+            margin-top: 0;
         }
 
         .crm-quotation-gen .q-ai-itin-preview {
@@ -16879,7 +17567,8 @@ $qWizardSteps = [
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-day-nav-btn.q-day-nav-primary,
-        [data-theme="dark"] .crm-quotation-gen .q-day-ai-btn {
+        [data-theme="dark"] .crm-quotation-gen .q-day-ai-btn,
+        [data-theme="dark"] .crm-quotation-gen .q-itin-ai-suggest-btn {
             background: #c62828 !important;
             border-color: #c62828 !important;
             color: #fff !important;
@@ -17498,6 +18187,14 @@ $qWizardSteps = [
                                     <i class="fas fa-bars" aria-hidden="true"></i>
                                 </button>
                             <?php } ?>
+                            <?php
+                            $qEditLeadId = (int) ($prefill['lead_id'] ?? ($quotation['lead_id'] ?? ($leadSidebar['lead_id'] ?? 0)));
+                            if ($qEditLeadId > 0 && !$isArchivedView && !$qPreviewOnly) {
+                            ?>
+                                <button type="button" class="btn btn-sm btn-q-edit-lead" id="qEditLeadBtn" data-lead-id="<?= $qEditLeadId ?>" title="Edit linked lead">
+                                    <i class="fas fa-user-edit mr-1"></i> Edit Lead
+                                </button>
+                            <?php } ?>
                             <button type="button" class="btn btn-sm btn-q-upload-doc" id="qUploadDocBtn" title="Upload itinerary, hotel quote, or package document">
                                 <i class="fas fa-file-upload mr-1"></i> Upload Document
                             </button>
@@ -17542,11 +18239,11 @@ $qWizardSteps = [
                                     <div class="q-side-grid">
                                         <div class="q-side-grid-item">
                                             <div class="q-side-grid-label"><i class="fas fa-map-marker-alt"></i> Destination</div>
-                                            <div class="q-side-grid-value"><?= htmlspecialchars((string) $leadSidebar['travel']['destination'], ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="q-side-grid-value" data-q-side="destination"><?= htmlspecialchars((string) $leadSidebar['travel']['destination'], ENT_QUOTES, 'UTF-8') ?></div>
                                         </div>
                                         <div class="q-side-grid-item">
                                             <div class="q-side-grid-label"><i class="far fa-calendar-alt"></i> Travel Date</div>
-                                            <div class="q-side-grid-value"><?= htmlspecialchars((string) $leadSidebar['travel']['travel_date'], ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="q-side-grid-value" data-q-side="travel_date"><?= htmlspecialchars((string) $leadSidebar['travel']['travel_date'], ENT_QUOTES, 'UTF-8') ?></div>
                                         </div>
                                         <div class="q-side-grid-item">
                                             <div class="q-side-grid-label"><i class="fas fa-suitcase"></i> Service Type</div>
@@ -17554,18 +18251,18 @@ $qWizardSteps = [
                                         </div>
                                         <div class="q-side-grid-item">
                                             <div class="q-side-grid-label"><i class="fas fa-moon"></i> Nights</div>
-                                            <div class="q-side-grid-value"><?= htmlspecialchars((string) $leadSidebar['travel']['nights'], ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="q-side-grid-value" data-q-side="nights"><?= htmlspecialchars((string) $leadSidebar['travel']['nights'], ENT_QUOTES, 'UTF-8') ?></div>
                                         </div>
                                         <div class="q-side-grid-item">
                                             <div class="q-side-grid-label"><i class="fas fa-star"></i> Hotel Star Category</div>
-                                            <div class="q-side-grid-value"><?= htmlspecialchars((string) ($leadSidebar['travel']['hotel_star_category'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="q-side-grid-value" data-q-side="hotel_star"><?= htmlspecialchars((string) ($leadSidebar['travel']['hotel_star_category'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></div>
                                         </div>
                                     </div>
                                     <div class="q-side-travellers">
                                         <div class="q-side-travellers-label">Traveller Info</div>
                                         <div class="q-side-travellers-value">
                                             <i class="fas fa-users"></i>
-                                            <?= htmlspecialchars((string) $leadSidebar['travel']['travellers'], ENT_QUOTES, 'UTF-8') ?>
+                                            <span data-q-side="travellers"><?= htmlspecialchars((string) $leadSidebar['travel']['travellers'], ENT_QUOTES, 'UTF-8') ?></span>
                                         </div>
                                     </div>
                                 </div>
@@ -17575,15 +18272,15 @@ $qWizardSteps = [
                                     <div class="q-side-list">
                                         <div class="q-side-list-item">
                                             <i class="fas fa-user"></i>
-                                            <span><?= htmlspecialchars((string) $leadSidebar['basic']['guest_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span data-q-side="guest_name"><?= htmlspecialchars((string) $leadSidebar['basic']['guest_name'], ENT_QUOTES, 'UTF-8') ?></span>
                                         </div>
                                         <div class="q-side-list-item">
                                             <i class="fas fa-envelope"></i>
-                                            <span><?= htmlspecialchars((string) $leadSidebar['basic']['email'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span data-q-side="email"><?= htmlspecialchars((string) $leadSidebar['basic']['email'], ENT_QUOTES, 'UTF-8') ?></span>
                                         </div>
                                         <div class="q-side-list-item">
                                             <i class="fas fa-mobile-alt"></i>
-                                            <span><?= htmlspecialchars((string) $leadSidebar['basic']['mobile'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span data-q-side="mobile"><?= htmlspecialchars((string) $leadSidebar['basic']['mobile'], ENT_QUOTES, 'UTF-8') ?></span>
                                         </div>
                                     </div>
                                 </div>
@@ -17597,11 +18294,11 @@ $qWizardSteps = [
                                         </div>
                                         <div class="q-side-list-item">
                                             <i class="fas fa-bullhorn"></i>
-                                            <span><strong>Lead Source:</strong> <?= htmlspecialchars((string) ($leadSidebar['query']['lead_source_display'] ?? $leadSidebar['query']['lead_source']), ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span><strong>Lead Source:</strong> <span data-q-side="lead_source"><?= htmlspecialchars((string) ($leadSidebar['query']['lead_source_display'] ?? $leadSidebar['query']['lead_source']), ENT_QUOTES, 'UTF-8') ?></span></span>
                                         </div>
                                         <div class="q-side-list-item">
                                             <i class="far fa-flag"></i>
-                                            <span><strong>QT Stage:</strong> <?= htmlspecialchars((string) $leadSidebar['query']['stage'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span><strong>QT Stage:</strong> <span data-q-side="stage"><?= htmlspecialchars((string) $leadSidebar['query']['stage'], ENT_QUOTES, 'UTF-8') ?></span></span>
                                         </div>
                                     </div>
                                 </div>
@@ -17612,7 +18309,7 @@ $qWizardSteps = [
                                         <i class="fas fa-chevron-down q-side-card-toggle-icon" aria-hidden="true"></i>
                                     </button>
                                     <div class="q-side-card-body">
-                                        <div class="q-side-description"><?= htmlspecialchars((string) $leadSidebar['description'], ENT_QUOTES, 'UTF-8') ?></div>
+                                        <div class="q-side-description" data-q-side="description"><?= htmlspecialchars((string) $leadSidebar['description'], ENT_QUOTES, 'UTF-8') ?></div>
                                     </div>
                                 </div>
 
@@ -17629,7 +18326,7 @@ $qWizardSteps = [
                                             </div>
                                             <div>
                                                 <dt>Owner</dt>
-                                                <dd><?= htmlspecialchars((string) $leadSidebar['other']['owner'], ENT_QUOTES, 'UTF-8') ?></dd>
+                                                <dd data-q-side="owner"><?= htmlspecialchars((string) $leadSidebar['other']['owner'], ENT_QUOTES, 'UTF-8') ?></dd>
                                             </div>
                                             <div>
                                                 <dt>Created By</dt>
@@ -17643,7 +18340,7 @@ $qWizardSteps = [
                                     </div>
                                 </div>
 
-                                <div class="q-side-footer">
+                                <div class="q-side-footer" data-q-side="updated_at">
                                     Last Modified on <strong><?= htmlspecialchars((string) $leadSidebar['other']['updated_at'], ENT_QUOTES, 'UTF-8') ?></strong>
                                 </div>
                                 </div>
@@ -18037,6 +18734,13 @@ $qWizardSteps = [
                                                         <span class="q-itin-pkg-hd-label">Search Existing Package</span>
                                                     </div>
                                                 </div>
+                                                <button type="button"
+                                                    class="btn q-itin-ai-suggest-btn"
+                                                    id="qSuggestAIItinerary"
+                                                    title="AI Suggest full itinerary"
+                                                    data-accordion-ignore>
+                                                    <i class="fas fa-magic mr-1"></i>AI Suggest
+                                                </button>
                                             </div>
                                             <div class="q-itin-search-body">
                                                 <div class="q-itin-search-primary">
@@ -18487,6 +19191,73 @@ $qWizardSteps = [
         </div>
     </div>
 
+    <div class="modal fade q-ai-incl-modal" id="qAiItineraryModal" tabindex="-1" role="dialog" aria-labelledby="qAiItineraryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="q-day-ai-modal-hd">
+                        <div class="q-ai-incl-modal-icon"><i class="fas fa-magic"></i></div>
+                        <div>
+                            <h5 class="modal-title mb-0" id="qAiItineraryModalLabel">AI Suggest — Full Itinerary</h5>
+                            <p class="q-day-ai-modal-sub mb-0">Generate or improve all day titles and activities together. Images, meals and overnight stays are kept.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none py-2 px-3" id="qAiItinError" role="alert"></div>
+                    <div class="alert alert-success d-none py-2 px-3" id="qAiItinSuccess" role="alert"></div>
+
+                    <div class="q-ai-incl-chips" id="qAiItineraryMeta" aria-label="Itinerary context summary"></div>
+
+                    <div class="form-group mb-0">
+                        <label class="q-label" for="qAiItineraryNotes">Extra instructions <span class="text-muted font-weight-normal">(optional)</span></label>
+                        <textarea class="form-control" id="qAiItineraryNotes" rows="3" placeholder="e.g. Preferred travel pace, must-see attractions, family-friendly activities, avoid duplicate sightseeing..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer q-ai-incl-footer">
+                    <button type="button" class="btn btn-light border" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn q-ai-generate-btn q-day-ai-generate" id="qAiItinGenerate">
+                        <i class="fas fa-bolt mr-1"></i> Generate Itinerary
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade q-ai-itin-confirm-modal" id="qAiItineraryConfirmModal" tabindex="-1" role="dialog" aria-labelledby="qAiItineraryConfirmTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="q-ai-itin-confirm-icon" aria-hidden="true"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h5 class="q-ai-itin-confirm-title" id="qAiItineraryConfirmTitle">Replace Existing Itinerary?</h5>
+                    <p class="q-ai-itin-confirm-msg mb-0">Are you sure you want to replace the current day titles and activities with the AI-generated itinerary? Existing destination images, meal plans and overnight stays will be preserved.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" id="qAiItinConfirmCancel" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn q-ai-itin-confirm-ok" id="qAiItinConfirmOk">Yes, Replace</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade q-crm-confirm-modal" id="qCrmConfirmModal" tabindex="-1" role="dialog" aria-labelledby="qCrmConfirmTitle" aria-hidden="true" data-backdrop="static" data-keyboard="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="q-crm-confirm-icon" aria-hidden="true"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h5 class="q-crm-confirm-title" id="qCrmConfirmTitle">Are you sure?</h5>
+                    <p class="q-crm-confirm-msg mb-0" id="qCrmConfirmMessage">Please confirm this action.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" id="qCrmConfirmCancel">Cancel</button>
+                    <button type="button" class="btn q-crm-confirm-ok" id="qCrmConfirmOk">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="qCrmToastWrap" aria-live="polite" aria-atomic="true"></div>
+
     <div class="modal fade q-ai-incl-modal" id="qAiInclusionsModal" tabindex="-1" role="dialog" aria-labelledby="qAiInclusionsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
             <div class="modal-content">
@@ -18681,16 +19452,26 @@ $qWizardSteps = [
         </div>
     </div>
 
-    <div class="modal fade" id="qDocUploadModal" tabindex="-1" role="dialog" aria-labelledby="qDocUploadModalLabel" aria-hidden="true" data-backdrop="static">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+    <div class="modal fade q-doc-modal" id="qDocUploadModal" tabindex="-1" role="dialog" aria-labelledby="qDocUploadModalLabel" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title mb-0" id="qDocUploadModalLabel"><i class="fas fa-file-upload mr-2"></i>Upload Document</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <div class="q-doc-hd-main">
+                        <div class="q-doc-hd-icon" aria-hidden="true"><i class="fas fa-file-upload"></i></div>
+                        <div class="q-doc-hd-copy">
+                            <h5 class="q-doc-hd-title" id="qDocUploadModalLabel">Upload Document</h5>
+                            <p class="q-doc-hd-file d-none" id="qDocUploadFileName"></p>
+                            <p class="q-doc-hd-sub" id="qDocUploadReviewHint">Upload a travel document. AI will extract and rephrase details for review.</p>
+                        </div>
+                    </div>
+                    <div class="q-doc-hd-actions">
+                        <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="qDocUploadAgain"><i class="fas fa-redo mr-1"></i>Upload another</button>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
                 </div>
                 <div class="modal-body">
                     <div id="qDocUploadStepPick">
-                        <p class="text-muted small mb-3">Upload a travel itinerary, hotel quotation, package PDF, Word document, or image. AI will extract itinerary, hotels, inclusions, and exclusions for your review.</p>
+                        <p class="text-muted small mb-3">Upload a travel itinerary, hotel quotation, package PDF, Word document, or image. AI will extract and professionally rephrase itinerary, hotels, inclusions, exclusions, and terms for your review.</p>
                         <div class="q-doc-upload-drop" id="qDocUploadDrop" tabindex="0" role="button" aria-label="Choose or drop a document">
                             <div class="mb-2 text-danger"><i class="fas fa-cloud-upload-alt fa-2x"></i></div>
                             <div class="font-weight-bold text-dark mb-1">Drop file here or click to browse</div>
@@ -18708,62 +19489,97 @@ $qWizardSteps = [
                         <div class="alert alert-danger d-none mt-3 mb-0" id="qDocUploadError"></div>
                     </div>
                     <div id="qDocUploadStepReview" class="d-none">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
-                            <p class="text-muted small mb-0" id="qDocUploadReviewHint">Review extracted details. Empty fields were left blank on purpose. Existing quotation data is kept unless a field is empty.</p>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="qDocUploadAgain"><i class="fas fa-redo mr-1"></i>Upload another</button>
-                        </div>
-                        <div class="q-doc-section-check">
-                            <label class="mb-0"><input type="checkbox" class="mr-1" id="qDocApplyItinerary" checked> Itinerary</label>
-                            <label class="mb-0"><input type="checkbox" class="mr-1" id="qDocApplyHotels" checked> Hotels</label>
-                            <label class="mb-0"><input type="checkbox" class="mr-1" id="qDocApplyInclusions" checked> Inclusions</label>
-                            <label class="mb-0"><input type="checkbox" class="mr-1" id="qDocApplyExclusions" checked> Exclusions</label>
-                        </div>
-                        <ul class="nav nav-tabs" role="tablist">
-                            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#qDocTabItinerary" role="tab">Itinerary <span class="badge badge-light" id="qDocCountItinerary">0</span></a></li>
-                            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#qDocTabHotels" role="tab">Hotels <span class="badge badge-light" id="qDocCountHotels">0</span></a></li>
-                            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#qDocTabInclusions" role="tab">Inclusions <span class="badge badge-light" id="qDocCountInclusions">0</span></a></li>
-                            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#qDocTabExclusions" role="tab">Exclusions <span class="badge badge-light" id="qDocCountExclusions">0</span></a></li>
-                        </ul>
-                        <div class="tab-content pt-3">
-                            <div class="tab-pane fade show active" id="qDocTabItinerary" role="tabpanel">
-                                <div id="qDocItineraryList"></div>
+                        <div class="q-doc-review-toolbar">
+                            <div class="q-doc-section-check">
+                                <label><input type="checkbox" class="mr-1" id="qDocApplyHotels" checked> Hotels</label>
+                                <label><input type="checkbox" class="mr-1" id="qDocApplyItinerary" checked> Itinerary</label>
+                                <label><input type="checkbox" class="mr-1" id="qDocApplyInclusions" checked> Inclusions</label>
+                                <label><input type="checkbox" class="mr-1" id="qDocApplyExclusions" checked> Exclusions</label>
+                                <label><input type="checkbox" class="mr-1" id="qDocApplyTerms" checked> Terms</label>
                             </div>
-                            <div class="tab-pane fade" id="qDocTabHotels" role="tabpanel">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-bordered mb-0" id="qDocHotelTable">
-                                        <thead>
-                                            <tr>
-                                                <th>City</th>
-                                                <th>Hotel</th>
-                                                <th>Room</th>
-                                                <th>Rooms</th>
-                                                <th>Meal</th>
-                                                <th>Nights</th>
-                                                <th>Check-in</th>
-                                                <th>Check-out</th>
-                                                <th>Rate</th>
-                                                <th></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-                                    </table>
+                        </div>
+                        <div class="q-doc-review-scroll" id="qDocReviewScroll">
+                            <section class="q-doc-sec" data-sec="hotels">
+                                <div class="q-doc-sec-hd" data-q-doc-toggle>
+                                    <h6 class="q-doc-sec-title">Hotel Details</h6>
+                                    <span class="q-doc-sec-count" id="qDocCountHotels">0</span>
+                                    <i class="fas fa-chevron-down q-doc-sec-toggle" aria-hidden="true"></i>
                                 </div>
-                                <div class="q-doc-empty d-none" id="qDocHotelsEmpty">No hotel rows were found in this document.</div>
-                            </div>
-                            <div class="tab-pane fade" id="qDocTabInclusions" role="tabpanel">
-                                <div id="qDocInclusionsList"></div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="qDocAddInclusion"><i class="fas fa-plus mr-1"></i>Add line</button>
-                            </div>
-                            <div class="tab-pane fade" id="qDocTabExclusions" role="tabpanel">
-                                <div id="qDocExclusionsList"></div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="qDocAddExclusion"><i class="fas fa-plus mr-1"></i>Add line</button>
-                            </div>
+                                <div class="q-doc-sec-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm q-doc-hotel-table mb-0" id="qDocHotelTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>City</th>
+                                                    <th>Hotel</th>
+                                                    <th>Star</th>
+                                                    <th>Nights</th>
+                                                    <th>Room</th>
+                                                    <th>Check-in</th>
+                                                    <th>Check-out</th>
+                                                    <th>Meals</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="q-doc-empty d-none" id="qDocHotelsEmpty">No hotel rows were found in this document.</div>
+                                </div>
+                            </section>
+
+                            <section class="q-doc-sec" data-sec="itinerary">
+                                <div class="q-doc-sec-hd" data-q-doc-toggle>
+                                    <h6 class="q-doc-sec-title">Itinerary</h6>
+                                    <span class="q-doc-sec-count" id="qDocCountItinerary">0</span>
+                                    <i class="fas fa-chevron-down q-doc-sec-toggle" aria-hidden="true"></i>
+                                </div>
+                                <div class="q-doc-sec-body">
+                                    <div id="qDocItineraryList"></div>
+                                </div>
+                            </section>
+
+                            <section class="q-doc-sec" data-sec="inclusions">
+                                <div class="q-doc-sec-hd" data-q-doc-toggle>
+                                    <h6 class="q-doc-sec-title">Inclusions</h6>
+                                    <span class="q-doc-sec-count" id="qDocCountInclusions">0</span>
+                                    <i class="fas fa-chevron-down q-doc-sec-toggle" aria-hidden="true"></i>
+                                </div>
+                                <div class="q-doc-sec-body">
+                                    <div id="qDocInclusionsList"></div>
+                                    <button type="button" class="btn q-doc-add-btn" id="qDocAddInclusion"><i class="fas fa-plus mr-1"></i>Add inclusion</button>
+                                </div>
+                            </section>
+
+                            <section class="q-doc-sec" data-sec="exclusions">
+                                <div class="q-doc-sec-hd" data-q-doc-toggle>
+                                    <h6 class="q-doc-sec-title">Exclusions</h6>
+                                    <span class="q-doc-sec-count" id="qDocCountExclusions">0</span>
+                                    <i class="fas fa-chevron-down q-doc-sec-toggle" aria-hidden="true"></i>
+                                </div>
+                                <div class="q-doc-sec-body">
+                                    <div id="qDocExclusionsList"></div>
+                                    <button type="button" class="btn q-doc-add-btn" id="qDocAddExclusion"><i class="fas fa-plus mr-1"></i>Add exclusion</button>
+                                </div>
+                            </section>
+
+                            <section class="q-doc-sec" data-sec="terms">
+                                <div class="q-doc-sec-hd" data-q-doc-toggle>
+                                    <h6 class="q-doc-sec-title">Terms &amp; Policies</h6>
+                                    <span class="q-doc-sec-count" id="qDocCountTerms">0</span>
+                                    <i class="fas fa-chevron-down q-doc-sec-toggle" aria-hidden="true"></i>
+                                </div>
+                                <div class="q-doc-sec-body">
+                                    <div id="qDocTermsList"></div>
+                                    <button type="button" class="btn q-doc-add-btn" id="qDocAddTerm"><i class="fas fa-plus mr-1"></i>Add term</button>
+                                </div>
+                            </section>
                         </div>
-                        <div class="alert alert-danger d-none mt-3 mb-0" id="qDocApplyError"></div>
+                        <div class="alert alert-danger d-none" id="qDocApplyError"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-light border" data-dismiss="modal" id="qDocUploadCancel">Cancel</button>
                     <button type="button" class="btn btn-danger d-none" id="qDocUploadApply"><i class="fas fa-check mr-1"></i>Apply to Quotation</button>
                 </div>
             </div>
@@ -18970,6 +19786,23 @@ $qWizardSteps = [
         </div>
     </div>
 
+    <div class="modal fade" id="qLeadFormModal" tabindex="-1" role="dialog" aria-labelledby="qLeadFormModalLabel" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-xl lead-form-dialog" role="document">
+            <div class="modal-content lead-form-shell">
+                <div class="modal-header lead-form-hd text-white">
+                    <h5 class="modal-title mb-0" id="qLeadFormModalLabel"><i class="fas fa-user-edit"></i><span>Edit Lead</span></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body lead-form-bd" id="qLeadFormModalBody">
+                    <div class="lead-form-loading">
+                        <div><i class="fas fa-spinner fa-spin d-block"></i></div>
+                        Loading form…
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <?php include __DIR__ . '/../includes/footer-links.php'; ?>
 
     <?php if ($qGuestTourLocked) { ?>
@@ -18978,7 +19811,7 @@ $qWizardSteps = [
             var $grid = $('#qGuestTourGrid');
             $grid.find('input, select, textarea').not('#q_header_text').each(function () {
                 $(this).prop('readonly', true)
-                    .attr({ tabindex: '-1', 'aria-readonly': 'true', title: 'Locked — edit in the lead' })
+                    .attr({ tabindex: '-1', 'aria-readonly': 'true', title: 'Locked — use Edit Lead to change' })
                     .addClass('q-gt-locked-field')
                     .closest('.form-group').addClass('q-gt-locked-wrap');
             });
@@ -19010,9 +19843,9 @@ $qWizardSteps = [
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=381"></script>
+    <script src="crm/assets/quotation_generator.js?v=393"></script>
     <script src="crm/assets/quotation_flight_search.js?v=38"></script>
-    <script src="crm/assets/quotation_itinerary_images.js?v=7"></script>
+    <script src="crm/assets/quotation_itinerary_images.js?v=8"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>
     <script>
         $(function () {

@@ -88,45 +88,15 @@ function qdocInlineSafeBytes(): int
 
 function qdocPrompt(): string
 {
-    $p = "You are a travel-document extraction engine for an Indian travel agency quotation form.\n";
-    $p .= "Read the attached travel itinerary, hotel quotation, package PDF, Word document, or screenshot.\n";
-    $p .= "Extract ONLY what is clearly present. Never invent hotels, days, or inclusions.\n";
-    $p .= "\nReturn ONLY JSON with this shape:\n";
-    $p .= "{\n";
-    $p .= "  \"document_type\": \"itinerary | hotel_quote | package | mixed | other\",\n";
-    $p .= "  \"itinerary\": [\n";
-    $p .= "    {\n";
-    $p .= "      \"day\": 1,\n";
-    $p .= "      \"title\": \"short day title\",\n";
-    $p .= "      \"description\": \"full day description / activities / sightseeing as plain text with newlines\",\n";
-    $p .= "      \"overnight\": \"hotel or city overnight if printed\",\n";
-    $p .= "      \"meal\": \"meal plan text if printed\"\n";
-    $p .= "    }\n";
-    $p .= "  ],\n";
-    $p .= "  \"hotels\": [\n";
-    $p .= "    {\n";
-    $p .= "      \"city\": \"\",\n";
-    $p .= "      \"hotel_name\": \"\",\n";
-    $p .= "      \"room_type\": \"\",\n";
-    $p .= "      \"rooms\": \"\",\n";
-    $p .= "      \"meal_plan\": \"EP|CP|MAP|AP or empty\",\n";
-    $p .= "      \"nights\": \"\",\n";
-    $p .= "      \"check_in\": \"YYYY-MM-DD\",\n";
-    $p .= "      \"check_out\": \"YYYY-MM-DD\",\n";
-    $p .= "      \"rate\": \"number only\",\n";
-    $p .= "      \"supplier\": \"\"\n";
-    $p .= "    }\n";
-    $p .= "  ],\n";
-    $p .= "  \"inclusions\": [\"service or facility included\"],\n";
-    $p .= "  \"exclusions\": [\"service or expense excluded\"]\n";
-    $p .= "}\n\n";
-    $p .= "Rules:\n";
-    $p .= "- Day numbers must start at 1 and follow document order.\n";
-    $p .= "- description should keep sightseeing and activity detail; use plain text, not HTML.\n";
-    $p .= "- Split inclusion/exclusion bullets into separate array items.\n";
-    $p .= "- Use \"\" / [] when a section is not present.\n";
-    $p .= "- Dates must be YYYY-MM-DD when year is known; otherwise \"\".\n";
-    $p .= "- meal_plan hotel codes only when clearly EP/CP/MAP/AP (or full plan names).\n";
+    $p = "Extract travel quotation data from the attached document. Return ONLY JSON.\n";
+    $p .= "Extract ONLY what is clearly present. Never invent hotels, days, prices, or inclusions.\n";
+    $p .= "Schema:\n";
+    $p .= "{\"document_type\":\"itinerary|hotel_quote|package|mixed|other\",";
+    $p .= "\"itinerary\":[{\"day\":1,\"title\":\"\",\"description\":\"\",\"overnight\":\"\",\"meal\":\"\"}],";
+    $p .= "\"hotels\":[{\"city\":\"\",\"hotel_name\":\"\",\"room_type\":\"\",\"rooms\":\"\",\"meal_plan\":\"EP|CP|MAP|AP or empty\",\"nights\":\"\",\"check_in\":\"YYYY-MM-DD\",\"check_out\":\"YYYY-MM-DD\",\"rate\":\"\",\"supplier\":\"\"}],";
+    $p .= "\"inclusions\":[\"...\"],\"exclusions\":[\"...\"],";
+    $p .= "\"terms_policies\":[\"...\"]}\n";
+    $p .= "Rules: keep day order; plain-text descriptions; split bullets; empty string/[] when missing; YYYY-MM-DD dates when known.\n";
     return $p;
 }
 
@@ -547,12 +517,215 @@ function qdocNormalize(array $raw): array
         }
     }
 
+    $terms = qdocStringList($raw['terms_policies'] ?? ($raw['terms'] ?? []), 60, 500);
+
     return [
         'document_type' => $docType,
         'itinerary' => $itinerary,
         'hotels' => $hotels,
         'inclusions' => qdocStringList($raw['inclusions'] ?? []),
         'exclusions' => qdocStringList($raw['exclusions'] ?? []),
+        'terms_policies' => $terms,
+    ];
+}
+
+/**
+ * Public-facing extract error (never expose keys / raw transport secrets).
+ */
+function qdocPublicError(string $error, int $httpCode = 0): string
+{
+    $error = trim($error);
+    if ($error === '') {
+        return 'The document could not be read. Please try a clearer PDF or image.';
+    }
+    if (function_exists('crmAiIsBusyOverloadError') && crmAiIsBusyOverloadError($error)) {
+        return 'The AI service is under high demand right now (HTTP '
+            . ($httpCode > 0 ? $httpCode : '429/503')
+            . '). Please wait about a minute and try again.';
+    }
+    if (stripos($error, 'api key') !== false || $httpCode === 401 || $httpCode === 403) {
+        return 'AI authentication failed. Check the Gemini API key in crm/includes/ai_config.local.php.';
+    }
+    if (stripos($error, 'no longer available') !== false || stripos($error, 'not found') !== false) {
+        return 'The configured AI model is unavailable. Update model IDs in crm/includes/ai_config.php and retry.';
+    }
+    if (stripos($error, 'could not reach') !== false || stripos($error, 'timed out') !== false || stripos($error, 'timeout') !== false) {
+        return 'Could not reach the AI service (timeout/network). Check server connectivity and PHP cURL, then retry.';
+    }
+    // Strip accidental key material.
+    $error = preg_replace('/AIza[0-9A-Za-z_\-]{10,}/', '[redacted]', $error) ?? $error;
+    $error = preg_replace('/AQ\.[0-9A-Za-z_\-]{10,}/', '[redacted]', $error) ?? $error;
+    if (strlen($error) > 280) {
+        $error = substr($error, 0, 280) . '…';
+    }
+    return $error;
+}
+
+function qdocSanitizeDayHtml(string $html): string
+{
+    $html = trim($html);
+    if ($html === '') {
+        return '';
+    }
+    // Convert markdown bold leftovers.
+    $html = preg_replace('/\*\*([^*]+)\*\*/', '<strong>$1</strong>', $html) ?? $html;
+    $html = strip_tags($html, '<strong><em><b><i><br><p><ul><ol><li>');
+    return trim($html);
+}
+
+/**
+ * @param array<string,mixed> $data
+ */
+function qdocContentCount(array $data): int
+{
+    return count($data['itinerary'] ?? [])
+        + count($data['hotels'] ?? [])
+        + count($data['inclusions'] ?? [])
+        + count($data['exclusions'] ?? [])
+        + count($data['terms_policies'] ?? []);
+}
+
+/**
+ * @param array<string,mixed> $data
+ */
+function qdocHasContent(array $data): bool
+{
+    return qdocContentCount($data) > 0;
+}
+
+/**
+ * Compact rephrase prompt (text-only; no document re-upload).
+ */
+function qdocRephrasePrompt(array $extracted): string
+{
+    $json = json_encode($extracted, JSON_UNESCAPED_UNICODE);
+    if (!is_string($json)) {
+        $json = '{}';
+    }
+    if (strlen($json) > 28000) {
+        $json = substr($json, 0, 28000) . '…';
+    }
+
+    $p = "Rewrite this extracted travel quotation JSON into professional customer-facing language.\n";
+    $p .= "Return ONLY JSON with the SAME keys/shape. Do not invent hotels, sights, prices, dates, or services.\n";
+    $p .= "Preserve all important facts (destinations, hotels, dates, rates, inclusions, exclusions, terms).\n";
+    $p .= "Itinerary rules: keep day order; each description max ~100 words; concise attractive prose; wrap important sightseeing place names in <strong>...</strong>; avoid repeating the same attraction across days; keep arrival/departure/transfers/overnight.\n";
+    $p .= "Also polish hotel names/room text, inclusions, exclusions, and terms_policies into clear professional lines.\n";
+    $p .= "Fix spelling/grammar; remove duplicates and irrelevant filler.\n\n";
+    $p .= "INPUT JSON:\n" . $json;
+    return $p;
+}
+
+/**
+ * Second-pass AI polish. On failure returns original extracted data.
+ *
+ * @param array<string,mixed> $extracted
+ * @return array{ok:bool,result:array<string,mixed>,rephrased:bool,model?:string,error?:string,elapsed_ms?:int}
+ */
+function qdocRephraseExtracted(array $extracted): array
+{
+    $started = microtime(true);
+    if (!qdocAvailable()) {
+        return [
+            'ok' => true,
+            'result' => $extracted,
+            'rephrased' => false,
+            'error' => 'AI disabled',
+            'elapsed_ms' => 0,
+        ];
+    }
+
+    $hasAny = !empty($extracted['itinerary'])
+        || !empty($extracted['hotels'])
+        || !empty($extracted['inclusions'])
+        || !empty($extracted['exclusions'])
+        || !empty($extracted['terms_policies']);
+    if (!$hasAny) {
+        return [
+            'ok' => true,
+            'result' => $extracted,
+            'rephrased' => false,
+            'elapsed_ms' => 0,
+        ];
+    }
+
+    $prompt = qdocRephrasePrompt($extracted);
+    $models = function_exists('crmAiGeminiItineraryModels')
+        ? crmAiGeminiItineraryModels()
+        : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+
+    $res = crmAiCallGemini(
+        $prompt,
+        'gemini-3.5-flash-lite',
+        55,
+        $models,
+        [
+            'max_attempts_per_model' => 2,
+            'sleep_us' => 350000,
+            'generation_config' => [
+                'temperature' => 0.25,
+                'maxOutputTokens' => 8192,
+                'responseMimeType' => 'application/json',
+            ],
+        ]
+    );
+
+    $elapsed = (int) round((microtime(true) - $started) * 1000);
+    if (!empty($res['ok']) && is_array($res['data'])) {
+        $normalized = qdocNormalize($res['data']);
+        foreach ($normalized['itinerary'] as $i => $day) {
+            $normalized['itinerary'][$i]['description'] = qdocSanitizeDayHtml((string) ($day['description'] ?? ''));
+        }
+        // Never replace a good extract with an empty/near-empty rephrase payload.
+        $beforeCount = qdocContentCount($extracted);
+        $afterCount = qdocContentCount($normalized);
+        if ($afterCount <= 0 || ($beforeCount > 0 && $afterCount < max(1, (int) floor($beforeCount * 0.4)))) {
+            if (function_exists('crmAiLog')) {
+                crmAiLog('qdoc_rephrase_empty_fallback', [
+                    'model' => (string) ($res['model'] ?? ''),
+                    'ms' => $elapsed,
+                    'before' => $beforeCount,
+                    'after' => $afterCount,
+                ]);
+            }
+            return [
+                'ok' => false,
+                'result' => $extracted,
+                'rephrased' => false,
+                'error' => 'AI rephrasing returned incomplete content. Showing original extracted text.',
+                'elapsed_ms' => $elapsed,
+            ];
+        }
+        if (function_exists('crmAiLog')) {
+            crmAiLog('qdoc_rephrase_ok', [
+                'model' => (string) ($res['model'] ?? ''),
+                'ms' => $elapsed,
+                'items' => $afterCount,
+            ]);
+        }
+        return [
+            'ok' => true,
+            'result' => $normalized,
+            'rephrased' => true,
+            'model' => (string) ($res['model'] ?? ''),
+            'elapsed_ms' => $elapsed,
+        ];
+    }
+
+    $lastError = (string) ($res['error'] ?? 'Rephrase failed');
+    if (function_exists('crmAiLog')) {
+        crmAiLog('qdoc_rephrase_fail', [
+            'ms' => $elapsed,
+            'error' => $lastError,
+        ]);
+    }
+
+    return [
+        'ok' => false,
+        'result' => $extracted,
+        'rephrased' => false,
+        'error' => qdocPublicError($lastError, (int) ($res['http_code'] ?? 0)),
+        'elapsed_ms' => $elapsed,
     ];
 }
 
@@ -719,25 +892,36 @@ function qdocExtract(string $absPath, string $mime, string $ext): array
 
     $prompt = qdocPrompt();
     $lastError = 'The document could not be read.';
+    $lastCode = 0;
     $mode = (string) ($prepared['mode'] ?? '');
     $timeout = ($mode === 'file') ? 210 : (($mode === 'inline') ? 150 : 90);
 
-    $models = crmAiGeminiModels();
-    // Extra multimodal fallbacks used by hotel/flight OCR paths when primary models fail.
-    foreach (['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'] as $extra) {
-        if (!in_array($extra, $models, true)) {
-            $models[] = $extra;
-        }
-    }
+    $models = function_exists('crmAiGeminiDocumentModels')
+        ? crmAiGeminiDocumentModels()
+        : crmAiGeminiModels();
+    $models = array_values(array_unique(array_filter(array_map('strval', $models))));
 
+    $started = microtime(true);
+    $attempt = 0;
     try {
-        foreach (array_slice($models, 0, 5) as $model) {
+        foreach (array_slice($models, 0, 4) as $model) {
+            $attempt++;
+            if (function_exists('crmAiLog')) {
+                crmAiLog('qdoc_extract_try', ['model' => $model, 'mode' => $mode, 'attempt' => $attempt]);
+            }
             $res = qdocCallGeminiOnce($prompt, $prepared, $model, $timeout);
             if (!empty($res['ok']) && is_array($res['data'])) {
+                if (function_exists('crmAiLog')) {
+                    crmAiLog('qdoc_extract_ok', [
+                        'model' => $model,
+                        'ms' => (int) round((microtime(true) - $started) * 1000),
+                    ]);
+                }
                 return [
                     'ok' => true,
                     'result' => qdocNormalize($res['data']),
                     'model' => (string) $model,
+                    'elapsed_ms' => (int) round((microtime(true) - $started) * 1000),
                 ];
             }
             $err = trim((string) ($res['error'] ?? ''));
@@ -745,11 +929,28 @@ function qdocExtract(string $absPath, string $mime, string $ext): array
                 $lastError = $err;
             }
             $code = (int) ($res['http_code'] ?? 0);
+            $lastCode = $code;
+            if (function_exists('crmAiLog')) {
+                crmAiLog('qdoc_extract_fail', [
+                    'model' => $model,
+                    'http_code' => $code,
+                    'error' => $lastError,
+                ]);
+            }
             if (in_array($code, [401, 403], true)) {
                 break;
             }
+            // Controlled backoff for real overload only (not model-not-found).
+            $busy = (function_exists('crmAiIsBusyOverloadError') && crmAiIsBusyOverloadError($lastError))
+                || in_array($code, [429, 503], true);
+            if ($busy && $attempt < 4) {
+                usleep((int) (400000 * (2 ** max(0, $attempt - 1)))); // 0.4s, 0.8s, 1.6s
+            }
             // Keep trying next model on not-found / overload; stop on clear client errors.
-            if (!crmAiIsTransientGeminiError($lastError) && !in_array($code, [0, 404, 429, 500, 503], true)) {
+            if (!$busy
+                && !crmAiIsTransientGeminiError($lastError)
+                && !in_array($code, [0, 404, 500], true)
+            ) {
                 break;
             }
         }
@@ -759,8 +960,18 @@ function qdocExtract(string $absPath, string $mime, string $ext): array
         }
     }
 
-    if (crmAiIsQuotaOrRateError($lastError)) {
-        $lastError = 'The AI service is busy right now. Please try again in a minute.';
+    if (function_exists('crmAiLog')) {
+        crmAiLog('qdoc_extract_exhausted', [
+            'ms' => (int) round((microtime(true) - $started) * 1000),
+            'http_code' => $lastCode,
+            'error' => $lastError,
+        ]);
     }
-    return ['ok' => false, 'error' => $lastError];
+
+    return [
+        'ok' => false,
+        'error' => qdocPublicError($lastError, $lastCode),
+        'http_code' => $lastCode,
+        'elapsed_ms' => (int) round((microtime(true) - $started) * 1000),
+    ];
 }

@@ -1,18 +1,21 @@
-/* Itinerary image search (Pexels / Unsplash / Wikimedia fallback) */
+/* Itinerary image search — combined Pexels + Unsplash (alternating batches of 6) */
 (function ($) {
     'use strict';
 
     var qiiTargetCard = null;
     var qiiSearchTimer = null;
-    var qiiPage = 1;
-    var qiiPerPage = 18;
     var qiiQuery = '';
-    var qiiHasMore = false;
     var qiiLoading = false;
     var qiiImages = [];
     var qiiSeenKeys = {};
-    var qiiProvider = 'pexels';
     var qiiRequestSeq = 0;
+    var qiiBatchSize = 6;
+    var qiiProviders = ['pexels', 'unsplash'];
+    var qiiNextProviderIndex = 0;
+    var qiiProviderState = {
+        pexels: { page: 0, hasMore: true },
+        unsplash: { page: 0, hasMore: true }
+    };
 
     function qiiAbsUrl(u) {
         if (typeof window.qQuotationAbsUrl === 'function') {
@@ -24,11 +27,23 @@
     }
 
     function qiiProviderLabel(source) {
-        source = String(source || qiiProvider || '').toLowerCase();
+        source = String(source || '').toLowerCase();
         if (source === 'unsplash') return 'Unsplash';
         if (source === 'pexels') return 'Pexels';
         if (source === 'wikimedia') return 'Wikimedia Commons';
         return 'Image library';
+    }
+
+    function qiiResetProviderState() {
+        qiiNextProviderIndex = 0;
+        qiiProviderState = {
+            pexels: { page: 0, hasMore: true },
+            unsplash: { page: 0, hasMore: true }
+        };
+    }
+
+    function qiiHasMoreAny() {
+        return !!(qiiProviderState.pexels.hasMore || qiiProviderState.unsplash.hasMore);
     }
 
     function qiiSetSourceNote(text) {
@@ -44,8 +59,8 @@
         }
     }
 
-    function qiiShowSkeleton(count) {
-        count = Math.max(1, parseInt(count, 10) || 6);
+    function qiiSkeletonHtml(count) {
+        count = Math.max(1, parseInt(count, 10) || qiiBatchSize);
         var html = '';
         var i;
         for (i = 0; i < count; i++) {
@@ -54,62 +69,30 @@
                     '<div class="qii-skel-thumb"></div>' +
                 '</div>';
         }
-        $('#qiiResultsGrid').html(html);
+        return html;
     }
 
-    function qiiSyncProviderIndicator(animate) {
-        var $switch = $('.qii-provider-switch').first();
-        var $indicator = $switch.find('.qii-provider-indicator');
-        var $active = $switch.find('.qii-provider-btn.is-active').first();
-        if (!$switch.length || !$indicator.length || !$active.length) {
+    function qiiShowSkeleton(count) {
+        $('#qiiResultsGrid').html(qiiSkeletonHtml(count));
+    }
+
+    function qiiAppendSkeleton(count) {
+        $('#qiiResultsGrid').append(qiiSkeletonHtml(count));
+    }
+
+    function qiiClearSkeleton() {
+        $('#qiiResultsGrid').find('.qii-skel-card').remove();
+    }
+
+    function qiiSetInfiniteLoading(show) {
+        var $wrap = $('#qiiLoadMoreWrap');
+        if (!$wrap.length) {
             return;
         }
-
-        var switchEl = $switch.get(0);
-        var activeEl = $active.get(0);
-        var switchRect = switchEl.getBoundingClientRect();
-        var activeRect = activeEl.getBoundingClientRect();
-        var left = Math.max(0, activeRect.left - switchRect.left);
-        var width = Math.max(1, activeRect.width);
-
-        if (animate === false) {
-            $indicator.css('transition', 'none');
-        }
-
-        $indicator.css({
-            width: width + 'px',
-            transform: 'translateX(' + left + 'px)'
-        });
-
-        if (animate === false) {
-            // Force reflow, then restore transition for later switches.
-            void $indicator.get(0).offsetWidth;
-            $indicator.css('transition', '');
-        }
-    }
-
-    function qiiSetProvider(provider, opts) {
-        opts = opts || {};
-        provider = String(provider || 'pexels').toLowerCase() === 'unsplash' ? 'unsplash' : 'pexels';
-        var changed = qiiProvider !== provider;
-        qiiProvider = provider;
-
-        $('.qii-provider-btn').each(function () {
-            var isActive = String($(this).data('provider') || '') === provider;
-            $(this).toggleClass('is-active', isActive).attr('aria-selected', isActive ? 'true' : 'false');
-        });
-
-        qiiSyncProviderIndicator(opts.animate !== false);
-
-        if (opts.search !== false && changed) {
-            var q = ($('#qiiSearchInput').val() || '').trim();
-            if (q.length >= 2) {
-                qiiRunSearch(q);
-            } else {
-                $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
-                qiiSetSourceNote('');
-                qiiSetLoadMoreVisible(false);
-            }
+        if (show) {
+            $wrap.prop('hidden', false).show();
+        } else {
+            $wrap.prop('hidden', true).hide();
         }
     }
 
@@ -118,9 +101,9 @@
             return '';
         }
         if (img.id) {
-            return String(img.source || qiiProvider) + ':id:' + String(img.id);
+            return String(img.source || '') + ':id:' + String(img.id);
         }
-        return String(img.source || qiiProvider) + ':url:' + String(img.url || img.thumb || '');
+        return String(img.source || '') + ':url:' + String(img.url || img.thumb || '');
     }
 
     function qiiUpdatePreview($card, url) {
@@ -155,32 +138,6 @@
         return parts.join(' ').replace(/\s+/g, ' ').trim();
     }
 
-    function qiiSetLoadMoreVisible(show) {
-        var $wrap = $('#qiiLoadMoreWrap');
-        if (!$wrap.length) {
-            return;
-        }
-        if (show) {
-            $wrap.prop('hidden', false).show();
-        } else {
-            $wrap.prop('hidden', true).hide();
-        }
-    }
-
-    function qiiSetLoadMoreLoading(isLoading) {
-        var $btn = $('#qiiLoadMoreBtn');
-        if (!$btn.length) {
-            return;
-        }
-        qiiLoading = !!isLoading;
-        $btn.prop('disabled', qiiLoading);
-        if (qiiLoading) {
-            $btn.html('<i class="fas fa-circle-notch fa-spin mr-1" aria-hidden="true"></i><span class="qii-load-more-label">Loading…</span>');
-        } else {
-            $btn.html('<span class="qii-load-more-label">Load More</span>');
-        }
-    }
-
     function qiiAppendImages(images) {
         var $grid = $('#qiiResultsGrid');
         var added = [];
@@ -198,7 +155,8 @@
             var $btn = $('<button type="button" class="qii-img-item"></button>')
                 .attr('data-index', idx)
                 .attr('title', altText)
-                .attr('aria-label', altText);
+                .attr('aria-label', altText)
+                .attr('data-source', img.source || '');
             $('<img class="qii-img-thumb" alt="">')
                 .attr('src', img.thumb || img.url)
                 .attr('alt', altText)
@@ -209,154 +167,215 @@
         return added;
     }
 
-    function qiiRenderResults(images, meta, append) {
-        var $grid = $('#qiiResultsGrid');
-        meta = meta || {};
-
-        if (!append) {
-            $grid.empty();
-            qiiImages = [];
-            qiiSeenKeys = {};
-        } else {
-            $grid.find('.qii-empty, .qii-loading, .qii-skel-card').remove();
-        }
-
-        if (meta.error && !(images && images.length) && !append) {
-            qiiSetSourceNote('');
-            $grid.html('<div class="qii-empty text-danger"><i class="fas fa-exclamation-circle"></i>' +
-                $('<div>').text(meta.error).html() + '</div>');
-            qiiSetLoadMoreVisible(false);
-            return;
-        }
-
-        if (meta.source) {
-            var srcLabel = qiiProviderLabel(meta.source);
-            qiiSetSourceNote('Showing results from ' + srcLabel + (meta.query ? ' for "' + meta.query + '"' : ''));
-        } else if (!append) {
-            qiiSetSourceNote('');
-        }
-
-        var added = qiiAppendImages(images);
-        qiiHasMore = !!meta.has_more;
-
-        if (!qiiImages.length) {
-            $grid.html('<div class="qii-empty"><i class="fas fa-image"></i>No images found on ' +
-                qiiProviderLabel(meta.source || qiiProvider) + '. Try another search term.</div>');
-            qiiSetLoadMoreVisible(false);
-            return;
-        }
-
-        if (append && !added.length && !qiiHasMore) {
-            qiiSetLoadMoreVisible(false);
-            return;
-        }
-
-        qiiSetLoadMoreVisible(qiiHasMore);
+    function qiiFetchProvider(query, provider, page) {
+        return $.getJSON(qiiAbsUrl('crm/ajax/search_itinerary_images.php'), {
+            q: query,
+            limit: qiiBatchSize,
+            page: page,
+            provider: provider
+        }).then(
+            function (res) {
+                return {
+                    provider: provider,
+                    ok: !!(res && (res.success || (res.images && res.images.length))),
+                    images: (res && res.images) ? res.images : [],
+                    page: (res && parseInt(res.page, 10)) || page,
+                    has_more: !!(res && res.has_more),
+                    source: (res && res.source) || provider,
+                    message: (res && res.message) || ''
+                };
+            },
+            function () {
+                return {
+                    provider: provider,
+                    ok: false,
+                    images: [],
+                    page: page,
+                    has_more: false,
+                    source: provider,
+                    message: 'Search failed on ' + qiiProviderLabel(provider) + '.'
+                };
+            }
+        );
     }
 
-    function qiiFetchPage(query, page, append) {
-        query = (query || '').trim();
-        page = Math.max(1, parseInt(page, 10) || 1);
+    function qiiApplyProviderResult(result) {
+        var provider = result.provider;
+        var state = qiiProviderState[provider];
+        if (!state) {
+            return [];
+        }
+        state.page = result.page || state.page;
+        // No more if failed, empty, or API says no more.
+        state.hasMore = !!(result.ok && result.images && result.images.length && result.has_more);
+        if (!result.ok || !(result.images && result.images.length)) {
+            state.hasMore = false;
+        }
+        return qiiAppendImages(result.images || []);
+    }
 
-        if (query.length < 2) {
-            if (!append) {
-                $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
+    function qiiUpdateCombinedNote(query, errors) {
+        var sources = [];
+        if (qiiImages.some(function (img) { return String(img.source || '') === 'pexels' || String(img.source || '') === 'wikimedia'; })) {
+            sources.push(qiiImages.some(function (img) { return String(img.source || '') === 'wikimedia'; }) &&
+                !qiiImages.some(function (img) { return String(img.source || '') === 'pexels'; })
+                ? 'Wikimedia'
+                : 'Pexels');
+        }
+        if (qiiImages.some(function (img) { return String(img.source || '') === 'unsplash'; })) {
+            sources.push('Unsplash');
+        }
+        if (!sources.length) {
+            if (errors && errors.length) {
+                qiiSetSourceNote(errors.join(' '));
+            } else {
                 qiiSetSourceNote('');
-                qiiSetLoadMoreVisible(false);
             }
             return;
         }
-
-        // Allow a fresh search / provider switch to interrupt an in-flight request.
-        if (append && qiiLoading) {
-            return;
+        var note = 'Showing results from ' + sources.join(' & ') + (query ? ' for "' + query + '"' : '');
+        if (errors && errors.length === 1) {
+            note += ' · ' + errors[0];
         }
-
-        qiiLoading = true;
-        var reqId = ++qiiRequestSeq;
-        if (append) {
-            qiiSetLoadMoreLoading(true);
-        } else {
-            qiiSetLoadMoreVisible(false);
-            qiiShowSkeleton(window.matchMedia && window.matchMedia('(max-width: 575px)').matches ? 4 : 6);
-            qiiSetSourceNote('Searching ' + qiiProviderLabel(qiiProvider) + '…');
-            var $panel = $('#qiiResultsPanel');
-            if ($panel.length) {
-                $panel.scrollTop(0);
-            }
-        }
-
-        $.getJSON(qiiAbsUrl('crm/ajax/search_itinerary_images.php'), {
-            q: query,
-            limit: qiiPerPage,
-            page: page,
-            provider: qiiProvider
-        })
-            .done(function (res) {
-                if (reqId !== qiiRequestSeq) {
-                    return;
-                }
-                if (!res || (!res.success && !(res.images && res.images.length))) {
-                    if (!append) {
-                        qiiRenderResults([], {
-                            error: (res && res.message) ? res.message : ('Could not search ' + qiiProviderLabel(qiiProvider) + '.'),
-                            source: qiiProvider,
-                            query: query
-                        });
-                    } else {
-                        qiiHasMore = false;
-                        qiiSetLoadMoreVisible(false);
-                    }
-                    return;
-                }
-                qiiPage = parseInt(res.page, 10) || page;
-                qiiQuery = query;
-                qiiRenderResults(res.images || [], {
-                    source: res.source || qiiProvider,
-                    query: query,
-                    has_more: !!res.has_more,
-                    error: res.message || ''
-                }, !!append);
-            })
-            .fail(function () {
-                if (reqId !== qiiRequestSeq) {
-                    return;
-                }
-                if (!append) {
-                    qiiSetSourceNote('');
-                    $('#qiiResultsGrid').html('<div class="qii-empty text-danger"><i class="fas fa-exclamation-circle"></i>Search failed on ' +
-                        qiiProviderLabel(qiiProvider) + '. Please try again.</div>');
-                    qiiSetLoadMoreVisible(false);
-                } else {
-                    alert('Could not load more images. Please try again.');
-                }
-            })
-            .always(function () {
-                if (reqId !== qiiRequestSeq) {
-                    return;
-                }
-                qiiLoading = false;
-                qiiSetLoadMoreLoading(false);
-                if (!qiiHasMore) {
-                    qiiSetLoadMoreVisible(false);
-                }
-            });
+        qiiSetSourceNote(note);
     }
 
     function qiiRunSearch(query) {
-        qiiPage = 1;
-        qiiHasMore = false;
-        qiiImages = [];
-        qiiSeenKeys = {};
-        qiiFetchPage(query, 1, false);
-    }
-
-    function qiiLoadMore() {
-        if (qiiLoading || !qiiHasMore) {
+        query = (query || '').trim();
+        if (query.length < 2) {
+            $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
+            qiiSetSourceNote('');
+            qiiSetInfiniteLoading(false);
             return;
         }
-        var nextPage = (parseInt(qiiPage, 10) || 1) + 1;
-        qiiFetchPage(qiiQuery || $('#qiiSearchInput').val(), nextPage, true);
+
+        var reqId = ++qiiRequestSeq;
+        qiiQuery = query;
+        qiiLoading = true;
+        qiiImages = [];
+        qiiSeenKeys = {};
+        qiiResetProviderState();
+        qiiSetInfiniteLoading(false);
+        qiiShowSkeleton(window.matchMedia && window.matchMedia('(max-width: 575px)').matches ? 4 : 12);
+        qiiSetSourceNote('Searching Pexels & Unsplash…');
+        var $panel = $('#qiiResultsPanel');
+        if ($panel.length) {
+            $panel.scrollTop(0);
+        }
+
+        // Initial load: fetch first batch from both providers in parallel, render Pexels then Unsplash.
+        $.when(
+            qiiFetchProvider(query, 'pexels', 1),
+            qiiFetchProvider(query, 'unsplash', 1)
+        ).done(function (pexelsRes, unsplashRes) {
+            if (reqId !== qiiRequestSeq) {
+                return;
+            }
+            qiiClearSkeleton();
+            $('#qiiResultsGrid').find('.qii-empty, .qii-loading').remove();
+
+            var errors = [];
+            if (!pexelsRes.ok && pexelsRes.message) {
+                errors.push(pexelsRes.message);
+            }
+            if (!unsplashRes.ok && unsplashRes.message) {
+                errors.push(unsplashRes.message);
+            }
+
+            qiiApplyProviderResult(pexelsRes);
+            qiiApplyProviderResult(unsplashRes);
+            // Next append starts with Pexels page 2 (after both first batches).
+            qiiNextProviderIndex = 0;
+
+            if (!qiiImages.length) {
+                var errText = errors.length
+                    ? errors.join(' ')
+                    : 'No images found. Try another search term.';
+                $('#qiiResultsGrid').html(
+                    '<div class="qii-empty' + (errors.length ? ' text-danger' : '') + '">' +
+                    '<i class="fas fa-' + (errors.length ? 'exclamation-circle' : 'image') + '"></i>' +
+                    $('<div>').text(errText).html() +
+                    '</div>'
+                );
+                qiiSetSourceNote('');
+                qiiSetInfiniteLoading(false);
+                return;
+            }
+
+            qiiUpdateCombinedNote(query, errors.filter(function (e, i, arr) {
+                // Soft-warn only when one provider failed but the other returned images.
+                return arr.length === 1;
+            }));
+        }).always(function () {
+            if (reqId !== qiiRequestSeq) {
+                return;
+            }
+            qiiLoading = false;
+            qiiMaybeLoadMore();
+        });
+    }
+
+    function qiiPickNextProvider() {
+        var i;
+        for (i = 0; i < qiiProviders.length; i++) {
+            var idx = (qiiNextProviderIndex + i) % qiiProviders.length;
+            var provider = qiiProviders[idx];
+            if (qiiProviderState[provider] && qiiProviderState[provider].hasMore) {
+                qiiNextProviderIndex = (idx + 1) % qiiProviders.length;
+                return provider;
+            }
+        }
+        return null;
+    }
+
+    function qiiLoadNextBatch() {
+        if (qiiLoading || !qiiQuery) {
+            return;
+        }
+        var provider = qiiPickNextProvider();
+        if (!provider) {
+            qiiSetInfiniteLoading(false);
+            return;
+        }
+
+        var reqId = qiiRequestSeq;
+        var nextPage = (parseInt(qiiProviderState[provider].page, 10) || 0) + 1;
+        qiiLoading = true;
+        qiiAppendSkeleton(qiiBatchSize);
+        qiiSetInfiniteLoading(true);
+
+        qiiFetchProvider(qiiQuery, provider, nextPage).done(function (result) {
+            if (reqId !== qiiRequestSeq) {
+                return;
+            }
+            qiiClearSkeleton();
+            qiiApplyProviderResult(result);
+            qiiUpdateCombinedNote(qiiQuery, []);
+        }).always(function () {
+            if (reqId !== qiiRequestSeq) {
+                return;
+            }
+            qiiLoading = false;
+            qiiSetInfiniteLoading(false);
+            // Keep filling if still near bottom and more remains.
+            window.setTimeout(function () {
+                qiiMaybeLoadMore();
+            }, 50);
+        });
+    }
+
+    function qiiMaybeLoadMore() {
+        if (qiiLoading || !qiiHasMoreAny() || !qiiImages.length) {
+            return;
+        }
+        var panel = document.getElementById('qiiResultsPanel');
+        if (!panel) {
+            return;
+        }
+        var remaining = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
+        if (remaining < 220) {
+            qiiLoadNextBatch();
+        }
     }
 
     function qiiOpenModal($card) {
@@ -365,15 +384,13 @@
         var dayHead = ($card.find('.q-day-head').text() || '').trim();
         $('#qiiImageModalSub').text(dayHead ? ('Choose a photo for: ' + dayHead) : 'Choose a photo for this day');
         $('#qiiSearchInput').val(query);
-        qiiSetLoadMoreVisible(false);
-        qiiPage = 1;
-        qiiHasMore = false;
+        qiiSetInfiniteLoading(false);
         qiiImages = [];
         qiiSeenKeys = {};
-        qiiSetProvider(qiiProvider || 'pexels', { search: false, animate: false });
+        qiiResetProviderState();
         if (query.length >= 2) {
-            qiiShowSkeleton(window.matchMedia && window.matchMedia('(max-width: 575px)').matches ? 4 : 6);
-            qiiSetSourceNote('Searching ' + qiiProviderLabel(qiiProvider) + '…');
+            qiiShowSkeleton(window.matchMedia && window.matchMedia('(max-width: 575px)').matches ? 4 : 12);
+            qiiSetSourceNote('Searching Pexels & Unsplash…');
         } else {
             $('#qiiResultsGrid').html('<div class="qii-empty text-muted">Type at least 2 characters to search.</div>');
             qiiSetSourceNote('');
@@ -406,7 +423,7 @@
 
         var $card = qiiTargetCard;
         var $grid = $('#qiiResultsGrid');
-        qiiSetLoadMoreVisible(false);
+        qiiSetInfiniteLoading(false);
         $grid.html('<div class="qii-loading"><i class="fas fa-circle-notch fa-spin mr-1"></i> Saving image...</div>');
 
         $.ajax({
@@ -415,7 +432,7 @@
             dataType: 'json',
             data: {
                 url: img.url,
-                source: img.source || qiiProvider,
+                source: img.source || '',
                 download_location: img.download_location || ''
             }
         }).done(function (res) {
@@ -446,20 +463,6 @@
             qiiUpdatePreview($card, '');
         });
 
-        $(document).on('click', '.qii-provider-btn', function (e) {
-            e.preventDefault();
-            this.blur();
-            qiiSetProvider($(this).data('provider'), { search: true });
-        });
-
-        $('#qiiImageModal').on('shown.bs.modal', function () {
-            qiiSyncProviderIndicator(false);
-        });
-
-        $(window).on('resize', function () {
-            qiiSyncProviderIndicator(false);
-        });
-
         $('#qiiSearchBtn').on('click', function () {
             qiiRunSearch($('#qiiSearchInput').val());
         });
@@ -481,9 +484,8 @@
             }, 450);
         });
 
-        $('#qiiLoadMoreBtn').on('click', function (e) {
-            e.preventDefault();
-            qiiLoadMore();
+        $('#qiiResultsPanel').on('scroll', function () {
+            qiiMaybeLoadMore();
         });
 
         $(document).on('click', '.qii-img-item', function () {
