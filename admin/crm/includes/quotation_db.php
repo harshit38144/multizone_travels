@@ -49,6 +49,7 @@ function crmEnsureQuotationTables(mysqli $conn)
     $cols = [
         'tour_confirmed' => 'TINYINT(1) NOT NULL DEFAULT 0',
         'tour_confirm_json' => 'LONGTEXT DEFAULT NULL',
+        'tour_confirmed_at' => 'DATETIME DEFAULT NULL',
         'lead_id' => 'INT UNSIGNED DEFAULT NULL',
         'version' => 'INT UNSIGNED NOT NULL DEFAULT 1',
         'status' => "VARCHAR(20) NOT NULL DEFAULT 'published'",

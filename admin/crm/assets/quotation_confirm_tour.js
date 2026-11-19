@@ -2040,36 +2040,67 @@
         });
     }
 
+    /**
+     * After a successful confirm: notify open Bookings tabs to soft-refresh,
+     * then open/switch to All Bookings (no full Admin Panel reload).
+     */
+    function openBookingsAfterConfirm(quotationId) {
+        quotationId = parseInt(quotationId, 10) || 0;
+        var path = 'crm/bookings.php' + (quotationId ? ('?highlight=' + encodeURIComponent(String(quotationId))) : '');
+        var payload = {
+            type: 'mz-data-changed',
+            resource: 'bookings',
+            quotationId: quotationId,
+            id: quotationId,
+            at: Date.now()
+        };
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(payload, '*');
+            }
+        } catch (eParent) { /* ignore */ }
+        try {
+            window.postMessage(payload, '*');
+        } catch (eSelf) { /* ignore */ }
+
+        var opened = false;
+        try {
+            var topWin = window.parent && window.parent !== window ? window.parent : window;
+            if (topWin.MZTabWorkspace && typeof topWin.MZTabWorkspace.open === 'function') {
+                topWin.MZTabWorkspace.open(path, 'All Bookings', { pushHistory: true });
+                opened = true;
+            }
+        } catch (eTab) { /* ignore */ }
+
+        // Retry notify after tab activation so an already-open Bookings iframe refreshes
+        window.setTimeout(function () {
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage(payload, '*');
+                }
+            } catch (eRetry) { /* ignore */ }
+        }, 250);
+
+        if (!opened) {
+            window.location.href = path;
+        }
+    }
+
     function showTourConfirmedDone(quotationId) {
         ensureQuickConfirmStyles();
         hideQuickConfirmOverlay();
-        var $overlay = $(
-            '<div id="ctQuickConfirmOverlay" role="dialog" aria-modal="true" aria-labelledby="ctQuickConfirmDoneTitle">' +
-            '<div id="ctQuickConfirmCard">' +
-            '<div class="ct-qc-icon is-ok"><i class="fas fa-check"></i></div>' +
-            '<h5 id="ctQuickConfirmDoneTitle">Tour Confirmed</h5>' +
-            '<div class="ct-qc-actions">' +
-            '<button type="button" class="ct-qc-btn ct-qc-ok" id="ctQuickConfirmOk">OK</button>' +
-            '<button type="button" class="ct-qc-btn ct-qc-show" id="ctQuickConfirmShow">Show Booking</button>' +
-            '</div></div></div>'
-        );
-        $(document.body).append($overlay);
-        $('#ctQuickConfirmOk').on('click', function () {
-            hideQuickConfirmOverlay();
-        });
-        $('#ctQuickConfirmShow').on('click', function () {
-            hideQuickConfirmOverlay();
-            window.location.href = 'crm/bookings.php?highlight=' + encodeURIComponent(String(quotationId || ''));
-        });
+        openBookingsAfterConfirm(quotationId);
     }
 
+    var quickConfirmInFlight = false;
     function runQuickConfirmTour(quotationId, $row) {
         quotationId = parseInt(quotationId, 10) || 0;
-        if (!quotationId) {
+        if (!quotationId || quickConfirmInFlight) {
             return;
         }
         activeRow = $row && $row.length ? $row : activeRow;
         var $yes = $('#ctQuickConfirmYes, #askConfirmTourYes');
+        quickConfirmInFlight = true;
         $yes.prop('disabled', true).text('Confirming…');
         $.ajax({
             url: 'crm/ajax/confirm_tour_quick.php',
@@ -2090,7 +2121,7 @@
                 if ($('.crm-leads-ui').length) {
                     showTourConfirmedDone(quotationId);
                 } else {
-                    window.alert((res && res.message) || 'Tour confirmed.');
+                    openBookingsAfterConfirm(quotationId);
                 }
             })
             .fail(function (xhr) {
@@ -2103,6 +2134,7 @@
                 window.alert(msg);
             })
             .always(function () {
+                quickConfirmInFlight = false;
                 $yes.prop('disabled', false).text('Yes');
             });
     }
@@ -5259,11 +5291,11 @@
         });
         $(document).on('click', '#tourConfirmedShow', function () {
             var id = parseInt($('#tourConfirmedPopup').data('quotationId') || 0, 10);
+            $('#tourConfirmedPopup').modal('hide');
             if (!id) {
-                $('#tourConfirmedPopup').modal('hide');
                 return;
             }
-            window.location.href = 'crm/bookings.php?highlight=' + encodeURIComponent(String(id));
+            openBookingsAfterConfirm(id);
         });
 
         $('#ctSaveBtn').on('click', function () {
@@ -5302,9 +5334,9 @@
                         }
                         updateListRow(res);
                         if (justConfirmed) {
-                            $('#confirmTourModal').one('hidden.bs.modal', function () {
-                                $('#tourConfirmedPopup').data('quotationId', quotationId).modal('show');
-                            });
+                            forceHideConfirmTourModal();
+                            openBookingsAfterConfirm(quotationId);
+                            return;
                         }
                         forceHideConfirmTourModal();
                     } else {
@@ -5330,6 +5362,7 @@
         runQuickConfirm: function (quotationId, $triggerRow) {
             runQuickConfirmTour(quotationId, $triggerRow);
         },
+        openBookings: openBookingsAfterConfirm,
         hide: function () {
             forceHideConfirmTourModal();
         }

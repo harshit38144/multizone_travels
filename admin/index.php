@@ -593,6 +593,10 @@ if (!empty($_SESSION['login_lockout_until'])) {
       .card { animation: none !important; }
     }
   </style>
+  <script>
+    // Always wipe Admin Panel tabs when the login page is shown (logout or new session)
+    try { sessionStorage.removeItem('mz.admin.tabs.v1'); } catch (e) {}
+  </script>
 </head>
 <body class="login-body">
   <div class="login-shell">

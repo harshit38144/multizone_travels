@@ -211,25 +211,6 @@
                                                             $waDest = trim((string) ($lead['travel_dest_display'] ?? $lead['travel_destination_text'] ?? ''));
                                                             $waUid = trim((string) ($lead['lead_uid'] ?? ''));
                                                         ?>
-                                                        <button type="button"
-                                                            class="btn-icon btn-whatsapp js-lead-wa-chat"
-                                                            data-lead-id="<?= (int) $lead['id'] ?>"
-                                                            data-lead-name="<?= htmlspecialchars($waName, ENT_QUOTES, 'UTF-8') ?>"
-                                                            data-lead-phone="<?= htmlspecialchars($waPhone, ENT_QUOTES, 'UTF-8') ?>"
-                                                            data-lead-letters="<?= htmlspecialchars($waLetters, ENT_QUOTES, 'UTF-8') ?>"
-                                                            data-lead-dest="<?= htmlspecialchars($waDest, ENT_QUOTES, 'UTF-8') ?>"
-                                                            data-lead-uid="<?= htmlspecialchars($waUid, ENT_QUOTES, 'UTF-8') ?>"
-                                                            title="WhatsApp chat"
-                                                            aria-label="Open WhatsApp chat">
-                                                            <i class="fab fa-whatsapp"></i>
-                                                        </button>
-                                                        <button type="button"
-                                                            class="btn-icon btn-edit js-lead-edit-btn"
-                                                            data-lead-id="<?= (int) $lead['id'] ?>"
-                                                            title="Edit Lead"
-                                                            aria-label="Edit lead">
-                                                            <i class="fas fa-pen"></i>
-                                                        </button>
                                                         <?php
                                                             $latestQuotationHref = trim((string) ($lead['latest_quotation_href'] ?? ''));
                                                             $latestQuotationId = (int) ($lead['latest_quotation_id'] ?? 0);
@@ -245,6 +226,28 @@
                                                                 || !empty($lead['has_quotation'])
                                                                 || in_array($leadStage, ['quoted', 'confirmed'], true);
                                                         ?>
+                                                        <button type="button"
+                                                            class="btn-icon btn-whatsapp js-lead-wa-chat"
+                                                            data-lead-id="<?= (int) $lead['id'] ?>"
+                                                            data-lead-name="<?= htmlspecialchars($waName, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-lead-phone="<?= htmlspecialchars($waPhone, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-lead-letters="<?= htmlspecialchars($waLetters, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-lead-dest="<?= htmlspecialchars($waDest, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-lead-uid="<?= htmlspecialchars($waUid, ENT_QUOTES, 'UTF-8') ?>"
+                                                            title="WhatsApp chat"
+                                                            aria-label="Open WhatsApp chat">
+                                                            <i class="fab fa-whatsapp"></i>
+                                                        </button>
+                                                        <?php if ($latestQuotationHref !== '') { ?>
+                                                        <a href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>"
+                                                            class="btn-icon btn-edit js-open-quotation-tab"
+                                                            data-lead-id="<?= (int) $lead['id'] ?>"
+                                                            <?php if ($latestQuotationId > 0) { ?>data-quotation-id="<?= $latestQuotationId ?>"<?php } ?>
+                                                            title="Edit Quotation"
+                                                            aria-label="Edit quotation">
+                                                            <i class="fas fa-pen"></i>
+                                                        </a>
+                                                        <?php } ?>
                                                         <?php if ($hasQuotationAction && $latestQuotationHref !== '') {
                                                             $latestIsDraft = (($lead['latest_quotation_status'] ?? '') === 'draft');
                                                             $latestTourConfirmed = !empty($lead['latest_is_tour_confirmed'])

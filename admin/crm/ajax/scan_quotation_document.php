@@ -121,7 +121,19 @@ try {
         ]);
     }
 
-    $result = $ocr['result'];
+    $stage = 'validating';
+    $result = is_array($ocr['result'] ?? null) ? $ocr['result'] : [];
+    // Local validation/normalize only — extract prompt already polishes language in one AI pass.
+    // A second Gemini round-trip was the main cause of the long "90%" wait.
+    if (!empty($result['itinerary']) && is_array($result['itinerary'])) {
+        foreach ($result['itinerary'] as $i => $day) {
+            if (!is_array($day)) {
+                continue;
+            }
+            $result['itinerary'][$i]['description'] = qdocSanitizeDayHtml((string) ($day['description'] ?? ''));
+        }
+    }
+
     if (!qdocHasContent($result)) {
         qdocJson(true, 'No itinerary, hotel, inclusion, or exclusion details could be read. Fill the sections manually.', [
             'data' => $result,
@@ -129,47 +141,39 @@ try {
             'stage' => 'extracting',
             'rephrased' => false,
             'model' => (string) ($ocr['model'] ?? ''),
+            'elapsed_ms' => (int) ($ocr['elapsed_ms'] ?? 0),
         ]);
     }
 
-    // Second pass: professional rephrase (text-only). Keep extracted data if rephrase fails.
-    $stage = 'rephrasing';
-    $extractResult = $result;
-    $rephrase = qdocRephraseExtracted($result);
-    $rephrased = !empty($rephrase['rephrased']);
-    if ($rephrased && !empty($rephrase['result']) && is_array($rephrase['result']) && qdocHasContent($rephrase['result'])) {
-        $result = $rephrase['result'];
-    } else {
-        $rephrased = false;
-        $result = $extractResult;
+    // Extract prompt already polishes in one multimodal call (`polished` flag).
+    // Keep a lean text-only rephrase only if that flag is missing (older/partial extract path).
+    $rephrased = !empty($ocr['polished']);
+    $rephraseElapsed = 0;
+    $rephraseModel = '';
+    if (!$rephrased) {
+        $stage = 'rephrasing';
+        $rephrase = qdocRephraseExtracted($result);
+        $rephraseElapsed = (int) ($rephrase['elapsed_ms'] ?? 0);
+        if (!empty($rephrase['rephrased']) && !empty($rephrase['result']) && is_array($rephrase['result']) && qdocHasContent($rephrase['result'])) {
+            $result = $rephrase['result'];
+            $rephrased = true;
+            $rephraseModel = (string) ($rephrase['model'] ?? '');
+        }
     }
 
-    // Final safety: never claim success-with-review if payload is empty.
-    if (!qdocHasContent($result)) {
-        qdocJson(true, 'No itinerary, hotel, inclusion, or exclusion details could be read. Fill the sections manually.', [
-            'data' => $result,
-            'file_name' => $origName,
-            'stage' => 'extracting',
-            'rephrased' => false,
-            'model' => (string) ($ocr['model'] ?? ''),
-        ]);
-    }
-
+    $stage = 'ready';
     $msg = $rephrased
         ? 'Document details were extracted and professionally rephrased. Review and edit them before applying.'
-        : 'Document details were read. AI rephrasing was skipped or failed, so the original extracted text is shown for review.';
-    if (!$rephrased && !empty($rephrase['error'])) {
-        $msg .= ' (' . $rephrase['error'] . ')';
-    }
+        : 'Document details were read. Review and edit them before applying.';
 
     qdocJson(true, $msg, [
         'data' => $result,
         'file_name' => $origName,
-        'model' => (string) ($rephrased ? ($rephrase['model'] ?? '') : ($ocr['model'] ?? '')),
+        'model' => (string) ($rephraseModel !== '' ? $rephraseModel : ($ocr['model'] ?? '')),
         'extract_model' => (string) ($ocr['model'] ?? ''),
         'rephrased' => $rephrased,
-        'stage' => $rephrased ? 'ready' : 'extracted',
-        'elapsed_ms' => (int) ($ocr['elapsed_ms'] ?? 0) + (int) ($rephrase['elapsed_ms'] ?? 0),
+        'stage' => $stage,
+        'elapsed_ms' => (int) ($ocr['elapsed_ms'] ?? 0) + $rephraseElapsed,
     ]);
 } catch (Throwable $e) {
     if (function_exists('crmAiLog')) {

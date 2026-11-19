@@ -129,13 +129,18 @@ if ($json === false) {
     $json = '{}';
 }
 
+$wasConfirmed = (int) ($current['tour_confirmed'] ?? 0) === 1;
 $tourConfirmed = $travellersOnly
     ? (int) ($current['tour_confirmed'] ?? 0)
     : (!empty($payload['services']) ? 1 : 0);
+$stampConfirmAt = !$travellersOnly && $tourConfirmed === 1 && !$wasConfirmed;
+$confirmAtSql = $stampConfirmAt
+    ? ', `tour_confirmed_at` = NOW()'
+    : ($tourConfirmed === 1 ? ', `tour_confirmed_at` = COALESCE(`tour_confirmed_at`, NOW())' : '');
 
 $stmt = $conn->prepare(
     'UPDATE `crm_quotations`
-     SET `guest_name` = ?, `mobile_no` = ?, `email` = ?, `tour_confirmed` = ?, `tour_confirm_json` = ?
+     SET `guest_name` = ?, `mobile_no` = ?, `email` = ?, `tour_confirmed` = ?, `tour_confirm_json` = ?' . $confirmAtSql . '
      WHERE `id` = ? LIMIT 1'
 );
 if (!$stmt) {

@@ -666,7 +666,7 @@ $boot = json_encode([
         var prevKey = monthKey(prev);
         var a = 0, b = 0;
         list.forEach(function (row) {
-            var key = String(row.created_at || '').slice(0, 7);
+            var key = String(row.confirmed_at || row.created_at || '').slice(0, 7);
             if (key === thisKey) a++;
             if (key === prevKey) b++;
         });
@@ -867,7 +867,7 @@ $boot = json_encode([
             html += '<tr><td colspan="8" class="bk-empty">No confirmed tours match these filters. Tours appear here after Confirm Tour.</td></tr>';
         }
         slice.forEach(function (b) {
-            var createdMeta = fmtCreatedMeta(b.created_at);
+            var createdMeta = fmtCreatedMeta(b.confirmed_at || b.created_at);
             var travel = fmtTravelShort(b.start);
             var initials = guestInitials(b.guest);
             var pax = paxBadge(b);
@@ -955,9 +955,21 @@ $boot = json_encode([
         state.tab = 'all';
         $('#bkTabs button').removeClass('is-on');
         $('#bkTabs button[data-tab="all"]').addClass('is-on');
+        // Prefer All Bookings with no restrictive filters so the new row is visible
         var idx = 0;
-        for (var i = 0; i < rows.length; i++) {
-            if (rows[i].id === highlightId) { idx = i; break; }
+        var list = filtered();
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].id === highlightId) { idx = i; break; }
+        }
+        // If filters hide the new booking, clear them once so it can surface
+        if (!byId(highlightId)) return;
+        if (!list.some(function (b) { return b.id === highlightId; })) {
+            $('#bkSearch, #bkFrom, #bkTo').val('');
+            $('#bkDest, #bkCustomer, #bkSupplier, #bkPay, #bkType').val('');
+            list = filtered();
+            for (i = 0; i < list.length; i++) {
+                if (list[i].id === highlightId) { idx = i; break; }
+            }
         }
         state.page = Math.floor(idx / state.size) + 1;
     }
@@ -970,7 +982,89 @@ $boot = json_encode([
             try { el.scrollIntoView({ block: 'center' }); } catch (err) { el.scrollIntoView(); }
         }, 60);
     }
+    function syncFilterOptions() {
+        function fill(sel, values, placeholder) {
+            var $sel = $(sel);
+            var current = $sel.val() || '';
+            var opts = '<option value="">' + placeholder + '</option>';
+            values.forEach(function (v) {
+                opts += '<option value="' + esc(v) + '"' + (v === current ? ' selected' : '') + '>' + esc(v) + '</option>';
+            });
+            $sel.html(opts);
+            if (current && values.indexOf(current) !== -1) $sel.val(current);
+        }
+        var dests = [], customers = [], suppliers = [], types = [];
+        rows.forEach(function (b) {
+            if (b.destination && dests.indexOf(b.destination) === -1) dests.push(b.destination);
+            if (b.guest && customers.indexOf(b.guest) === -1) customers.push(b.guest);
+            (b.suppliers || []).forEach(function (s) {
+                if (s && suppliers.indexOf(s) === -1) suppliers.push(s);
+            });
+            if (b.tour_type && types.indexOf(b.tour_type) === -1) types.push(b.tour_type);
+        });
+        dests.sort(); customers.sort(); suppliers.sort(); types.sort();
+        fill('#bkDest', dests, 'All Tours');
+        fill('#bkCustomer', customers, 'Customer');
+        fill('#bkSupplier', suppliers, 'Supplier');
+        fill('#bkType', types, 'Tour Type');
+    }
+    function applyBoot(payload, opts) {
+        opts = opts || {};
+        if (!payload || typeof payload !== 'object') return;
+        boot = payload;
+        rows = Array.isArray(payload.bookings) ? payload.bookings : [];
+        if (opts.highlightId) {
+            highlightId = parseInt(opts.highlightId, 10) || 0;
+            highlightScrolled = false;
+        }
+        syncFilterOptions();
+        placeHighlight();
+        render();
+    }
+    var refreshInFlight = null;
+    function refreshBookingsData(opts) {
+        opts = opts || {};
+        if (refreshInFlight) {
+            refreshInFlight.abort && refreshInFlight.abort();
+        }
+        refreshInFlight = $.ajax({
+            url: 'crm/ajax/confirmed_bookings.php',
+            method: 'POST',
+            dataType: 'json',
+            data: { action: 'list' }
+        }).done(function (res) {
+            if (!res || !res.success) return;
+            applyBoot({
+                bookings: res.bookings || [],
+                customer_payments: res.customer_payments || [],
+                supplier_payments: res.supplier_payments || [],
+                activity: res.activity || [],
+                methods: res.methods || boot.methods || [],
+                today: res.today || boot.today,
+                stages: res.stages || boot.stages || {}
+            }, opts);
+        }).always(function () {
+            refreshInFlight = null;
+        });
+        return refreshInFlight;
+    }
     function render() { renderStats(); renderCharts(); renderTable(); scrollHighlight(); }
+    window.CrmBookings = {
+        refresh: refreshBookingsData,
+        highlight: function (id) {
+            highlightId = parseInt(id, 10) || 0;
+            highlightScrolled = false;
+            placeHighlight();
+            render();
+        }
+    };
+    window.addEventListener('message', function (ev) {
+        var data = ev.data;
+        if (!data || typeof data !== 'object') return;
+        if (data.type !== 'mz-data-changed') return;
+        if (data.resource && data.resource !== 'bookings' && data.resource !== 'all') return;
+        refreshBookingsData({ highlightId: data.quotationId || data.id || 0 });
+    });
     function openView(b) {
         var services = (b.services || []).map(function (s) {
             return '<div class="bk-kv"><span>' + esc(s.label) + (s.supplier ? ' · ' + esc(s.supplier) : '') + '</span><b>' + esc(money(s.paid)) + ' / ' + esc(money(s.total)) + '</b></div>';
@@ -1176,7 +1270,7 @@ $boot = json_encode([
     render();
 })(jQuery);
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=59"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=60"></script>
 <script src="crm/assets/quotation_preview_modal.js?v=2"></script>
 <script>
 (function () {

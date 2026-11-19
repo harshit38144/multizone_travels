@@ -2623,12 +2623,91 @@
         $('#qRemoveHotelCategory').prop('disabled', !canRemove).toggle(canRemove);
     }
 
+    function getPrimaryHotelCategoryPanel() {
+        return getHotelCategoryPanels().first();
+    }
+
+    function hotelOptionPanelHasRows($panel) {
+        return !!($panel && $panel.length && $panel.find('.q-hotel-row').length);
+    }
+
+    /**
+     * Shared accommodation fields copied into a new option.
+     * Hotel / room type / rate / supplier stay empty for independent entry.
+     */
+    function cloneSharedHotelFieldsFromPrimary(sourceHotels) {
+        return (Array.isArray(sourceHotels) ? sourceHotels : []).map(function (h) {
+            h = h || {};
+            return {
+                city: h.city || '',
+                city_id: h.city_id || '',
+                country: h.country || '',
+                rooms: (h.rooms != null && h.rooms !== '') ? h.rooms : '0',
+                meal_plan: h.meal_plan || '',
+                nights: (h.nights != null && h.nights !== '') ? h.nights : '0',
+                checkin: h.checkin || h.check_in || '',
+                checkout: h.checkout || h.check_out || '',
+                check_in: h.checkin || h.check_in || '',
+                check_out: h.checkout || h.check_out || '',
+                name: '',
+                hotel_id: '',
+                room_type: '',
+                star_category: '',
+                rate: '',
+                amount: '',
+                supplier_id: '',
+                supplier: '',
+                is_manual: 1
+            };
+        });
+    }
+
+    /**
+     * First-time populate an empty option from Option 01.
+     * Never overwrites an option that already has hotel rows.
+     */
+    function seedHotelOptionFromPrimaryIfEmpty($panel) {
+        if (!$panel || !$panel.length) {
+            return false;
+        }
+        var $primary = getPrimaryHotelCategoryPanel();
+        if (!$primary.length) {
+            return false;
+        }
+        if (String($panel.attr('data-cat-id') || '') === String($primary.attr('data-cat-id') || '')) {
+            return false;
+        }
+        if (hotelOptionPanelHasRows($panel)) {
+            return false;
+        }
+        var primaryHotels = collectHotelsFromPanel($primary);
+        if (!primaryHotels.length) {
+            return false;
+        }
+        var seeded = cloneSharedHotelFieldsFromPrimary(primaryHotels);
+        var $rows = $panel.find('.q-hotel-rows');
+        seeded.forEach(function (h) {
+            var $row = $(hotelRowHtml(h));
+            $rows.append($row);
+            if (typeof initHotelRow === 'function') {
+                initHotelRow($row);
+            }
+            qInitSupplierSelect2($row.find('.h-supplier'), { placeholder: 'Select' });
+        });
+        return true;
+    }
+
     function setActiveHotelCategory(catId) {
         qActiveHotelCategoryId = String(catId || '');
+        var $panel = getHotelCategoryPanels().filter(function () {
+            return String($(this).attr('data-cat-id') || '') === qActiveHotelCategoryId;
+        }).first();
+        seedHotelOptionFromPrimaryIfEmpty($panel);
         refreshHotelCategoryTabs();
         renderPricingSheets();
         scheduleItineraryMetaFromHotels();
         scheduleSyncReturnAirfareInclusion();
+        updateCommercialHeaderTotals();
     }
 
     function collectHotelsFromPanel($panel) {
@@ -2816,8 +2895,11 @@
         }));
         $('#qHotelCategories').append($panel);
         qActiveHotelCategoryId = id;
+        // New options inherit shared stay fields from Option 01 on first creation.
+        seedHotelOptionFromPrimaryIfEmpty($panel);
         refreshHotelCategoryTabs();
         renderPricingSheets();
+        scheduleItineraryMetaFromHotels();
         return $panel;
     }
 
@@ -3979,13 +4061,23 @@
     /* ------------------------------------------------------------------ */
     /* Upload Document — itinerary / hotels / inclusions / exclusions      */
     /* ------------------------------------------------------------------ */
-    function qDocShowError(msg) {
+    var qDocLastFile = null;
+
+    function qDocShowError(msg, opts) {
+        opts = opts || {};
         var $err = $('#qDocUploadError');
+        var $retry = $('#qDocUploadRetryWrap');
         if (!msg) {
             $err.addClass('d-none').text('');
+            $retry.addClass('d-none');
             return;
         }
         $err.removeClass('d-none').text(msg);
+        if (opts.retry && qDocLastFile) {
+            $retry.removeClass('d-none');
+        } else {
+            $retry.addClass('d-none');
+        }
     }
 
     function qDocShowApplyError(msg) {
@@ -4046,6 +4138,7 @@
         qDocShowError('');
         qDocShowApplyError('');
         qDocSetProgress(false);
+        qDocLastFile = null;
         $('#qDocUploadDrop').removeClass('is-drag');
         $('#qDocItineraryList, #qDocInclusionsList, #qDocExclusionsList, #qDocTermsList').empty();
         $('#qDocHotelTable tbody').empty();
@@ -4629,29 +4722,52 @@
             return;
         }
 
+        qDocLastFile = file;
         var fd = new FormData();
         fd.append('document', file, name);
         qDocShowError('');
-        $('#qUploadDocBtn, #qDocUploadDrop').prop('disabled', true);
+        $('#qUploadDocBtn, #qDocUploadDrop, #qDocUploadRetryBtn').prop('disabled', true);
 
         qDocSetProgress(true, 'Uploading document…', 8);
         var stageTimer = null;
+        var processStartedAt = 0;
+        var uploadDone = false;
+        var stopStagePulse = function () {
+            if (stageTimer) {
+                window.clearInterval(stageTimer);
+                stageTimer = null;
+            }
+        };
+        var processingLabelForElapsed = function (elapsedMs) {
+            if (elapsedMs < 4000) {
+                return 'Processing document…';
+            }
+            if (elapsedMs < 12000) {
+                return 'Extracting document data…';
+            }
+            if (elapsedMs < 28000) {
+                return 'Rephrasing content using AI…';
+            }
+            return 'Validating extracted information…';
+        };
+        // Keep progress moving while the single AI request runs — never freeze at 90%.
+        var processingPctForElapsed = function (elapsedMs) {
+            var t = Math.max(0, elapsedMs) / 1000;
+            // Asymptotic climb from ~42% toward ~94% as wait continues.
+            var pct = 42 + (52 * (1 - Math.exp(-t / 18)));
+            return Math.max(42, Math.min(94, Math.round(pct)));
+        };
         var startStagePulse = function () {
-            var stages = [
-                { label: 'Extracting document data…', pct: 55 },
-                { label: 'Rephrasing content using AI…', pct: 78 },
-                { label: 'Validating extracted information…', pct: 90 }
-            ];
-            var i = 0;
-            qDocSetProgress(true, stages[0].label, stages[0].pct);
+            if (stageTimer) {
+                return;
+            }
+            uploadDone = true;
+            processStartedAt = Date.now();
+            qDocSetProgress(true, processingLabelForElapsed(0), processingPctForElapsed(0));
             stageTimer = window.setInterval(function () {
-                i = Math.min(i + 1, stages.length - 1);
-                qDocSetProgress(true, stages[i].label, stages[i].pct);
-                if (i >= stages.length - 1 && stageTimer) {
-                    window.clearInterval(stageTimer);
-                    stageTimer = null;
-                }
-            }, 3200);
+                var elapsed = Date.now() - processStartedAt;
+                qDocSetProgress(true, processingLabelForElapsed(elapsed), processingPctForElapsed(elapsed));
+            }, 700);
         };
 
         $.ajax({
@@ -4661,7 +4777,7 @@
             processData: false,
             contentType: false,
             dataType: 'json',
-            timeout: 240000,
+            timeout: 180000,
             xhr: function () {
                 var xhr = $.ajaxSettings.xhr();
                 if (xhr && xhr.upload) {
@@ -4671,33 +4787,28 @@
                         }
                         var pct = Math.round((e.loaded / e.total) * 40);
                         qDocSetProgress(true, 'Uploading document…', Math.max(8, pct));
-                        if (pct >= 40 && !stageTimer) {
+                        if (pct >= 40 && !uploadDone) {
                             startStagePulse();
                         }
                     });
                     xhr.upload.addEventListener('load', function () {
-                        if (!stageTimer) {
-                            startStagePulse();
-                        }
+                        startStagePulse();
                     });
                 }
                 return xhr;
             }
         }).done(function (res) {
-            if (stageTimer) {
-                window.clearInterval(stageTimer);
-                stageTimer = null;
-            }
-            qDocSetProgress(true, 'Preparing review…', 96);
+            stopStagePulse();
+            qDocSetProgress(true, 'Preparing review…', 97);
             if (!res || !res.success) {
-                qDocShowError((res && res.message) || 'The document could not be read.');
+                qDocShowError((res && res.message) || 'The document could not be read.', { retry: true });
                 qDocSetProgress(false);
                 return;
             }
             qDocSetProgress(true, 'Done', 100);
             var data = qDocNormalizePayload(res.data || {});
             if (!qDocHasContent(data)) {
-                qDocShowError('No usable itinerary, hotel, inclusion, exclusion, or terms details were found in this document.');
+                qDocShowError('No usable itinerary, hotel, inclusion, exclusion, or terms details were found in this document.', { retry: true });
                 qDocSetProgress(false);
                 return;
             }
@@ -4710,13 +4821,11 @@
                     console.error('qDocFillReview failed', err);
                 }
                 qDocResetModalToPick();
-                qDocShowError('Extracted details could not be displayed. Please try uploading the document again.');
+                qDocLastFile = file;
+                qDocShowError('Extracted details could not be displayed. Please try again.', { retry: true });
             }
         }).fail(function (xhr, textStatus) {
-            if (stageTimer) {
-                window.clearInterval(stageTimer);
-                stageTimer = null;
-            }
+            stopStagePulse();
             var msg = 'The document could not be read.';
             var recovered = null;
             // Recover JSON if PHP warnings were printed before the payload.
@@ -4743,7 +4852,7 @@
                             if (window.console && console.error) {
                                 console.error('qDocFillReview failed', err2);
                             }
-                            msg = 'Extracted details could not be displayed. Please try uploading the document again.';
+                            msg = 'Extracted details could not be displayed. Please try again.';
                         }
                     } else {
                         msg = 'No usable itinerary, hotel, inclusion, exclusion, or terms details were found in this document.';
@@ -4752,7 +4861,7 @@
                     msg = recovered.message || msg;
                 }
             } else if (textStatus === 'timeout') {
-                msg = 'Timed out while reading the document. Try a smaller PDF/image or fewer pages.';
+                msg = 'Timed out while reading the document. Try a smaller PDF/image, fewer pages, or tap Retry.';
             } else if (textStatus === 'parsererror') {
                 msg = 'The server returned an invalid response. Please try again.';
             } else if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
@@ -4762,14 +4871,11 @@
             } else if (xhr && xhr.status === 401) {
                 msg = 'Session expired. Please sign in again.';
             }
-            qDocShowError(msg);
+            qDocShowError(msg, { retry: true });
             qDocSetProgress(false);
         }).always(function () {
-            if (stageTimer) {
-                window.clearInterval(stageTimer);
-                stageTimer = null;
-            }
-            $('#qUploadDocBtn, #qDocUploadDrop').prop('disabled', false);
+            stopStagePulse();
+            $('#qUploadDocBtn, #qDocUploadDrop, #qDocUploadRetryBtn').prop('disabled', false);
             $('#qUploadDocFile').val('');
         });
     }
@@ -8207,8 +8313,133 @@
             profit_amount: '',
             profit_source: '',
             price_per_adult: '',
-            price_per_adult_edited: 0
+            price_per_adult_edited: 0,
+            hide_gst: 0,
+            hide_tcs: 0,
+            gst_percent: 5,
+            tcs_percent: 2
         };
+    }
+
+    function normalizeOptionTourTax(src) {
+        src = src || {};
+        var gstPct = parseFloat(src.gst_percent);
+        if (isNaN(gstPct) || gstPct < 0) {
+            gstPct = 5;
+        }
+        var tcsPct = parseFloat(src.tcs_percent);
+        if (isNaN(tcsPct) || tcsPct < 0) {
+            tcsPct = 2;
+        }
+        return {
+            hide_gst: parseInt(src.hide_gst, 10) === 1 ? 1 : 0,
+            hide_tcs: parseInt(src.hide_tcs, 10) === 1 ? 1 : 0,
+            gst_percent: gstPct,
+            tcs_percent: tcsPct
+        };
+    }
+
+    function pricingStateFromSavedOption(opt, fallbackTax) {
+        opt = opt || {};
+        var taxSrc = (opt.tour_cost && typeof opt.tour_cost === 'object') ? opt.tour_cost : opt;
+        var hasExplicitTax =
+            (opt.hide_gst != null && opt.hide_gst !== '') ||
+            (opt.hide_tcs != null && opt.hide_tcs !== '') ||
+            (opt.gst_percent != null && opt.gst_percent !== '') ||
+            (opt.tcs_percent != null && opt.tcs_percent !== '') ||
+            (opt.tour_cost && (
+                (opt.tour_cost.hide_gst != null && opt.tour_cost.hide_gst !== '') ||
+                (opt.tour_cost.hide_tcs != null && opt.tour_cost.hide_tcs !== '') ||
+                (opt.tour_cost.gst_percent != null && opt.tour_cost.gst_percent !== '') ||
+                (opt.tour_cost.tcs_percent != null && opt.tour_cost.tcs_percent !== '')
+            ));
+        var tax = normalizeOptionTourTax(hasExplicitTax ? {
+            hide_gst: taxSrc.hide_gst != null ? taxSrc.hide_gst : opt.hide_gst,
+            hide_tcs: taxSrc.hide_tcs != null ? taxSrc.hide_tcs : opt.hide_tcs,
+            gst_percent: taxSrc.gst_percent != null ? taxSrc.gst_percent : opt.gst_percent,
+            tcs_percent: taxSrc.tcs_percent != null ? taxSrc.tcs_percent : opt.tcs_percent
+        } : (fallbackTax || {
+            hide_gst: $('#q_hide_gst_note').is(':checked') ? 1 : 0,
+            hide_tcs: $('#q_hide_tcs').is(':checked') ? 1 : 0,
+            gst_percent: (typeof qTourCostState !== 'undefined' && qTourCostState) ? qTourCostState.gst_percent : 5,
+            tcs_percent: (typeof qTourCostState !== 'undefined' && qTourCostState) ? qTourCostState.tcs_percent : 2
+        }));
+        return {
+            fixed: opt.fixed || {},
+            fixed_parts: opt.fixed_parts || {},
+            row_labels: opt.row_labels || {},
+            custom: Array.isArray(opt.custom) ? opt.custom : [],
+            user_edited: opt.user_edited || {},
+            profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
+            profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
+            profit_source: opt.profit_source === 'amount' || opt.profit_source === 'percent' ? opt.profit_source : '',
+            price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
+            price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0,
+            hide_gst: tax.hide_gst,
+            hide_tcs: tax.hide_tcs,
+            gst_percent: tax.gst_percent,
+            tcs_percent: tax.tcs_percent
+        };
+    }
+
+    function readSheetTourTaxState($sheet) {
+        if ($sheet && $sheet.length) {
+            var catId = String($sheet.attr('data-cat-id') || '');
+            var st = (catId && qPricingOptionsState[catId]) ? qPricingOptionsState[catId] : {};
+            var $gstSw = $sheet.find('.q-tour-gst-rate-switch').first();
+            var $tcsSw = $sheet.find('.q-tour-tcs-rate-switch').first();
+            var $gstIn = $sheet.find('.q-tour-gst-input').first();
+            var $tcsIn = $sheet.find('.q-tour-tcs-input').first();
+            var hideGst = $gstSw.length ? ($gstSw.is(':checked') ? 0 : 1) : (parseInt(st.hide_gst, 10) === 1 ? 1 : 0);
+            var hideTcs = $tcsSw.length ? ($tcsSw.is(':checked') ? 0 : 1) : (parseInt(st.hide_tcs, 10) === 1 ? 1 : 0);
+            var gstPct = $gstIn.length ? parseFloat($gstIn.val()) : parseFloat(st.gst_percent);
+            var tcsPct = $tcsIn.length ? parseFloat($tcsIn.val()) : parseFloat(st.tcs_percent);
+            return normalizeOptionTourTax({
+                hide_gst: hideGst,
+                hide_tcs: hideTcs,
+                gst_percent: !isNaN(gstPct) ? gstPct : st.gst_percent,
+                tcs_percent: !isNaN(tcsPct) ? tcsPct : st.tcs_percent
+            });
+        }
+        return normalizeOptionTourTax({
+            hide_gst: $('#q_hide_gst_note').is(':checked') ? 1 : 0,
+            hide_tcs: $('#q_hide_tcs').is(':checked') ? 1 : 0,
+            gst_percent: qTourCostState.gst_percent,
+            tcs_percent: qTourCostState.tcs_percent
+        });
+    }
+
+    function writeSheetTourTaxState($sheet, tax) {
+        tax = normalizeOptionTourTax(tax);
+        if ($sheet && $sheet.length) {
+            var catId = String($sheet.attr('data-cat-id') || '');
+            if (catId) {
+                if (!qPricingOptionsState[catId]) {
+                    qPricingOptionsState[catId] = defaultPricingSheetState();
+                }
+                qPricingOptionsState[catId].hide_gst = tax.hide_gst;
+                qPricingOptionsState[catId].hide_tcs = tax.hide_tcs;
+                qPricingOptionsState[catId].gst_percent = tax.gst_percent;
+                qPricingOptionsState[catId].tcs_percent = tax.tcs_percent;
+            }
+        }
+        return tax;
+    }
+
+    function syncActiveTourTaxMastersFromSheet($sheet) {
+        if (!$sheet || !$sheet.length) {
+            return;
+        }
+        var sheetId = String($sheet.attr('data-cat-id') || '');
+        var activeId = String(qActiveHotelCategoryId || '');
+        if (!$sheet.hasClass('is-active') && sheetId && activeId && sheetId !== activeId) {
+            return;
+        }
+        var tax = readSheetTourTaxState($sheet);
+        $('#q_hide_gst_note').prop('checked', !!tax.hide_gst);
+        $('#q_hide_tcs').prop('checked', !!tax.hide_tcs);
+        qTourCostState.gst_percent = tax.gst_percent;
+        qTourCostState.tcs_percent = tax.tcs_percent;
     }
 
     function collectSheetStateFromDom($sheet) {
@@ -8293,6 +8524,7 @@
                 amount: $(this).find('.cc-amount').val()
             });
         });
+        var taxState = readSheetTourTaxState($sheet);
         return {
             fixed: fixed,
             fixed_parts: fixedParts,
@@ -8307,7 +8539,11 @@
             profit_amount: $sheet.find('.q-sheet-profit-amount').val() || '',
             profit_source: ($sheet.attr('data-profit-source') === 'amount' || $sheet.attr('data-profit-source') === 'percent') ? $sheet.attr('data-profit-source') : '',
             price_per_adult: $sheet.find('.q-sheet-price-per-adult').val() || '',
-            price_per_adult_edited: $sheet.find('.q-sheet-price-per-adult').attr('data-user-edited') === '1' ? 1 : 0
+            price_per_adult_edited: $sheet.find('.q-sheet-price-per-adult').attr('data-user-edited') === '1' ? 1 : 0,
+            hide_gst: taxState.hide_gst,
+            hide_tcs: taxState.hide_tcs,
+            gst_percent: taxState.gst_percent,
+            tcs_percent: taxState.tcs_percent
         };
     }
 
@@ -9315,6 +9551,29 @@
         return '₹ ' + money(num);
     }
 
+    function getActiveHotelCommercialTotal() {
+        var data = collectHotelCategories();
+        var cats = data.categories || [];
+        var activeId = String(qActiveHotelCategoryId || data.active_category_id || '');
+        var cat = cats.find(function (c) { return String(c.id) === activeId; }) || cats[0] || null;
+        return cat ? hotelTotalForCategory(cat) : 0;
+    }
+
+    function updateCommercialHeaderTotals() {
+        var $flight = $('#qFlightCommercialTotal');
+        if ($flight.length) {
+            $flight.text(formatInrDisplay(sumNumericFields('#qFlightRows .f-fare')));
+        }
+        var $hotel = $('#qHotelCommercialTotal');
+        if ($hotel.length) {
+            $hotel.text(formatInrDisplay(getActiveHotelCommercialTotal()));
+        }
+        var $itin = $('#qItinCommercialTotal');
+        if ($itin.length) {
+            $itin.text(formatInrDisplay(getItineraryLandTotal()));
+        }
+    }
+
     /* ------------------------------------------------------------------ */
     /* Tour Cost Pricing card (Package Total distributed among travelers) */
     /* ------------------------------------------------------------------ */
@@ -9710,11 +9969,22 @@
     }
 
     function syncTourCostOptUiFromMasters() {
+        var $sheets = $('#qPricingSheetsHost .q-pricing-option-sheet');
+        if ($sheets.length) {
+            // Multi-option: keep each card's own GST/TCS toggles; only sync form masters from active card.
+            var $active = getActivePricingSheet();
+            if ($active.length) {
+                syncActiveTourTaxMastersFromSheet($active);
+            }
+            return;
+        }
         $('.q-tour-gst-rate-switch').prop('checked', !$('#q_hide_gst_note').is(':checked'));
         $('.q-tour-tcs-rate-switch').prop('checked', !$('#q_hide_tcs').is(':checked'));
     }
 
     function tourCostCardShellHtml(suffix) {
+        /* Grand Total sits outside the full-bleed tour-cost card (sibling of
+           .q-sheet-profit-block) so it shares the same horizontal width. */
         return '' +
             '<div class="q-tour-cost-card q-sheet-tour-cost" aria-label="Tour Cost Summary">' +
             '<div class="q-tour-cost-hd">' +
@@ -9725,7 +9995,8 @@
             '</div></div>' +
             '</span></div>' +
             '<div class="q-tour-cost-body q-sheet-tour-cost-rows"></div>' +
-            '<div class="q-tour-cost-grand-wrap">' +
+            '</div>' +
+            '<div class="q-tour-cost-grand-wrap q-sheet-tour-grand-wrap">' +
             '<div class="q-tour-cost-grand">' +
             '<div class="q-tour-cost-grand-left">' +
             '<span class="q-tour-cost-grand-ico" aria-hidden="true">₹</span>' +
@@ -9734,8 +10005,7 @@
             '</div></div>' +
             '<span class="q-tour-cost-grand-divider" aria-hidden="true"></span>' +
             '<strong class="q-tour-cost-grand-amount q-sheet-tour-grand">0</strong>' +
-            '</div></div>' +
-            '</div>';
+            '</div></div>';
     }
 
     function tourCostRowSubtitle(key, name) {
@@ -9950,7 +10220,7 @@
         return getSheetPerPersonRate($sheet, adults, readGuestCounts().children);
     }
 
-    function buildTourCostRowsHtml(perPersonRate) {
+    function buildTourCostRowsHtml(perPersonRate, taxOpts) {
         var counts = readGuestCounts();
         var childRows = readChildCostRows();
         qTourCostChildQtySync = true;
@@ -9961,10 +10231,13 @@
         }
         counts = readGuestCounts();
         ensureTourCostChildRates(childRows.length);
-        var gstPct = parseFloat(qTourCostState.gst_percent);
-        if (isNaN(gstPct) || gstPct < 0) {
-            gstPct = 5;
-        }
+        var tax = normalizeOptionTourTax(taxOpts || {
+            hide_gst: $('#q_hide_gst_note').is(':checked') ? 1 : 0,
+            hide_tcs: $('#q_hide_tcs').is(':checked') ? 1 : 0,
+            gst_percent: qTourCostState.gst_percent,
+            tcs_percent: qTourCostState.tcs_percent
+        });
+        var gstPct = tax.gst_percent;
         var rateStr = perPersonRate != null && perPersonRate !== '' ? String(perPersonRate) : '';
         var html = '';
         var adultRateShow = rateStr;
@@ -10009,25 +10282,21 @@
                 removeIndex: i
             });
         });
-            html += tourCostRowHtml({
-                key: 'gst',
-                icon: 'fas fa-percentage',
-                name: 'GST',
-                editable: false,
-                hideMeta: true,
-                summary: true,
-                gstEditable: true,
-                gstPct: gstPct,
-            previewOn: !$('#q_hide_gst_note').is(':checked'),
+        html += tourCostRowHtml({
+            key: 'gst',
+            icon: 'fas fa-percentage',
+            name: 'GST',
+            editable: false,
+            hideMeta: true,
+            summary: true,
+            gstEditable: true,
+            gstPct: gstPct,
+            previewOn: !tax.hide_gst,
             amountText: '0',
             removable: true,
             removeKind: 'gst'
         });
         if (isInternationalQuotationTour()) {
-            var tcsPct = parseFloat(qTourCostState.tcs_percent);
-            if (isNaN(tcsPct) || tcsPct < 0) {
-                tcsPct = 2;
-            }
             html += tourCostRowHtml({
                 key: 'tcs',
                 icon: 'fas fa-percentage',
@@ -10036,8 +10305,8 @@
                 hideMeta: true,
                 summary: true,
                 tcsEditable: true,
-                tcsPct: tcsPct,
-                previewOn: !$('#q_hide_tcs').is(':checked'),
+                tcsPct: tax.tcs_percent,
+                previewOn: !tax.hide_tcs,
                 amountText: '0'
             });
         }
@@ -10050,8 +10319,10 @@
         if ($sheets.length) {
             $sheets.each(function () {
                 var $sheet = $(this);
+                var catId = String($sheet.attr('data-cat-id') || '');
+                var tax = normalizeOptionTourTax(qPricingOptionsState[catId] || readSheetTourTaxState($sheet));
                 var perPerson = getSheetPerPersonRate($sheet, counts.adults, counts.children);
-                $sheet.find('.q-sheet-tour-cost-rows').html(buildTourCostRowsHtml(perPerson > 0 ? formatTourRateValue(perPerson) : ''));
+                $sheet.find('.q-sheet-tour-cost-rows').html(buildTourCostRowsHtml(perPerson > 0 ? formatTourRateValue(perPerson) : '', tax));
             });
             return;
         }
@@ -10104,19 +10375,30 @@
                 }
             }
             ensureTourCostChildRates(rows.length);
+            var $sheetSnap = $scope.closest('.q-pricing-option-sheet');
+            var taxSnap = readSheetTourTaxState($sheetSnap.length ? $sheetSnap : null);
             var $gst = $scope.find('.q-tour-gst-input').first();
             if ($gst.length) {
                 var g = parseFloat($gst.val());
                 if (!isNaN(g) && g >= 0) {
-                    qTourCostState.gst_percent = g;
+                    taxSnap.gst_percent = g;
+                    if (!$sheetSnap.length || $sheetSnap.hasClass('is-active')) {
+                        qTourCostState.gst_percent = g;
+                    }
                 }
             }
             var $tcs = $scope.find('.q-tour-tcs-input').first();
             if ($tcs.length) {
                 var tcsVal = parseFloat($tcs.val());
                 if (!isNaN(tcsVal) && tcsVal >= 0) {
-                    qTourCostState.tcs_percent = tcsVal;
+                    taxSnap.tcs_percent = tcsVal;
+                    if (!$sheetSnap.length || $sheetSnap.hasClass('is-active')) {
+                        qTourCostState.tcs_percent = tcsVal;
+                    }
                 }
+            }
+            if ($sheetSnap.length) {
+                writeSheetTourTaxState($sheetSnap, taxSnap);
             }
             return;
         }
@@ -10198,22 +10480,29 @@
         } else {
             breakdown = buildPackageTravelerBreakdown(packageTotal, counts.adults, childQtys);
         }
-        var hideGstPreview = $('#q_hide_gst_note').is(':checked');
-        var gstPct = parseFloat(qTourCostState.gst_percent);
-        if (isNaN(gstPct) || gstPct < 0) {
-            gstPct = 5;
-        }
+        var taxForSheet = readSheetTourTaxState($sheet.length ? $sheet : null);
+        var hideGstPreview = !!taxForSheet.hide_gst;
+        var gstPct = taxForSheet.gst_percent;
         var gst = roundTourMoney(breakdown.package_total * gstPct / 100);
         var international = isInternationalQuotationTour();
-        var hideTcsPreview = $('#q_hide_tcs').is(':checked');
-        var tcsPct = parseFloat(qTourCostState.tcs_percent);
-        if (isNaN(tcsPct) || tcsPct < 0) {
-            tcsPct = 2;
-        }
+        var hideTcsPreview = !!taxForSheet.hide_tcs;
+        var tcsPct = taxForSheet.tcs_percent;
         var tcs = international ? roundTourMoney(breakdown.package_total * tcsPct / 100) : 0;
         var gstForTotal = hideGstPreview ? 0 : gst;
         var tcsForTotal = hideTcsPreview ? 0 : tcs;
         var grand = roundTourMoney(breakdown.package_total + gstForTotal + tcsForTotal);
+        if ($sheet.length) {
+            writeSheetTourTaxState($sheet, {
+                hide_gst: hideGstPreview ? 1 : 0,
+                hide_tcs: hideTcsPreview ? 1 : 0,
+                gst_percent: gstPct,
+                tcs_percent: tcsPct
+            });
+        }
+        if (!$sheet.length || $sheet.hasClass('is-active')) {
+            qTourCostState.gst_percent = gstPct;
+            qTourCostState.tcs_percent = tcsPct;
+        }
         var childRates = [];
         var i;
         if (ratesEdited && Array.isArray(breakdown.child_rates)) {
@@ -10526,6 +10815,24 @@
         } else if (state.apply_tcs != null && state.apply_tcs !== '') {
             $('#q_hide_tcs').prop('checked', parseInt(state.apply_tcs, 10) !== 1);
         }
+        var activeTaxId = String(qActiveHotelCategoryId || '');
+        if (activeTaxId) {
+            if (!qPricingOptionsState[activeTaxId]) {
+                qPricingOptionsState[activeTaxId] = defaultPricingSheetState();
+            }
+            var appliedTax = normalizeOptionTourTax({
+                hide_gst: state.hide_gst != null ? state.hide_gst : ($('#q_hide_gst_note').is(':checked') ? 1 : 0),
+                hide_tcs: state.hide_tcs != null
+                    ? state.hide_tcs
+                    : (state.apply_tcs != null ? (parseInt(state.apply_tcs, 10) !== 1 ? 1 : 0) : ($('#q_hide_tcs').is(':checked') ? 1 : 0)),
+                gst_percent: state.gst_percent != null ? state.gst_percent : qTourCostState.gst_percent,
+                tcs_percent: state.tcs_percent != null && state.tcs_percent !== '' ? state.tcs_percent : qTourCostState.tcs_percent
+            });
+            qPricingOptionsState[activeTaxId].hide_gst = appliedTax.hide_gst;
+            qPricingOptionsState[activeTaxId].hide_tcs = appliedTax.hide_tcs;
+            qPricingOptionsState[activeTaxId].gst_percent = appliedTax.gst_percent;
+            qPricingOptionsState[activeTaxId].tcs_percent = appliedTax.tcs_percent;
+        }
         syncTourCostOptUiFromMasters();
         if (Array.isArray(state.children_ages) || Array.isArray(state.child_qtys)) {
             var agesApply = Array.isArray(state.children_ages) ? state.children_ages : [];
@@ -10595,6 +10902,7 @@
         $('#q_total_cost').val($active.find('.q-sheet-total-cost').val() || '0');
         $('#q_profit_percent').val($active.find('.q-sheet-profit-percent').val() || '');
         $('#q_profit_amount').val($active.find('.q-sheet-profit-amount').val() || '');
+        syncActiveTourTaxMastersFromSheet($active);
         var payload = recalcTourCostForSheet($active);
         if (payload) {
             $('#q_quotation_total').val(money(payload.grand_total));
@@ -10633,6 +10941,7 @@
                 renderTourCostRows();
             }
             recalcAllTourCostCards();
+            updateCommercialHeaderTotals();
             return;
         }
         if (!tourCostRowsPresent()) {
@@ -10645,6 +10954,7 @@
         $('#qPricingSheetsHost .q-pricing-option-sheet[data-cat-id="' + String(qActiveHotelCategoryId || '').replace(/"/g, '\\"') + '"]').addClass('is-active');
         syncLegacyPricingFieldsFromActiveSheet();
         refreshPricingVisibilityIfNeeded();
+        updateCommercialHeaderTotals();
     }
 
     function collectPricingOptionsPayload() {
@@ -10656,6 +10966,10 @@
             var $sheet = $('#qPricingSheetsHost .q-pricing-option-sheet').filter(function () {
                 return String($(this).attr('data-cat-id') || '') === String(cat.id);
             }).first();
+            var taxOpt = $sheet.length
+                ? readSheetTourTaxState($sheet)
+                : normalizeOptionTourTax(state);
+            var sheetTourCost = $sheet.length ? collectTourCostPayload(null, $sheet) : null;
             options.push({
                 category_id: cat.id,
                 label: cat.label || defaultHotelCategoryLabel(idx),
@@ -10669,6 +10983,11 @@
                 profit_source: state.profit_source === 'amount' || state.profit_source === 'percent' ? state.profit_source : '',
                 price_per_adult: state.price_per_adult || '',
                 price_per_adult_edited: state.price_per_adult_edited || 0,
+                hide_gst: taxOpt.hide_gst,
+                hide_tcs: taxOpt.hide_tcs,
+                gst_percent: taxOpt.gst_percent,
+                tcs_percent: taxOpt.tcs_percent,
+                tour_cost: sheetTourCost,
                 total_cost: $sheet.length ? String($sheet.find('.q-sheet-total-cost').val() || '').replace(/,/g, '') : '',
                 package_total: $sheet.length ? String($sheet.find('.q-sheet-package-total').val() || '').replace(/,/g, '') : '',
                 quotation_total: $sheet.length ? String($sheet.find('.q-sheet-quotation-total').val() || '').replace(/,/g, '') : '',
@@ -10685,7 +11004,7 @@
             options: options,
             active_option_id: active ? active.category_id : activeId,
             pricing_notes: $.trim($('#q_pricing_notes').val() || ''),
-            tour_cost: collectTourCostPayload(),
+            tour_cost: active && active.tour_cost ? active.tour_cost : collectTourCostPayload(),
             hotel_categories: {
                 active_category_id: data.active_category_id,
                 options: (function () {
@@ -10786,26 +11105,15 @@
     $(document).on('input change', '.q-sheet-tour-cost-rows .q-tour-gst-input, #qTourCostRows .q-tour-gst-input', function () {
         var $sheet = $(this).closest('.q-pricing-option-sheet');
         snapshotTourCostFromDom($(this));
-        var gstVal = $(this).val();
-        $('.q-sheet-tour-cost-rows .q-tour-gst-input, #qTourCostRows .q-tour-gst-input').not(this).each(function () {
-            if (!$(this).is(':focus')) {
-                $(this).val(gstVal);
-            }
-        });
         if ($sheet.length) {
-            var activePayload = null;
-            $('#qPricingSheetsHost .q-pricing-option-sheet').each(function () {
-                var payload = recalcTourCostForSheet($(this));
-                if ($(this).hasClass('is-active')) {
-                    activePayload = payload;
-                }
-            });
-            if (activePayload) {
-                $('#q_quotation_total').val(money(activePayload.grand_total));
-                $('#q_package_total').val(money(activePayload.package_total != null ? activePayload.package_total : activePayload.subtotal));
+            var payload = recalcTourCostForSheet($sheet);
+            syncActiveTourTaxMastersFromSheet($sheet);
+            if (payload && $sheet.hasClass('is-active')) {
+                $('#q_quotation_total').val(money(payload.grand_total));
+                $('#q_package_total').val(money(payload.package_total != null ? payload.package_total : payload.subtotal));
                 $('#q_price_per_adult').val($sheet.find('.q-sheet-price-per-adult').val() || '');
-                qTourCostState.adult_rate = activePayload.adult_rate || '';
-                $('#q_tour_cost_json').val(JSON.stringify(activePayload));
+                qTourCostState.adult_rate = payload.adult_rate || '';
+                $('#q_tour_cost_json').val(JSON.stringify(payload));
             }
         } else {
             recalcAllTourCostCards();
@@ -10817,26 +11125,15 @@
     $(document).on('input change', '.q-sheet-tour-cost-rows .q-tour-tcs-input, #qTourCostRows .q-tour-tcs-input', function () {
         var $sheet = $(this).closest('.q-pricing-option-sheet');
         snapshotTourCostFromDom($(this));
-        var tcsVal = $(this).val();
-        $('.q-sheet-tour-cost-rows .q-tour-tcs-input, #qTourCostRows .q-tour-tcs-input').not(this).each(function () {
-            if (!$(this).is(':focus')) {
-                $(this).val(tcsVal);
-            }
-        });
         if ($sheet.length) {
-            var activePayload = null;
-            $('#qPricingSheetsHost .q-pricing-option-sheet').each(function () {
-                var payload = recalcTourCostForSheet($(this));
-                if ($(this).hasClass('is-active')) {
-                    activePayload = payload;
-                }
-            });
-            if (activePayload) {
-                $('#q_quotation_total').val(money(activePayload.grand_total));
-                $('#q_package_total').val(money(activePayload.package_total != null ? activePayload.package_total : activePayload.subtotal));
+            var payload = recalcTourCostForSheet($sheet);
+            syncActiveTourTaxMastersFromSheet($sheet);
+            if (payload && $sheet.hasClass('is-active')) {
+                $('#q_quotation_total').val(money(payload.grand_total));
+                $('#q_package_total').val(money(payload.package_total != null ? payload.package_total : payload.subtotal));
                 $('#q_price_per_adult').val($sheet.find('.q-sheet-price-per-adult').val() || '');
-                qTourCostState.adult_rate = activePayload.adult_rate || '';
-                $('#q_tour_cost_json').val(JSON.stringify(activePayload));
+                qTourCostState.adult_rate = payload.adult_rate || '';
+                $('#q_tour_cost_json').val(JSON.stringify(payload));
             }
         } else {
             recalcAllTourCostCards();
@@ -11010,12 +11307,32 @@
             return;
         }
         if (kind === 'gst') {
-            $('#q_hide_gst_note').prop('checked', true);
-            $('.q-tour-gst-rate-switch').prop('checked', false);
-            $('.q-tour-gst-input').val(0);
-            qTourCostState.gst_percent = 0;
-            snapshotTourCostFromDom();
-            recalcAllTourCostCards();
+            var $gstSheet = $(this).closest('.q-pricing-option-sheet');
+            if ($gstSheet.length) {
+                $gstSheet.find('.q-tour-gst-rate-switch').prop('checked', false);
+                $gstSheet.find('.q-tour-gst-input').val(0);
+                writeSheetTourTaxState($gstSheet, {
+                    hide_gst: 1,
+                    hide_tcs: readSheetTourTaxState($gstSheet).hide_tcs,
+                    gst_percent: 0,
+                    tcs_percent: readSheetTourTaxState($gstSheet).tcs_percent
+                });
+                snapshotTourCostFromDom($(this));
+                var gstPayload = recalcTourCostForSheet($gstSheet);
+                syncActiveTourTaxMastersFromSheet($gstSheet);
+                if (gstPayload && $gstSheet.hasClass('is-active')) {
+                    $('#q_quotation_total').val(money(gstPayload.grand_total));
+                    $('#q_package_total').val(money(gstPayload.package_total != null ? gstPayload.package_total : gstPayload.subtotal));
+                    $('#q_tour_cost_json').val(JSON.stringify(gstPayload));
+                }
+            } else {
+                $('#q_hide_gst_note').prop('checked', true);
+                $('.q-tour-gst-rate-switch').prop('checked', false);
+                $('.q-tour-gst-input').val(0);
+                qTourCostState.gst_percent = 0;
+                snapshotTourCostFromDom();
+                recalcAllTourCostCards();
+            }
             refreshOpenQuotationPreview();
             saveFormDraftToStorage();
         }
@@ -11056,20 +11373,50 @@
 
     $(document).on('change', '.q-tour-gst-rate-switch', function () {
         var showInPreview = $(this).is(':checked');
-        $('#q_hide_gst_note').prop('checked', !showInPreview);
-        $('.q-tour-gst-rate-switch').not(this).prop('checked', showInPreview);
-        snapshotTourCostFromDom();
-        recalcAllTourCostCards();
+        var $sheet = $(this).closest('.q-pricing-option-sheet');
+        if ($sheet.length) {
+            var tax = readSheetTourTaxState($sheet);
+            tax.hide_gst = showInPreview ? 0 : 1;
+            writeSheetTourTaxState($sheet, tax);
+            snapshotTourCostFromDom($(this));
+            var payload = recalcTourCostForSheet($sheet);
+            syncActiveTourTaxMastersFromSheet($sheet);
+            if (payload && $sheet.hasClass('is-active')) {
+                $('#q_quotation_total').val(money(payload.grand_total));
+                $('#q_package_total').val(money(payload.package_total != null ? payload.package_total : payload.subtotal));
+                $('#q_tour_cost_json').val(JSON.stringify(payload));
+            }
+        } else {
+            $('#q_hide_gst_note').prop('checked', !showInPreview);
+            $('.q-tour-gst-rate-switch').not(this).prop('checked', showInPreview);
+            snapshotTourCostFromDom();
+            recalcAllTourCostCards();
+        }
         refreshOpenQuotationPreview();
         saveFormDraftToStorage();
     });
 
     $(document).on('change', '.q-tour-tcs-rate-switch', function () {
         var showInPreview = $(this).is(':checked');
-        $('#q_hide_tcs').prop('checked', !showInPreview);
-        $('.q-tour-tcs-rate-switch').not(this).prop('checked', showInPreview);
-        snapshotTourCostFromDom();
-        recalcAllTourCostCards();
+        var $sheet = $(this).closest('.q-pricing-option-sheet');
+        if ($sheet.length) {
+            var tax = readSheetTourTaxState($sheet);
+            tax.hide_tcs = showInPreview ? 0 : 1;
+            writeSheetTourTaxState($sheet, tax);
+            snapshotTourCostFromDom($(this));
+            var payload = recalcTourCostForSheet($sheet);
+            syncActiveTourTaxMastersFromSheet($sheet);
+            if (payload && $sheet.hasClass('is-active')) {
+                $('#q_quotation_total').val(money(payload.grand_total));
+                $('#q_package_total').val(money(payload.package_total != null ? payload.package_total : payload.subtotal));
+                $('#q_tour_cost_json').val(JSON.stringify(payload));
+            }
+        } else {
+            $('#q_hide_tcs').prop('checked', !showInPreview);
+            $('.q-tour-tcs-rate-switch').not(this).prop('checked', showInPreview);
+            snapshotTourCostFromDom();
+            recalcAllTourCostCards();
+        }
         refreshOpenQuotationPreview();
         saveFormDraftToStorage();
     });
@@ -13588,10 +13935,14 @@
             opts = opts || {};
             var editable = !!opts.editable;
             var tourCost = null;
-            try {
-                var csFull = typeof p.cost_sheet_json === 'string' ? JSON.parse(p.cost_sheet_json || '{}') : (p.cost_sheet || {});
-                if (csFull && csFull.tour_cost) tourCost = csFull.tour_cost;
-            } catch (e) { /* ignore */ }
+            if (opt && opt.tour_cost && typeof opt.tour_cost === 'object' && parseFloat(opt.tour_cost.grand_total) > 0) {
+                tourCost = opt.tour_cost;
+            } else {
+                try {
+                    var csFull = typeof p.cost_sheet_json === 'string' ? JSON.parse(p.cost_sheet_json || '{}') : (p.cost_sheet || {});
+                    if (csFull && csFull.tour_cost) tourCost = csFull.tour_cost;
+                } catch (e) { /* ignore */ }
+            }
 
             if (tourCost && parseFloat(tourCost.grand_total) > 0) {
                 var rowsTc = '';
@@ -14245,21 +14596,11 @@
         qPricingOptionsState = {};
         var legacyPricing = null;
         if (Array.isArray(cs.options) && cs.options.length) {
+            var csTaxFallback = normalizeOptionTourTax(cs.tour_cost || {});
             cs.options.forEach(function (opt) {
                 var id = String(opt.category_id || opt.id || '');
                 if (!id) return;
-                qPricingOptionsState[id] = {
-                    fixed: opt.fixed || {},
-                    fixed_parts: opt.fixed_parts || {},
-                    row_labels: opt.row_labels || {},
-                    custom: Array.isArray(opt.custom) ? opt.custom : [],
-                    user_edited: opt.user_edited || {},
-                    profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
-                    profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
-                    profit_source: opt.profit_source === 'amount' || opt.profit_source === 'percent' ? opt.profit_source : '',
-                    price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
-                    price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
-                };
+                qPricingOptionsState[id] = pricingStateFromSavedOption(opt, csTaxFallback);
             });
             if (cs.active_option_id) {
                 qActiveHotelCategoryId = String(cs.active_option_id);
@@ -14303,21 +14644,11 @@
             draft && draft.hotels ? draft.hotels : null
         );
         if (draft && draft.cost_sheet && Array.isArray(draft.cost_sheet.options) && !Array.isArray(cs.options)) {
+            var draftTaxFallback = normalizeOptionTourTax((draft.cost_sheet && draft.cost_sheet.tour_cost) || cs.tour_cost || {});
             draft.cost_sheet.options.forEach(function (opt) {
                 var id = String(opt.category_id || opt.id || '');
                 if (!id || qPricingOptionsState[id]) return;
-                qPricingOptionsState[id] = {
-                    fixed: opt.fixed || {},
-                    fixed_parts: opt.fixed_parts || {},
-                    row_labels: opt.row_labels || {},
-                    custom: Array.isArray(opt.custom) ? opt.custom : [],
-                    user_edited: opt.user_edited || {},
-                    profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
-                    profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
-                    profit_source: opt.profit_source === 'amount' || opt.profit_source === 'percent' ? opt.profit_source : '',
-                    price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
-                    price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
-                };
+                qPricingOptionsState[id] = pricingStateFromSavedOption(opt, draftTaxFallback);
             });
             if (draft.active_option_id || draft.cost_sheet.active_option_id) {
                 qActiveHotelCategoryId = String(draft.active_option_id || draft.cost_sheet.active_option_id);
@@ -16118,6 +16449,13 @@
                 }
                 qDocUploadFile(file);
             }
+        });
+        $('#qDocUploadRetryBtn').on('click', function () {
+            if (!qDocLastFile) {
+                qDocShowError('No previous file to retry. Please choose a document again.');
+                return;
+            }
+            qDocUploadFile(qDocLastFile);
         });
         $('#qDocUploadDrop').on('dragenter dragover', function (e) {
             e.preventDefault();
@@ -18558,21 +18896,11 @@
                 }
                 if (localDraft.cost_sheet && Array.isArray(localDraft.cost_sheet.options)) {
                     qPricingOptionsState = {};
+                    var localTaxFallback = normalizeOptionTourTax((localDraft.cost_sheet && localDraft.cost_sheet.tour_cost) || {});
                     localDraft.cost_sheet.options.forEach(function (opt) {
                         var id = String(opt.category_id || opt.id || '');
                         if (!id) return;
-                        qPricingOptionsState[id] = {
-                            fixed: opt.fixed || {},
-                            fixed_parts: opt.fixed_parts || {},
-                            row_labels: opt.row_labels || {},
-                            custom: Array.isArray(opt.custom) ? opt.custom : [],
-                            user_edited: opt.user_edited || {},
-                            profit_percent: opt.profit_percent != null ? opt.profit_percent : '',
-                            profit_amount: opt.profit_amount != null ? opt.profit_amount : '',
-                            profit_source: opt.profit_source === 'amount' || opt.profit_source === 'percent' ? opt.profit_source : '',
-                            price_per_adult: opt.price_per_adult != null ? opt.price_per_adult : '',
-                            price_per_adult_edited: parseInt(opt.price_per_adult_edited, 10) === 1 ? 1 : 0
-                        };
+                        qPricingOptionsState[id] = pricingStateFromSavedOption(opt, localTaxFallback);
                     });
                     if (localDraft.active_option_id || localDraft.cost_sheet.active_option_id) {
                         qActiveHotelCategoryId = String(localDraft.active_option_id || localDraft.cost_sheet.active_option_id);

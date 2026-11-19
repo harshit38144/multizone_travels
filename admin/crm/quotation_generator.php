@@ -327,6 +327,34 @@ $qWizardSteps = [
             min-width: 0;
         }
 
+        .crm-quotation-gen .q-commercial-head-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-width: 0;
+        }
+
+        .crm-quotation-gen .q-commercial-head-total {
+            margin-left: auto;
+            flex: 0 0 auto;
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #c4121a;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-itin-comm-head-right {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            flex: 0 0 auto;
+            margin-left: auto;
+            min-width: 0;
+        }
+
         .crm-quotation-gen .content-wrapper > .content {
             background: linear-gradient(180deg, #f8fafc 0%, var(--q-bg) 100%);
             padding: 0.65rem 0.75rem 1.25rem;
@@ -5191,6 +5219,10 @@ $qWizardSteps = [
             letter-spacing: -0.01em;
         }
 
+        .crm-quotation-gen .q-flight-head-commercial .q-flight-group-title {
+            justify-content: space-between;
+        }
+
         .crm-quotation-gen .q-flight-group-title i {
             color: #e11d2e;
             font-size: 0.78rem;
@@ -6504,6 +6536,10 @@ $qWizardSteps = [
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.01em;
+        }
+
+        #qWizardSection3 .q-hotel-head-commercial .q-hotel-group-title {
+            justify-content: space-between;
         }
 
         #qWizardSection3 .q-hotel-group-title i {
@@ -9355,8 +9391,10 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-sheets-host {
+            /* Match the original single-option card width for every option. */
+            --q-price-card-w: 440px;
             display: grid;
-            grid-template-columns: minmax(148px, 168px) repeat(var(--q-opt-count, 1), minmax(260px, 1fr));
+            grid-template-columns: minmax(148px, 168px) repeat(var(--q-opt-count, 1), var(--q-price-card-w));
             gap: 0.75rem;
             align-items: stretch;
             overflow-x: auto;
@@ -9368,12 +9406,12 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-sheets-host.is-single-option {
-            grid-template-columns: minmax(148px, 168px) minmax(320px, 1fr);
+            grid-template-columns: minmax(148px, 168px) var(--q-price-card-w);
         }
 
         .crm-quotation-gen .q-pricing-sheets-host.is-single-option .q-pricing-option-sheet {
-            max-width: 440px;
-            width: 100%;
+            max-width: var(--q-price-card-w);
+            width: var(--q-price-card-w);
         }
 
         .crm-quotation-gen .q-pricing-sidebar {
@@ -10025,9 +10063,11 @@ $qWizardSteps = [
             background: #fff;
             box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
             overflow: hidden;
-            width: auto;
-            max-width: none;
-            min-width: 260px;
+            width: var(--q-price-card-w, 440px);
+            max-width: var(--q-price-card-w, 440px);
+            min-width: var(--q-price-card-w, 440px);
+            flex: 0 0 var(--q-price-card-w, 440px);
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
         }
@@ -10435,7 +10475,8 @@ $qWizardSteps = [
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-row .q-sheet-profit-amount,
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-amount,
         .crm-quotation-gen .q-sheet-profit-block .q-tour-cost-grand-amount,
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-amount {
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-amount,
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-amount {
             flex: 0 0 var(--q-price-col, 8.5rem);
             width: var(--q-price-col, 8.5rem);
             min-width: var(--q-price-col, 8.5rem);
@@ -11240,7 +11281,8 @@ $qWizardSteps = [
             line-height: 1.15;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand .q-tour-cost-grand-label {
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand .q-tour-cost-grand-label,
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-label {
             font-size: 0.88rem;
             letter-spacing: 0.04em;
             text-transform: none;
@@ -11248,7 +11290,8 @@ $qWizardSteps = [
             color: #9f1239;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand .q-tour-cost-grand-amount {
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand .q-tour-cost-grand-amount,
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-amount {
             display: inline-flex;
             align-items: center;
             justify-content: flex-end;
@@ -11294,7 +11337,8 @@ $qWizardSteps = [
             width: auto;
             max-width: none;
             min-width: 0;
-            margin: 0.55rem calc(var(--q-body-pad-x, 0.85rem) * -1) -0.85rem;
+            /* Full-bleed horizontally; Grand Total is a sibling below (not inside). */
+            margin: 0.55rem calc(var(--q-body-pad-x, 0.85rem) * -1) 0;
             flex: 1 1 auto;
             align-self: stretch;
             border-radius: 0;
@@ -11374,30 +11418,43 @@ $qWizardSteps = [
             text-decoration: line-through;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-wrap {
-            padding-right: var(--q-body-pad-x, 0.85rem);
+        /*
+         * Grand Total is a sibling of .q-sheet-profit-block (not inside full-bleed
+         * tour-cost), so it uses the same horizontal padding and width.
+         */
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap {
+            margin: 0;
+            padding: 0.55rem 0 0.5rem 0.8rem;
+            background: transparent;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand {
-            margin-right: 0;
-            padding: 0.35rem var(--q-body-pad-x, 0.85rem);
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand {
+            margin: 0;
+            width: 100%;
+            max-width: 100%;
+            padding: 0.35rem 1rem;
+            padding-right: 0;
+            box-sizing: border-box;
             flex-wrap: nowrap;
             justify-content: flex-start;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-left {
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-left {
             flex: 1 1 auto;
             min-width: 0;
             align-items: center;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-divider {
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-divider {
             display: none;
         }
 
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand-amount {
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-amount {
             flex: 0 0 var(--q-price-col);
             width: var(--q-price-col);
             min-width: var(--q-price-col);
@@ -11411,6 +11468,14 @@ $qWizardSteps = [
             text-align: right;
             padding: 0 var(--q-price-pad-right);
             box-sizing: border-box;
+        }
+
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-label {
+            font-size: 0.88rem;
+            letter-spacing: 0.04em;
+            text-transform: none;
+            font-weight: 800;
+            color: #9f1239;
         }
 
         .crm-quotation-gen .q-pricing-sheets-host.is-single-option .q-sheet-tour-cost .q-tour-cost-traveller-sub {
@@ -11569,7 +11634,8 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-sheet-profit-block .q-tour-cost-grand::after,
-        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand::after {
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand::after,
+        .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand::after {
             content: '';
             flex: 0 0 var(--q-price-action, 28px);
             width: var(--q-price-action, 28px);
@@ -11980,14 +12046,15 @@ $qWizardSteps = [
         }
 
         @media (max-width: 767.98px) {
+            /* Keep card width; scroll horizontally instead of compressing. */
             .crm-quotation-gen .q-pricing-sheets-host {
-                grid-template-columns: minmax(96px, 112px) repeat(var(--q-opt-count, 1), 130px);
+                grid-template-columns: minmax(96px, 112px) repeat(var(--q-opt-count, 1), var(--q-price-card-w, 440px));
             }
 
             .crm-quotation-gen .q-pricing-option-sheet {
-                width: 130px;
-                max-width: 130px;
-                min-width: 130px;
+                width: var(--q-price-card-w, 440px);
+                max-width: var(--q-price-card-w, 440px);
+                min-width: var(--q-price-card-w, 440px);
             }
         }
 
@@ -17386,6 +17453,10 @@ $qWizardSteps = [
             border: 0 !important;
         }
 
+        [data-theme="dark"] .crm-quotation-gen .q-commercial-head-total {
+            color: #fb7185 !important;
+        }
+
         [data-theme="dark"] .crm-quotation-gen .q-flight-head-commercial {
             background: rgba(225, 29, 46, 0.16) !important;
         }
@@ -18598,8 +18669,11 @@ $qWizardSteps = [
                                         </div>
                                         <div class="q-flight-head-commercial q-commercial-block">
                                             <div class="q-flight-group-title">
-                                                <i class="fas fa-coins" aria-hidden="true"></i>
-                                                <span>Commercial Details</span>
+                                                <span class="q-commercial-head-label">
+                                                    <i class="fas fa-coins" aria-hidden="true"></i>
+                                                    <span>Commercial Details</span>
+                                                </span>
+                                                <span class="q-commercial-head-total" id="qFlightCommercialTotal" aria-label="Flight commercial total">₹ 0</span>
                                             </div>
                                             <div class="q-flight-col-labels q-flight-col-labels-commercial">
                                                 <span><i class="fas fa-rupee-sign" aria-hidden="true"></i>Rate (₹)</span>
@@ -18692,8 +18766,11 @@ $qWizardSteps = [
                                 </div>
                                 <div class="q-hotel-head-commercial q-commercial-block">
                                     <div class="q-hotel-group-title">
-                                        <i class="fas fa-coins" aria-hidden="true"></i>
-                                        <span>Commercial Details</span>
+                                        <span class="q-commercial-head-label">
+                                            <i class="fas fa-coins" aria-hidden="true"></i>
+                                            <span>Commercial Details</span>
+                                        </span>
+                                        <span class="q-commercial-head-total" id="qHotelCommercialTotal" aria-label="Hotel commercial total">₹ 0</span>
                                     </div>
                                     <div class="q-hotel-col-labels q-hotel-col-labels-commercial">
                                         <span><i class="fas fa-rupee-sign" aria-hidden="true"></i>Rate (₹)</span>
@@ -18801,9 +18878,12 @@ $qWizardSteps = [
                                                     <i class="fas fa-coins" aria-hidden="true"></i>
                                                     <span>Commercial Details</span>
                                                 </div>
-                                                <button type="button" class="btn q-itin-add-supplier-btn" id="qAddItinerarySupplier">
-                                                    <i class="fas fa-plus mr-1"></i>Add Supplier
-                                                </button>
+                                                <div class="q-itin-comm-head-right">
+                                                    <button type="button" class="btn q-itin-add-supplier-btn" id="qAddItinerarySupplier">
+                                                        <i class="fas fa-plus mr-1"></i>Add Supplier
+                                                    </button>
+                                                    <span class="q-commercial-head-total" id="qItinCommercialTotal" aria-label="Itinerary commercial total">₹ 0</span>
+                                                </div>
                                             </div>
                                             <div class="q-itin-comm-col-labels">
                                                 <span><i class="fas fa-rupee-sign" aria-hidden="true"></i>Rate (₹)</span>
@@ -19487,6 +19567,11 @@ $qWizardSteps = [
                             </div>
                         </div>
                         <div class="alert alert-danger d-none mt-3 mb-0" id="qDocUploadError"></div>
+                        <div class="mt-3 d-none" id="qDocUploadRetryWrap">
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="qDocUploadRetryBtn">
+                                <i class="fas fa-redo mr-1"></i> Retry extraction
+                            </button>
+                        </div>
                     </div>
                     <div id="qDocUploadStepReview" class="d-none">
                         <div class="q-doc-review-toolbar">
@@ -19843,7 +19928,7 @@ $qWizardSteps = [
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=393"></script>
+    <script src="crm/assets/quotation_generator.js?v=398"></script>
     <script src="crm/assets/quotation_flight_search.js?v=38"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=8"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

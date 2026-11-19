@@ -32,7 +32,7 @@ $stmt = $conn->prepare(
     'SELECT `id`, `quotation_uid`, `lead_id`, `guest_name`, `mobile_no`, `email`, `destination`,
             `tentative_date`, `no_of_nights`, `no_of_adults`, `no_of_children`, `no_of_infants`,
             `package_total`, `quotation_total`, `cost_sheet_json`, `hotels_json`, `flights_json`,
-            `tour_confirmed`, `tour_confirm_json`, `status`
+            `tour_confirmed`, `tour_confirmed_at`, `tour_confirm_json`, `status`
      FROM `crm_quotations` WHERE `id` = ? LIMIT 1'
 );
 if (!$stmt) {
@@ -108,10 +108,15 @@ if ($json === false) {
     $json = '{}';
 }
 
+$alreadyConfirmed = (int) ($row['tour_confirmed'] ?? 0) === 1;
 $tourConfirmed = 1;
+$confirmedAtSql = $alreadyConfirmed
+    ? '`tour_confirmed_at` = COALESCE(`tour_confirmed_at`, NOW())'
+    : '`tour_confirmed_at` = NOW()';
 $upd = $conn->prepare(
     'UPDATE `crm_quotations`
-     SET `guest_name` = ?, `mobile_no` = ?, `email` = ?, `tour_confirmed` = ?, `tour_confirm_json` = ?
+     SET `guest_name` = ?, `mobile_no` = ?, `email` = ?, `tour_confirmed` = ?, `tour_confirm_json` = ?,
+         ' . $confirmedAtSql . '
      WHERE `id` = ? LIMIT 1'
 );
 if (!$upd) {
@@ -134,10 +139,12 @@ spEnsureTable($conn);
 $payload['services'] = svAttachCounts($conn, $id, $payload['services']);
 $payload['services'] = spAttachCounts($conn, $id, $payload['services']);
 
-qConfirmQuickJson(true, 'Tour confirmed.', [
+// Idempotent: re-confirm updates the same quotation row (no duplicate booking).
+qConfirmQuickJson(true, $alreadyConfirmed ? 'Tour already confirmed.' : 'Tour confirmed.', [
     'id' => $id,
     'lead_id' => $leadId,
     'tour_confirmed' => 1,
+    'already_confirmed' => $alreadyConfirmed ? 1 : 0,
     'status_html' => crmQuotationRenderStatusBadges($json),
     'booking_status_html' => crmQuotationBookingStatusIconsHtml($json),
     'confirm' => $payload,

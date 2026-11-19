@@ -24,7 +24,9 @@
     adminRoot: '/admin',
     dashboardUrl: 'dashboard.php',
     dashboardTitle: 'Dashboard',
-    initialOpen: ''
+    initialOpen: '',
+    sessionKey: '',
+    freshLogin: false
   }
 
   function normalizeAdminRoot (root) {
@@ -49,6 +51,8 @@
     if (t.dashboardUrl) cfg.dashboardUrl = t.dashboardUrl
     if (t.dashboardTitle) cfg.dashboardTitle = t.dashboardTitle
     if (typeof t.initialOpen === 'string') cfg.initialOpen = t.initialOpen
+    if (typeof t.sessionKey === 'string') cfg.sessionKey = t.sessionKey
+    if (t.freshLogin === true) cfg.freshLogin = true
   }
 
   function normalizePath (href) {
@@ -140,17 +144,93 @@
     return path + hash
   }
 
-  function tabIdFromPath (path) {
-    // Identity without hash for duplicate prevention of same page+query
-    return path.split('#')[0]
-  }
-
   function pathFileKey (path) {
     return String(path || '').split('#')[0].split('?')[0].replace(/^\/+/, '').toLowerCase()
   }
 
   function sameTabPage (a, b) {
     return pathFileKey(a) === pathFileKey(b)
+  }
+
+  /** Pages that may have multiple tabs (keyed by quotation/lead id). */
+  function isMultiInstancePage (file) {
+    return pathFileKey(file) === 'crm/quotation_generator.php'
+  }
+
+  function parseQueryParams (path) {
+    var clean = String(path || '').split('#')[0]
+    var qi = clean.indexOf('?')
+    var out = {}
+    if (qi < 0) return out
+    clean.slice(qi + 1).split('&').forEach(function (pair) {
+      if (!pair) return
+      var parts = pair.split('=')
+      var k = decodeURIComponent((parts[0] || '').replace(/\+/g, ' '))
+      var v = decodeURIComponent((parts.slice(1).join('=') || '').replace(/\+/g, ' '))
+      if (k) out[k] = v
+    })
+    return out
+  }
+
+  /**
+   * Tab identity:
+   * - Most admin pages → one tab per PHP file (Leads, Bookings, …).
+   * - quotation_generator.php → one tab per quotation id (or lead_id / blank create).
+   */
+  function tabIdentityKey (path) {
+    var clean = String(path || '').split('#')[0]
+    var file = pathFileKey(clean)
+    if (!file) return clean
+    if (!isMultiInstancePage(file)) {
+      return file
+    }
+    var params = parseQueryParams(clean)
+    if (params.id) return file + '?id=' + String(params.id)
+    if (params.lead_id) return file + '?lead_id=' + String(params.lead_id)
+    return file + '?new=1'
+  }
+
+  function tabIdFromPath (path) {
+    return tabIdentityKey(path)
+  }
+
+  function canonicalPathForTab (path) {
+    var clean = String(path || '').split('#')[0]
+    var file = pathFileKey(clean)
+    if (!isMultiInstancePage(file)) {
+      return file
+    }
+    return clean
+  }
+
+  /** Prefer matching an open Edit Quotation tab by quotation id (path or live iframe). */
+  function findQuotationTabById (quotationId) {
+    if (!quotationId) return null
+    var want = String(quotationId)
+    for (var i = 0; i < state.tabs.length; i++) {
+      var t = state.tabs[i]
+      if (!isMultiInstancePage(t.path)) continue
+      var tp = parseQueryParams(t.path)
+      if (tp.id && String(tp.id) === want) return t
+      var pane = findPaneEl(t.id)
+      var iframe = pane && pane.querySelector('iframe.mz-tab-frame')
+      var framePath = iframe ? readFramePath(iframe) : null
+      if (framePath && isMultiInstancePage(framePath)) {
+        var fp = parseQueryParams(framePath)
+        if (fp.id && String(fp.id) === want) return t
+      }
+    }
+    return null
+  }
+
+  function findExistingTabForPath (norm) {
+    var id = tabIdFromPath(norm)
+    var existing = findTab(id)
+    if (existing) return existing
+    if (!isMultiInstancePage(norm)) return null
+    var params = parseQueryParams(norm)
+    if (params.id) return findQuotationTabById(params.id)
+    return null
   }
 
   function titleFromLink ($link, path) {
@@ -201,9 +281,16 @@
     return toFrameSrc(path)
   }
 
+  function clearPersistedTabs () {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY)
+    } catch (e) {}
+  }
+
   function persist () {
     try {
       var payload = {
+        sessionKey: cfg.sessionKey || '',
         tabs: state.tabs.map(function (t) {
           return { id: t.id, path: t.path, title: t.title, pinned: !!t.pinned }
         }),
@@ -218,7 +305,15 @@
     try {
       var raw = sessionStorage.getItem(STORAGE_KEY)
       if (!raw) return null
-      return JSON.parse(raw)
+      var data = JSON.parse(raw)
+      // New login / different PHP session → never restore previous workspace tabs
+      if (cfg.sessionKey) {
+        if (!data || !data.sessionKey || String(data.sessionKey) !== String(cfg.sessionKey)) {
+          clearPersistedTabs()
+          return null
+        }
+      }
+      return data
     } catch (e) {
       return null
     }
@@ -249,22 +344,42 @@
     title.textContent = tab.title
     btn.appendChild(title)
 
+    var actions = document.createElement('span')
+    actions.className = 'mz-tab-actions'
+
+    var refresh = document.createElement('button')
+    refresh.type = 'button'
+    refresh.className = 'mz-tab-refresh'
+    refresh.setAttribute('aria-label', 'Refresh ' + tab.title)
+    refresh.title = 'Refresh'
+    refresh.innerHTML = '<i class="fas fa-sync-alt" aria-hidden="true"></i>'
+    refresh.addEventListener('click', function (e) {
+      e.preventDefault()
+      e.stopPropagation()
+      refresh.blur()
+      refreshTab(tab.id, refresh)
+    })
+    actions.appendChild(refresh)
+
     if (!tab.pinned) {
       var close = document.createElement('button')
       close.type = 'button'
       close.className = 'mz-tab-close'
       close.setAttribute('aria-label', 'Close ' + tab.title)
+      close.title = 'Close'
       close.innerHTML = '&times;'
       close.addEventListener('click', function (e) {
         e.preventDefault()
         e.stopPropagation()
         closeTab(tab.id)
       })
-      btn.appendChild(close)
+      actions.appendChild(close)
     }
 
+    btn.appendChild(actions)
+
     btn.addEventListener('click', function (e) {
-      if ($(e.target).closest('.mz-tab-close').length) return
+      if ($(e.target).closest('.mz-tab-close, .mz-tab-refresh').length) return
       activateTab(tab.id, { pushHistory: true })
     })
 
@@ -277,6 +392,44 @@
     })
 
     return btn
+  }
+
+  /** Reload only this tab's iframe; keep other tabs untouched. */
+  function refreshTab (tabId, refreshBtn) {
+    var tab = findTab(tabId)
+    if (!tab) return
+    var pane = findPaneEl(tabId)
+    if (!pane) return
+    var iframe = pane.querySelector('iframe.mz-tab-frame')
+    if (!iframe) return
+
+    var framePath = readFramePath(iframe)
+    if (framePath) {
+      if (framePath !== tab.path) {
+        tab.path = framePath
+        persist()
+      }
+    }
+
+    if (refreshBtn) {
+      refreshBtn.classList.add('is-spinning')
+      var clearSpin = function () {
+        refreshBtn.classList.remove('is-spinning')
+        iframe.removeEventListener('load', clearSpin)
+      }
+      iframe.addEventListener('load', clearSpin)
+      setTimeout(clearSpin, 4000)
+    }
+
+    try {
+      if (iframe.contentWindow && iframe.contentWindow.location &&
+          String(iframe.contentWindow.location.href || '').indexOf('about:') !== 0) {
+        iframe.contentWindow.location.reload()
+        return
+      }
+    } catch (e) { /* fall through */ }
+
+    iframe.src = toFrameSrc(tab.path)
   }
 
   function findPaneEl (tabId) {
@@ -369,6 +522,16 @@
       // Only rename when the iframe is still on this tab's page (same PHP file)
       var framePath = readFramePath(iframe)
       if (framePath && !sameTabPage(framePath, tab.path)) return
+
+      // Keep Edit Quotation path in sync when a draft gains a quotation id
+      if (framePath && isMultiInstancePage(framePath)) {
+        var fp = parseQueryParams(framePath)
+        var tp = parseQueryParams(tab.path)
+        if (fp.id && String(fp.id) !== String(tp.id || '')) {
+          tab.path = framePath
+          persist()
+        }
+      }
 
       var doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document)
       if (!doc || !doc.title) return
@@ -512,11 +675,26 @@
     var norm = normalizePath(path) || normalizePath(toAbsoluteUrl(path))
     if (!norm) return null
 
+    norm = canonicalPathForTab(norm)
     var id = tabIdFromPath(norm)
-    var existing = findTab(id)
+    var existing = findExistingTabForPath(norm)
     if (existing) {
       if (title && !existing.pinned) existing.title = title
-      activateTab(id, { pushHistory: options.pushHistory !== false })
+      // Prefer a concrete quotation id path when reopening / after save
+      if (isMultiInstancePage(norm)) {
+        var nextParams = parseQueryParams(norm)
+        var curParams = parseQueryParams(existing.path)
+        if (nextParams.id && (!curParams.id || String(curParams.id) !== String(nextParams.id))) {
+          existing.path = norm
+        } else if (norm !== existing.path && nextParams.id) {
+          existing.path = norm
+        }
+      }
+      // Re-activate only — do not reload the iframe
+      activateTab(existing.id, {
+        pushHistory: options.pushHistory !== false,
+        skipFrameSync: true
+      })
       return existing
     }
 
@@ -557,7 +735,9 @@
     state.activeId = id
     touchMru(id)
     ensurePane(tab)
-    ensureFrameMatchesTab(tab)
+    if (!options.skipFrameSync) {
+      ensureFrameMatchesTab(tab)
+    }
     renderAll()
 
     // Scroll active tab into view
@@ -667,11 +847,24 @@
       if (!normalizePath(href)) return
       onShellLinkClick(e)
     })
+
+    // Logout: wipe workspace tabs before the session ends
+    $(document).on('click.mzTabsLogout', 'a[href*="logout.php"]', function () {
+      clearPersistedTabs()
+      state.tabs = []
+      state.activeId = null
+      state.mru = []
+    })
   }
 
   function bootstrapTabs () {
-    var saved = restore()
+    // Fresh login always starts Dashboard-only (ignore any leftover storage)
+    if (cfg.freshLogin) {
+      clearPersistedTabs()
+    }
+    var saved = cfg.freshLogin ? null : restore()
     var openParam = cfg.initialOpen ? normalizePath(toAbsoluteUrl(cfg.initialOpen)) || normalizePath(cfg.initialOpen) : ''
+    if (openParam) openParam = canonicalPathForTab(openParam)
 
     // Always ensure Dashboard pinned first
     openTab(cfg.dashboardUrl, cfg.dashboardTitle, { pinned: true, pushHistory: false })
@@ -681,6 +874,7 @@
         if (!t || !t.path) return
         var path = canonicalizeTabPath(normalizePath(t.path) || t.path)
         if (!path) return
+        path = canonicalPathForTab(path)
         var id = tabIdFromPath(path)
         if (findTab(id)) {
           var ex = findTab(id)
@@ -723,16 +917,38 @@
     }
     if (openParam) {
       var openTitle = titleFromPath(openParam)
+      if (/quotation_generator\.php$/i.test(pathFileKey(openParam))) {
+        openTitle = 'Edit Quotation'
+      }
       openTab(openParam, openTitle, { pushHistory: false })
       activate = tabIdFromPath(openParam)
     }
 
+    // After a fresh login, force Dashboard only (ignore ?open= leftovers)
+    if (cfg.freshLogin) {
+      activate = tabIdFromPath(cfg.dashboardUrl)
+    }
+
     if (findTab(activate)) {
-      activateTab(activate, { pushHistory: false })
+      activateTab(activate, { pushHistory: false, skipFrameSync: true })
       replaceHistory(findTab(activate))
     } else {
-      activateTab(tabIdFromPath(cfg.dashboardUrl), { pushHistory: false })
+      activateTab(tabIdFromPath(cfg.dashboardUrl), { pushHistory: false, skipFrameSync: true })
       replaceHistory(findTab(state.activeId))
+    }
+
+    // Drop ?fresh=1 so a later refresh keeps in-session tabs
+    if (cfg.freshLogin) {
+      try {
+        var cleanUrl = shellAppUrl('')
+        window.history.replaceState(
+          { mzTabId: tabIdFromPath(cfg.dashboardUrl) },
+          cfg.dashboardTitle,
+          cleanUrl
+        )
+      } catch (eFresh) {}
+      cfg.freshLogin = false
+      if (window.MZ_TABS) window.MZ_TABS.freshLogin = false
     }
   }
 
@@ -850,6 +1066,8 @@
     open: openTab,
     close: closeTab,
     activate: activateTab,
+    refresh: refreshTab,
+    clearPersisted: clearPersistedTabs,
     normalizePath: normalizePath
   }
 

@@ -15,6 +15,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $action = (string) ($_POST['action'] ?? '');
+
+if ($action === 'list' || $action === 'boot') {
+    $bookings = array_values(array_filter(cbList($conn), static function (array $row): bool {
+        return (string) ($row['phase'] ?? '') !== 'cancelled';
+    }));
+    $ledgers = cbLedgers($conn, $bookings);
+    cbJson(true, 'OK', [
+        'bookings' => $bookings,
+        'customer_payments' => $ledgers['customer'],
+        'supplier_payments' => $ledgers['supplier'],
+        'activity' => $ledgers['activity'],
+        'methods' => spPaymentMethods(),
+        'today' => date('Y-m-d'),
+        'stages' => crmLeadStageOptions(),
+    ]);
+}
+
 $quotationId = (int) ($_POST['quotation_id'] ?? 0);
 if ($quotationId <= 0) {
     cbJson(false, 'Invalid booking.');

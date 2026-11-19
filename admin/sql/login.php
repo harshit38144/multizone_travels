@@ -49,6 +49,12 @@ if (isset($_POST['adminlogin'])) {
         adminLoginClearFailures($conn, $nameRaw);
         unset($_SESSION['login_lockout_until'], $_SESSION['login_lockout_seconds']);
 
+        // New auth session: invalidate any previous workspace tab state
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        $_SESSION['mz_tabs_token'] = bin2hex(random_bytes(16));
+
         $_SESSION['id'] = $data['id'];
         $_SESSION['name'] = $data['name'];
         $_SESSION['email'] = $data['email'];
@@ -64,7 +70,7 @@ if (isset($_POST['adminlogin'])) {
              VALUES ('$admin_id','$msg')"
         );
 
-        header('Location: app.php');
+        header('Location: app.php?fresh=1');
         exit;
 
     } else {

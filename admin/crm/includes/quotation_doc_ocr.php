@@ -88,15 +88,19 @@ function qdocInlineSafeBytes(): int
 
 function qdocPrompt(): string
 {
-    $p = "Extract travel quotation data from the attached document. Return ONLY JSON.\n";
-    $p .= "Extract ONLY what is clearly present. Never invent hotels, days, prices, or inclusions.\n";
+    // Single-pass: extract facts AND polish language so a second AI round-trip is unnecessary.
+    $p = "Extract travel quotation data from the attached document and return ONLY JSON.\n";
+    $p .= "Extract ONLY what is clearly present. Never invent hotels, days, prices, inclusions, or services.\n";
+    $p .= "Write customer-facing professional language in the same response (fix spelling/grammar; remove duplicates/filler).\n";
     $p .= "Schema:\n";
     $p .= "{\"document_type\":\"itinerary|hotel_quote|package|mixed|other\",";
     $p .= "\"itinerary\":[{\"day\":1,\"title\":\"\",\"description\":\"\",\"overnight\":\"\",\"meal\":\"\"}],";
     $p .= "\"hotels\":[{\"city\":\"\",\"hotel_name\":\"\",\"room_type\":\"\",\"rooms\":\"\",\"meal_plan\":\"EP|CP|MAP|AP or empty\",\"nights\":\"\",\"check_in\":\"YYYY-MM-DD\",\"check_out\":\"YYYY-MM-DD\",\"rate\":\"\",\"supplier\":\"\"}],";
     $p .= "\"inclusions\":[\"...\"],\"exclusions\":[\"...\"],";
     $p .= "\"terms_policies\":[\"...\"]}\n";
-    $p .= "Rules: keep day order; plain-text descriptions; split bullets; empty string/[] when missing; YYYY-MM-DD dates when known.\n";
+    $p .= "Itinerary: keep day order; each description max ~100 words; concise attractive prose; wrap important sightseeing place names in <strong>...</strong>; avoid repeating the same attraction across days; keep arrival/departure/transfers/overnight.\n";
+    $p .= "Also polish hotel names/room text, inclusions, exclusions, and terms_policies into clear professional lines.\n";
+    $p .= "Rules: split bullets; empty string/[] when missing; YYYY-MM-DD dates when known.\n";
     return $p;
 }
 
@@ -275,10 +279,10 @@ function qdocGeminiFilesUpload(string $absPath, string $mime, string $displayNam
         return ['ok' => false, 'error' => 'Large-file upload did not return a file URI.'];
     }
 
-    // Wait briefly if processing is still pending.
-    $deadline = time() + 90;
+    // Wait briefly if processing is still pending (poll quickly; avoid long idle gaps).
+    $deadline = time() + 60;
     while ($state === 'PROCESSING' && $fileName !== '' && time() < $deadline) {
-        usleep(800000);
+        usleep(350000);
         $statusUrl = 'https://generativelanguage.googleapis.com/v1beta/' . ltrim($fileName, '/');
         $ch3 = curl_init($statusUrl);
         curl_setopt_array($ch3, [
@@ -653,18 +657,20 @@ function qdocRephraseExtracted(array $extracted): array
     $models = function_exists('crmAiGeminiItineraryModels')
         ? crmAiGeminiItineraryModels()
         : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+    // Keep rephrase lean: one attempt per lite model, short timeout (fallback path only).
+    $models = array_values(array_unique(array_filter(array_map('strval', array_slice($models, 0, 2)))));
 
     $res = crmAiCallGemini(
         $prompt,
         'gemini-3.5-flash-lite',
-        55,
+        40,
         $models,
         [
-            'max_attempts_per_model' => 2,
-            'sleep_us' => 350000,
+            'max_attempts_per_model' => 1,
+            'sleep_us' => 0,
             'generation_config' => [
                 'temperature' => 0.25,
-                'maxOutputTokens' => 8192,
+                'maxOutputTokens' => 6144,
                 'responseMimeType' => 'application/json',
             ],
         ]
@@ -894,34 +900,43 @@ function qdocExtract(string $absPath, string $mime, string $ext): array
     $lastError = 'The document could not be read.';
     $lastCode = 0;
     $mode = (string) ($prepared['mode'] ?? '');
-    $timeout = ($mode === 'file') ? 210 : (($mode === 'inline') ? 150 : 90);
+    // Prefer faster timeouts; Files API already waited for ACTIVE before generate.
+    $timeout = ($mode === 'file') ? 150 : (($mode === 'inline') ? 120 : 75);
 
     $models = function_exists('crmAiGeminiDocumentModels')
         ? crmAiGeminiDocumentModels()
         : crmAiGeminiModels();
     $models = array_values(array_unique(array_filter(array_map('strval', $models))));
+    // Try lite models first (max 3) to avoid long cascading fallbacks.
+    $models = array_slice($models, 0, 3);
 
     $started = microtime(true);
     $attempt = 0;
     try {
-        foreach (array_slice($models, 0, 4) as $model) {
+        foreach ($models as $model) {
             $attempt++;
             if (function_exists('crmAiLog')) {
                 crmAiLog('qdoc_extract_try', ['model' => $model, 'mode' => $mode, 'attempt' => $attempt]);
             }
             $res = qdocCallGeminiOnce($prompt, $prepared, $model, $timeout);
             if (!empty($res['ok']) && is_array($res['data'])) {
+                $normalized = qdocNormalize($res['data']);
+                foreach ($normalized['itinerary'] as $i => $day) {
+                    $normalized['itinerary'][$i]['description'] = qdocSanitizeDayHtml((string) ($day['description'] ?? ''));
+                }
                 if (function_exists('crmAiLog')) {
                     crmAiLog('qdoc_extract_ok', [
                         'model' => $model,
                         'ms' => (int) round((microtime(true) - $started) * 1000),
+                        'items' => qdocContentCount($normalized),
                     ]);
                 }
                 return [
                     'ok' => true,
-                    'result' => qdocNormalize($res['data']),
+                    'result' => $normalized,
                     'model' => (string) $model,
                     'elapsed_ms' => (int) round((microtime(true) - $started) * 1000),
+                    'polished' => true,
                 ];
             }
             $err = trim((string) ($res['error'] ?? ''));
@@ -943,8 +958,8 @@ function qdocExtract(string $absPath, string $mime, string $ext): array
             // Controlled backoff for real overload only (not model-not-found).
             $busy = (function_exists('crmAiIsBusyOverloadError') && crmAiIsBusyOverloadError($lastError))
                 || in_array($code, [429, 503], true);
-            if ($busy && $attempt < 4) {
-                usleep((int) (400000 * (2 ** max(0, $attempt - 1)))); // 0.4s, 0.8s, 1.6s
+            if ($busy && $attempt < count($models)) {
+                usleep((int) (250000 * (2 ** max(0, $attempt - 1)))); // 0.25s, 0.5s, 1s
             }
             // Keep trying next model on not-found / overload; stop on clear client errors.
             if (!$busy

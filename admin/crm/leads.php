@@ -1594,11 +1594,12 @@ foreach ($destinationLookup as $destId => $destName) {
 
         .crm-leads-ui table.crm-leads-table thead th.col-actions,
         .crm-leads-ui table.crm-leads-table tbody td.col-actions {
-            width: 7.25rem !important;
-            min-width: 6.75rem !important;
-            max-width: 8rem !important;
-            padding-left: 0.2rem;
-            padding-right: 0.35rem;
+            /* Fit up to 5 fixed 28px action buttons + gaps + cell padding */
+            width: 11.25rem !important;
+            min-width: 11.25rem !important;
+            max-width: none !important;
+            padding-left: 0.35rem;
+            padding-right: 0.45rem;
             white-space: nowrap;
             text-align: center;
             box-sizing: border-box;
@@ -2375,28 +2376,43 @@ foreach ($destinationLookup as $destId => $destName) {
 
         .crm-leads-ui .action-btns {
             display: inline-flex;
-            gap: 2px;
+            gap: 4px;
             align-items: center;
             justify-content: center;
             flex-wrap: nowrap;
             white-space: nowrap;
-            width: auto;
-            max-width: 100%;
+            width: max-content;
+            max-width: none;
+            min-width: max-content;
             overflow: visible;
+            flex-shrink: 0;
         }
 
         .crm-leads-ui .action-btns .btn-icon {
             width: 28px;
             height: 28px;
+            min-width: 28px;
+            min-height: 28px;
+            max-width: 28px;
+            max-height: 28px;
+            flex: 0 0 28px;
             padding: 0;
+            box-sizing: border-box;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 7px;
             border: 1px solid transparent;
             font-size: calc(0.72rem + 1px);
+            line-height: 1;
             text-decoration: none;
             transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .crm-leads-ui .action-btns .lead-actions-more {
+            flex: 0 0 auto;
+            flex-shrink: 0;
+            display: inline-flex;
         }
 
         .crm-leads-ui .action-btns .btn-view {
@@ -6353,17 +6369,18 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     var LEADS_COL_SAVE_URL = 'crm/ajax/save_leads_column_settings.php';
-    var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v3';
+    var LEADS_COL_WIDTHS_KEY = 'crm_leads_col_widths_v5';
     var LEADS_TABLE_COLUMNS = [
-        { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 18, minWidth: 110 },
-        { key: 'guest', className: 'col-ld-guest', label: 'Guest', locked: false, weight: 16, minWidth: 120 },
-        { key: 'dest', className: 'col-ld-dest', label: 'Destination', locked: false, weight: 16, minWidth: 120 },
-        { key: 'date', className: 'col-ld-date', label: 'Travel Date', locked: false, weight: 10, minWidth: 100 },
-        { key: 'services', className: 'col-ld-services', label: 'Services', locked: false, weight: 12, minWidth: 100 },
-        { key: 'source', className: 'col-ld-source', label: 'Lead Source', locked: false, weight: 12, minWidth: 100 },
-        { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 10, minWidth: 100 },
-        { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 5, minWidth: 92, maxWidth: 118 },
-        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '9.5rem', minWidth: 132, maxWidth: 168 }
+        { key: 'lead', className: 'col-ld-lead', label: 'Lead ID', locked: true, weight: 16, minWidth: 100 },
+        { key: 'guest', className: 'col-ld-guest', label: 'Guest', locked: false, weight: 14, minWidth: 96 },
+        { key: 'dest', className: 'col-ld-dest', label: 'Destination', locked: false, weight: 14, minWidth: 96 },
+        { key: 'date', className: 'col-ld-date', label: 'Travel Date', locked: false, weight: 9, minWidth: 88 },
+        { key: 'services', className: 'col-ld-services', label: 'Services', locked: false, weight: 10, minWidth: 80 },
+        { key: 'source', className: 'col-ld-source', label: 'Lead Source', locked: false, weight: 11, minWidth: 88 },
+        { key: 'assign', className: 'col-ld-assign', label: 'Assigned', locked: false, weight: 9, minWidth: 88 },
+        { key: 'stage', className: 'col-ld-stage', label: 'Stage', locked: false, weight: 5, minWidth: 88, maxWidth: 110 },
+        /* 5 × 28px buttons + 4 × 4px gaps + cell padding ≈ 180px — never shrink */
+        { key: 'actions', className: 'col-actions', label: 'Actions', locked: true, fixedWidth: '11.25rem', minWidth: 180 }
     ];
     var leadsColumnVisibilityState = <?= json_encode($leadsColumnVisibility, JSON_UNESCAPED_UNICODE) ?>;
     var leadsColumnSaveTimer = null;
@@ -6545,29 +6562,33 @@ foreach ($destinationLookup as $destId => $destName) {
         }
         if (fitToWrap && total > 0 && wrapW > 0) {
             if (total > wrapW) {
-                // Shrink flexible columns only — keep Actions/Status (and the column being dragged) usable.
+                // Shrink other columns only — Actions keeps full fixed width (no horizontal scroll).
                 var protectedItems = [];
                 var flexibleItems = [];
                 var reserved = 0;
                 visible.forEach(function (item) {
-                    if (leadsColIsWidthProtected(item.col) || item.col.key === lockKey) {
+                    if (item.col.key === 'actions' || item.col.key === lockKey) {
                         protectedItems.push(item);
                         reserved += item.width;
                     } else {
                         flexibleItems.push(item);
                     }
                 });
-                var remain = Math.max(flexibleItems.length * 40, wrapW - reserved);
-                if (flexibleItems.length && remain > 0) {
+                var remain = Math.max(0, wrapW - reserved);
+                if (flexibleItems.length) {
                     var flexTotal = 0;
                     flexibleItems.forEach(function (item) { flexTotal += item.width; });
                     var usedF = 0;
+                    // Soft floor while fitting; may go below preferred minWidth to avoid overflow.
+                    var hardFloor = 56;
                     flexibleItems.forEach(function (item, idx) {
+                        var preferredMin = item.col.minWidth || hardFloor;
+                        var floor = Math.min(preferredMin, hardFloor);
                         if (idx === flexibleItems.length - 1) {
-                            item.width = Math.max(item.col.minWidth || 40, remain - usedF);
+                            item.width = Math.max(floor, remain - usedF);
                         } else {
                             var next = Math.max(
-                                item.col.minWidth || 40,
+                                floor,
                                 Math.floor(remain * (item.width / Math.max(1, flexTotal)))
                             );
                             if (item.col.maxWidth) {
@@ -6577,38 +6598,55 @@ foreach ($destinationLookup as $destId => $destName) {
                             usedF += item.width;
                         }
                     });
-                } else if (!flexibleItems.length && reserved > wrapW) {
-                    // Extreme case: even protected columns overflow — scale them down lightly,
-                    // but never shrink the column currently being dragged.
+                    // If preferred mins still overflowed the budget, force-fit proportionally.
+                    var flexSum = 0;
+                    flexibleItems.forEach(function (item) { flexSum += item.width; });
+                    if (flexSum > remain && remain > 0) {
+                        var usedForce = 0;
+                        flexibleItems.forEach(function (item, idx) {
+                            if (idx === flexibleItems.length - 1) {
+                                item.width = Math.max(hardFloor, remain - usedForce);
+                            } else {
+                                item.width = Math.max(
+                                    hardFloor,
+                                    Math.floor(remain * (item.width / Math.max(1, flexSum)))
+                                );
+                                usedForce += item.width;
+                            }
+                        });
+                    }
+                } else if (reserved > wrapW) {
+                    // Only non-actions protected left — scale those, never Actions.
                     var usedP = 0;
                     var scalable = protectedItems.filter(function (item) {
-                        return item.col.key !== lockKey;
+                        return item.col.key !== 'actions';
                     });
-                    var lockedItem = null;
+                    var actionsW = 0;
                     protectedItems.forEach(function (item) {
-                        if (item.col.key === lockKey) {
-                            lockedItem = item;
+                        if (item.col.key === 'actions') {
+                            actionsW = item.width;
                         }
                     });
-                    var lockedW = lockedItem ? lockedItem.width : 0;
-                    var scaleBudget = Math.max(1, wrapW - lockedW);
-                    var scaleFrom = Math.max(1, reserved - lockedW);
+                    var scaleBudget = Math.max(1, wrapW - actionsW);
+                    var scaleFrom = Math.max(1, reserved - actionsW);
                     scalable.forEach(function (item, idx) {
                         if (idx === scalable.length - 1) {
-                            item.width = Math.max(1, scaleBudget - usedP);
+                            item.width = Math.max(item.col.minWidth || 1, scaleBudget - usedP);
                         } else {
-                            item.width = Math.max(1, Math.floor(item.width * (scaleBudget / scaleFrom)));
+                            item.width = Math.max(
+                                item.col.minWidth || 1,
+                                Math.floor(item.width * (scaleBudget / scaleFrom))
+                            );
                             usedP += item.width;
                         }
                     });
                 }
             } else if (total < wrapW) {
                 // Grow only non-protected / uncapped columns; keep Actions tight.
-                // Skip the locked drag column — its width is intentional.
                 var growable = [];
                 var growTotal = 0;
                 visible.forEach(function (item) {
-                    if (item.col.key === lockKey) {
+                    if (item.col.key === lockKey || item.col.key === 'actions') {
                         return;
                     }
                     if (!leadsColIsWidthProtected(item.col) && !item.col.maxWidth) {
@@ -6639,18 +6677,21 @@ foreach ($destinationLookup as $destId => $destName) {
         });
 
         if (leadsMobileList) {
+            var mobileTotal = 0;
+            visible.forEach(function (item) { mobileTotal += item.width; });
             $table.css({
-                width: total + 'px',
-                minWidth: total + 'px',
+                width: mobileTotal + 'px',
+                minWidth: mobileTotal + 'px',
                 maxWidth: 'none'
             });
-        } else {
-            $table.css({
-                width: '100%',
-                minWidth: '0',
-                maxWidth: '100%'
-            });
+            return mobileTotal;
         }
+
+        $table.css({
+            width: '100%',
+            minWidth: '0',
+            maxWidth: '100%'
+        });
         return total;
     }
 
@@ -9554,7 +9595,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=59"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=60"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 (function () {
@@ -9618,16 +9659,53 @@ foreach ($destinationLookup as $destId => $destName) {
         };
         document.getElementById('leadsBookQuickShow').onclick = function () {
             removeLeadsBookOverlay();
-            window.location.href = 'crm/bookings.php?highlight=' + encodeURIComponent(String(quotationId || ''));
+            openLeadsBookingsAfterConfirm(quotationId);
         };
     }
 
+    function openLeadsBookingsAfterConfirm(quotationId) {
+        quotationId = parseInt(quotationId, 10) || 0;
+        if (window.CrmConfirmTour && typeof window.CrmConfirmTour.openBookings === 'function') {
+            window.CrmConfirmTour.openBookings(quotationId);
+            return;
+        }
+        var path = 'crm/bookings.php' + (quotationId ? ('?highlight=' + encodeURIComponent(String(quotationId))) : '');
+        var payload = {
+            type: 'mz-data-changed',
+            resource: 'bookings',
+            quotationId: quotationId,
+            id: quotationId,
+            at: Date.now()
+        };
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(payload, '*');
+            }
+        } catch (e1) { /* ignore */ }
+        try {
+            var topWin = window.parent && window.parent !== window ? window.parent : window;
+            if (topWin.MZTabWorkspace && typeof topWin.MZTabWorkspace.open === 'function') {
+                topWin.MZTabWorkspace.open(path, 'All Bookings', { pushHistory: true });
+                window.setTimeout(function () {
+                    try { window.parent.postMessage(payload, '*'); } catch (e2) { /* ignore */ }
+                }, 250);
+                return;
+            }
+        } catch (e3) { /* ignore */ }
+        window.location.href = path;
+    }
+
+    var leadsQuickConfirmInFlight = false;
     function runLeadsQuickConfirm(quotationId, row) {
+        if (leadsQuickConfirmInFlight) {
+            return;
+        }
         var yesBtn = document.getElementById('leadsBookQuickYes');
         if (yesBtn) {
             yesBtn.disabled = true;
             yesBtn.textContent = 'Confirming…';
         }
+        leadsQuickConfirmInFlight = true;
         var body = new FormData();
         body.append('id', String(quotationId));
         fetch('crm/ajax/confirm_tour_quick.php', {
@@ -9652,7 +9730,8 @@ foreach ($destinationLookup as $destId => $destName) {
                 if (row && row.parentNode) {
                     row.parentNode.removeChild(row);
                 }
-                showLeadsBookDone(quotationId);
+                // Auto-open/switch All Bookings with refreshed list
+                openLeadsBookingsAfterConfirm(quotationId);
             })
             .catch(function () {
                 if (yesBtn) {
@@ -9660,6 +9739,9 @@ foreach ($destinationLookup as $destId => $destName) {
                     yesBtn.textContent = 'Yes';
                 }
                 window.alert('Could not confirm tour. Please try again.');
+            })
+            .then(function () {
+                leadsQuickConfirmInFlight = false;
             });
     }
 

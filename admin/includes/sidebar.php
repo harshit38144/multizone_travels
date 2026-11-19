@@ -24,6 +24,7 @@ $crmPages = ['crm_leads', 'crm_lead_add', 'crm_lead_intake_pending', 'crm_tasks_
 $mastersPages = ['crm_lead_source_master', 'crm_hotel_master', 'crm_hotel_create', 'crm_airline_master', 'crm_airline_create', 'crm_cruise_master', 'crm_cruise_create', 'crm_cruise_view', 'crm_vehicle_master', 'crm_vehicle_create', 'crm_vehicle_view', 'crm_addon_service_master', 'crm_addon_service_view', 'crm_sightseeing_master', 'crm_sightseeing_create', 'crm_sightseeing_destination', 'crm_sightseeing_view', 'crm_testimonial_master', 'crm_testimonial_create', 'crm_quotation_terms_master', 'geo_import'];
 $quotationsPages = ['crm_quotation_templates', 'crm_quotation-generator-list', 'crm_quotation_generator'];
 $bookingsPages = ['crm_bookings', 'crm_booking_add', 'crm_hotel_bookings'];
+$giftingPages = ['crm_gifting_inventory', 'crm_gifting_issue'];
 $crmCustomersPages = ['crm_customers', 'crm_customer_add'];
 $suppliersPages = ['crm_suppliers'];
 $crmUsersPages = ['crm_users', 'crm_permission_templates'];
@@ -43,6 +44,7 @@ $crmParentPages = array_merge(
   $mastersPages,
   $quotationsPages,
   $bookingsPages,
+  $giftingPages,
   $crmCustomersPages,
   $suppliersPages,
   $crmUsersPages,
@@ -498,6 +500,30 @@ $crmParentPages = array_merge(
                   <a href="crm/hotel_bookings.php" class="nav-link <?= ($page === 'crm_hotel_bookings') ? 'active' : '' ?>">
                     <i class="far fa-circle nav-icon"></i>
                     <p>Hotel Bookings</p>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            <!-- Gifting Items -->
+            <li class="nav-item has-treeview <?= in_array($page, $giftingPages, true) ? 'menu-open' : '' ?>">
+              <a href="#" class="nav-link <?= in_array($page, $giftingPages, true) ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-gift"></i>
+                <p>
+                  Gifting Items
+                  <i class="right fas fa-angle-left"></i>
+                </p>
+              </a>
+              <ul class="nav nav-treeview">
+                <li class="nav-item">
+                  <a href="crm/gifting_inventory.php" class="nav-link <?= ($page === 'crm_gifting_inventory') ? 'active' : '' ?>">
+                    <i class="fas fa-gift nav-icon"></i>
+                    <p>Inventory</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="crm/gifting_issue.php" class="nav-link <?= ($page === 'crm_gifting_issue') ? 'active' : '' ?>">
+                    <i class="fas fa-file-alt nav-icon"></i>
+                    <p>Issue / Allocate</p>
                   </a>
                 </li>
               </ul>

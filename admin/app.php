@@ -14,6 +14,13 @@ if (!isset($_SESSION['role']) || (string) $_SESSION['role'] !== '1') {
 	exit;
 }
 
+// Bind workspace tabs to this login (rotated on every successful login)
+if (empty($_SESSION['mz_tabs_token']) || !is_string($_SESSION['mz_tabs_token'])) {
+	$_SESSION['mz_tabs_token'] = bin2hex(random_bytes(16));
+}
+$mzTabSessionKey = (string) $_SESSION['mz_tabs_token'];
+$mzTabsFreshLogin = isset($_GET['fresh']) && (string) $_GET['fresh'] === '1';
+
 // Shell only needs session for auth; unlock so iframe pages can start sessions promptly
 if (session_status() === PHP_SESSION_ACTIVE) {
 	session_write_close();
@@ -34,7 +41,7 @@ if ($openPath !== '' && !preg_match('~^(?:[a-zA-Z0-9_-]+/)*[a-zA-Z0-9_.-]+\.php(
 	<title>Multizone Travels — Admin</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<?php include __DIR__ . '/includes/header-links.php'; ?>
-	<link rel="stylesheet" href="custom/tabs.css">
+	<link rel="stylesheet" href="custom/tabs.css?v=11">
 </head>
 <body class="hold-transition sidebar-mini layout-fixed mz-tab-shell">
 <div class="wrapper">
@@ -52,6 +59,8 @@ window.MZ_TABS.adminRoot = <?= json_encode($adminWebRoot, JSON_UNESCAPED_SLASHES
 window.MZ_TABS.initialOpen = <?= json_encode($openPath, JSON_UNESCAPED_SLASHES) ?>;
 window.MZ_TABS.dashboardUrl = 'dashboard.php';
 window.MZ_TABS.dashboardTitle = 'Dashboard';
+window.MZ_TABS.sessionKey = <?= json_encode((string) $mzTabSessionKey, JSON_UNESCAPED_SLASHES) ?>;
+window.MZ_TABS.freshLogin = <?= $mzTabsFreshLogin ? 'true' : 'false' ?>;
 window.MZ_TABS.redirectToShell = false;
 </script>
 <?php include __DIR__ . '/includes/footer-links.php'; ?>

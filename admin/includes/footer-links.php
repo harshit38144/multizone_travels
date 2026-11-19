@@ -48,10 +48,10 @@ if (!function_exists('mz_is_tab_shell')) {
 }
 if (mz_is_tab_shell()) :
 ?>
-<link rel="stylesheet" href="custom/tabs.css">
-<script src="custom/tabs.js?v=7"></script>
+<link rel="stylesheet" href="custom/tabs.css?v=11">
+<script src="custom/tabs.js?v=11"></script>
 <?php elseif (!mz_is_embed_request()) : ?>
-<script src="custom/tabs.js?v=7"></script>
+<script src="custom/tabs.js?v=11"></script>
 <?php endif; ?>
 
 <!-- DataTables -->

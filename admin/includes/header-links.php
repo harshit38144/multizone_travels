@@ -140,7 +140,7 @@ $mzAdminWebRoot = defined('ADMIN_WEB_ROOT') ? ADMIN_WEB_ROOT : '/admin';
 <!-- Custom CSS last: system UI font stack overrides AdminLTE -->
 <link rel="stylesheet" href="custom/custom-css.css?v=2">
 <link rel="stylesheet" href="custom/theme.css">
-<link rel="stylesheet" href="<?= htmlspecialchars(function_exists('admin_url') ? admin_url('custom/tabs.css') : 'custom/tabs.css', ENT_QUOTES, 'UTF-8') ?>">
+<link rel="stylesheet" href="<?= htmlspecialchars((function_exists('admin_url') ? admin_url('custom/tabs.css') : 'custom/tabs.css') . '?v=9', ENT_QUOTES, 'UTF-8') ?>">
 <?php
 $adminSiteSettings = isset($siteSettings) && is_array($siteSettings) ? $siteSettings : [];
 $adminFaviconUrl = adminPanelBrandFromSettings($adminSiteSettings['favicon_path'] ?? '', 'img/icons1.png');

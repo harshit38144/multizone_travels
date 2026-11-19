@@ -210,11 +210,12 @@ function cbList(mysqli $conn): array
                    q.`destination`, q.`tentative_date`, q.`no_of_nights`, q.`no_of_adults`, q.`no_of_children`,
                    q.`no_of_infants`, q.`package_total`, q.`quotation_total`, q.`cost_sheet_json`,
                    q.`hotels_json`, q.`flights_json`, q.`tour_confirm_json`, q.`created_at`,
+                   q.`updated_at`, q.`tour_confirmed_at`,
                    l.`lead_uid`, l.`customer_name`, l.`services`, l.`stage` AS `lead_stage`
             FROM `crm_quotations` q
             LEFT JOIN `crm_leads` l ON l.`id` = q.`lead_id`
             WHERE q.`tour_confirmed` = 1
-            ORDER BY q.`tentative_date` IS NULL, q.`tentative_date` ASC, q.`id` DESC';
+            ORDER BY COALESCE(q.`tour_confirmed_at`, q.`updated_at`, q.`created_at`) DESC, q.`id` DESC';
     $res = $conn->query($sql);
     if (!$res) {
         return [];
@@ -355,6 +356,12 @@ function cbList(mysqli $conn): array
             'status' => $statusLabel,
             'stage' => $leadStage,
             'created_at' => (string) ($quote['created_at'] ?? ''),
+            // Confirmation moment — used for list sort + Booking ID timestamp
+            'confirmed_at' => (string) (
+                ($quote['tour_confirmed_at'] ?? '')
+                ?: ($quote['updated_at'] ?? '')
+                ?: ($quote['created_at'] ?? '')
+            ),
             'hotel_count' => $hotelCount,
             'flight_count' => $flightCount,
             'services' => $services,

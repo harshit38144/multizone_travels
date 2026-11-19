@@ -331,6 +331,480 @@ if ($res && mysqli_num_rows($res) > 0) {
             color: #555;
         }
 
+        /* Flight search loading popup (namespaced loader) */
+        #flightSearchLoadingOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 20050;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.48);
+            padding: 1rem;
+        }
+        #flightSearchLoadingOverlay.is-visible {
+            display: flex;
+        }
+        body.flight-search-loading {
+            overflow: hidden;
+        }
+        .flight-search-popup {
+            width: min(640px, 94vw);
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+            padding: 0;
+            margin: 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .flight-search-popup-stage {
+            position: relative;
+            height: 220px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            border-radius: 0;
+            background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+        }
+        .flight-search-popup-title {
+            margin: 0;
+            padding: 0;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: 0.01em;
+            background: #fff;
+            line-height: 2.75rem;
+        }
+        .flight-search-loader {
+            position: absolute;
+            top: 50%;
+            margin-left: -50px;
+            left: 50%;
+            animation: flight-search-speeder 0.4s linear infinite;
+            z-index: 2;
+        }
+        .flight-search-loader > span {
+            height: 5px;
+            width: 35px;
+            background: #000;
+            position: absolute;
+            top: -19px;
+            left: 60px;
+            border-radius: 2px 10px 1px 0;
+        }
+        .flight-search-base span {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-top: 6px solid transparent;
+            border-right: 100px solid #000;
+            border-bottom: 6px solid transparent;
+        }
+        .flight-search-base span:before {
+            content: "";
+            height: 22px;
+            width: 22px;
+            border-radius: 50%;
+            background: #000;
+            position: absolute;
+            right: -110px;
+            top: -16px;
+        }
+        .flight-search-base span:after {
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-top: 0 solid transparent;
+            border-right: 55px solid #000;
+            border-bottom: 16px solid transparent;
+            top: -16px;
+            right: -98px;
+        }
+        .flight-search-face {
+            position: absolute;
+            height: 12px;
+            width: 20px;
+            background: #000;
+            border-radius: 20px 20px 0 0;
+            transform: rotate(-40deg);
+            right: -125px;
+            top: -15px;
+        }
+        .flight-search-face:after {
+            content: "";
+            height: 12px;
+            width: 12px;
+            background: #000;
+            right: 4px;
+            top: 7px;
+            position: absolute;
+            transform: rotate(40deg);
+            transform-origin: 50% 50%;
+            border-radius: 0 0 0 2px;
+        }
+        .flight-search-loader > span > span:nth-child(1),
+        .flight-search-loader > span > span:nth-child(2),
+        .flight-search-loader > span > span:nth-child(3),
+        .flight-search-loader > span > span:nth-child(4) {
+            width: 30px;
+            height: 1px;
+            background: #000;
+            position: absolute;
+            animation: flight-search-fazer1 0.2s linear infinite;
+        }
+        .flight-search-loader > span > span:nth-child(2) {
+            top: 3px;
+            animation: flight-search-fazer2 0.4s linear infinite;
+        }
+        .flight-search-loader > span > span:nth-child(3) {
+            top: 1px;
+            animation: flight-search-fazer3 0.4s linear infinite;
+            animation-delay: -1s;
+        }
+        .flight-search-loader > span > span:nth-child(4) {
+            top: 4px;
+            animation: flight-search-fazer4 1s linear infinite;
+            animation-delay: -1s;
+        }
+        @keyframes flight-search-fazer1 {
+            0% { left: 0; }
+            100% { left: -80px; opacity: 0; }
+        }
+        @keyframes flight-search-fazer2 {
+            0% { left: 0; }
+            100% { left: -100px; opacity: 0; }
+        }
+        @keyframes flight-search-fazer3 {
+            0% { left: 0; }
+            100% { left: -50px; opacity: 0; }
+        }
+        @keyframes flight-search-fazer4 {
+            0% { left: 0; }
+            100% { left: -150px; opacity: 0; }
+        }
+        @keyframes flight-search-speeder {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -3px) rotate(-1deg); }
+            20% { transform: translate(-2px, 0px) rotate(1deg); }
+            30% { transform: translate(1px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 3px) rotate(-1deg); }
+            60% { transform: translate(-1px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-2px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 1px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .flight-search-longfazers {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .flight-search-longfazers span {
+            position: absolute;
+            height: 2px;
+            width: 20%;
+            background: #000;
+        }
+        .flight-search-longfazers span:nth-child(1) {
+            top: 20%;
+            animation: flight-search-lf 0.6s linear infinite;
+            animation-delay: -5s;
+        }
+        .flight-search-longfazers span:nth-child(2) {
+            top: 40%;
+            animation: flight-search-lf2 0.8s linear infinite;
+            animation-delay: -1s;
+        }
+        .flight-search-longfazers span:nth-child(3) {
+            top: 60%;
+            animation: flight-search-lf3 0.6s linear infinite;
+        }
+        .flight-search-longfazers span:nth-child(4) {
+            top: 80%;
+            animation: flight-search-lf4 0.5s linear infinite;
+            animation-delay: -3s;
+        }
+        @keyframes flight-search-lf {
+            0% { left: 200%; }
+            100% { left: -200%; opacity: 0; }
+        }
+        @keyframes flight-search-lf2 {
+            0% { left: 200%; }
+            100% { left: -200%; opacity: 0; }
+        }
+        @keyframes flight-search-lf3 {
+            0% { left: 200%; }
+            100% { left: -100%; opacity: 0; }
+        }
+        @keyframes flight-search-lf4 {
+            0% { left: 200%; }
+            100% { left: -100%; opacity: 0; }
+        }
+
+        /* Selected-flight animated ticket (Uiverse Cobp/clever-shrimp-61, namespaced) */
+        #mzFlightTicketOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 20100;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.55);
+            padding: 1rem;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+        #mzFlightTicketOverlay.is-visible {
+            display: flex;
+            opacity: 1;
+        }
+        #mzFlightTicketOverlay.is-leaving {
+            opacity: 0;
+        }
+        body.mz-flight-ticket-busy {
+            overflow: hidden;
+        }
+        .mz-ft-ticket-wrap {
+            perspective: 1000px;
+            transform: scale(0.72);
+            opacity: 0;
+            transition: transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.25), opacity 0.35s ease;
+        }
+        #mzFlightTicketOverlay.is-visible .mz-ft-ticket-wrap {
+            transform: scale(1.35);
+            opacity: 1;
+        }
+        @media (max-width: 576px) {
+            #mzFlightTicketOverlay.is-visible .mz-ft-ticket-wrap {
+                transform: scale(1.05);
+            }
+        }
+        .mz-ft-ticket-card {
+            position: relative;
+            height: 150px;
+            width: 320px;
+            display: flex;
+            color: #2d2d2d;
+            background-color: #ffffff;
+            border-radius: 1rem;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+            z-index: 10;
+            gap: 1rem;
+            animation: mz-ft-animation-card 10s infinite;
+            overflow: hidden;
+        }
+        .mz-ft-ticket-card:hover {
+            animation-play-state: paused;
+            transform: translateY(-30px);
+        }
+        .mz-ft-ticket-card:hover .mz-ft-ticket-content::after,
+        .mz-ft-ticket-card:hover .mz-ft-ticket-content::before,
+        .mz-ft-ticket-card:hover .mz-ft-ticket-icons {
+            animation-play-state: paused;
+        }
+        .mz-ft-ticket-separator {
+            position: absolute;
+            top: 0;
+            left: 50px;
+            width: 16px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .mz-ft-ticket-span-lines {
+            position: relative;
+            display: flex;
+            height: 100%;
+            border-left: 2px dashed #e8e8e8;
+        }
+        .mz-ft-ticket-span-lines::after {
+            content: "";
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            border-radius: 16px;
+            background-color: #e8e8e8;
+        }
+        .mz-ft-ticket-span-lines::before {
+            content: "";
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            border-radius: 1rem;
+            background-color: #e8e8e8;
+        }
+        .mz-ft-ticket-content {
+            position: relative;
+            justify-content: space-between;
+            width: 100%;
+            display: flex;
+        }
+        .mz-ft-ticket-content::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-image: linear-gradient(90deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.8));
+            transform: translateX(200px) scale(1.5);
+            filter: blur(10px);
+            width: 200px;
+            height: 100%;
+            animation: mz-ft-shadow-card 10s infinite;
+        }
+        .mz-ft-ticket-content::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100px;
+            background-image: linear-gradient(90deg, rgba(0, 0, 0, 0), #ffffff, rgba(0, 0, 0, 0));
+            transform: translateX(-100px) scale(1.5) rotate(20deg);
+            width: 80px;
+            height: 100%;
+            animation: mz-ft-light-card 10s infinite;
+        }
+        .mz-ft-ticket-content-data {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            gap: 0.25rem;
+        }
+        .mz-ft-ticket-data-flex,
+        .mz-ft-ticket-data-flex-col {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            gap: 0.25rem;
+        }
+        .mz-ft-ticket-data-flex-col {
+            padding-bottom: 0.25rem;
+            flex-direction: column;
+        }
+        .mz-ft-ticket-data {
+            font-size: 10px;
+            line-height: 12px;
+        }
+        .mz-ft-ticket-data .mz-ft-ticket-title {
+            color: #aeaeae;
+            margin: 0;
+        }
+        .mz-ft-ticket-data .mz-ft-ticket-subtitle {
+            font-weight: 500;
+            color: #212121;
+            margin: 0;
+            min-height: 12px;
+        }
+        .mz-ft-ticket-destination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .mz-ft-ticket-dest {
+            display: flex;
+            flex-direction: column;
+        }
+        .mz-ft-ticket-dest .mz-ft-ticket-country {
+            font-size: 10px;
+            line-height: 1;
+            color: #aeaeae;
+            margin: 0;
+        }
+        .mz-ft-ticket-dest .mz-ft-ticket-acronym {
+            font-weight: 700;
+            color: #2d2d2d;
+            margin: 0;
+        }
+        .mz-ft-ticket-dest .mz-ft-ticket-hour {
+            font-size: 10px;
+            line-height: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #2d2d2d;
+            margin: 0;
+        }
+        .mz-ft-ticket-icons {
+            width: fit-content;
+            padding: 0.625rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            animation: mz-ft-color-card 10s infinite;
+            z-index: -1;
+        }
+        .mz-ft-ticket-icon {
+            color: #ffffff;
+        }
+        @keyframes mz-ft-animation-card {
+            0% { transform: translateZ(0px); }
+            25% { transform: translateX(-10px) rotateY(-20deg); }
+            75% { transform: translateX(10px) rotateY(20deg); }
+            100% { transform: translateZ(0px); }
+        }
+        @keyframes mz-ft-light-card {
+            25% { transform: translateX(450px) scale(1.5) rotate(25deg); }
+            50% { transform: translateX(-100px) scale(1.5) rotate(25deg); }
+        }
+        @keyframes mz-ft-shadow-card {
+            35% { transform: translateX(200px) scale(1.5); }
+            75% { transform: translateX(0px) scale(1.5); }
+        }
+        @keyframes mz-ft-color-card {
+            0% { background-color: #ffbd44; }
+            10% { background-color: #fb6902; }
+            15%, 25% { background-color: #ff4141; }
+            35% { background-color: #fb6902; }
+            40% { background-color: #ffbd44; }
+            50% { background-color: #fb6902; }
+            55%, 75% { background-color: #ff4141; }
+            75% { background-color: #fb6902; }
+            100% { background-color: #ffbd44; }
+        }
+        @keyframes mz-ft-eticket-flash {
+            0% { box-shadow: 0 0 0 0 rgba(227, 27, 35, 0.45); }
+            60% { box-shadow: 0 0 0 10px rgba(227, 27, 35, 0); }
+            100% { box-shadow: none; }
+        }
+        .mz-ft-eticket-populated {
+            animation: mz-ft-eticket-flash 1.1s ease;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .mz-ft-ticket-card,
+            .mz-ft-ticket-content::after,
+            .mz-ft-ticket-content::before,
+            .mz-ft-ticket-icons {
+                animation: none !important;
+            }
+            .mz-ft-ticket-wrap,
+            #mzFlightTicketOverlay {
+                transition: opacity 0.2s ease !important;
+            }
+            #mzFlightTicketOverlay.is-visible .mz-ft-ticket-wrap {
+                transform: scale(1.15);
+            }
+        }
+
         /* Two column layout for Payment & Contact */
         .two-columns {
             display: flex;
@@ -1830,6 +2304,170 @@ if ($res && mysqli_num_rows($res) > 0) {
 
         </div> <!-- /.modal -->
 
+        <!-- Flight Searching Popup -->
+        <div id="flightSearchLoadingOverlay" role="dialog" aria-modal="true" aria-labelledby="flightSearchLoadingTitle" aria-hidden="true">
+            <div class="flight-search-popup">
+                <div class="flight-search-popup-stage" aria-hidden="true">
+                    <div class="flight-search-loader">
+                        <span><span></span><span></span><span></span><span></span></span>
+                        <div class="flight-search-base">
+                            <span></span>
+                            <div class="flight-search-face"></div>
+                        </div>
+                    </div>
+                    <div class="flight-search-longfazers">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                <h5 class="flight-search-popup-title" id="flightSearchLoadingTitle">Searching for Available Flights...</h5>
+            </div>
+        </div>
+
+        <!-- Selected flight animated ticket (Uiverse) -->
+        <div id="mzFlightTicketOverlay" aria-hidden="true">
+            <div class="mz-ft-ticket-wrap">
+                <div class="mz-ft-ticket-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="150" viewBox="0 0 64 150" fill="black" aria-hidden="true">
+                        <path d="M44 138V136.967H20V138H44Z"></path>
+                        <path d="M44 13.0328V12H20V13.0328H44Z"></path>
+                        <path d="M44 14.0656V13.5492H20V14.0656H44Z"></path>
+                        <path d="M44 15.6148V15.0984H20V15.6148H44Z"></path>
+                        <path d="M44 18.1967V17.6803H20V18.1967H44Z"></path>
+                        <path d="M44 20.2623V19.2295H20V20.2623H44Z"></path>
+                        <path d="M44 22.8443V22.3279H20V22.8443H44Z"></path>
+                        <path d="M44 23.877V23.3607H20V23.877H44Z"></path>
+                        <path d="M44 26.9754V24.9098H20V26.9754H44Z"></path>
+                        <path d="M44 28.0082V27.4918H20V28.0082H44Z"></path>
+                        <path d="M44 29.5574V29.041H20V29.5574H44Z"></path>
+                        <path d="M44 32.6557V30.5902H20V32.6557H44Z"></path>
+                        <path d="M44 33.6885V33.1721H20V33.6885H44Z"></path>
+                        <path d="M44 35.2376V34.7213H20V35.2376H44Z"></path>
+                        <path d="M44 36.2705V35.7541H20V36.2705H44Z"></path>
+                        <path d="M44 39.3689V37.3033H20V39.3689H44Z"></path>
+                        <path d="M44 40.918V40.4015H20V40.918H44Z"></path>
+                        <path d="M44 43.5001V41.4345H20V43.5001H44Z"></path>
+                        <path d="M44 45.0492V44.5327H20V45.0492H44Z"></path>
+                        <path d="M44 47.631V46.0819H20V47.631H44Z"></path>
+                        <path d="M44 49.1804V48.664H20V49.1804H44Z"></path>
+                        <path d="M44 51.2458V50.2131H20V51.2458H44Z"></path>
+                        <path d="M44 52.2787V51.7622H20V52.2787H44Z"></path>
+                        <path d="M44 54.3443V52.7952H20V54.3443H44Z"></path>
+                        <path d="M44 56.4099V55.377H20V56.4099H44Z"></path>
+                        <path d="M44 57.959V57.4426H20V57.959H44Z"></path>
+                        <path d="M44 60.0247V58.4753H20V60.0247H44Z"></path>
+                        <path d="M44 62.09V61.0573H20V62.09H44Z"></path>
+                        <path d="M44 63.6394V63.123H20V63.6394H44Z"></path>
+                        <path d="M44 66.7377V64.6721H20V66.7377H44Z"></path>
+                        <path d="M44 68.2868V67.7704H20V68.2868H44Z"></path>
+                        <path d="M44 69.3198V68.8033H20V69.3198H44Z"></path>
+                        <path d="M44 72.4181V71.3851H20V72.4181H44Z"></path>
+                        <path d="M44 73.4508V72.9345H20V73.4508H44Z"></path>
+                        <path d="M44 76.5493V74.4837H20V76.5493H44Z"></path>
+                        <path d="M44 77.5819V77.0655H20V77.5819H44Z"></path>
+                        <path d="M44 79.1311V78.6146H20V79.1311H44Z"></path>
+                        <path d="M44 80.6802V80.164H20V80.6802H44Z"></path>
+                        <path d="M44 82.2294V81.1967H20V82.2294H44Z"></path>
+                        <path d="M44 83.7788V83.2623H20V83.7788H44Z"></path>
+                        <path d="M44 86.3606V85.8441H20V86.3606H44Z"></path>
+                        <path d="M44 87.9097V87.3935H20V87.9097H44Z"></path>
+                        <path d="M44 91.0083V88.9427H20V91.0083H44Z"></path>
+                        <path d="M44 92.041V91.5245H20V92.041H44Z"></path>
+                        <path d="M44 94.623V92.5574H20V94.623H44Z"></path>
+                        <path d="M44 96.1722V95.6557H20V96.1722H44Z"></path>
+                        <path d="M44 97.7213V97.2048H20V97.7213H44Z"></path>
+                        <path d="M44 99.2704V98.2378H20V99.2704H44Z"></path>
+                        <path d="M44 100.82V100.303H20V100.82H44Z"></path>
+                        <path d="M44 103.402V102.885H20V103.402H44Z"></path>
+                        <path d="M44 105.467V104.434H20V105.467H44Z"></path>
+                        <path d="M44 108.049V106.5H20V108.049H44Z"></path>
+                        <path d="M44 109.082V108.566H20V109.082H44Z"></path>
+                        <path d="M44 112.18V111.148H20V112.18H44Z"></path>
+                        <path d="M44 113.213V112.697H20V113.213H44Z"></path>
+                        <path d="M44 114.762V114.246H20V114.762H44Z"></path>
+                        <path d="M44 118.377V116.311H20V118.377H44Z"></path>
+                        <path d="M44 119.41V118.893H20V119.41H44Z"></path>
+                        <path d="M44 120.442V119.926H20V120.442H44Z"></path>
+                        <path d="M44 122.508V120.959H20V122.508H44Z"></path>
+                        <path d="M44 124.574V123.541H20V124.574H44Z"></path>
+                        <path d="M44 127.672V125.607H20V127.672H44Z"></path>
+                        <path d="M44 128.705V128.188H20V128.705H44Z"></path>
+                        <path d="M44 130.254V129.738H20V130.254H44Z"></path>
+                        <path d="M44 132.32V131.287H20V132.32H44Z"></path>
+                        <path d="M44 135.418V133.869H20V135.418H44Z"></path>
+                        <path d="M44 136.451V135.934H20V136.451H44Z"></path>
+                    </svg>
+                    <div class="mz-ft-ticket-separator">
+                        <span class="mz-ft-ticket-span-lines"></span>
+                    </div>
+                    <div class="mz-ft-ticket-content">
+                        <div class="mz-ft-ticket-content-data">
+                            <div class="mz-ft-ticket-destination">
+                                <div class="mz-ft-ticket-dest mz-ft-ticket-dest-start">
+                                    <p class="mz-ft-ticket-country" id="mzFtDepCity">—</p>
+                                    <p class="mz-ft-ticket-acronym" id="mzFtDepCode">—</p>
+                                    <p class="mz-ft-ticket-hour">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 1024 1024" aria-hidden="true">
+                                            <path fill="currentColor" d="M768 256H353.6a32 32 0 1 1 0-64H800a32 32 0 0 1 32 32v448a32 32 0 0 1-64 0z"></path>
+                                            <path fill="currentColor" d="M777.344 201.344a32 32 0 0 1 45.312 45.312l-544 544a32 32 0 0 1-45.312-45.312z"></path>
+                                        </svg>
+                                        <span id="mzFtDepTime">—</span>
+                                    </p>
+                                </div>
+                                <svg style="flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path fill="none" stroke="#aeaeae" stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="m18 8l4 4l-4 4M2 12h20"></path>
+                                </svg>
+                                <div class="mz-ft-ticket-dest mz-ft-ticket-dest-end">
+                                    <p class="mz-ft-ticket-country" id="mzFtArrCity">—</p>
+                                    <p class="mz-ft-ticket-acronym" id="mzFtArrCode">—</p>
+                                    <p class="mz-ft-ticket-hour">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 1024 1024" aria-hidden="true">
+                                            <path fill="currentColor" d="M352 768a32 32 0 1 0 0 64h448a32 32 0 0 0 32-32V352a32 32 0 0 0-64 0v416z"></path>
+                                            <path fill="currentColor" d="M777.344 822.656a32 32 0 0 0 45.312-45.312l-544-544a32 32 0 0 0-45.312 45.312z"></path>
+                                        </svg>
+                                        <span id="mzFtArrTime">—</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div style="border-bottom: 2px solid #e8e8e8"></div>
+                            <div class="mz-ft-ticket-data-flex-col">
+                                <div class="mz-ft-ticket-data-flex">
+                                    <div class="mz-ft-ticket-data">
+                                        <p class="mz-ft-ticket-title">Airline</p>
+                                        <p class="mz-ft-ticket-subtitle" id="mzFtAirline"></p>
+                                    </div>
+                                    <div class="mz-ft-ticket-data mz-ft-ticket-passenger">
+                                        <p class="mz-ft-ticket-title">Passenger</p>
+                                        <p class="mz-ft-ticket-subtitle" id="mzFtPassenger"></p>
+                                    </div>
+                                </div>
+                                <div class="mz-ft-ticket-data-flex">
+                                    <div class="mz-ft-ticket-data">
+                                        <p class="mz-ft-ticket-title">Flight</p>
+                                        <p class="mz-ft-ticket-subtitle" id="mzFtFlightNo"></p>
+                                    </div>
+                                    <div class="mz-ft-ticket-data">
+                                        <p class="mz-ft-ticket-title">Gate</p>
+                                        <p class="mz-ft-ticket-subtitle" id="mzFtGate"></p>
+                                    </div>
+                                    <div class="mz-ft-ticket-data">
+                                        <p class="mz-ft-ticket-title">Seat</p>
+                                        <p class="mz-ft-ticket-subtitle" id="mzFtSeat"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mz-ft-ticket-icons">
+                            <div class="mz-ft-ticket-icon mz-ft-ticket-icon-plane">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path fill="currentColor" d="M20.56 3.91c.59.59.59 1.54 0 2.12l-3.89 3.89l2.12 9.19l-1.41 1.42l-3.88-7.43L9.6 17l.36 2.47l-1.07 1.06l-1.76-3.18l-3.19-1.77L5 14.5l2.5.37L11.37 11L3.94 7.09l1.42-1.41l9.19 2.12l3.89-3.89c.56-.58 1.56-.58 2.12 0"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Flight Search Results Modal -->
         <div class="modal fade" id="flightsModal" tabindex="-1" role="dialog" aria-labelledby="flightsModalLabel"
             aria-hidden="true">
@@ -2632,9 +3270,27 @@ if ($res && mysqli_num_rows($res) > 0) {
             };
         }
 
+        function showFlightSearchPopup() {
+            var $overlay = $("#flightSearchLoadingOverlay");
+            $overlay.addClass("is-visible").attr("aria-hidden", "false");
+            $("body").addClass("flight-search-loading");
+        }
+
+        function hideFlightSearchPopup() {
+            var $overlay = $("#flightSearchLoadingOverlay");
+            $overlay.removeClass("is-visible").attr("aria-hidden", "true");
+            $("body").removeClass("flight-search-loading");
+            $("#searchFlightsBtn").text("Search").prop("disabled", false);
+            $("#searchLoadingIndicator").hide();
+        }
+
         // Also update when clicking Search to ensure it's synced
         $("#searchFlightsBtn").click(function (e) {
             e.preventDefault();
+
+            if ($(this).prop("disabled")) {
+                return;
+            }
 
             var fromVal = $("#apiFrom").val().trim();
             var toVal = $("#apiTo").val().trim();
@@ -2684,6 +3340,101 @@ if ($res && mysqli_num_rows($res) > 0) {
 
             function handleFlightSearchSuccess(res, preParsed) {
 
+                    /** Default cabin allowance for every flight-search result. */
+                    var DEFAULT_CABIN_BAGGAGE = "07 Kg";
+                    var DEFAULT_CHECKIN_BAGGAGE = "15 Kg";
+
+                    function normalizeBagWeight(val) {
+                        if (val == null || val === "") return "";
+                        if (typeof val === "object") {
+                            var pax = val.adt || val.chd || val.inf || val;
+                            if (pax && typeof pax === "object") {
+                                var qty = pax.qty != null ? pax.qty : (pax.weight != null ? pax.weight : "");
+                                var desc = pax.desc || pax.unit || "Kg";
+                                if (qty === "" || qty == null) return "";
+                                var unit = /kg/i.test(String(desc)) ? "Kg" : String(desc);
+                                return String(qty).replace(/\s*kg$/i, "").trim() + " " + unit;
+                            }
+                            if (val.qty != null || val.weight != null) {
+                                return String(val.qty != null ? val.qty : val.weight).replace(/\s*kg$/i, "").trim() + " Kg";
+                            }
+                            return "";
+                        }
+                        var s = String(val).trim();
+                        if (!s || /^(n\/?a|nil|none|-|null|undefined|—)$/i.test(s)) return "";
+                        if (/^\d+(\.\d+)?$/.test(s)) return s + " Kg";
+                        return s.replace(/\s*kgs?\s*$/i, " Kg");
+                    }
+
+                    function parseCombinedBaggage(text) {
+                        var out = { cabin: "", checkin: "" };
+                        var str = String(text || "").trim();
+                        if (!str) return out;
+                        var cabinMatch = str.match(/(?:cabin|hand|carry[\s-]?on)\s*(?:bag(?:gage)?|baggage)?\s*[:\-]?\s*([^|/·•]+)/i);
+                        var checkMatch = str.match(/(?:check[\s-]?in|checked|hold)\s*(?:bag(?:gage)?|baggage)?\s*[:\-]?\s*([^|/·•]+)/i);
+                        if (cabinMatch) out.cabin = normalizeBagWeight(cabinMatch[1]);
+                        if (checkMatch) out.checkin = normalizeBagWeight(checkMatch[1]);
+                        if (!out.cabin && !out.checkin && /\d/.test(str)) {
+                            if (/cabin|hand|carry/i.test(str) && !/check/i.test(str)) {
+                                out.cabin = normalizeBagWeight(str);
+                            } else {
+                                out.checkin = normalizeBagWeight(str);
+                            }
+                        }
+                        return out;
+                    }
+
+                    function pickBagField(obj, keys) {
+                        if (!obj || typeof obj !== "object") return "";
+                        for (var i = 0; i < keys.length; i++) {
+                            if (obj[keys[i]] != null && obj[keys[i]] !== "") {
+                                var n = normalizeBagWeight(obj[keys[i]]);
+                                if (n) return n;
+                            }
+                        }
+                        return "";
+                    }
+
+                    /**
+                     * Build baggage label for search results.
+                     * Cabin always defaults to 07 Kg when the API omits it.
+                     */
+                    function formatSearchBaggage(sources) {
+                        var cabinKeys = [
+                            "hand_baggage", "handBaggage", "handBag", "cabinBaggage", "cabin_baggage",
+                            "cBag", "cabinBag", "carryOnBaggage", "carry_on_baggage", "CabinBaggage"
+                        ];
+                        var checkinKeys = [
+                            "checkin_baggage", "checkinBaggage", "checkInBaggage", "check_in_baggage",
+                            "iBag", "checkInBag", "checkedBaggage", "checked_baggage", "frBag", "CheckInBaggage"
+                        ];
+                        var cabin = "";
+                        var checkin = "";
+                        var list = Array.isArray(sources) ? sources : [sources];
+                        list.forEach(function (node) {
+                            if (!node || typeof node !== "object") return;
+                            if (!cabin) cabin = pickBagField(node, cabinKeys);
+                            if (!checkin) checkin = pickBagField(node, checkinKeys);
+                            var amenity = node.amenities && node.amenities.baggage;
+                            if (amenity && typeof amenity === "object") {
+                                if (!cabin) cabin = normalizeBagWeight(amenity.cabin || amenity.hand || amenity.cabinBaggage);
+                                if (!checkin) checkin = normalizeBagWeight(amenity.checkin || amenity.checkIn || amenity.checked);
+                            }
+                            if ((!cabin || !checkin) && typeof node.baggage === "string") {
+                                var parsed = parseCombinedBaggage(node.baggage);
+                                if (!cabin && parsed.cabin) cabin = parsed.cabin;
+                                if (!checkin && parsed.checkin) checkin = parsed.checkin;
+                            }
+                        });
+                        if (!cabin) cabin = DEFAULT_CABIN_BAGGAGE;
+                        if (!checkin) checkin = DEFAULT_CHECKIN_BAGGAGE;
+                        return {
+                            hand_baggage: cabin,
+                            checkin_baggage: checkin,
+                            baggage: "Cabin: " + cabin + " | Check-in: " + checkin
+                        };
+                    }
+
                     function createFlightCard(item, overallDepCode, overallArrCode, overallDepCityName, overallArrCityName) {
                         var journey = item.journey || item;
                         var flightsArray = (journey.flights && journey.flights.length > 0) ? journey.flights : [item.primaryFlight || item];
@@ -2714,12 +3465,23 @@ if ($res && mysqli_num_rows($res) > 0) {
                         var dTime = moment(dTimeRaw).isValid() ? moment(dTimeRaw).format('DD MMM YYYY | hh:mm A') : dTimeRaw;
                         var aTime = moment(aTimeRaw).isValid() ? moment(aTimeRaw).format('DD MMM YYYY | hh:mm A') : aTimeRaw;
 
+                        var bagInfo = formatSearchBaggage([
+                            primaryF,
+                            journey,
+                            faresObj,
+                            paxFares,
+                            faresObj.totalFare,
+                            item
+                        ]);
+
                         var fData = {
                             fname: pFname, fno: pFno, dTime: dTime, aTime: aTime,
                             base: base, tax: tax, tot: tot,
                             terminal: primaryF.depDetail?.terminal || "T1",
                             stops: stopsStr, duration: pDuration,
-                            baggage: primaryF.baggage || "Cabin: 7kg | Check-in: 15kg",
+                            baggage: bagInfo.baggage,
+                            hand_baggage: bagInfo.hand_baggage,
+                            checkin_baggage: bagInfo.checkin_baggage,
                             carrierCode: pCarrierCode,
                             segments: flightsArray
                         };
@@ -2864,8 +3626,7 @@ if ($res && mysqli_num_rows($res) > 0) {
             }
 
             function handleFlightSearchError(err) {
-                    $("#searchFlightsBtn").text("Search").prop("disabled", false);
-                    $("#searchLoadingIndicator").hide();
+                    hideFlightSearchPopup();
 
                     $("#flightsModalTitle").html(`${from} - ${to} <span style='color:#ccc'>|</span> ${date}`);
                     var modalBody = $("#flightsModalBody");
@@ -2888,6 +3649,7 @@ if ($res && mysqli_num_rows($res) > 0) {
 
             $("#searchFlightsBtn").text("Searching...").prop("disabled", true);
             $("#searchLoadingIndicator").show();
+            showFlightSearchPopup();
 
             if (useDualIntlRoundTrip) {
                 var onwardPayload = buildViaSearchPayload([sectorInfos[0]], false, pax);
@@ -2907,8 +3669,7 @@ if ($res && mysqli_num_rows($res) > 0) {
                         data: JSON.stringify(returnPayload)
                     })
                 ).done(function (onwardRes, returnRes) {
-                    $("#searchFlightsBtn").text("Search").prop("disabled", false);
-                    $("#searchLoadingIndicator").hide();
+                    hideFlightSearchPopup();
 
                     var onwardParsed = parseViaSearchResponse(onwardRes[0]);
                     var returnParsed = parseViaSearchResponse(returnRes[0]);
@@ -2928,8 +3689,7 @@ if ($res && mysqli_num_rows($res) > 0) {
                 contentType: "application/json",
                 data: JSON.stringify(buildViaSearchPayload(sectorInfos, isDomesticSearch, pax)),
                 success: function (res) {
-                    $("#searchFlightsBtn").text("Search").prop("disabled", false);
-                    $("#searchLoadingIndicator").hide();
+                    hideFlightSearchPopup();
                     handleFlightSearchSuccess(res);
                 },
                 error: handleFlightSearchError
@@ -3027,11 +3787,119 @@ if ($res && mysqli_num_rows($res) > 0) {
         window.selectedOnwardFare = null;
         window.selectedReturnFare = null;
 
-        $(document).on("click", ".select-flight-card", function () {
-            var rawData = $(this).attr("data-flight");
+        var mzFlightTicketBusy = false;
+        var mzFlightTicketTimer = null;
+
+        function mzCityLabel(name, code) {
+            var city = String(name || "").replace(/\(.*?\)/g, "").split(",")[0].trim();
+            return city || code || "—";
+        }
+
+        function mzClockFromRaw(raw, fallbackDisplay) {
+            if (raw && moment(raw).isValid()) {
+                return moment(raw).format("hh:mm A");
+            }
+            var m = String(fallbackDisplay || "").match(/\|\s*(.+)$/);
+            if (m) return m[1].trim();
+            if (raw) return String(raw);
+            return "—";
+        }
+
+        function mzFillAnimatedTicket(f, ctx) {
+            var segments = f.segments && f.segments.length ? f.segments : null;
+            var first = segments ? segments[0] : null;
+            var last = segments ? segments[segments.length - 1] : null;
+
+            var depCode = first && first.depDetail && first.depDetail.code
+                ? first.depDetail.code
+                : (ctx.depCode || "—");
+            var arrCode = last && last.arrDetail && last.arrDetail.code
+                ? last.arrDetail.code
+                : (ctx.arrCode || "—");
+            var depCity = first && first.depDetail && first.depDetail.name
+                ? first.depDetail.name
+                : (ctx.depCity || depCode);
+            var arrCity = last && last.arrDetail && last.arrDetail.name
+                ? last.arrDetail.name
+                : (ctx.arrCity || arrCode);
+
+            var depRaw = first
+                ? ((first.depDetail && first.depDetail.time) || first.departureTime || first.depTime)
+                : null;
+            var arrRaw = last
+                ? ((last.arrDetail && last.arrDetail.time) || last.arrivalTime || last.arrTime)
+                : null;
+
+            var airline = f.fname || "";
+            var flightNo = f.fno || "";
+            if (first) {
+                var aObj = first.carrier || first.airline || {};
+                if (!airline) airline = aObj.name || first.airlineName || first.carrierName || "";
+                if (!flightNo) {
+                    flightNo = (aObj.code || "FL") + "-" + (first.flightNo || first.flightNumber || "");
+                }
+            }
+
+            $("#mzFtDepCity").text(mzCityLabel(depCity, depCode));
+            $("#mzFtDepCode").text(depCode || "—");
+            $("#mzFtDepTime").text(mzClockFromRaw(depRaw, f.dTime));
+            $("#mzFtArrCity").text(mzCityLabel(arrCity, arrCode));
+            $("#mzFtArrCode").text(arrCode || "—");
+            $("#mzFtArrTime").text(mzClockFromRaw(arrRaw, f.aTime));
+            $("#mzFtAirline").text(airline || "");
+            $("#mzFtFlightNo").text(flightNo || "");
+            // Unavailable fields stay blank — do not invent PNR / gate / seat / passenger
+            $("#mzFtPassenger").text("");
+            $("#mzFtGate").text("");
+            $("#mzFtSeat").text("");
+        }
+
+        function showMzFlightTicketThen(f, ctx, done) {
+            if (mzFlightTicketBusy) return;
+            mzFlightTicketBusy = true;
+            mzFillAnimatedTicket(f, ctx || {});
+
+            var $ov = $("#mzFlightTicketOverlay");
+            $ov.removeClass("is-leaving").attr("aria-hidden", "false").css("display", "flex");
+            // Force reflow so enter transition plays
+            void $ov[0].offsetWidth;
+            $ov.addClass("is-visible");
+            $("body").addClass("mz-flight-ticket-busy");
+
+            var reduce = false;
+            try {
+                reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            } catch (eRm) { /* ignore */ }
+            var holdMs = reduce ? 450 : 3000;
+
+            clearTimeout(mzFlightTicketTimer);
+            mzFlightTicketTimer = setTimeout(function () {
+                $ov.addClass("is-leaving");
+                setTimeout(function () {
+                    $ov.removeClass("is-visible is-leaving").css("display", "none").attr("aria-hidden", "true");
+                    $("body").removeClass("mz-flight-ticket-busy");
+                    mzFlightTicketBusy = false;
+                    if (typeof done === "function") done();
+                }, reduce ? 180 : 380);
+            }, holdMs);
+        }
+
+        function highlightEticketFlight(container) {
+            var $target = $(container);
+            if (!$target.length) return;
+            $target.removeClass("mz-ft-eticket-populated");
+            void $target[0].offsetWidth;
+            $target.addClass("mz-ft-eticket-populated");
+            setTimeout(function () {
+                $target.removeClass("mz-ft-eticket-populated");
+            }, 1200);
+        }
+
+        function applySelectedFlightFromCard($card) {
+            var rawData = $card.attr("data-flight");
             var f = JSON.parse(decodeURIComponent(rawData));
 
-            var isReturn = $(this).closest("#returnCol").length > 0;
+            var isReturn = $card.closest("#returnCol").length > 0;
             var isRoundTrip = $("input[name='tripType']:checked").val() === "roundtrip";
 
             var container = isReturn ? $("#returnFlightDetailsContainer") : $("#flightDetailsContainer");
@@ -3042,7 +3910,6 @@ if ($res && mysqli_num_rows($res) > 0) {
             var segments = f.segments && f.segments.length > 0 ? f.segments : null;
 
             if (segments) {
-                var prevArrTimeRaw = null;
                 segments.forEach(function (leg, index) {
                     var airlineObj = leg.carrier || leg.airline || {};
                     var fname = airlineObj.name || leg.airlineName || leg.carrierName || f.fname;
@@ -3096,7 +3963,18 @@ if ($res && mysqli_num_rows($res) > 0) {
                             </div>
                         </div>
                         <div class="baggage-info" style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="flex: 1; text-align: left;">${f.baggage}</div>`;
+                            <div style="flex: 1; text-align: left;">${(function () {
+                                var bag = String(f.baggage || "").trim();
+                                if (bag && !/cabin\s*:/i.test(bag)) {
+                                    bag = "Cabin: 07 Kg | " + bag;
+                                }
+                                if (!bag) {
+                                    var cabin = (f.hand_baggage || "").trim() || "07 Kg";
+                                    var checkin = (f.checkin_baggage || "").trim();
+                                    bag = "Cabin: " + cabin + (checkin ? (" | Check-in: " + checkin) : "");
+                                }
+                                return bag;
+                            })()}</div>`;
 
                     var nextLeg = segments[index + 1];
                     if (nextLeg) {
@@ -3120,6 +3998,12 @@ if ($res && mysqli_num_rows($res) > 0) {
                     </div>`;
                 });
             } else {
+                var singleBagCabin = (f.hand_baggage || "").trim() || "07 Kg";
+                var singleBagCheckin = (f.checkin_baggage || "").trim();
+                var singleBagText = f.baggage || ("Cabin: " + singleBagCabin + (singleBagCheckin ? (" | Check-in: " + singleBagCheckin) : ""));
+                if (singleBagText && !/cabin\s*:/i.test(singleBagText)) {
+                    singleBagText = "Cabin: " + singleBagCabin + " | " + singleBagText;
+                }
                 cardHtml = `
                 <div class="flight-card">
                     <div class="flight-card-header">
@@ -3148,11 +4032,12 @@ if ($res && mysqli_num_rows($res) > 0) {
                         </div>
                     </div>
                     <div class="baggage-info">
-                        ${f.baggage}
+                        ${singleBagText}
                     </div>
                 </div>`;
             }
             container.html(cardHtml);
+            highlightEticketFlight(container);
 
             // Populate Input fields and handle modal
             if (isRoundTrip) {
@@ -3174,8 +4059,8 @@ if ($res && mysqli_num_rows($res) > 0) {
                 $("#airlineLogo").attr("src", logoUrl);
                 $("#airlineLogoBox").css("display", "flex");
 
-                $(this).closest(".col-md-6").find(".select-flight-card").css("border", "1px solid #e9ecef").removeClass("border-success");
-                $(this).css("border", "2px solid #28a745").addClass("border-success");
+                $card.closest(".col-md-6").find(".select-flight-card").css("border", "1px solid #e9ecef").removeClass("border-success");
+                $card.css("border", "2px solid #28a745").addClass("border-success");
 
                 if (window.selectedOnwardFare && window.selectedReturnFare) {
                     setTimeout(function () { $("#flightsModal").modal("hide"); }, 500);
@@ -3190,10 +4075,44 @@ if ($res && mysqli_num_rows($res) > 0) {
                 $("#taxInput").val(f.tax).trigger("keyup");
                 $("#totalInput").val(f.tot).trigger("keyup");
 
-                var logoUrl = "ajax/image_proxy.php?url=" + encodeURIComponent("https://pics.avs.io/200/100/" + f.carrierCode + ".png");
-                $("#airlineLogo").attr("src", logoUrl);
+                var logoUrl2 = "ajax/image_proxy.php?url=" + encodeURIComponent("https://pics.avs.io/200/100/" + f.carrierCode + ".png");
+                $("#airlineLogo").attr("src", logoUrl2);
                 $("#airlineLogoBox").css("display", "flex");
             }
+        }
+
+        $(document).on("click", ".select-flight-card", function () {
+            if (mzFlightTicketBusy) return;
+
+            var $card = $(this);
+            var rawData = $card.attr("data-flight");
+            if (!rawData) return;
+
+            var f;
+            try {
+                f = JSON.parse(decodeURIComponent(rawData));
+            } catch (eParse) {
+                return;
+            }
+
+            var isReturn = $card.closest("#returnCol").length > 0;
+            var depCode = isReturn ? getAirportCode($("#apiTo"), "BOM") : getAirportCode($("#apiFrom"), "DEL");
+            var arrCode = isReturn ? getAirportCode($("#apiFrom"), "DEL") : getAirportCode($("#apiTo"), "BOM");
+            var depCity = isReturn
+                ? (($("#apiTo").attr("data-city") || "").split(",")[0].replace(/\(.*?\)/g, "").trim() || depCode)
+                : (($("#apiFrom").attr("data-city") || "").split(",")[0].replace(/\(.*?\)/g, "").trim() || depCode);
+            var arrCity = isReturn
+                ? (($("#apiFrom").attr("data-city") || "").split(",")[0].replace(/\(.*?\)/g, "").trim() || arrCode)
+                : (($("#apiTo").attr("data-city") || "").split(",")[0].replace(/\(.*?\)/g, "").trim() || arrCode);
+
+            showMzFlightTicketThen(f, {
+                depCode: depCode,
+                arrCode: arrCode,
+                depCity: depCity,
+                arrCity: arrCity
+            }, function () {
+                applySelectedFlightFromCard($card);
+            });
         });
 
         $(document).on("click", ".fa-trash", function () {
@@ -3592,11 +4511,15 @@ if ($res && mysqli_num_rows($res) > 0) {
 
             function baggageText(seg) {
                 var parts = [];
-                if (seg.hand_baggage) {
-                    parts.push("Cabin: " + esc(seg.hand_baggage));
+                var cabin = (seg && seg.hand_baggage) ? String(seg.hand_baggage).trim() : "";
+                var checkin = (seg && seg.checkin_baggage) ? String(seg.checkin_baggage).trim() : "";
+                // Flight search / ticket display: cabin defaults to 07 Kg when omitted
+                if (!cabin) {
+                    cabin = "07 Kg";
                 }
-                if (seg.checkin_baggage) {
-                    parts.push("Check-in: " + esc(seg.checkin_baggage));
+                parts.push("Cabin: " + esc(cabin));
+                if (checkin) {
+                    parts.push("Check-in: " + esc(checkin));
                 }
                 return parts.join(" | ");
             }
