@@ -3702,82 +3702,193 @@ if ($res && mysqli_num_rows($res) > 0) {
 
         function initAirportAutosuggest(inputId, suggestDivId) {
             var timeoutId = null;
+            var reqSeq = 0;
             var inputEl = $("#" + inputId);
             var suggestObj = $("#" + suggestDivId);
+            if (!inputEl.length || !suggestObj.length) return;
 
-            inputEl.on("keyup", function () {
+            function escHtml(v) {
+                return $("<div>").text(v == null ? "" : String(v)).html();
+            }
+
+            function hideSuggest() {
+                suggestObj
+                    .removeClass("et-airport-suggest-open")
+                    .hide()
+                    .css({
+                        position: "",
+                        left: "",
+                        top: "",
+                        width: "",
+                        right: "",
+                        zIndex: "",
+                        maxHeight: "",
+                        visibility: ""
+                    });
+                var $field = inputEl.closest(".form-group");
+                if ($field.length && suggestObj.parent()[0] !== $field[0]) {
+                    $field.append(suggestObj);
+                }
+            }
+
+            function positionSuggest() {
+                if (!inputEl.length || !suggestObj.length) return;
+                var rect = inputEl[0].getBoundingClientRect();
+                var width = Math.max(rect.width, 240);
+                var left = Math.min(rect.left, window.innerWidth - width - 8);
+                left = Math.max(8, left);
+                var top = rect.bottom + 4;
+                var maxH = Math.min(260, Math.max(120, window.innerHeight - top - 12));
+                if (suggestObj.parent()[0] !== document.body) {
+                    suggestObj.appendTo(document.body);
+                }
+                suggestObj
+                    .addClass("et-airport-suggest-open")
+                    .css({
+                        position: "fixed",
+                        left: left + "px",
+                        top: top + "px",
+                        width: width + "px",
+                        right: "auto",
+                        zIndex: 20080,
+                        maxHeight: maxH + "px",
+                        display: "block",
+                        visibility: "visible",
+                        background: "#fff",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                        overflowY: "auto",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.12)"
+                    })
+                    .show();
+            }
+
+            function normalizeItems(res) {
+                var items = [];
+                if (!res) return items;
+                if (Array.isArray(res.r)) items = res.r;
+                else if (Array.isArray(res)) items = res;
+                else if (res.r && typeof res.r === "object") items = [res.r];
+                return items;
+            }
+
+            function renderItems(items) {
+                suggestObj.empty();
+                var html = "";
+                var count = 0;
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i] || {};
+                    var code = item.iata || item.code || "";
+                    var city = item.ct || item.cName || item.city || "";
+                    var country = item.cnty || item.countryName || item.country || "";
+                    var airportName = item.n || item.name || "";
+                    if (!city && airportName) city = airportName;
+                    var fullStr = city
+                        ? (country ? (city + ", " + country + " (" + code + ")") : (city + " (" + code + ")"))
+                        : code;
+                    if (code && city) {
+                        html += '<div class="suggest-item p-2 border-bottom autocomplete-hover" style="cursor:pointer; font-size:14px;" data-code="' + escHtml(code) + '" data-full="' + escHtml(fullStr) + '" data-city="' + escHtml(city) + '">' +
+                            '<div class="d-flex justify-content-between">' +
+                            '<div><i class="fa fa-plane text-muted mr-1"></i> ' + escHtml(city) +
+                            (country ? (' <small class="text-muted">' + escHtml(country) + '</small>') : '') +
+                            (airportName && airportName !== city ? ('<div class="text-muted" style="font-size:11px;padding-left:18px;">' + escHtml(airportName) + '</div>') : '') +
+                            '</div>' +
+                            '<div class="font-weight-bold text-primary">' + escHtml(code) + '</div>' +
+                            '</div></div>';
+                        count++;
+                    }
+                }
+                if (count > 0) {
+                    suggestObj.html(html);
+                    positionSuggest();
+                } else {
+                    hideSuggest();
+                }
+            }
+
+            function fetchLocalAirports(query, seq) {
+                $.ajax({
+                    url: "ajax/search_airports.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: { q: query },
+                    success: function (res) {
+                        if (seq !== reqSeq) return;
+                        renderItems(normalizeItems(res));
+                    },
+                    error: function () {
+                        if (seq !== reqSeq) return;
+                        hideSuggest();
+                    }
+                });
+            }
+
+            function fetchSuggestions(query) {
+                var seq = ++reqSeq;
+                $.ajax({
+                    url: "ajax/mmt_autosuggest.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: { q: query },
+                    success: function (res) {
+                        if (seq !== reqSeq) return;
+                        var items = normalizeItems(res);
+                        if (items.length) {
+                            renderItems(items);
+                            return;
+                        }
+                        fetchLocalAirports(query, seq);
+                    },
+                    error: function () {
+                        if (seq !== reqSeq) return;
+                        fetchLocalAirports(query, seq);
+                    }
+                });
+            }
+
+            inputEl.on("input keyup", function () {
                 var query = $(this).val().trim();
-
                 if (query.length < 2) {
-                    suggestObj.hide();
+                    hideSuggest();
                     return;
                 }
-
                 clearTimeout(timeoutId);
                 timeoutId = setTimeout(function () {
-                    $.ajax({
-                        url: 'ajax/mmt_autosuggest.php',
-                        type: 'GET',
-                        data: { q: query },
-                        success: function (res) {
-                            suggestObj.empty();
-
-                            // Handing makemytrip specific response inside res.r
-                            var items = res.r ? res.r : (Array.isArray(res) ? res : []);
-                            if (!Array.isArray(items)) {
-                                items = [items];
-                            }
-
-                            var html = "";
-                            var count = 0;
-                            if (items.length > 0) {
-                                for (var i = 0; i < items.length; i++) {
-                                    var item = items[i];
-                                    var code = item.iata || "";
-                                    var city = item.ct || item.cName || "";
-                                    var country = item.cnty || item.countryName || "";
-                                    var fullStr = city + ", " + country + " (" + code + ")";
-                                    if (code && city) {
-                                        html += `<div class="suggest-item p-2 border-bottom autocomplete-hover" style="cursor:pointer; font-size:14px;" data-code="${code}" data-full="${fullStr}" data-city="${city}">
-                                            <div class="d-flex justify-content-between">
-                                                <div><i class="fa fa-plane text-muted mr-1"></i> ${city} <small class="text-muted">${country}</small></div>
-                                                <div class="font-weight-bold text-primary">${code}</div>
-                                            </div>
-                                        </div>`;
-                                        count++;
-                                    }
-                                }
-                            }
-
-                            if (count > 0) {
-                                suggestObj.html(html).show();
-                            } else {
-                                suggestObj.hide();
-                            }
-                        },
-                        error: function () {
-                            suggestObj.hide();
-                        }
-                    });
-                }, 300);
+                    fetchSuggestions(query);
+                }, 250);
             });
 
-            $(document).on("click", "#" + suggestDivId + " .suggest-item", function () {
-                var code = $(this).data("code");
-                var fullText = $(this).data("full");
-                var city = $(this).data("city");
+            inputEl.on("focus", function () {
+                if (suggestObj.children(".suggest-item").length) {
+                    positionSuggest();
+                }
+            });
+
+            $(document).off("mousedown.etAirport" + inputId).on("mousedown.etAirport" + inputId, "#" + suggestDivId + " .suggest-item", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var code = $(this).attr("data-code") || $(this).data("code");
+                var fullText = $(this).attr("data-full") || $(this).data("full");
+                var city = $(this).attr("data-city") || $(this).data("city");
                 inputEl.attr("data-code", code);
                 if (city) inputEl.attr("data-city", city);
                 inputEl.val(fullText ? fullText : code);
-                suggestObj.hide();
+                hideSuggest();
                 inputEl.trigger("change");
             });
 
-            $(document).on("click", function (e) {
+            $(document).off("mousedown.etAirportDoc" + inputId).on("mousedown.etAirportDoc" + inputId, function (e) {
                 if (!$(e.target).closest("#" + inputId).length && !$(e.target).closest("#" + suggestDivId).length) {
-                    suggestObj.hide();
+                    hideSuggest();
                 }
             });
+
+            $(window).off("resize.etAirport" + inputId + " scroll.etAirport" + inputId)
+                .on("resize.etAirport" + inputId + " scroll.etAirport" + inputId, function () {
+                    if (suggestObj.hasClass("et-airport-suggest-open")) {
+                        positionSuggest();
+                    }
+                });
         }
 
         initAirportAutosuggest("apiFrom", "apiFromSuggest");

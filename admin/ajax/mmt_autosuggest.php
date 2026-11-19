@@ -52,10 +52,57 @@ if (function_exists('curl_init')) {
     }
 }
 
-if ($httpCode !== 200 || $response === false || $response === '') {
-    http_response_code(400);
-    echo json_encode(['error' => 'API request failed']);
-    exit;
+if ($httpCode === 200 && $response !== false && $response !== '') {
+    $decoded = json_decode($response, true);
+    if (is_array($decoded) && !empty($decoded['r'])) {
+        echo $response;
+        exit;
+    }
+    if (is_array($decoded) && (isset($decoded['s']) || isset($decoded['r']))) {
+        echo $response;
+        exit;
+    }
 }
 
-echo $response;
+// Fallback: local airports table when MakeMyTrip autosuggest is unavailable
+try {
+    include_once __DIR__ . '/../connection.php';
+    if (isset($conn) && $conn instanceof mysqli) {
+        $check = @$conn->query("SHOW TABLES LIKE 'airports'");
+        if ($check && $check->num_rows > 0) {
+            $stmt = $conn->prepare(
+                "SELECT name, city, country, iata
+                 FROM airports
+                 WHERE iata LIKE CONCAT('%', ?, '%')
+                    OR city LIKE CONCAT('%', ?, '%')
+                    OR name LIKE CONCAT('%', ?, '%')
+                 LIMIT 10"
+            );
+            if ($stmt) {
+                $stmt->bind_param('sss', $q, $q, $q);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $rows = [];
+                while ($row = $result->fetch_assoc()) {
+                    $rows[] = [
+                        'iata' => (string) ($row['iata'] ?? ''),
+                        'n' => (string) ($row['name'] ?? ''),
+                        'ct' => (string) ($row['city'] ?? ''),
+                        'cnty' => (string) ($row['country'] ?? ''),
+                        't' => 'airport',
+                    ];
+                }
+                $stmt->close();
+                if ($rows) {
+                    echo json_encode(['s' => true, 'err' => '', 'r' => $rows]);
+                    exit;
+                }
+            }
+        }
+    }
+} catch (Throwable $e) {
+    // Ignore local DB fallback failures
+}
+
+http_response_code(200);
+echo json_encode(['s' => false, 'err' => 'API request failed', 'r' => []]);
