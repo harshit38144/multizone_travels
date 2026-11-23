@@ -4051,6 +4051,24 @@ $qWizardSteps = [
         .q-ai-incl-doc .q-ai-incl-sec[data-sec="sightseeing"] .q-ai-incl-sec-title i { color: #ea580c; }
         .q-ai-incl-doc .q-ai-incl-sec[data-sec="transfers"] .q-ai-incl-sec-title i { color: #0284c7; }
         .q-ai-incl-doc .q-ai-incl-sec[data-sec="other"] .q-ai-incl-sec-title i { color: #78716c; }
+        .q-ai-incl-doc .q-ai-incl-sec[data-sec="visa"] .q-ai-incl-sec-title i { color: #7c3aed; }
+
+        .note-editable .q-ai-incl-sec[data-sec="visa"] .q-ai-incl-sec-title {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin: 0.85rem 0 0.35rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .note-editable .q-ai-incl-sec[data-sec="visa"] .q-ai-incl-sec-title i {
+            width: 1.15rem;
+            text-align: center;
+            color: #7c3aed;
+            font-size: 0.95rem;
+        }
 
         .q-ai-incl-doc .q-ai-incl-sec ul {
             margin: 0 0 0 1.35rem;
@@ -6478,6 +6496,70 @@ $qWizardSteps = [
             justify-content: center;
             color: #e11d2e;
             border-color: #fecaca;
+        }
+
+        #qWizardSection3 .q-hotel-option-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            margin-left: 2px;
+            padding: 2px 4px;
+            border-radius: 999px;
+            flex: 0 0 auto;
+            line-height: 1;
+            user-select: none;
+        }
+
+        #qWizardSection3 .q-hotel-option-star {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            margin: 0;
+            border: 0;
+            background: transparent;
+            color: #d1d5db;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: color 0.12s ease, transform 0.12s ease, background 0.12s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #qWizardSection3 .q-hotel-option-star i {
+            font-size: 0.92rem;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        #qWizardSection3 .q-hotel-option-star.is-on,
+        #qWizardSection3 .q-hotel-option-stars.is-hovering .q-hotel-option-star.is-hover {
+            color: #f5b301;
+        }
+
+        #qWizardSection3 .q-hotel-option-star:hover {
+            background: rgba(245, 179, 1, 0.1);
+            transform: translateY(-1px);
+        }
+
+        #qWizardSection3 .q-hotel-option-star:focus {
+            outline: none;
+        }
+
+        #qWizardSection3 .q-hotel-option-star:focus-visible {
+            box-shadow: 0 0 0 2px rgba(245, 179, 1, 0.35);
+        }
+
+        @media (max-width: 640px) {
+            #qWizardSection3 .q-hotel-option-star {
+                width: 32px;
+                height: 32px;
+            }
+
+            #qWizardSection3 .q-hotel-option-star i {
+                font-size: 1rem;
+            }
         }
 
         #qWizardSection3 .q-hotel-add-btn {
@@ -13526,6 +13608,58 @@ $qWizardSteps = [
             print-color-adjust: exact;
         }
 
+        .qp-hotel-option-heading {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .qp-hotel-option-heading .qp-hotel-option-tabs {
+            margin-bottom: 0;
+        }
+
+        .qp-hotel-option-star-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #374151;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.2;
+            letter-spacing: 0.01em;
+        }
+
+        .qp-hotel-option-star-label .qp-hotel-option-star-sep {
+            color: #9ca3af;
+            font-weight: 500;
+        }
+
+        .qp-hotel-option-star-label .qp-opt-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 1px;
+            line-height: 1;
+        }
+
+        .qp-hotel-option-star-label .qp-opt-star {
+            display: inline-block;
+            width: 11px;
+            height: 11px;
+            flex: 0 0 auto;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-hotel-option-star-label .qp-opt-star.is-on {
+            color: #f5b301;
+        }
+
+        .qp-hotel-option-star-label .qp-opt-star.is-off {
+            color: #d1d5db;
+        }
+
         .qp-hotel-panel {
             background: #ffffff;
             /* border: 1px solid #e4e8ef; */
@@ -14693,6 +14827,10 @@ $qWizardSteps = [
 
         .qp-incl-edit .q-ai-incl-sec[data-sec="other"] .q-ai-incl-sec-title i {
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M14 10h20v28H14z'/%3E%3Cpath d='M18 18h12M18 24h12M18 30h8'/%3E%3C/svg%3E");
+        }
+
+        .qp-incl-edit .q-ai-incl-sec[data-sec="visa"] .q-ai-incl-sec-title i {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23e10600' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 8h18l6 6v26H12z'/%3E%3Cpath d='M30 8v6h6'/%3E%3Ccircle cx='24' cy='24' r='5'/%3E%3Cpath d='M16 36c1.5-4 14.5-4 16 0'/%3E%3C/svg%3E");
         }
 
         .qp-incl-edit .q-ai-incl-sec-title strong {
@@ -18721,6 +18859,13 @@ $qWizardSteps = [
                                 <button type="button" class="btn q-hotel-remove-option-btn" id="qRemoveHotelCategory" title="Remove this option" style="display:none;">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
+                                <div class="q-hotel-option-stars" id="qHotelOptionStars" role="radiogroup" aria-label="Hotel star category">
+                                    <button type="button" class="q-hotel-option-star" data-star="1" title="1-Star Hotels" aria-label="1-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
+                                    <button type="button" class="q-hotel-option-star" data-star="2" title="2-Star Hotels" aria-label="2-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
+                                    <button type="button" class="q-hotel-option-star" data-star="3" title="3-Star Hotels" aria-label="3-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
+                                    <button type="button" class="q-hotel-option-star" data-star="4" title="4-Star Hotels" aria-label="4-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
+                                    <button type="button" class="q-hotel-option-star" data-star="5" title="5-Star Hotels" aria-label="5-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
+                                </div>
                             <div class="q-hotel-ocr-wrap">
                             <div class="q-hotel-ocr-bar" id="qHotelOcrBar">
                                 <span class="q-hotel-ocr-thumb" id="qHotelOcrThumb">
@@ -19928,7 +20073,7 @@ $qWizardSteps = [
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=398"></script>
+    <script src="crm/assets/quotation_generator.js?v=403"></script>
     <script src="crm/assets/quotation_flight_search.js?v=38"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=8"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

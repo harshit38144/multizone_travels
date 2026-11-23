@@ -1347,19 +1347,35 @@
         return 'Airfare : ' + names.join(' -> ');
     }
 
+    function isAutoTouristVisaLabel(text) {
+        var t = String(text || '').replace(/<\/?[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        if (!t || t.length > 80) {
+            return false;
+        }
+        if (/\b(assist|help|process|fee|applic|support|document|insurance|charges?)\b/i.test(t)) {
+            return false;
+        }
+        // "Thailand Tourist Visa" / "MAURITIUS VISA"
+        return /^.+\s+tourist\s+visa\.?$/i.test(t) || /^.+\s+visa\.?$/i.test(t);
+    }
+
     function stripAutoTouristVisaHtml(html) {
         html = String(html || '');
+        // Auto-managed visa blocks / list items.
+        html = html.replace(/<div[^>]*\bdata-q-auto-tourist-visa\b[^>]*>[\s\S]*?<\/div>/gi, '');
+        html = html.replace(/<div[^>]*\bdata-sec=["']visa["'][^>]*>[\s\S]*?<\/div>/gi, '');
         html = html.replace(/<(p|div|li)([^>]*)\sdata-q-auto-tourist-visa(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi, '');
-        // Plain/AI duplicates: short "[Destination] Tourist Visa" lines only.
+        // Plain/AI duplicates: short "[Destination] (Tourist) Visa" lines only.
         html = html.replace(
-            /<(p|li)(?:\s[^>]*)?>\s*(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*([^<]{1,80}?)\s+Tourist\s+Visa\.?(?:\s*<\/(?:strong|b|em|span)>)?\s*<\/\1>/gi,
-            function (full, _tag, destPart) {
-                var t = String(destPart || '').replace(/\s+/g, ' ').trim().toLowerCase();
-                if (!t || /\b(assist|help|process|fee|applic|support|document|insurance)\b/.test(t)) {
-                    return full;
-                }
-                return '';
+            /<(p|li|h[1-6])(?:\s[^>]*)?>\s*(?:<i[^>]*>\s*<\/i>\s*)?(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*([^<]{1,80}?)(?:\s*<\/(?:strong|b|em|span)>)?\s*<\/\1>/gi,
+            function (full, _tag, label) {
+                return isAutoTouristVisaLabel(label) ? '' : full;
             }
+        );
+        // Drop empty Other Inclusions sections left after visa removal.
+        html = html.replace(
+            /<div[^>]*\bdata-sec=["']other["'][^>]*>\s*<p[^>]*class=["'][^"']*q-ai-incl-sec-title[^"']*["'][^>]*>[\s\S]*?<\/p>\s*<ul[^>]*>\s*<\/ul>\s*<\/div>/gi,
+            ''
         );
         return html;
     }
@@ -1421,7 +1437,16 @@
         if (!dest) {
             return '';
         }
-        return dest + ' Tourist Visa';
+        // Match quotation style: "MAURITIUS VISA"
+        return String(dest).replace(/\s+/g, ' ').trim().toUpperCase() + ' VISA';
+    }
+
+    function buildAutoTouristVisaListItemHtml(text) {
+        text = String(text || '').trim();
+        if (!text) {
+            return '';
+        }
+        return '<li data-q-auto-tourist-visa="1">' + esc(text) + '</li>';
     }
 
     function buildAutoTouristVisaHtml(text) {
@@ -1429,7 +1454,41 @@
         if (!text) {
             return '';
         }
-        return '<p data-q-auto-tourist-visa="1">' + esc(text) + '</p>';
+        // Same layout as reference: Other Inclusions heading + bullet "DESTINATION VISA".
+        return '<div class="q-ai-incl-sec" data-sec="other">' +
+            '<p class="q-ai-incl-sec-title">' +
+            '<i class="fas fa-clipboard-list" aria-hidden="true"></i> ' +
+            '<strong>Other Inclusions</strong>' +
+            '</p>' +
+            '<ul>' + buildAutoTouristVisaListItemHtml(text) + '</ul>' +
+            '</div>';
+    }
+
+    /** Append visa under Other Inclusions at the end (merge if that section already exists). */
+    function appendAutoTouristVisaHtml(html, visaText) {
+        html = String(html || '');
+        visaText = String(visaText || '').trim();
+        if (!visaText) {
+            return html;
+        }
+        var li = buildAutoTouristVisaListItemHtml(visaText);
+        var injected = false;
+        html = html.replace(
+            /(<div\b[^>]*\bdata-sec=["']other["'][^>]*>[\s\S]*?<ul\b[^>]*>)([\s\S]*?)(<\/ul>)/i,
+            function (_full, open, mid, close) {
+                injected = true;
+                return open + mid + li + close;
+            }
+        );
+        if (injected) {
+            return html;
+        }
+        var block = buildAutoTouristVisaHtml(visaText);
+        var wrapped = html.match(/^(<div\b[^>]*\bdata-q-ai-inclusions\b[^>]*>)([\s\S]*)(<\/div>\s*)$/i);
+        if (wrapped) {
+            return wrapped[1] + wrapped[2] + block + wrapped[3];
+        }
+        return html + block;
     }
 
     function padTourNightsLabel(nights) {
@@ -1713,10 +1772,7 @@
         if (air) {
             parts += buildAutoReturnAirfareHtml(air);
         }
-        var visa = getAutoTouristVisaInclusionText();
-        if (visa) {
-            parts += buildAutoTouristVisaHtml(visa);
-        }
+        // Tourist visa is appended at the end via syncReturnAirfareInclusion — not here.
         parts += getAutoAccommodationInclusionHtml();
         parts += getAutoSightseeingInclusionHtml();
         parts += getAutoMealsInclusionHtml();
@@ -1776,11 +1832,11 @@
         var norm = function (h) {
             return String(h || '').replace(/\s+/g, ' ').trim();
         };
-        // AI docs: still keep tourist visa in sync (no airfare/hotel auto rewrite).
+        var visaText = getAutoTouristVisaInclusionText();
+        // AI docs: keep DESTINATION VISA under Other Inclusions at the end.
         if (/data-q-ai-inclusions/i.test(String(current || ''))) {
-            var visaHtml = buildAutoTouristVisaHtml(getAutoTouristVisaInclusionText());
             var cleanedAi = stripAutoTouristVisaHtml(current);
-            var nextAi = visaHtml + cleanedAi;
+            var nextAi = appendAutoTouristVisaHtml(cleanedAi, visaText);
             if (norm(nextAi) === norm(current)) {
                 return;
             }
@@ -1789,7 +1845,7 @@
         }
         var prefix = buildAutoInclusionPrefixHtml();
         var cleaned = stripAutoReturnAirfareHtml(current);
-        var next = prefix + cleaned;
+        var next = appendAutoTouristVisaHtml(prefix + cleaned, visaText);
         if (norm(next) === norm(current)) {
             return;
         }
@@ -2565,13 +2621,72 @@
             '</div></div>';
     }
 
+    function normalizeOptionStar(value) {
+        var n = parseInt(value, 10);
+        if (isNaN(n) || n < 1 || n > 5) {
+            return '';
+        }
+        return n;
+    }
+
+    function optionStarCategoryLabel(stars) {
+        var n = normalizeOptionStar(stars);
+        if (!n) {
+            return '';
+        }
+        return n + '-Star Hotels';
+    }
+
+    function getActiveHotelCategoryPanel() {
+        var $panel = getHotelCategoryPanels().filter(function () {
+            return String($(this).attr('data-cat-id') || '') === String(qActiveHotelCategoryId || '');
+        }).first();
+        if (!$panel.length) {
+            $panel = getHotelCategoryPanels().first();
+        }
+        return $panel;
+    }
+
+    function getHotelOptionStar($panel) {
+        if (!$panel || !$panel.length) {
+            return '';
+        }
+        return normalizeOptionStar($panel.find('.q-hotel-option-star-val').val());
+    }
+
+    function setHotelOptionStar($panel, stars) {
+        if (!$panel || !$panel.length) {
+            return;
+        }
+        var n = normalizeOptionStar(stars);
+        $panel.find('.q-hotel-option-star-val').val(n === '' ? '' : String(n));
+    }
+
+    function syncHotelOptionStarUi() {
+        var $wrap = $('#qHotelOptionStars');
+        if (!$wrap.length) {
+            return;
+        }
+        var stars = getHotelOptionStar(getActiveHotelCategoryPanel());
+        $wrap.find('.q-hotel-option-star').each(function () {
+            var n = parseInt($(this).attr('data-star'), 10) || 0;
+            var on = stars !== '' && n <= stars;
+            $(this)
+                .toggleClass('is-on', on)
+                .attr('aria-checked', on && n === stars ? 'true' : 'false');
+        });
+        $wrap.removeClass('is-hovering').find('.q-hotel-option-star').removeClass('is-hover');
+    }
+
     function hotelCategoryPanelHtml(cat) {
         cat = cat || {};
         var id = cat.id || nextHotelCategoryId();
         var label = cat.label || defaultHotelCategoryLabel(0);
+        var optionStar = normalizeOptionStar(cat.option_star);
         return '' +
             '<div class="q-hotel-category" data-cat-id="' + esc(id) + '">' +
             '<input type="hidden" class="q-hotel-cat-label" value="' + esc(label) + '">' +
+            '<input type="hidden" class="q-hotel-option-star-val" value="' + esc(optionStar === '' ? '' : String(optionStar)) + '">' +
             '<div class="q-hotel-rows"></div>' +
             '</div>';
     }
@@ -2590,6 +2705,8 @@
             .toggle(canAddOption)
             .attr('title', canAddOption ? 'Add pricing option' : 'Maximum ' + Q_MAX_HOTEL_OPTIONS + ' options allowed');
         if (!$panels.length) {
+            $('#qRemoveHotelCategory').prop('disabled', true).hide();
+            syncHotelOptionStarUi();
             return;
         }
         var activeExists = false;
@@ -2621,6 +2738,7 @@
         }).addClass('is-active');
         var canRemove = $panels.length > 1;
         $('#qRemoveHotelCategory').prop('disabled', !canRemove).toggle(canRemove);
+        syncHotelOptionStarUi();
     }
 
     function getPrimaryHotelCategoryPanel() {
@@ -2761,6 +2879,7 @@
             categories.push({
                 id: id,
                 label: label,
+                option_star: getHotelOptionStar($panel),
                 hotels: collectHotelsFromPanel($panel)
             });
         });
@@ -2768,6 +2887,7 @@
             categories.push({
                 id: nextHotelCategoryId(),
                 label: defaultHotelCategoryLabel(0),
+                option_star: '',
                 hotels: []
             });
         }
@@ -2793,6 +2913,7 @@
                 categories: [{
                     id: 'opt_1',
                     label: defaultHotelCategoryLabel(0),
+                    option_star: '',
                     hotels: raw
                 }],
                 active_category_id: 'opt_1'
@@ -2803,11 +2924,12 @@
                 return {
                     id: cat.id || ('opt_' + (idx + 1)),
                     label: defaultHotelCategoryLabel(idx),
+                    option_star: normalizeOptionStar(cat.option_star),
                     hotels: Array.isArray(cat.hotels) ? cat.hotels : []
                 };
             });
             if (!cats.length) {
-                cats.push({ id: 'opt_1', label: defaultHotelCategoryLabel(0), hotels: [] });
+                cats.push({ id: 'opt_1', label: defaultHotelCategoryLabel(0), option_star: '', hotels: [] });
             }
             var activeId = raw.active_category_id || cats[0].id;
             if (!cats.some(function (c) { return c.id === activeId; })) {
@@ -2816,7 +2938,7 @@
             return { categories: cats, active_category_id: activeId };
         }
         return {
-            categories: [{ id: 'opt_1', label: defaultHotelCategoryLabel(0), hotels: [] }],
+            categories: [{ id: 'opt_1', label: defaultHotelCategoryLabel(0), option_star: '', hotels: [] }],
             active_category_id: 'opt_1'
         };
     }
@@ -2831,7 +2953,8 @@
         data.categories.forEach(function (cat, idx) {
             var $panel = $(hotelCategoryPanelHtml({
                 id: cat.id || nextHotelCategoryId(),
-                label: defaultHotelCategoryLabel(idx)
+                label: defaultHotelCategoryLabel(idx),
+                option_star: cat.option_star
             }));
             bumpHotelIdSeqFromCategory({
                 id: $panel.attr('data-cat-id')
@@ -7552,7 +7675,7 @@
             }
             line = line.replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
             if (line) {
-                if (/\btourist\s+visa\b/i.test(line)) {
+                if (isAutoTouristVisaLabel(line)) {
                     return;
                 }
                 sections[current].push(line);
@@ -7565,7 +7688,7 @@
             lines.forEach(function (raw) {
                 var line = String(raw || '').replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
                 if (line) {
-                    if (/\btourist\s+visa\b/i.test(line)) {
+                    if (isAutoTouristVisaLabel(line)) {
                         return;
                     }
                     sections.other.push(line);
@@ -7573,13 +7696,15 @@
             });
         }
 
-        // Ensure international destinations keep a single tourist visa inclusion.
+        // Strip auto visa labels from body sections; re-add once under Other Inclusions.
+        order.forEach(function (key) {
+            sections[key] = (sections[key] || []).filter(function (item) {
+                return !isAutoTouristVisaLabel(item);
+            });
+        });
         var visaLine = getAutoTouristVisaInclusionText();
         if (visaLine) {
-            sections.other = (sections.other || []).filter(function (item) {
-                return !/\btourist\s+visa\b/i.test(String(item || ''));
-            });
-            sections.other.unshift(visaLine);
+            sections.other.push(visaLine);
         }
 
         var html = '';
@@ -7593,9 +7718,7 @@
             html += '<p class="q-ai-incl-sec-title"><i class="' + info.icon + '" aria-hidden="true"></i> <strong>' + esc(info.label) + '</strong></p>';
             html += '<ul>';
             items.forEach(function (item) {
-                var liAttrs = /\btourist\s+visa\b/i.test(String(item || ''))
-                    ? ' data-q-auto-tourist-visa="1"'
-                    : '';
+                var liAttrs = isAutoTouristVisaLabel(item) ? ' data-q-auto-tourist-visa="1"' : '';
                 html += '<li' + liAttrs + '>' + esc(item) + '</li>';
             });
             html += '</ul></div>';
@@ -8095,6 +8218,7 @@
         $(document).on('change input', '[name=destination]', function () {
             var dest = getItineraryDestinationLabel();
             $('#qItineraryDays .q-day-head-sub').text(dest || 'Destination');
+            scheduleSyncReturnAirfareInclusion(true);
         });
 
         $('#qDayAiGenerate').on('click', function () {
@@ -8703,11 +8827,37 @@
     function pricingOptionTitle(cat, idx) {
         var base = defaultHotelCategoryLabel(idx);
         var label = String(cat.label || '').trim();
+        var optionStar = normalizeOptionStar(cat && cat.option_star);
         if (!label || /^Option\s+\d+$/i.test(label) || /^Option\s+0?\d+$/i.test(label)) {
-            var stars = idx === 0 ? '3★' : (idx === 1 ? '4★' : 'Hotel');
-            return base + ' – ' + stars + ' Hotel';
+            if (optionStar) {
+                return base + ' — ' + optionStarCategoryLabel(optionStar);
+            }
+            return base;
+        }
+        if (optionStar) {
+            return label + ' — ' + optionStarCategoryLabel(optionStar);
         }
         return label;
+    }
+
+    /** Instantly sync Final Cost card headings with each option's star category. */
+    function refreshPricingOptionTitles() {
+        var $host = $('#qPricingSheetsHost');
+        if (!$host.length) {
+            return;
+        }
+        var data = collectHotelCategories();
+        var cats = data.categories || [];
+        cats.forEach(function (cat, idx) {
+            var id = String(cat.id || '');
+            if (!id) {
+                return;
+            }
+            var title = pricingOptionTitle(cat, idx);
+            $host.find('.q-pricing-option-sheet').filter(function () {
+                return String($(this).attr('data-cat-id') || '') === id;
+            }).find('.q-pricing-option-hd-meta > h4').first().text(title);
+        });
     }
 
     function uniquePricingSupplierNames(names) {
@@ -11361,6 +11511,7 @@
         snapshotTourCostFromDom();
         renderTourCostRows();
         recalcAllTourCostCards();
+        scheduleSyncReturnAirfareInclusion(true);
     });
 
     function refreshOpenQuotationPreview() {
@@ -12272,6 +12423,58 @@
             '<span class="qp-meal-legend-label">Meal Plan:</span> ' +
             parts.join('<span class="qp-meal-legend-dot"> • </span>') +
             '</div>';
+    }
+
+    function qpOptionStarSvgIcon(filled) {
+        var fill = filled ? '#f5b301' : '#d1d5db';
+        return '<svg class="qp-opt-star ' + (filled ? 'is-on' : 'is-off') + '" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+            '<path fill="' + fill + '" d="M12 2.5l2.89 6.17 6.76.74-5.05 4.58 1.42 6.61L12 17.77 6.98 20.6l1.42-6.61L3.35 9.41l6.76-.74L12 2.5z"/>' +
+            '</svg>';
+    }
+
+    function qpOptionStarsHtml(stars, maxStars) {
+        var n = normalizeOptionStar(stars);
+        if (!n) {
+            return '';
+        }
+        maxStars = maxStars == null ? 5 : Math.max(1, Math.min(5, parseInt(maxStars, 10) || 5));
+        var html = '<span class="qp-opt-stars" aria-hidden="true">';
+        for (var i = 1; i <= maxStars; i++) {
+            html += qpOptionStarSvgIcon(i <= n);
+        }
+        html += '</span>';
+        return html;
+    }
+
+    function qpHotelOptionStarBadgeHtml(cat, withEmDash) {
+        var stars = normalizeOptionStar(cat && cat.option_star);
+        if (!stars) {
+            return '';
+        }
+        return '<span class="qp-hotel-option-star-label">' +
+            (withEmDash ? '<span class="qp-hotel-option-star-sep" aria-hidden="true">—</span> ' : '') +
+            esc(optionStarCategoryLabel(stars)) + ' ' + qpOptionStarsHtml(stars, 5) +
+            '</span>';
+    }
+
+    function qpHotelOptionHeadingHtml(cat, idx, forceShowTab) {
+        var label = (cat && cat.label) || defaultHotelCategoryLabel(idx || 0);
+        var stars = normalizeOptionStar(cat && cat.option_star);
+        var showTab = !!forceShowTab;
+        if (!showTab && !stars) {
+            return '';
+        }
+        var html = '<div class="qp-hotel-option-heading">';
+        if (showTab) {
+            html += '<div class="qp-hotel-option-tabs">' +
+                '<span class="qp-hotel-option-tab is-active">' + esc(label) + '</span>' +
+                '</div>';
+            html += qpHotelOptionStarBadgeHtml(cat, true);
+        } else {
+            html += qpHotelOptionStarBadgeHtml(cat, false);
+        }
+        html += '</div>';
+        return html;
     }
 
     function qpHotelOptionsTabsHtml(categories, activeIdx) {
@@ -14054,12 +14257,7 @@
             hotelCatsWithRows.forEach(function (item, viewIdx) {
                 var cat = item.cat;
                 var idx = item.idx;
-                if (multiHotelOptions) {
-                    var optLabel = cat.label || defaultHotelCategoryLabel(idx);
-                    html += '<div class="qp-hotel-option-tabs">' +
-                        '<span class="qp-hotel-option-tab is-active">' + esc(optLabel) + '</span>' +
-                        '</div>';
-                }
+                html += qpHotelOptionHeadingHtml(cat, idx, multiHotelOptions);
                 html += buildPreviewHotelCardsHtml(cat.hotels || [], idx);
 
                 if (multiHotelOptions) {
@@ -16589,6 +16787,39 @@
         $(document).on('click', '.q-hotel-cat-tab', function () {
             setActiveHotelCategory($(this).attr('data-cat-id'));
             saveFormDraftToStorage();
+        });
+        $(document).on('click', '#qHotelOptionStars .q-hotel-option-star', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $panel = getActiveHotelCategoryPanel();
+            if (!$panel.length) {
+                ensureHotelCategoriesReady();
+                $panel = getActiveHotelCategoryPanel();
+            }
+            if (!$panel.length) {
+                return;
+            }
+            var clicked = normalizeOptionStar($(this).attr('data-star'));
+            if (!clicked) {
+                return;
+            }
+            var current = getHotelOptionStar($panel);
+            setHotelOptionStar($panel, current === clicked ? '' : clicked);
+            syncHotelOptionStarUi();
+            refreshPricingOptionTitles();
+            saveFormDraftToStorage();
+        });
+        $(document).on('mouseenter', '#qHotelOptionStars .q-hotel-option-star', function () {
+            var $wrap = $('#qHotelOptionStars');
+            var hoverN = parseInt($(this).attr('data-star'), 10) || 0;
+            $wrap.addClass('is-hovering');
+            $wrap.find('.q-hotel-option-star').each(function () {
+                var n = parseInt($(this).attr('data-star'), 10) || 0;
+                $(this).toggleClass('is-hover', n > 0 && n <= hoverN);
+            });
+        });
+        $(document).on('mouseleave', '#qHotelOptionStars', function () {
+            $(this).removeClass('is-hovering').find('.q-hotel-option-star').removeClass('is-hover');
         });
         $(document).on('input', '.q-hotel-cat-label', function () {
             refreshHotelCategoryTabs();

@@ -82,9 +82,165 @@ function tocrCallGeminiVisionOnce(string $prompt, string $mime, string $base64, 
     $text = trim(preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($text)) ?? $text);
     $parsed = json_decode($text, true);
     if (!is_array($parsed)) {
+        if (preg_match('/\{[\s\S]*\}|\[[\s\S]*\]/', $text, $m)) {
+            $parsed = json_decode($m[0], true);
+        }
+    }
+    if (!is_array($parsed)) {
         return ['ok' => false, 'error' => 'Could not read the AI response.'];
     }
     return ['ok' => true, 'data' => $parsed, 'model' => $model];
+}
+
+/**
+ * Downscale large screenshots so vision OCR is faster and less likely to hit timeouts / 503s.
+ *
+ * @return array{0:string,1:string} [mime, base64]
+ */
+function tocrPrepareVisionPayload(string $absPath, string $mime): array
+{
+    $bytes = @file_get_contents($absPath);
+    if ($bytes === false || $bytes === '') {
+        return [$mime, ''];
+    }
+
+    $mime = strtolower(trim($mime));
+    if ($mime === 'image/jpg') {
+        $mime = 'image/jpeg';
+    }
+
+    $canResize = function_exists('imagecreatefromstring') && function_exists('imagejpeg');
+    $tooBig = strlen($bytes) > (900 * 1024);
+    if (!$canResize || (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true) && !$tooBig)) {
+        return [$mime, base64_encode($bytes)];
+    }
+
+    $img = @imagecreatefromstring($bytes);
+    if ($img === false) {
+        return [$mime, base64_encode($bytes)];
+    }
+
+    $w = imagesx($img);
+    $h = imagesy($img);
+    $maxEdge = 1600;
+    if ($w <= 0 || $h <= 0) {
+        imagedestroy($img);
+        return [$mime, base64_encode($bytes)];
+    }
+
+    $scale = 1.0;
+    if ($w > $maxEdge || $h > $maxEdge) {
+        $scale = min($maxEdge / $w, $maxEdge / $h);
+    } elseif (!$tooBig) {
+        imagedestroy($img);
+        return [$mime, base64_encode($bytes)];
+    }
+
+    $nw = max(1, (int) round($w * $scale));
+    $nh = max(1, (int) round($h * $scale));
+    $dst = imagecreatetruecolor($nw, $nh);
+    if ($dst === false) {
+        imagedestroy($img);
+        return [$mime, base64_encode($bytes)];
+    }
+    imagealphablending($dst, true);
+    imagesavealpha($dst, false);
+    $white = imagecolorallocate($dst, 255, 255, 255);
+    imagefilledrectangle($dst, 0, 0, $nw, $nh, $white);
+    imagecopyresampled($dst, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    imagedestroy($img);
+
+    ob_start();
+    imagejpeg($dst, null, 82);
+    $jpeg = ob_get_clean();
+    imagedestroy($dst);
+
+    if (!is_string($jpeg) || $jpeg === '') {
+        return [$mime, base64_encode($bytes)];
+    }
+
+    return ['image/jpeg', base64_encode($jpeg)];
+}
+
+/**
+ * Vision call with model fallbacks + short retries on overload (503/429).
+ *
+ * @param list<string>|null $models
+ * @return array{ok:bool,error?:string,http_code?:int,data?:array,model?:string}
+ */
+function tocrCallGeminiVision(string $prompt, string $mime, string $base64, int $timeoutSeconds = 70, ?array $models = null, int $maxAttemptsPerModel = 3): array
+{
+    $queue = [];
+    if (is_array($models) && $models) {
+        foreach ($models as $m) {
+            $m = trim((string) $m);
+            if ($m !== '') {
+                $queue[] = $m;
+            }
+        }
+    } else {
+        $queue = crmAiGeminiModels();
+    }
+
+    $seen = [];
+    $unique = [];
+    foreach ($queue as $m) {
+        if (isset($seen[$m])) {
+            continue;
+        }
+        $seen[$m] = true;
+        $unique[] = $m;
+    }
+
+    $maxAttemptsPerModel = max(1, min(4, $maxAttemptsPerModel));
+    $lastError = 'OCR request failed.';
+    $lastCode = 0;
+
+    foreach ($unique as $model) {
+        for ($attempt = 1; $attempt <= $maxAttemptsPerModel; $attempt++) {
+            crmAiLog('vision_try', [
+                'model' => $model,
+                'attempt' => $attempt,
+            ]);
+            $res = tocrCallGeminiVisionOnce($prompt, $mime, $base64, $model, $timeoutSeconds);
+            if (!empty($res['ok']) && is_array($res['data'] ?? null)) {
+                crmAiLog('vision_ok', ['model' => $model, 'attempt' => $attempt]);
+                return $res;
+            }
+
+            $lastError = (string) ($res['error'] ?? $lastError);
+            $lastCode = (int) ($res['http_code'] ?? 0);
+            crmAiLog('vision_fail', [
+                'model' => $model,
+                'attempt' => $attempt,
+                'http_code' => $lastCode,
+                'error' => $lastError,
+            ]);
+
+            if (in_array($lastCode, [401, 403], true)) {
+                return ['ok' => false, 'error' => $lastError, 'http_code' => $lastCode];
+            }
+
+            $busy = in_array($lastCode, [429, 500, 503], true) || crmAiIsBusyOverloadError($lastError);
+            $missing = in_array($lastCode, [404], true)
+                || strpos(strtolower($lastError), 'not found') !== false
+                || strpos(strtolower($lastError), 'no longer available') !== false;
+
+            if ($missing) {
+                // Next model immediately — no point retrying a retired ID.
+                break;
+            }
+            if (!$busy && !crmAiIsTransientGeminiError($lastError)) {
+                break;
+            }
+            if ($attempt < $maxAttemptsPerModel && $busy) {
+                // Back off briefly; Gemini free-tier overload is usually short-lived.
+                usleep(700000 * $attempt);
+            }
+        }
+    }
+
+    return ['ok' => false, 'error' => $lastError, 'http_code' => $lastCode];
 }
 
 function tocrPrompt(string $hint): string
@@ -274,29 +430,21 @@ function tocrExtract(string $absPath, string $mime, string $hint = 'auto'): arra
     if (!tocrAvailable()) {
         return ['ok' => false, 'error' => 'AI document reading is not enabled. Configure the Gemini key in ai_config.local.php.'];
     }
-    $bytes = @file_get_contents($absPath);
-    if ($bytes === false || $bytes === '') {
+    [$mime, $base64] = tocrPrepareVisionPayload($absPath, $mime);
+    if ($base64 === '') {
         return ['ok' => false, 'error' => 'Could not read the uploaded file.'];
     }
-    $base64 = base64_encode($bytes);
     $prompt = tocrPrompt($hint);
-
-    $lastError = 'OCR request failed.';
-    foreach (array_slice(crmAiGeminiModels(), 0, 3) as $model) {
-        $res = tocrCallGeminiVisionOnce($prompt, $mime, $base64, $model, 45);
-        if (!empty($res['ok'])) {
-            return ['ok' => true, 'result' => tocrNormalize($res['data']), 'model' => $model];
-        }
-        $lastError = (string) ($res['error'] ?? $lastError);
-        $code = (int) ($res['http_code'] ?? 0);
-        if (in_array($code, [401, 403], true)) {
-            break;
-        }
-        if (!crmAiIsTransientGeminiError($lastError) && !in_array($code, [404, 429, 500, 503], true)) {
-            break;
-        }
+    $res = tocrCallGeminiVision($prompt, $mime, $base64, 60, crmAiGeminiModels(), 3);
+    if (!empty($res['ok']) && is_array($res['data'] ?? null)) {
+        return [
+            'ok' => true,
+            'result' => tocrNormalize($res['data']),
+            'model' => (string) ($res['model'] ?? ''),
+        ];
     }
-    if (crmAiIsQuotaOrRateError($lastError)) {
+    $lastError = (string) ($res['error'] ?? 'OCR request failed.');
+    if (crmAiIsQuotaOrRateError($lastError) || in_array((int) ($res['http_code'] ?? 0), [429, 503], true)) {
         $lastError = 'The AI service is busy right now. Please try again in a minute or fill the details manually.';
     }
     return ['ok' => false, 'error' => $lastError];

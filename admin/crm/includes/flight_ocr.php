@@ -287,28 +287,21 @@ function focrExtract(string $absPath, string $mime): array
     if (!focrAvailable()) {
         return ['ok' => false, 'error' => 'AI image reading is not enabled. Configure the Gemini key in crm/includes/ai_config.local.php.'];
     }
-    $bytes = @file_get_contents($absPath);
-    if ($bytes === false || $bytes === '') {
+    [$mime, $base64] = tocrPrepareVisionPayload($absPath, $mime);
+    if ($base64 === '') {
         return ['ok' => false, 'error' => 'Could not read the uploaded image.'];
     }
-    $base64 = base64_encode($bytes);
     $prompt = focrPrompt();
-    $lastError = 'The ticket image could not be read.';
-    foreach (array_slice(crmAiGeminiModels(), 0, 3) as $model) {
-        $res = tocrCallGeminiVisionOnce($prompt, $mime, $base64, $model, 70);
-        if (!empty($res['ok']) && is_array($res['data'])) {
-            return ['ok' => true, 'result' => focrNormalize($res['data']), 'model' => (string) $model];
-        }
-        $lastError = (string) ($res['error'] ?? $lastError);
-        $code = (int) ($res['http_code'] ?? 0);
-        if (in_array($code, [401, 403], true)) {
-            break;
-        }
-        if (!crmAiIsTransientGeminiError($lastError) && !in_array($code, [404, 429, 500, 503], true)) {
-            break;
-        }
+    $res = tocrCallGeminiVision($prompt, $mime, $base64, 70, crmAiGeminiModels(), 3);
+    if (!empty($res['ok']) && is_array($res['data'] ?? null)) {
+        return [
+            'ok' => true,
+            'result' => focrNormalize($res['data']),
+            'model' => (string) ($res['model'] ?? ''),
+        ];
     }
-    if (crmAiIsQuotaOrRateError($lastError)) {
+    $lastError = (string) ($res['error'] ?? 'The ticket image could not be read.');
+    if (crmAiIsQuotaOrRateError($lastError) || in_array((int) ($res['http_code'] ?? 0), [429, 503], true)) {
         $lastError = 'The AI service is busy right now. Please try again in a minute or fill the flight rows manually.';
     }
     return ['ok' => false, 'error' => $lastError];

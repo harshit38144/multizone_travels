@@ -128,9 +128,11 @@ if (!function_exists('crmLegacyNormalizeHotelsJson')) {
                         $hotels[] = $norm;
                     }
                 }
+                $optionStar = (int) ($cat['option_star'] ?? 0);
                 $categories[] = [
                     'id' => (string) ($cat['id'] ?? ('opt_' . ($idx + 1))),
                     'label' => (string) ($cat['label'] ?? ('Option ' . ($idx + 1))),
+                    'option_star' => ($optionStar >= 1 && $optionStar <= 5) ? $optionStar : '',
                     'hotels' => $hotels,
                 ];
             }

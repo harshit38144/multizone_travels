@@ -443,29 +443,21 @@ function etocrExtract(string $absPath, string $mime): array
     if (!etocrAvailable()) {
         return ['ok' => false, 'error' => 'AI e-ticket reading is not enabled. Configure the Gemini key in crm/includes/ai_config.local.php.'];
     }
-    $bytes = @file_get_contents($absPath);
-    if ($bytes === false || $bytes === '') {
+    [$mime, $base64] = tocrPrepareVisionPayload($absPath, $mime);
+    if ($base64 === '') {
         return ['ok' => false, 'error' => 'Could not read the uploaded file.'];
     }
-    $base64 = base64_encode($bytes);
     $prompt = etocrPrompt();
-
-    $lastError = 'The e-ticket could not be read.';
-    foreach (array_slice(crmAiGeminiModels(), 0, 3) as $model) {
-        $res = tocrCallGeminiVisionOnce($prompt, $mime, $base64, $model, 60);
-        if (!empty($res['ok'])) {
-            return ['ok' => true, 'result' => etocrNormalize($res['data']), 'model' => $model];
-        }
-        $lastError = (string) ($res['error'] ?? $lastError);
-        $code = (int) ($res['http_code'] ?? 0);
-        if (in_array($code, [401, 403], true)) {
-            break;
-        }
-        if (!crmAiIsTransientGeminiError($lastError) && !in_array($code, [404, 429, 500, 503], true)) {
-            break;
-        }
+    $res = tocrCallGeminiVision($prompt, $mime, $base64, 70, crmAiGeminiModels(), 3);
+    if (!empty($res['ok']) && is_array($res['data'] ?? null)) {
+        return [
+            'ok' => true,
+            'result' => etocrNormalize($res['data']),
+            'model' => (string) ($res['model'] ?? ''),
+        ];
     }
-    if (crmAiIsQuotaOrRateError($lastError)) {
+    $lastError = (string) ($res['error'] ?? 'The e-ticket could not be read.');
+    if (crmAiIsQuotaOrRateError($lastError) || in_array((int) ($res['http_code'] ?? 0), [429, 503], true)) {
         $lastError = 'The AI service is busy right now. Please try again in a minute or fill the details manually.';
     }
     return ['ok' => false, 'error' => $lastError];

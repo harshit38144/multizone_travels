@@ -86,6 +86,8 @@ try {
                 if (!is_array($hotelCategory)) {
                     continue;
                 }
+                $optionStar = (int) ($hotelCategory['option_star'] ?? 0);
+                $hotelCategory['option_star'] = ($optionStar >= 1 && $optionStar <= 5) ? $optionStar : '';
                 $catHotels = $hotelCategory['hotels'] ?? [];
                 if (!is_array($catHotels)) {
                     $catHotels = [];

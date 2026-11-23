@@ -84,11 +84,13 @@ function crmAiJsonResponse(array $payload, int $code = 200): void
  */
 function crmAiGeminiModels(): array
 {
+    // Prefer the most reliable free-tier lite model first; keep fuller flash as fallbacks.
     return [
         'gemini-3.5-flash-lite',
         'gemini-3.1-flash-lite',
         'gemini-3.8-flash',
         'gemini-3.5-flash',
+        'gemini-flash-latest',
     ];
 }
 
@@ -562,7 +564,8 @@ function crmAiBuildItineraryPrompt(
 
 function crmAiIsQuotaOrRateError(string $error): bool
 {
-    return crmAiIsTransientGeminiError($error);
+    // Only real overload / quota — never map "model not found" to the busy UX message.
+    return crmAiIsBusyOverloadError($error);
 }
 
 function crmAiDestinationProfile(string $destination): array
