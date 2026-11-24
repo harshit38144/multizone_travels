@@ -305,17 +305,34 @@ function crmTwilioSendWhatsappContent(string $toPhoneDigits, string $contentSid,
     }
 
     $contentVariables = [];
-    $i = 1;
-    foreach ($variables as $variable) {
-        $contentVariables[(string) $i] = mb_substr(trim((string) $variable), 0, 1024);
-        $i++;
+    $keys = array_keys($variables);
+    $isList = $keys === range(0, count($variables) - 1);
+    if ($isList) {
+        $i = 1;
+        foreach ($variables as $variable) {
+            $val = mb_substr(trim((string) $variable), 0, 1024);
+            if ($val !== '') {
+                $contentVariables[(string) $i] = $val;
+            }
+            $i++;
+        }
+    } else {
+        foreach ($variables as $key => $variable) {
+            $key = trim((string) $key);
+            if ($key === '') {
+                continue;
+            }
+            $contentVariables[$key] = mb_substr(trim((string) $variable), 0, 1024);
+        }
     }
 
+    // ContentSid only — do not send Body with templates (Twilio rejects / ignores).
     $fields = [
         'From' => $from,
         'To' => $to,
         'ContentSid' => $contentSid,
     ];
+    // Only include ContentVariables when we have values (avoids error 21654 edge cases).
     if ($contentVariables !== []) {
         $fields['ContentVariables'] = json_encode($contentVariables, JSON_UNESCAPED_UNICODE);
     }

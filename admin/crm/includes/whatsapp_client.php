@@ -69,7 +69,7 @@ function crmWhatsappLocalFailure(string $error): array
 }
 
 /**
- * Session text via Twilio. Only delivers inside an open WhatsApp customer-care window.
+ * Session text via Twilio. Production only — inside the 24-hour customer-care window.
  *
  * @return array{ok:bool,status:string,http_status:int,message_id:string,error:string,timed_out:bool,response:array<string,mixed>|null}
  */
@@ -82,6 +82,11 @@ function crmWhatsappSendText(string $phone, string $message, string $idempotency
     if ($phone === '') {
         return crmWhatsappLocalFailure('Enter a valid mobile number with country code.');
     }
+    if (crmTwilioIsTrialMode()) {
+        return crmWhatsappLocalFailure(
+            'Twilio trial mode cannot send free-form text. Select a Content template (ContentSid) and try again.'
+        );
+    }
     if ($message === '') {
         return crmWhatsappLocalFailure('Write a message before sending.');
     }
@@ -93,40 +98,37 @@ function crmWhatsappSendText(string $phone, string $message, string $idempotency
 }
 
 /**
- * Business-initiated Content Template via Twilio.
+ * Business-initiated Content Template via Twilio (ContentSid).
  *
- * @param list<string> $variables
+ * @param list<string>|array<string,string> $variables
  * @return array{ok:bool,status:string,http_status:int,message_id:string,error:string,timed_out:bool,response:array<string,mixed>|null}
  */
 function crmWhatsappSendTemplate(string $phone, string $template, string $language, array $variables, string $idempotencyKey = '', ?string $unused = null): array
 {
     unset($language, $idempotencyKey, $unused);
     $phone = crmWhatsappNormalizePhone($phone);
-    $template = trim($template);
+    $contentSid = crmTwilioResolveContentSid($template);
 
     if ($phone === '') {
         return crmWhatsappLocalFailure('Enter a valid mobile number with country code.');
     }
-
-    $contentSid = crmTwilioContentSid() !== '' ? crmTwilioContentSid() : $template;
     if ($contentSid === '' || !preg_match('/^HX[0-9a-fA-F]+$/', $contentSid)) {
-        return crmWhatsappLocalFailure('Set twilio_content_sid (HX…) in whatsapp_config.local.php for template sends.');
+        return crmWhatsappLocalFailure(
+            'ContentSid is required. Set twilio_content_sid / twilio_content_templates in whatsapp_config.local.php.'
+        );
     }
 
-    $cleanVars = [];
-    foreach ($variables as $variable) {
-        $cleanVars[] = mb_substr(trim((string) $variable), 0, 1024);
-    }
-    if (count($cleanVars) > 10) {
+    if (count($variables) > 10) {
         return crmWhatsappLocalFailure('A template can use at most 10 variables.');
     }
 
-    return crmTwilioSendWhatsappContent($phone, $contentSid, $cleanVars);
+    return crmTwilioSendWhatsappContent($phone, $contentSid, $variables);
 }
 
 /**
  * Manual send for one CRM lead. Does not send unless this function is called.
  *
+ * @param string $contentSid Optional ContentSid from the chat template picker.
  * @return array{success:bool,message:string,status:string,provider_message_id:string,needs_confirm:bool}
  */
 function crmWhatsappSendLeadManual(
@@ -136,9 +138,17 @@ function crmWhatsappSendLeadManual(
     string $sessionMessage,
     bool $confirmResend,
     int $adminId,
-    string $adminName
+    string $adminName,
+    string $contentSid = ''
 ): array {
     $mode = $mode === 'session' ? 'session' : 'template';
+    $contentSid = crmTwilioResolveContentSid($contentSid);
+
+    // Trial accounts cannot send Body-only WhatsApp messages — force ContentSid.
+    if (crmTwilioIsTrialMode() && $mode === 'session') {
+        $mode = 'template';
+    }
+
     if ($leadId <= 0) {
         return crmWhatsappUserResult(false, 'Choose a lead first.', 'failed', '', false);
     }
@@ -167,10 +177,13 @@ function crmWhatsappSendLeadManual(
     $guestFirst = $guest === '' ? 'Guest' : preg_split('/\s+/', $guest)[0];
     $agent = trim($adminName) !== '' ? trim($adminName) : 'Team';
     $company = 'Multi Zone Travels';
-    $values = [
+    $valueMap = [
         'guest' => $guestFirst,
         'agent' => $agent,
         'company' => $company,
+        '1' => $guestFirst,
+        '2' => $agent,
+        '3' => $company,
     ];
 
     $templateName = '';
@@ -178,6 +191,7 @@ function crmWhatsappSendLeadManual(
     $variables = [];
     $bodyText = '';
     $fingerprintPayload = '';
+    $tplMeta = null;
 
     if ($mode === 'session') {
         $sessionMessage = trim($sessionMessage);
@@ -190,22 +204,57 @@ function crmWhatsappSendLeadManual(
         $bodyText = $sessionMessage;
         $fingerprintPayload = $sessionMessage;
     } else {
-        $templateName = crmTwilioContentSid();
+        $templateName = $contentSid;
         $language = crmWhatsappTemplateLanguage();
         if ($templateName === '' || !preg_match('/^HX[0-9a-fA-F]+$/', $templateName)) {
             return crmWhatsappUserResult(
                 false,
-                'No Twilio Content template is configured. Set twilio_content_sid in whatsapp_config.local.php, or reply in the chat after the guest messages you.',
+                'ContentSid Required — pick a WhatsApp template (or set twilio_content_sid in whatsapp_config.local.php).',
                 'failed',
                 '',
                 false
             );
         }
-        foreach (crmWhatsappTemplateVariableTokens() as $token) {
-            $variables[] = $values[$token];
+
+        $tplMeta = crmTwilioFindContentTemplate($templateName);
+        $tokenList = $tplMeta['variables'] ?? crmWhatsappTemplateVariableTokens();
+        if ($tokenList === []) {
+            $tokenList = crmWhatsappTemplateVariableTokens();
         }
-        $bodyText = 'Template ' . $templateName;
-        $fingerprintPayload = json_encode($variables, JSON_UNESCAPED_UNICODE) ?: '';
+
+        $sessionMessage = trim($sessionMessage);
+        // Optional typed text fills the first template variable when present.
+        if ($sessionMessage !== '' && $tokenList !== []) {
+            $first = strtolower((string) $tokenList[0]);
+            if (isset($valueMap[$first])) {
+                $valueMap[$first] = $sessionMessage;
+            }
+            $valueMap['1'] = $sessionMessage;
+        }
+
+        foreach ($tokenList as $idx => $token) {
+            $token = strtolower(trim((string) $token));
+            if ($token === '') {
+                continue;
+            }
+            if (isset($valueMap[$token])) {
+                $variables[] = $valueMap[$token];
+            } elseif (ctype_digit($token) && isset($valueMap[$token])) {
+                $variables[] = $valueMap[$token];
+            } else {
+                $variables[] = $valueMap[(string) ($idx + 1)] ?? '';
+            }
+        }
+
+        $label = $tplMeta['label'] ?? ('Template ' . substr($templateName, 0, 10));
+        $preview = trim((string) ($tplMeta['preview'] ?? ''));
+        $bodyText = '[Template] ' . $label;
+        if ($preview !== '') {
+            $bodyText .= "\n" . $preview;
+        } elseif ($sessionMessage !== '') {
+            $bodyText .= "\n" . $sessionMessage;
+        }
+        $fingerprintPayload = $templateName . '|' . (json_encode($variables, JSON_UNESCAPED_UNICODE) ?: '');
     }
 
     $fingerprint = crmWhatsappFingerprint($mode, $phone, $templateName, $language, $fingerprintPayload);

@@ -2879,6 +2879,21 @@ foreach ($destinationLookup as $destId => $destName) {
             border-top-left-radius: 0;
         }
         #waChatModal .wa-bubble.is-failed { background: #ffe8e6; }
+        #waChatModal .wa-bubble.is-template {
+            border-left: 3px solid #128c7e;
+        }
+        #waChatModal .wa-bubble-kind {
+            display: inline-block;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #128c7e;
+            margin-bottom: 0.15rem;
+        }
+        #waChatModal .wa-bubble-row.is-out .wa-bubble.is-template .wa-bubble-kind {
+            color: #056a5a;
+        }
         #waChatModal .wa-bubble-text {
             font-size: 0.9rem;
             color: #111b21;
@@ -2899,6 +2914,30 @@ foreach ($destinationLookup as $destId => $destName) {
             background: #f0f2f5;
             padding: 0.55rem 0.65rem;
             border-top: 1px solid #d1d7db;
+        }
+        #waChatModal .wa-template-row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin-bottom: 0.45rem;
+        }
+        #waChatModal .wa-template-row label {
+            margin: 0;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #54656f;
+            white-space: nowrap;
+        }
+        #waChatModal #waChatTemplateSelect {
+            flex: 1;
+            min-width: 0;
+            height: 2rem;
+            border: 1px solid #d1d7db;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 0.8rem;
+            color: #111b21;
+            padding: 0 0.5rem;
         }
         #waChatModal .wa-attach-chip {
             display: none;
@@ -5733,6 +5772,12 @@ foreach ($destinationLookup as $destId => $destName) {
                                 <span id="waChatAttachName">Attachment</span>
                                 <button type="button" id="waChatAttachClear" title="Remove attachment">&times;</button>
                             </div>
+                            <div class="wa-template-row" id="waChatTemplateRow">
+                                <label for="waChatTemplateSelect">Template</label>
+                                <select id="waChatTemplateSelect" aria-label="WhatsApp template">
+                                    <option value="">Loading templates…</option>
+                                </select>
+                            </div>
                             <div class="wa-compose-row">
                                 <div class="wa-compose-tools">
                                     <button type="button" class="wa-tool-btn" id="waChatEmojiBtn" title="Emoji"><i class="far fa-smile"></i></button>
@@ -8162,7 +8207,8 @@ foreach ($destinationLookup as $destId => $destName) {
         uid: '',
         loading: false,
         sending: false,
-        attach: null
+        attach: null,
+        api: null
     };
 
     var WA_EMOJI_LIST = [
@@ -8249,14 +8295,61 @@ foreach ($destinationLookup as $destId => $destName) {
                     ticks = '<i class="fas fa-exclamation-circle is-err" title="Failed"></i>';
                 }
             }
+            var isTemplate = !!msg.is_template;
+            var kindLabel = String(msg.kind_label || (isTemplate ? 'Template' : (isOut ? 'Text' : '')));
+            var bubbleClass = 'wa-bubble'
+                + (failed ? ' is-failed' : '')
+                + (isTemplate ? ' is-template' : '');
             html += '<div class="wa-bubble-row ' + (isOut ? 'is-out' : 'is-in') + '">'
-                + '<div class="wa-bubble' + (failed ? ' is-failed' : '') + '">'
+                + '<div class="' + bubbleClass + '">'
+                + (isOut && kindLabel ? ('<div class="wa-bubble-kind">' + waChatEsc(kindLabel) + '</div>') : '')
                 + '<div class="wa-bubble-text">' + waChatEsc(msg.body || '') + '</div>'
                 + '<div class="wa-bubble-meta"><span>' + waChatEsc(msg.time_label || '') + '</span>' + ticks + '</div>'
                 + '</div></div>';
         });
         $box.html(html);
         $box.scrollTop($box[0].scrollHeight);
+    }
+
+    function waChatApplyApi(api) {
+        waChatState.api = api || {};
+        var isTrial = !!(waChatState.api.is_trial || waChatState.api.twilio_mode === 'trial');
+        var templates = Array.isArray(waChatState.api.templates) ? waChatState.api.templates : [];
+        var defaultSid = String(waChatState.api.default_content_sid || '');
+        var $sel = $('#waChatTemplateSelect').empty();
+        if (!isTrial) {
+            $sel.append($('<option></option>').val('').text('Free text (24-hour window)'));
+        }
+        if (!templates.length && defaultSid) {
+            templates = [{ sid: defaultSid, label: 'Default template', preview: '' }];
+        }
+        templates.forEach(function (tpl) {
+            var sid = String(tpl.sid || '');
+            if (!sid) return;
+            var label = String(tpl.label || sid);
+            $sel.append($('<option></option>').val(sid).text(label));
+        });
+        if (defaultSid && $sel.find('option[value="' + defaultSid.replace(/"/g, '\\"') + '"]').length) {
+            $sel.val(defaultSid);
+        } else if (isTrial && templates.length) {
+            $sel.prop('selectedIndex', 0);
+        }
+        $('#waChatTemplateRow').toggle(isTrial || templates.length > 0);
+        waChatSyncComposerMode();
+    }
+
+    function waChatSyncComposerMode() {
+        var api = waChatState.api || {};
+        var isTrial = !!(api.is_trial || api.twilio_mode === 'trial');
+        var sid = String($('#waChatTemplateSelect').val() || '');
+        var usingTemplate = isTrial || sid !== '';
+        if (usingTemplate) {
+            $('#waChatInput').attr('placeholder', isTrial
+                ? 'Optional: value for first template variable'
+                : 'Optional note / first template variable');
+        } else {
+            $('#waChatInput').attr('placeholder', 'Type a message');
+        }
     }
 
     function waChatStopPoll() {
@@ -8386,8 +8479,13 @@ foreach ($destinationLookup as $destId => $destName) {
             waChatRenderMessages(res.messages || []);
             waChatStartPoll();
             var api = res.api || {};
+            waChatApplyApi(api);
             if (api.can_send || api.twilio_configured) {
-                waChatSetStatus('');
+                if (api.is_trial && !(api.templates && api.templates.length) && !api.default_content_sid) {
+                    waChatSetStatus('Trial mode needs a Content SID — add twilio_content_sid / twilio_content_templates in whatsapp_config.local.php.', 'err');
+                } else {
+                    waChatSetStatus('');
+                }
             } else {
                 waChatSetStatus('Twilio WhatsApp is not configured — set Account SID, Auth Token, and WhatsApp From in whatsapp_config.local.php on this server.', 'err');
             }
@@ -8401,7 +8499,15 @@ foreach ($destinationLookup as $destId => $destName) {
         if (!waChatState.leadId || waChatState.sending) return;
         var text = String($('#waChatInput').val() || '').trim();
         var attach = waChatState.attach;
-        if (!text && !attach) {
+        var api = waChatState.api || {};
+        var isTrial = !!(api.is_trial || api.twilio_mode === 'trial');
+        var contentSid = String($('#waChatTemplateSelect').val() || '');
+        var sendMode = (isTrial || contentSid) ? 'template' : 'session';
+        if (sendMode === 'template' && !contentSid) {
+            waChatSetStatus('Select a WhatsApp template (Content SID is required).', 'err');
+            return;
+        }
+        if (sendMode === 'session' && !text && !attach) {
             waChatSetStatus('Type a message or attach a file.', 'err');
             return;
         }
@@ -8418,11 +8524,14 @@ foreach ($destinationLookup as $destId => $destName) {
                 action: 'send',
                 lead_id: waChatState.leadId,
                 message: finalText,
+                content_sid: contentSid,
+                send_mode: sendMode,
                 confirm_resend: confirmResend ? '1' : '0'
             }, function (res) {
                 waChatState.sending = false;
                 $('#waChatSendBtn').prop('disabled', false);
                 res = res || {};
+                if (res.api) waChatApplyApi(res.api);
                 if (res.needs_confirm) {
                     waChatSetStatus(res.message || 'Already sent.', 'err');
                     if (window.confirm(res.message || 'Send this message again?')) {
@@ -8500,6 +8609,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     $('#waChatRefresh').on('click', function () { waChatLoadThread(); });
+    $('#waChatTemplateSelect').on('change', waChatSyncComposerMode);
     $('#waChatModal').on('hidden.bs.modal', function () {
         waChatStopPoll();
         waChatState.lastMsgId = 0;

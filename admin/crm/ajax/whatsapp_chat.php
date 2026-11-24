@@ -20,6 +20,13 @@ function waChatFormatMessage(array $row): array
     }
     $body = trim((string) ($row['body_text'] ?? ''));
     $template = trim((string) ($row['template_name'] ?? ''));
+    $channel = strtolower((string) ($row['channel'] ?? ''));
+    $isTemplate = $direction === 'outbound' && (
+        $channel === 'twilio_template'
+        || $channel === 'template'
+        || ($template !== '' && preg_match('/^HX[0-9a-fA-F]+$/', $template))
+        || strpos($body, '[Template]') === 0
+    );
     if ($body === '' && $template !== '') {
         $body = 'Template: ' . $template;
     }
@@ -32,6 +39,9 @@ function waChatFormatMessage(array $row): array
         'body' => $body,
         'status' => (string) ($row['status'] ?? ''),
         'channel' => (string) ($row['channel'] ?? ''),
+        'is_template' => $isTemplate,
+        'content_sid' => $isTemplate ? $template : '',
+        'kind_label' => $isTemplate ? 'Template' : ($direction === 'outbound' ? 'Text' : ''),
         'error' => (string) ($row['error_message'] ?? ''),
         'created_by' => (string) ($row['created_by_name'] ?? ''),
         'created_at' => $createdAt,
@@ -107,18 +117,30 @@ if ($action === 'send') {
     }
 
     $text = trim((string) ($_POST['message'] ?? ''));
+    $contentSid = trim((string) ($_POST['content_sid'] ?? ''));
+    $sendMode = strtolower(trim((string) ($_POST['send_mode'] ?? '')));
     $confirmResend = (string) ($_POST['confirm_resend'] ?? '') === '1';
     $adminId = isset($_SESSION['id']) ? (int) $_SESSION['id'] : 0;
     $adminName = trim((string) ($_SESSION['name'] ?? ''));
 
+    if ($sendMode !== 'session' && $sendMode !== 'template') {
+        // Trial always templates; production uses ContentSid when one is selected.
+        if (crmTwilioIsTrialMode() || $contentSid !== '') {
+            $sendMode = 'template';
+        } else {
+            $sendMode = 'session';
+        }
+    }
+
     $result = crmWhatsappSendLeadManual(
         $conn,
         $leadId,
-        'session',
+        $sendMode,
         $text,
         $confirmResend,
         $adminId,
-        $adminName
+        $adminName,
+        $contentSid
     );
 
     $messages = array_map('waChatFormatMessage', crmWhatsappListLeadMessages($conn, $leadId, 300));
@@ -131,6 +153,7 @@ if ($action === 'send') {
         'lead' => $leadPayload,
         'messages' => $messages,
         'sent_text' => $text,
+        'api' => crmWhatsappPublicStatus(),
     ]);
 }
 

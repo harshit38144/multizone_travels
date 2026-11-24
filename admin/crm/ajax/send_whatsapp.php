@@ -28,6 +28,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 $leadId = (int) ($_POST['lead_id'] ?? 0);
 $mode = (string) ($_POST['mode'] ?? 'template');
 $message = (string) ($_POST['message'] ?? '');
+$contentSid = trim((string) ($_POST['content_sid'] ?? ''));
 $confirmResend = (string) ($_POST['confirm_resend'] ?? '') === '1';
 $adminId = isset($_SESSION['id']) ? (int) $_SESSION['id'] : 0;
 $adminName = trim((string) ($_SESSION['name'] ?? ''));
@@ -39,5 +40,6 @@ sendWhatsappJson(crmWhatsappSendLeadManual(
     $message,
     $confirmResend,
     $adminId,
-    $adminName
+    $adminName,
+    $contentSid
 ));
