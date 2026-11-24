@@ -8386,10 +8386,10 @@ foreach ($destinationLookup as $destId => $destName) {
             waChatRenderMessages(res.messages || []);
             waChatStartPoll();
             var api = res.api || {};
-            if (!api.key_configured) {
-                waChatSetStatus('API key not configured — messages will not deliver until RichAutomate is set up.', 'err');
-            } else {
+            if (api.can_send || api.twilio_configured) {
                 waChatSetStatus('');
+            } else {
+                waChatSetStatus('Twilio WhatsApp is not configured — set Account SID, Auth Token, and WhatsApp From in whatsapp_config.local.php on this server.', 'err');
             }
         }).fail(function () {
             waChatState.loading = false;
@@ -8941,7 +8941,7 @@ foreach ($destinationLookup as $destId => $destName) {
             smsTplShowApiResult(message, res.success ? 'ok' : 'err');
         }, 'json').fail(function (xhr) {
             $btn.prop('disabled', false);
-            var message = 'The send request failed before RichAutomate answered. It was not retried.';
+            var message = 'The send request failed before Twilio answered. It was not retried.';
             if (xhr && xhr.status === 401) {
                 message = 'Your session has expired. Sign in again. Nothing was retried.';
             }

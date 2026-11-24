@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Local checks for the RichAutomate client.
+ * Local checks for the Twilio WhatsApp client.
  * Does not message a lead.
  * A live send happens only when both --phone= and --confirm-send=yes are passed,
  * and only to that phone.
@@ -9,7 +9,7 @@
  * Usage:
  *   php admin/crm/scripts/whatsapp_api_check.php
  *   php admin/crm/scripts/whatsapp_api_check.php --prepare-db
- *   php admin/crm/scripts/whatsapp_api_check.php --phone=91XXXXXXXXXX --confirm-send=yes --mode=template
+ *   php admin/crm/scripts/whatsapp_api_check.php --phone=91XXXXXXXXXX --confirm-send=yes --mode=session
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -53,63 +53,37 @@ waCheck('rejects a short phone', crmWhatsappNormalizePhone('12345') === '');
 waCheck('prefixes a 10-digit India number', crmWhatsappNormalizePhone('9876543210') === '919876543210');
 waCheck('keeps a country-code number', crmWhatsappNormalizePhone('+91 98765 43210') === '919876543210');
 
-$invalidPhone = crmWhatsappSendText('abc', 'Hello', 'test-invalid-phone', '');
+$invalidPhone = crmWhatsappSendText('abc', 'Hello');
 waCheck('invalid number does not call the API', ($invalidPhone['status'] ?? '') === 'failed' && ($invalidPhone['http_status'] ?? -1) === 0, (string) ($invalidPhone['error'] ?? ''));
 
-$missingKey = crmWhatsappSendText('919876543210', 'Hello', 'test-missing-key', '');
-waCheck('missing key stops before the network', ($missingKey['ok'] ?? true) === false && strpos((string) ($missingKey['error'] ?? ''), 'not configured') !== false, (string) ($missingKey['error'] ?? ''));
-
-$emptyText = crmWhatsappSendText('919876543210', '   ', 'test-empty', '');
+$emptyText = crmWhatsappSendText('919876543210', '   ');
 waCheck('empty text is rejected', ($emptyText['status'] ?? '') === 'failed');
 
-$badTemplate = crmWhatsappSendTemplate('919876543210', '', 'en_US', [], 'test-template', '');
-waCheck('missing template name is rejected', ($badTemplate['status'] ?? '') === 'failed');
+$badTemplate = crmWhatsappSendTemplate('919876543210', '', 'en_US', []);
+waCheck('missing ContentSid is rejected', ($badTemplate['status'] ?? '') === 'failed');
 
-$unauth = crmWhatsappInterpretTransport(401, '{"success":false,"error":"Invalid or suspended API key."}', 0, '');
-waCheck('401 is a failed send', ($unauth['status'] ?? '') === 'failed' && ($unauth['ok'] ?? true) === false, (string) ($unauth['error'] ?? ''));
-
-$invalid = crmWhatsappInterpretTransport(422, '{"success":false,"error":"The phone field is invalid."}', 0, '');
-waCheck('422 is a failed send', ($invalid['status'] ?? '') === 'failed');
-
-$accepted = crmWhatsappInterpretTransport(200, '{"success":true,"message_id":123456,"status":"queued"}', 0, '');
-waCheck('200 stores the provider message id', ($accepted['ok'] ?? false) === true && ($accepted['message_id'] ?? '') === '123456');
-
-$timeout = crmWhatsappInterpretTransport(0, null, 28, 'Operation timed out');
-waCheck('timeout is unknown and not a success', ($timeout['status'] ?? '') === 'unknown' && ($timeout['timed_out'] ?? false) === true && ($timeout['ok'] ?? true) === false);
-
-$serverError = crmWhatsappInterpretTransport(502, '{"success":false,"error":"upstream"}', 0, '');
-waCheck('502 stays unknown so it is not retried automatically', ($serverError['status'] ?? '') === 'unknown');
-
-if (function_exists('curl_init')) {
-    $ch = curl_init('http://192.0.2.1:81/');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 2,
-        CURLOPT_TIMEOUT => 2,
-        CURLOPT_FOLLOWLOCATION => false,
-    ]);
-    curl_exec($ch);
-    $errno = (int) curl_errno($ch);
-    curl_close($ch);
-    $fromNetwork = crmWhatsappInterpretTransport(0, null, $errno === 0 ? 28 : $errno, $errno === 28 || $errno === 0 ? 'timed out' : 'connect failed');
-    $status = (string) ($fromNetwork['status'] ?? '');
-    waCheck(
-        'a dead network is not reported as delivered',
-        $errno !== 0 && ($fromNetwork['ok'] ?? true) === false && ($status === 'unknown' || $status === 'failed'),
-        'curl errno ' . $errno . ' status ' . $status
-    );
-}
-
-$redacted = crmWhatsappRedact(['api_key' => 'ra_live_secret', 'nested' => ['authorization' => 'Bearer x']]);
-waCheck('redaction removes key fields', ($redacted['api_key'] ?? '') === '[redacted]' && ($redacted['nested']['authorization'] ?? '') === '[redacted]');
+$redacted = crmWhatsappRedact(['auth_token' => 'secret', 'nested' => ['authorization' => 'Bearer x']]);
+waCheck('redaction removes key fields', ($redacted['auth_token'] ?? '') === '[redacted]' && ($redacted['nested']['authorization'] ?? '') === '[redacted]');
 
 $status = crmWhatsappPublicStatus();
 waCheck(
-    'public status has no key value',
-    !array_key_exists('richautomate_api_key', $status) && is_bool($status['key_configured'] ?? null)
+    'public status has no secret fields',
+    !array_key_exists('twilio_auth_token', $status)
+        && !array_key_exists('richautomate_api_key', $status)
+        && is_bool($status['key_configured'] ?? null)
 );
-echo 'INFO  API key configured: ' . (!empty($status['key_configured']) ? 'yes' : 'no') . PHP_EOL;
-echo 'INFO  template: ' . (($status['template_name'] ?? '') !== '' ? $status['template_name'] . ' (' . $status['template_language'] . ')' : 'not set') . PHP_EOL;
+echo 'INFO  Twilio configured: ' . (!empty($status['twilio_configured']) ? 'yes' : 'no') . PHP_EOL;
+echo 'INFO  can send: ' . (!empty($status['can_send']) ? 'yes' : 'no') . PHP_EOL;
+echo 'INFO  content sid: ' . (($status['template_name'] ?? '') !== '' ? $status['template_name'] : 'not set') . PHP_EOL;
+
+if (!crmTwilioIsConfigured()) {
+    $missingKey = crmWhatsappSendText('919876543210', 'Hello');
+    waCheck(
+        'missing Twilio config stops before the network',
+        ($missingKey['ok'] ?? true) === false && strpos((string) ($missingKey['error'] ?? ''), 'not configured') !== false,
+        (string) ($missingKey['error'] ?? '')
+    );
+}
 
 if (!empty($args['prepare-db'])) {
     $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -122,11 +96,11 @@ if (!empty($args['prepare-db'])) {
         $logId = crmWhatsappInsertPending($conn, [
             'lead_id' => 0,
             'phone' => '919876543210',
-            'channel' => 'template',
-            'template_name' => 'example_template',
-            'template_language' => 'en_US',
-            'body_text' => 'Template example_template (en_US)',
-            'variables_json' => '["Guest"]',
+            'channel' => 'twilio',
+            'template_name' => '',
+            'template_language' => '',
+            'body_text' => 'rollback check',
+            'variables_json' => '',
             'fingerprint' => hash('sha256', 'rollback-check'),
             'idempotency_key' => 'rollback-' . bin2hex(random_bytes(8)),
             'created_by_id' => 0,
@@ -152,18 +126,15 @@ $confirm = (string) ($args['confirm-send'] ?? '');
 if ($phone !== '' || $confirm !== '') {
     if ($confirm !== 'yes' || crmWhatsappNormalizePhone($phone) === '') {
         waCheck('live send', false, 'Refused. Pass --phone=91XXXXXXXXXX and --confirm-send=yes to message that number only.');
-    } elseif (crmWhatsappApiKey() === '') {
-        waCheck('live send', false, 'Refused. API key is not configured.');
+    } elseif (!crmTwilioIsConfigured()) {
+        waCheck('live send', false, 'Refused. Twilio is not configured.');
     } else {
-        $mode = (string) ($args['mode'] ?? 'template');
-        $idem = 'manual-test-' . bin2hex(random_bytes(8));
-        if ($mode === 'session') {
-            $text = (string) ($args['text'] ?? 'Multizone Travels API check');
-            $live = crmWhatsappSendText($phone, $text, $idem);
+        $mode = (string) ($args['mode'] ?? 'session');
+        if ($mode === 'template') {
+            $live = crmWhatsappSendTemplate($phone, crmTwilioContentSid(), 'en_US', ['Guest', 'Team', 'Multi Zone Travels']);
         } else {
-            $template = crmWhatsappTemplateName();
-            $language = crmWhatsappTemplateLanguage();
-            $live = crmWhatsappSendTemplate($phone, $template, $language, ['Guest', 'Team', 'Multi Zone Travels'], $idem);
+            $text = (string) ($args['text'] ?? 'Multizone Travels Twilio API check');
+            $live = crmWhatsappSendText($phone, $text);
         }
         $detail = (string) ($live['error'] ?? '');
         if (!empty($live['ok'])) {

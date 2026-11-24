@@ -20,7 +20,6 @@ require_once __DIR__ . '/includes/whatsapp_twilio.php';
 require_once __DIR__ . '/includes/lead_db.php';
 require_once dirname(__DIR__, 2) . '/includes/payment_helpers.php';
 
-// Normalize helper lives on the RichAutomate client; load only that function’s file deps lightly.
 if (!function_exists('crmWhatsappNormalizePhone')) {
     require_once __DIR__ . '/includes/whatsapp_client.php';
 }
