@@ -32,7 +32,7 @@ function dashPeriodRange($period)
     return [$start, $end];
 }
 
-function dashPeriodLabel($period, DateTime $start = null, DateTime $end = null)
+function dashPeriodLabel($period, ?DateTime $start = null, ?DateTime $end = null)
 {
     if ($period === 'all_time') {
         return 'All time';
@@ -43,7 +43,7 @@ function dashPeriodLabel($period, DateTime $start = null, DateTime $end = null)
     return 'Selected period';
 }
 
-function dashDateWhere($column, DateTime $start = null, DateTime $end = null)
+function dashDateWhere($column, ?DateTime $start = null, ?DateTime $end = null)
 {
     if (!$start || !$end) {
         return ['', []];

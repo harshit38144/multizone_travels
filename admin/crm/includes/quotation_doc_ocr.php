@@ -94,13 +94,19 @@ function qdocPrompt(): string
     $p .= "Write customer-facing professional language in the same response (fix spelling/grammar; remove duplicates/filler).\n";
     $p .= "Schema:\n";
     $p .= "{\"document_type\":\"itinerary|hotel_quote|package|mixed|other\",";
-    $p .= "\"itinerary\":[{\"day\":1,\"title\":\"\",\"description\":\"\",\"overnight\":\"\",\"meal\":\"\"}],";
+    $p .= "\"itinerary\":[{\"day\":1,\"title\":\"\",\"description\":\"<p>...</p>\",\"overnight\":\"\",\"meal\":\"\"}],";
     $p .= "\"hotels\":[{\"city\":\"\",\"hotel_name\":\"\",\"room_type\":\"\",\"rooms\":\"\",\"meal_plan\":\"EP|CP|MAP|AP or empty\",\"nights\":\"\",\"check_in\":\"YYYY-MM-DD\",\"check_out\":\"YYYY-MM-DD\",\"rate\":\"\",\"supplier\":\"\"}],";
     $p .= "\"inclusions\":[\"...\"],\"exclusions\":[\"...\"],";
     $p .= "\"terms_policies\":[\"...\"]}\n";
-    $p .= "Itinerary: keep day order; each description max ~100 words; concise attractive prose; wrap important sightseeing place names in <strong>...</strong>; avoid repeating the same attraction across days; keep arrival/departure/transfers/overnight.\n";
+    $p .= "Itinerary: keep day order; ";
+    if (function_exists('crmAiItineraryParagraphRules')) {
+        $p .= crmAiItineraryParagraphRules() . ' ';
+    } else {
+        $p .= 'each description must be one paragraph of 60–65 words with no bullets/lists/subheadings. ';
+    }
+    $p .= "Wrap important sightseeing place names in <strong>...</strong>; avoid repeating the same attraction across days; keep arrival/departure/transfers/meals/overnight details from the source.\n";
     $p .= "Also polish hotel names/room text, inclusions, exclusions, and terms_policies into clear professional lines.\n";
-    $p .= "Rules: split bullets; empty string/[] when missing; YYYY-MM-DD dates when known.\n";
+    $p .= "Rules: for inclusions/exclusions/terms arrays, put one item per array entry; empty string/[] when missing; YYYY-MM-DD dates when known.\n";
     return $p;
 }
 
@@ -571,10 +577,32 @@ function qdocSanitizeDayHtml(string $html): string
     if ($html === '') {
         return '';
     }
-    // Convert markdown bold leftovers.
+    // Shared normalizer: one paragraph, no bullets/lists (same rules as AI Suggest).
+    if (function_exists('crmAiNormalizeItineraryDescriptionHtml')) {
+        return crmAiNormalizeItineraryDescriptionHtml($html);
+    }
+    // Fallback if ai_config helpers are unavailable.
     $html = preg_replace('/\*\*([^*]+)\*\*/', '<strong>$1</strong>', $html) ?? $html;
-    $html = strip_tags($html, '<strong><em><b><i><br><p><ul><ol><li>');
-    return trim($html);
+    if (preg_match_all('/<li\b[^>]*>(.*?)<\/li>/is', $html, $m) && !empty($m[1])) {
+        $parts = [];
+        foreach ($m[1] as $li) {
+            $part = trim(strip_tags((string) $li, '<strong><em><b><i>'));
+            if ($part !== '') {
+                if (!preg_match('/[.!?]$/u', strip_tags($part))) {
+                    $part .= '.';
+                }
+                $parts[] = $part;
+            }
+        }
+        if ($parts) {
+            return '<p>' . implode(' ', $parts) . '</p>';
+        }
+    }
+    $html = strip_tags($html, '<strong><em><b><i><br><p>');
+    $html = preg_replace('/<\s*br\s*\/?\s*>/i', ' ', $html) ?? $html;
+    $html = preg_replace('/<\/?\s*p\b[^>]*>/i', ' ', $html) ?? $html;
+    $html = trim(preg_replace('/\s+/', ' ', $html) ?? $html);
+    return $html === '' ? '' : '<p>' . $html . '</p>';
 }
 
 /**
@@ -613,7 +641,13 @@ function qdocRephrasePrompt(array $extracted): string
     $p = "Rewrite this extracted travel quotation JSON into professional customer-facing language.\n";
     $p .= "Return ONLY JSON with the SAME keys/shape. Do not invent hotels, sights, prices, dates, or services.\n";
     $p .= "Preserve all important facts (destinations, hotels, dates, rates, inclusions, exclusions, terms).\n";
-    $p .= "Itinerary rules: keep day order; each description max ~100 words; concise attractive prose; wrap important sightseeing place names in <strong>...</strong>; avoid repeating the same attraction across days; keep arrival/departure/transfers/overnight.\n";
+    $p .= "Itinerary rules: keep day order; ";
+    if (function_exists('crmAiItineraryParagraphRules')) {
+        $p .= crmAiItineraryParagraphRules() . ' ';
+    } else {
+        $p .= 'each description must be one paragraph of 60–65 words with no bullets/lists/subheadings. ';
+    }
+    $p .= "Wrap important sightseeing place names in <strong>...</strong>; avoid repeating the same attraction across days; keep arrival/departure/transfers/meals/overnight details.\n";
     $p .= "Also polish hotel names/room text, inclusions, exclusions, and terms_policies into clear professional lines.\n";
     $p .= "Fix spelling/grammar; remove duplicates and irrelevant filler.\n\n";
     $p .= "INPUT JSON:\n" . $json;

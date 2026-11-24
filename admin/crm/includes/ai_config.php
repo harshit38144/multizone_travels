@@ -455,8 +455,8 @@ function crmAiCallGemini(string $prompt, string $model = 'gemini-3.5-flash-lite'
 function crmAiCallGeminiItinerary(string $prompt, int $totalDays = 5, int $timeoutSeconds = 20, ?array $models = null): array
 {
     $totalDays = max(1, min(21, $totalDays));
-    // ~120–160 tokens/day for compact bullets + titles.
-    $maxTokens = min(3072, max(768, $totalDays * 160));
+    // ~100–140 tokens/day for a 60–65 word paragraph + title.
+    $maxTokens = min(3072, max(768, $totalDays * 140));
 
     return crmAiCallGemini(
         $prompt,
@@ -475,14 +475,122 @@ function crmAiCallGeminiItinerary(string $prompt, int $totalDays = 5, int $timeo
     );
 }
 
-function crmAiSanitizeItineraryHtml(string $html): string
+/**
+ * Shared itinerary-day writing rules for AI Suggest and document extract/rephrase.
+ */
+function crmAiItineraryParagraphRules(): string
+{
+    return 'Each day description must be ONE plain paragraph of 60–65 words in simple, clear, professional language. '
+        . 'No bullet points, numbered lists, subheadings, or extra formatting besides optional <strong> on key place names. '
+        . 'Preserve essential transfers, sightseeing, meals, and overnight stay details. '
+        . 'Do not invent unverified facts, prices, or hotel brand names. Keep a consistent style across days.';
+}
+
+/**
+ * Join activity lines into a single customer-facing paragraph.
+ *
+ * @param list<string> $lines
+ */
+function crmAiLinesToParagraphHtml(array $lines, bool $escape = true): string
+{
+    $sentences = [];
+    foreach ($lines as $line) {
+        $line = trim(preg_replace('/\s+/', ' ', (string) $line) ?? '');
+        if ($line === '') {
+            continue;
+        }
+        if ($escape) {
+            $line = htmlspecialchars($line, ENT_QUOTES, 'UTF-8');
+        }
+        $plain = trim(html_entity_decode(strip_tags($line), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if ($plain === '') {
+            continue;
+        }
+        if (!preg_match('/[.!?]$/u', $plain)) {
+            $line .= '.';
+        }
+        $sentences[] = $line;
+    }
+    if (!$sentences) {
+        return '';
+    }
+
+    return '<p>' . implode(' ', $sentences) . '</p>';
+}
+
+/**
+ * Soft-cap a paragraph near 65 words without cutting mid-sentence when possible.
+ */
+function crmAiTrimParagraphWordCount(string $html, int $maxWords = 70): string
+{
+    $inner = trim(strip_tags($html, '<strong><em><b><i>'));
+    $inner = trim(preg_replace('/\s+/', ' ', $inner) ?? $inner);
+    if ($inner === '') {
+        return '';
+    }
+
+    $plain = trim(html_entity_decode(strip_tags($inner), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    $words = preg_split('/\s+/u', $plain, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    if (count($words) <= $maxWords) {
+        return '<p>' . $inner . '</p>';
+    }
+
+    // Over limit: trim on plain text so inline tags are never split mid-attribute.
+    $slice = array_slice($words, 0, $maxWords);
+    $trimmed = implode(' ', $slice);
+    if (preg_match('/^(.*[.!?])\s+\S*$/u', $trimmed, $m) && str_word_count($m[1]) >= 45) {
+        $trimmed = $m[1];
+    } else {
+        $trimmed = rtrim($trimmed, '.,;:') . '.';
+    }
+
+    return '<p>' . htmlspecialchars($trimmed, ENT_QUOTES, 'UTF-8') . '</p>';
+}
+
+/**
+ * Normalize any AI/instant description into a single paragraph (no lists/headings).
+ */
+function crmAiNormalizeItineraryDescriptionHtml(string $html): string
 {
     $html = trim($html);
     if ($html === '') {
         return '';
     }
-    $allowed = '<ul><ol><li><p><br><strong><em><b><i>';
-    return strip_tags($html, $allowed);
+
+    // Markdown bold leftovers → strong.
+    $html = preg_replace('/\*\*([^*]+)\*\*/', '<strong>$1</strong>', $html) ?? $html;
+
+    // Convert list items into paragraph sentences.
+    if (preg_match_all('/<li\b[^>]*>(.*?)<\/li>/is', $html, $m) && !empty($m[1])) {
+        $parts = [];
+        foreach ($m[1] as $li) {
+            $part = trim(strip_tags((string) $li, '<strong><em><b><i>'));
+            $part = trim(preg_replace('/\s+/', ' ', $part) ?? $part);
+            if ($part !== '') {
+                $parts[] = $part;
+            }
+        }
+        if ($parts) {
+            return crmAiTrimParagraphWordCount(crmAiLinesToParagraphHtml($parts, false));
+        }
+    }
+
+    // Strip disallowed structure; keep light inline emphasis only.
+    $html = strip_tags($html, '<p><br><strong><em><b><i>');
+    $html = preg_replace('/<\s*br\s*\/?\s*>/i', ' ', $html) ?? $html;
+    $html = preg_replace('/<\/\s*p\s*>/i', ' ', $html) ?? $html;
+    $html = preg_replace('/<\s*p\b[^>]*>/i', ' ', $html) ?? $html;
+    $html = trim(preg_replace('/\s+/', ' ', $html) ?? $html);
+    if ($html === '') {
+        return '';
+    }
+
+    return crmAiTrimParagraphWordCount('<p>' . $html . '</p>');
+}
+
+function crmAiSanitizeItineraryHtml(string $html): string
+{
+    return crmAiNormalizeItineraryDescriptionHtml($html);
 }
 
 function crmAiNormalizeItineraryDays(array $days, int $expectedDays, bool $preserveImages = false): array
@@ -493,7 +601,7 @@ function crmAiNormalizeItineraryDays(array $days, int $expectedDays, bool $prese
             continue;
         }
         $title = trim((string) ($day['title'] ?? ''));
-        $desc = crmAiSanitizeItineraryHtml((string) ($day['description'] ?? ''));
+        $desc = crmAiNormalizeItineraryDescriptionHtml((string) ($day['description'] ?? ''));
         if ($title === '' && $desc === '') {
             continue;
         }
@@ -515,7 +623,11 @@ function crmAiNormalizeItineraryDays(array $days, int $expectedDays, bool $prese
         $n = count($out) + 1;
         $out[] = [
             'title' => 'Day ' . $n,
-            'description' => '<ul><li>Free time / leisure at destination</li></ul>',
+            'description' => crmAiLinesToParagraphHtml([
+                'Enjoy free time and leisure at the destination',
+                'Explore nearby attractions at your own pace',
+                'Overnight stay as per the package plan',
+            ]),
             'image' => '',
         ];
     }
@@ -556,8 +668,9 @@ function crmAiBuildItineraryPrompt(
     if ($notes !== '') {
         $prompt .= "Notes: {$notes}\n";
     }
-    $prompt .= "Schema: {\"days\":[{\"title\":\"...\",\"description\":\"<ul><li>...</li></ul>\"}]}\n";
-    $prompt .= "Rules: exactly {$totalDays} days; day1 arrival+check-in; last day checkout+departure; middle days unique sightseeing for {$destination}; 3-4 short <li> bullets/day; titles <50 chars; no prices/brand hotels; no duplicate activities.\n";
+    $prompt .= "Schema: {\"days\":[{\"title\":\"...\",\"description\":\"<p>One paragraph...</p>\"}]}\n";
+    $prompt .= "Rules: exactly {$totalDays} days; day1 arrival+check-in; last day checkout+departure; middle days unique sightseeing for {$destination}; titles <50 chars; no prices/brand hotels; no duplicate activities.\n";
+    $prompt .= crmAiItineraryParagraphRules() . "\n";
 
     return $prompt;
 }
@@ -675,10 +788,8 @@ function crmAiDestinationProfile(string $destination): array
 
 function crmAiBulletsToHtml(array $lines): string
 {
-    $bullets = array_map(function ($line) {
-        return '<li>' . htmlspecialchars((string) $line, ENT_QUOTES, 'UTF-8') . '</li>';
-    }, $lines);
-    return '<ul>' . implode('', $bullets) . '</ul>';
+    // Legacy name kept for callers — itinerary days are single paragraphs now.
+    return crmAiLinesToParagraphHtml($lines, true);
 }
 
 function crmAiSmartItinerary(string $destination, int $totalDays, string $notes = ''): array
@@ -700,38 +811,43 @@ function crmAiSmartItinerary(string $destination, int $totalDays, string $notes 
         if ($i === 0) {
             $title = 'Arrival in ' . $destShort;
             $lines = [
-                'Arrive at ' . $destShort . ' — meet & greet at airport / railway station',
-                'Transfer to hotel and complete check-in',
-                'Rest and freshen up after your journey',
+                'Arrive at ' . $destShort . ' and enjoy a warm meet and greet at the airport or railway station',
+                'Continue with a private transfer to your hotel for smooth check-in and time to rest after the journey',
             ];
             if (!empty($highlights[0])) {
-                $lines[] = 'Evening at leisure — optional visit: ' . preg_replace('/^Visit |^Explore /', '', $highlights[0]);
+                $lines[] = 'In the evening, enjoy leisure time with an optional light visit such as '
+                    . preg_replace('/^Visit |^Explore /i', '', (string) $highlights[0]);
+            } else {
+                $lines[] = 'In the evening, enjoy leisure time around the hotel and nearby local area at a relaxed pace';
             }
-            $lines[] = 'Overnight stay at ' . $destShort;
+            $lines[] = 'Dinner arrangements follow your chosen meal plan, with overnight stay in ' . $destShort;
         } elseif ($i === $totalDays - 1 && $totalDays > 1) {
             $title = 'Departure from ' . $destShort;
             $lines = [
-                'Breakfast at hotel',
-                'Check-out and hotel formalities',
-                'Transfer to airport / railway station for onward journey',
-                'Tour concludes with wonderful memories',
+                'Begin the day with breakfast at the hotel and complete check-out formalities comfortably on time',
+                'Depending on your departure schedule, keep a short buffer for packing or a quick local stop if time allows',
+                'Transfer to the airport or railway station with assistance for your onward journey',
+                'The tour concludes with warm memories of your stay in ' . $destShort,
             ];
         } else {
             $midIndex = $i - 1;
             $title = $titles[min($midIndex + 1, count($titles) - 2)] ?? ('Explore ' . $destShort);
-            $lines = ['Breakfast at hotel'];
             $h1 = $highlights[($midIndex * 2) % count($highlights)];
             $h2 = $highlights[($midIndex * 2 + 1) % count($highlights)];
-            $lines[] = $h1;
+            $lines = [
+                'After breakfast at the hotel, set out for a well-paced day of sightseeing in and around ' . $destShort,
+                (string) $h1,
+            ];
             if ($h2 !== $h1) {
-                $lines[] = $h2;
+                $lines[] = (string) $h2;
             }
-            $lines[] = 'Return to hotel — overnight stay at ' . $destShort;
+            $lines[] = 'Enjoy free time for photos, local snacks, or shopping before returning to the hotel';
+            $lines[] = 'Overnight stay in ' . $destShort . ' as per the package plan';
         }
 
         $days[] = [
             'title' => $title,
-            'description' => crmAiBulletsToHtml($lines),
+            'description' => crmAiNormalizeItineraryDescriptionHtml(crmAiLinesToParagraphHtml($lines)),
             'image' => '',
         ];
     }
@@ -875,9 +991,9 @@ function crmAiBuildSingleDayPrompt(
         $prompt .= "USER REQUEST FOR THIS DAY (must follow closely): {$notes}\n";
     }
     $prompt .= "\nReturn ONLY valid JSON with this exact structure:\n";
-    $prompt .= "{\"title\":\"Short day title\",\"description\":\"<ul><li>Activity</li></ul>\"}\n\n";
+    $prompt .= "{\"title\":\"Short day title\",\"description\":\"<p>One paragraph of 60-65 words...</p>\"}\n\n";
     $prompt .= "Rules:\n";
-    $prompt .= "- description must be HTML using only <ul> and <li> tags, 4-6 bullet points.\n";
+    $prompt .= '- ' . crmAiItineraryParagraphRules() . "\n";
     $prompt .= "- Title must be concise (under 55 characters).\n";
     if ($notes !== '') {
         $prompt .= "- Build the day plan primarily from the USER REQUEST above.\n";
@@ -940,25 +1056,25 @@ function crmAiDayFromUserPrompt(
 
     $lines = [];
     if ($dayIndex === 0) {
-        $lines[] = 'Arrive at ' . $destShort . ' — meet & greet at airport / railway station';
-        $lines[] = 'Transfer to hotel and complete check-in';
+        $lines[] = 'Arrive at ' . $destShort . ' with meet and greet assistance at the airport or railway station';
+        $lines[] = 'Transfer to the hotel, complete check-in, and take time to freshen up';
     } else {
-        $lines[] = 'Breakfast at hotel';
+        $lines[] = 'Start the day with breakfast at the hotel before continuing with the planned activities';
     }
 
-    foreach (array_slice($parts, 0, 5) as $part) {
+    foreach (array_slice($parts, 0, 4) as $part) {
         $lines[] = $part;
     }
 
     if ($dayIndex === $totalDays - 1 && $totalDays > 1) {
-        $lines[] = 'Check-out and transfer to airport / railway station for onward journey';
+        $lines[] = 'Complete check-out and transfer to the airport or railway station for your onward journey';
     } else {
-        $lines[] = 'Overnight stay at ' . $destShort;
+        $lines[] = 'Return for overnight stay in ' . $destShort;
     }
 
     return [
         'title' => $title,
-        'description' => crmAiBulletsToHtml($lines),
+        'description' => crmAiNormalizeItineraryDescriptionHtml(crmAiLinesToParagraphHtml($lines)),
         'image' => '',
     ];
 }

@@ -58,6 +58,127 @@ function crmImageApiJson(array $payload, int $code = 200): void
     exit;
 }
 
+/**
+ * HTTP GET. Uses cURL when available; otherwise file_get_contents
+ * (needed on some XAMPP builds where ext-curl fails to load).
+ *
+ * @param array<int, string> $headers
+ * @return array{ok:bool, raw:?string, http_code:int, content_type:string, error:string}
+ */
+function crmImageHttpGet(string $url, array $headers = [], int $timeoutSeconds = 15): array
+{
+    $timeoutSeconds = max(5, $timeoutSeconds);
+    $ua = 'MultizoneTravels-Quotation/1.0 (CRM itinerary images)';
+    $hasUa = false;
+    foreach ($headers as $h) {
+        if (stripos((string) $h, 'User-Agent:') === 0) {
+            $hasUa = true;
+            break;
+        }
+    }
+    if (!$hasUa) {
+        $headers[] = 'User-Agent: ' . $ua;
+    }
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_TIMEOUT => $timeoutSeconds,
+            CURLOPT_USERAGENT => $ua,
+        ]);
+        $raw = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($raw === false) {
+            return [
+                'ok' => false,
+                'raw' => null,
+                'http_code' => $httpCode,
+                'content_type' => $contentType,
+                'error' => ($curlErr !== '' ? $curlErr : 'cURL request failed.'),
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'raw' => (string) $raw,
+            'http_code' => $httpCode,
+            'content_type' => $contentType,
+            'error' => '',
+        ];
+    }
+
+    if (!ini_get('allow_url_fopen')) {
+        return [
+            'ok' => false,
+            'raw' => null,
+            'http_code' => 0,
+            'content_type' => '',
+            'error' => 'PHP cURL extension is missing and allow_url_fopen is off. Enable extension=curl in php.ini and restart Apache.',
+        ];
+    }
+
+    $headerLines = '';
+    foreach ($headers as $h) {
+        $headerLines .= $h . "\r\n";
+    }
+
+    $ctx = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => $headerLines,
+            'timeout' => $timeoutSeconds,
+            'ignore_errors' => true,
+            'follow_location' => 1,
+            'max_redirects' => 5,
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+        ],
+    ]);
+
+    $raw = @file_get_contents($url, false, $ctx);
+    $httpCode = 0;
+    $contentType = '';
+    if (isset($http_response_header) && is_array($http_response_header)) {
+        foreach ($http_response_header as $line) {
+            $line = (string) $line;
+            if (preg_match('/^HTTP\/\S+\s+(\d+)/', $line, $m)) {
+                $httpCode = (int) $m[1];
+            } elseif (stripos($line, 'Content-Type:') === 0) {
+                $contentType = trim(substr($line, strlen('Content-Type:')));
+            }
+        }
+    }
+
+    if ($raw === false) {
+        return [
+            'ok' => false,
+            'raw' => null,
+            'http_code' => $httpCode,
+            'content_type' => $contentType,
+            'error' => 'HTTP request failed (cURL unavailable; file_get_contents fallback failed). Enable extension=curl in php.ini and restart Apache.',
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'raw' => (string) $raw,
+        'http_code' => $httpCode,
+        'content_type' => $contentType,
+        'error' => '',
+    ];
+}
+
 function crmImageSearchPexels(string $query, int $limit, int $page = 1): array
 {
     $empty = [
@@ -66,6 +187,7 @@ function crmImageSearchPexels(string $query, int $limit, int $page = 1): array
         'per_page' => min(30, max(1, $limit)),
         'total_results' => 0,
         'has_more' => false,
+        'error' => '',
     ];
 
     $key = crmImageApiSettings()['pexels_api_key'] ?? '';
@@ -83,23 +205,22 @@ function crmImageSearchPexels(string $query, int $limit, int $page = 1): array
         'orientation' => 'landscape',
     ]);
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_HTTPHEADER => ['Authorization: ' . $key],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => 15,
-    ]);
-    $raw = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    $transport = crmImageHttpGet($url, ['Authorization: ' . $key], 15);
+    $raw = $transport['raw'];
+    $code = (int) ($transport['http_code'] ?? 0);
 
-    if ($raw === false || $code !== 200) {
+    if ($raw === null || $code !== 200) {
+        $empty['error'] = ($code === 401 || $code === 403)
+            ? 'Pexels authentication failed. Check the API key.'
+            : (!empty($transport['error'])
+                ? (string) $transport['error']
+                : 'Pexels search failed. Please try again.');
         return $empty;
     }
 
-    $data = json_decode($raw, true);
+    $data = json_decode((string) $raw, true);
     if (!is_array($data)) {
+        $empty['error'] = 'Pexels returned an invalid response.';
         return $empty;
     }
 
@@ -137,6 +258,7 @@ function crmImageSearchPexels(string $query, int $limit, int $page = 1): array
         'per_page' => $perPage,
         'total_results' => $total,
         'has_more' => $hasMore,
+        'error' => '',
     ];
 }
 
@@ -167,29 +289,23 @@ function crmImageSearchUnsplash(string $query, int $limit, int $page = 1): array
         'orientation' => 'landscape',
     ]);
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Client-ID ' . $accessKey,
-            'Accept-Version: v1',
-        ],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => 15,
-        CURLOPT_USERAGENT => 'MultizoneTravels-Quotation/1.0 (CRM itinerary images)',
-    ]);
-    $raw = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    $transport = crmImageHttpGet($url, [
+        'Authorization: Client-ID ' . $accessKey,
+        'Accept-Version: v1',
+    ], 15);
+    $raw = $transport['raw'];
+    $code = (int) ($transport['http_code'] ?? 0);
 
-    if ($raw === false || $code !== 200) {
+    if ($raw === null || $code !== 200) {
         $empty['error'] = $code === 401 || $code === 403
             ? 'Unsplash authentication failed. Check the access key.'
-            : 'Unsplash search failed. Please try again.';
+            : (!empty($transport['error'])
+                ? (string) $transport['error']
+                : 'Unsplash search failed. Please try again.');
         return $empty;
     }
 
-    $data = json_decode($raw, true);
+    $data = json_decode((string) $raw, true);
     if (!is_array($data)) {
         $empty['error'] = 'Unsplash returned an invalid response.';
         return $empty;
@@ -255,21 +371,14 @@ function crmImageSearchWikimedia(string $query, int $limit): array
     ]);
 
     $url = 'https://commons.wikimedia.org/w/api.php?' . $params;
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => 15,
-        CURLOPT_USERAGENT => 'MultizoneTravels-Quotation/1.0 (CRM itinerary images)',
-    ]);
-    $raw = curl_exec($ch);
-    curl_close($ch);
+    $transport = crmImageHttpGet($url, [], 15);
+    $raw = $transport['raw'];
 
-    if ($raw === false) {
+    if ($raw === null) {
         return [];
     }
 
-    $data = json_decode($raw, true);
+    $data = json_decode((string) $raw, true);
     $pages = $data['query']['pages'] ?? [];
     $out = [];
     foreach ($pages as $page) {
@@ -353,6 +462,8 @@ function crmImageSearch(string $query, int $limit = 18, int $page = 1, string $p
         ];
     }
 
+    $pexelsError = trim((string) ($pexels['error'] ?? ''));
+
     // Wikimedia has no reliable page API here — only first page.
     if ($page > 1) {
         return [
@@ -363,7 +474,7 @@ function crmImageSearch(string $query, int $limit = 18, int $page = 1, string $p
             'per_page' => $limit,
             'total_results' => 0,
             'has_more' => false,
-            'error' => '',
+            'error' => $pexelsError,
         ];
     }
 
@@ -377,7 +488,8 @@ function crmImageSearch(string $query, int $limit = 18, int $page = 1, string $p
         'per_page' => $limit,
         'total_results' => count($images),
         'has_more' => false,
-        'error' => '',
+        // Keep success when Wikimedia returns images; otherwise surface Pexels error.
+        'error' => !empty($images) ? '' : $pexelsError,
     ];
 }
 
@@ -417,19 +529,11 @@ function crmImageNotifyUnsplashDownload(string $downloadLocation): void
     if ($accessKey === '') {
         return;
     }
-    $ch = curl_init($downloadLocation);
-    curl_setopt_array($ch, [
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Client-ID ' . $accessKey,
-            'Accept-Version: v1',
-        ],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_USERAGENT => 'MultizoneTravels-Quotation/1.0 (CRM itinerary images)',
-    ]);
-    curl_exec($ch);
-    curl_close($ch);
+    // Best-effort tracking ping; never block image import.
+    crmImageHttpGet($downloadLocation, [
+        'Authorization: Client-ID ' . $accessKey,
+        'Accept-Version: v1',
+    ], 8);
 }
 
 function crmImageImportFromUrl(string $url): array
@@ -450,23 +554,13 @@ function crmImageImportFromUrl(string $url): array
         return ['ok' => false, 'error' => 'Invalid image URL.'];
     }
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 5,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => 45,
-        CURLOPT_USERAGENT => 'MultizoneTravels-Quotation/1.0 (CRM itinerary images)',
-        CURLOPT_HTTPHEADER => ['Accept: image/*,*/*;q=0.8'],
-    ]);
-    $binary = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-    $curlErr = curl_error($ch);
-    curl_close($ch);
+    $transport = crmImageHttpGet($url, ['Accept: image/*,*/*;q=0.8'], 45);
+    $binary = $transport['raw'];
+    $code = (int) ($transport['http_code'] ?? 0);
+    $contentType = (string) ($transport['content_type'] ?? '');
+    $curlErr = (string) ($transport['error'] ?? '');
 
-    if ($binary === false || $code !== 200) {
+    if ($binary === null || $code !== 200) {
         $detail = $curlErr !== '' ? $curlErr : ('HTTP ' . $code);
         return ['ok' => false, 'error' => 'Could not download image (' . $detail . ').'];
     }

@@ -337,7 +337,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-commercial-head-total {
             margin-left: auto;
             flex: 0 0 auto;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 800;
             color: #c4121a;
             font-variant-numeric: tabular-nums;
@@ -475,7 +475,7 @@ $qWizardSteps = [
             gap: 0.55rem;
         }
         #qLeadFormModal .modal-header.lead-form-hd .modal-title i {
-            font-size: 1.05rem;
+            font-size: 1.13rem;
         }
         #qLeadFormModal .modal-header.lead-form-hd .close {
             color: #fff;
@@ -583,14 +583,14 @@ $qWizardSteps = [
         }
 
         #qDocUploadModal .q-doc-hd-title {
-            font-size: 1rem;
+            font-size: 1.08rem;
             font-weight: 700;
             margin: 0;
             color: #0f172a;
         }
 
         #qDocUploadModal .q-doc-hd-file {
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             color: #64748b;
             margin: 0.15rem 0 0;
             white-space: nowrap;
@@ -600,7 +600,7 @@ $qWizardSteps = [
         }
 
         #qDocUploadModal .q-doc-hd-sub {
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             color: #64748b;
             margin: 0.1rem 0 0;
         }
@@ -658,7 +658,7 @@ $qWizardSteps = [
         }
 
         #qDocUploadModal .q-doc-section-check label {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             font-weight: 600;
             color: #334155;
             margin: 0;
@@ -697,7 +697,7 @@ $qWizardSteps = [
         }
 
         #qDocUploadModal .q-doc-sec-title {
-            font-size: 0.86rem;
+            font-size: 0.94rem;
             font-weight: 700;
             color: #0f172a;
             margin: 0;
@@ -713,14 +713,14 @@ $qWizardSteps = [
             border-radius: 999px;
             background: #fee2e2;
             color: #b91c1c;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
             font-weight: 700;
         }
 
         #qDocUploadModal .q-doc-sec-toggle {
             margin-left: auto;
             color: #94a3b8;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             transition: transform 0.15s ease;
         }
 
@@ -738,7 +738,7 @@ $qWizardSteps = [
 
         #qDocUploadModal .q-doc-empty {
             color: #94a3b8;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             padding: 0.35rem 0.15rem;
             margin: 0;
         }
@@ -757,7 +757,7 @@ $qWizardSteps = [
         }
 
         #qDocUploadModal .q-doc-day-num {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 800;
             color: #c62828;
             letter-spacing: 0.02em;
@@ -773,7 +773,7 @@ $qWizardSteps = [
             border-bottom: 1px solid transparent;
             border-radius: 0;
             padding: 0.2rem 0;
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             font-weight: 700;
             color: #0f172a;
             background: transparent;
@@ -806,7 +806,7 @@ $qWizardSteps = [
             min-height: 72px !important;
             max-height: 160px;
             overflow: auto;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             line-height: 1.45;
             padding: 0.4rem 0.55rem !important;
         }
@@ -826,7 +826,7 @@ $qWizardSteps = [
         }
 
         #qDocUploadModal .q-doc-inline-field > span {
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 700;
             color: #94a3b8;
             text-transform: uppercase;
@@ -839,7 +839,7 @@ $qWizardSteps = [
             border-bottom: 1px solid #e8ecf1;
             border-radius: 0;
             padding: 0.15rem 0;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             background: transparent;
             height: auto;
             box-shadow: none !important;
@@ -855,7 +855,7 @@ $qWizardSteps = [
 
         #qDocUploadModal .q-doc-hotel-table {
             margin: 0;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         #qDocUploadModal .q-doc-hotel-table th {
@@ -863,7 +863,7 @@ $qWizardSteps = [
             border-top: 0;
             border-color: #e8ecf1;
             color: #64748b;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.02em;
@@ -883,7 +883,7 @@ $qWizardSteps = [
             border: 0;
             background: transparent;
             padding: 0.15rem 0.2rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             height: auto;
             box-shadow: none !important;
             min-width: 0;
@@ -911,7 +911,7 @@ $qWizardSteps = [
             border-bottom: 1px solid transparent;
             border-radius: 0;
             padding: 0.2rem 0;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             background: transparent;
             box-shadow: none !important;
             flex: 1 1 auto;
@@ -929,7 +929,7 @@ $qWizardSteps = [
             border: 0;
             background: transparent;
             color: #c62828;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             padding: 0.15rem 0;
         }
@@ -990,7 +990,7 @@ $qWizardSteps = [
         }
 
         #qSupplierMailModal .q-supplier-mail-header .modal-title {
-            font-size: 1rem;
+            font-size: 1.08rem;
             font-weight: 700;
         }
 
@@ -1016,7 +1016,7 @@ $qWizardSteps = [
         }
 
         .q-supplier-mail-from-label {
-            font-size: 0.92rem;
+            font-size: 1rem;
             font-weight: 600;
             color: #334155;
             flex-shrink: 0;
@@ -1037,7 +1037,7 @@ $qWizardSteps = [
             background: transparent !important;
             padding: 0.25rem 1.5rem 0.25rem 0 !important;
             margin: 0 !important;
-            font-size: 0.92rem !important;
+            font-size: 1rem !important;
             color: #334155 !important;
             cursor: pointer;
             box-shadow: none !important;
@@ -1075,7 +1075,7 @@ $qWizardSteps = [
 
         .q-supplier-mail-field label {
             display: block;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 600;
             color: #64748b;
             margin-bottom: 0.25rem;
@@ -1086,7 +1086,7 @@ $qWizardSteps = [
             padding-left: 0;
             padding-right: 0;
             box-shadow: none;
-            font-size: 0.92rem;
+            font-size: 1rem;
         }
 
         .q-supplier-mail-field .form-control:focus {
@@ -1108,7 +1108,7 @@ $qWizardSteps = [
 
         .q-supplier-mail-create-btn {
             border-radius: 999px;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 600;
             white-space: nowrap;
             margin-top: 0.15rem;
@@ -1131,7 +1131,7 @@ $qWizardSteps = [
             border: 0;
             background: transparent;
             color: #334155;
-            font-size: 0.92rem;
+            font-size: 1rem;
             text-align: left;
             cursor: pointer;
         }
@@ -1155,7 +1155,7 @@ $qWizardSteps = [
 
         .q-supplier-mail-to-trigger-icon {
             color: #94a3b8;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             flex-shrink: 0;
         }
 
@@ -1210,14 +1210,14 @@ $qWizardSteps = [
 
         .q-supplier-mail-to-option-name {
             display: block;
-            font-size: 0.86rem;
+            font-size: 0.94rem;
             font-weight: 600;
             color: #1e293b;
         }
 
         .q-supplier-mail-to-option-email {
             display: block;
-            font-size: 0.76rem;
+            font-size: 0.84rem;
             color: #64748b;
         }
 
@@ -1233,7 +1233,7 @@ $qWizardSteps = [
             border: 1px solid #e2e8f0 !important;
             border-radius: 8px !important;
             padding: 0.3rem 0.55rem !important;
-            font-size: 0.82rem !important;
+            font-size: 0.9rem !important;
             background: #fff !important;
         }
 
@@ -1268,7 +1268,7 @@ $qWizardSteps = [
             background: #eff6ff;
             border: 1px solid #bfdbfe;
             border-radius: 999px;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             color: #1e40af;
             line-height: 1.3;
         }
@@ -1317,7 +1317,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
         }
 
         .q-supplier-mail-recipient-badge .badge-status-sent {
@@ -1350,7 +1350,7 @@ $qWizardSteps = [
             padding: 0.25rem 0 !important;
             margin: 0 !important;
             height: auto !important;
-            font-size: 0.92rem !important;
+            font-size: 1rem !important;
             font-weight: 400 !important;
             color: #202124 !important;
             flex: 1;
@@ -1386,7 +1386,7 @@ $qWizardSteps = [
 
         .q-supplier-mail-editor-wrap .note-editable {
             padding: 0.35rem 0.15rem 0.75rem !important;
-            font-size: 0.92rem;
+            font-size: 1rem;
             line-height: 1.45;
             color: #202124;
             min-height: 220px !important;
@@ -1448,7 +1448,7 @@ $qWizardSteps = [
             color: #fff !important;
             border-radius: 999px !important;
             font-weight: 600 !important;
-            font-size: 0.88rem !important;
+            font-size: 0.96rem !important;
             padding: 0.45rem 1.35rem !important;
             line-height: 1.2;
             box-shadow: none !important;
@@ -1536,13 +1536,13 @@ $qWizardSteps = [
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .q-gmail-close-link {
             color: #0b57d0 !important;
             font-weight: 600;
-            font-size: 0.86rem;
+            font-size: 0.94rem;
             padding: 0.25rem 0.4rem;
         }
 
@@ -1562,7 +1562,7 @@ $qWizardSteps = [
         }
 
         .q-supplier-mail-status-header .modal-title {
-            font-size: 1rem;
+            font-size: 1.08rem;
             font-weight: 700;
             color: #202124;
         }
@@ -1579,13 +1579,13 @@ $qWizardSteps = [
         }
 
         .q-supplier-mail-status-to-label {
-            font-size: 0.92rem;
+            font-size: 1rem;
             font-weight: 700;
             color: #334155;
         }
 
         .q-supplier-mail-status-to-summary {
-            font-size: 0.92rem;
+            font-size: 1rem;
             color: #5f6368;
         }
 
@@ -1604,7 +1604,7 @@ $qWizardSteps = [
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 999px;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             color: #334155;
             line-height: 1.3;
         }
@@ -1621,7 +1621,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .q-supplier-mail-status-badge.badge-sending {
@@ -1672,7 +1672,7 @@ $qWizardSteps = [
         }
 
         .q-supplier-create-modal .modal-title {
-            font-size: 1rem;
+            font-size: 1.08rem;
             font-weight: 700;
         }
 
@@ -1701,7 +1701,7 @@ $qWizardSteps = [
             transform: translateY(-50%);
             pointer-events: none;
             color: #94a3b8;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             line-height: 1;
         }
 
@@ -1714,7 +1714,7 @@ $qWizardSteps = [
             background-color: var(--q-card-bg) !important;
             background-image: none !important;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             font-weight: 600;
             color: var(--q-text);
             padding: 0 1.85rem 0 0.75rem;
@@ -1743,7 +1743,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .breadcrumbs {
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             color: var(--q-text-muted);
             background: var(--q-card-bg);
             border: 1px solid var(--q-border);
@@ -1792,7 +1792,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 700;
             color: #475569;
             margin: 0 0 0.75rem;
@@ -1825,7 +1825,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen label.q-label {
-            font-size: 0.74rem;
+            font-size: 0.82rem;
             color: var(--q-label);
             font-weight: 600;
             margin-bottom: 0.28rem;
@@ -1837,7 +1837,7 @@ $qWizardSteps = [
         .crm-quotation-gen .custom-select {
             border-radius: var(--q-radius-sm);
             border: 1px solid var(--q-border);
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             padding: 0.15rem 0.75rem;
             height: calc(1.5em + 0.9rem + 2px);
             background: #fff;
@@ -1879,7 +1879,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-hint {
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             color: var(--q-text-muted);
             margin: 0 0 0.65rem;
             line-height: 1.45;
@@ -1895,7 +1895,7 @@ $qWizardSteps = [
             gap: 0.5rem;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             color: var(--q-text);
             padding: 0.65rem 0.85rem;
             user-select: none;
@@ -1924,7 +1924,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-accordion-head i.toggle-icon {
             transition: transform .2s ease;
             color: var(--q-primary);
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             width: 16px;
         }
 
@@ -1995,7 +1995,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-guest-tour-subtitle,
         .crm-quotation-gen .q-flight-subtitle {
             margin: 0.28rem 0 0;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             color: #94a3b8;
             font-weight: 500;
             line-height: 1.4;
@@ -2007,7 +2007,7 @@ $qWizardSteps = [
             background: none;
             border: 0;
             border-radius: 0;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             color: #94a3b8;
             font-weight: 500;
             line-height: 1.4;
@@ -2047,7 +2047,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-section-accordion-toggle .toggle-icon {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             transition: transform 0.2s ease;
         }
 
@@ -2105,7 +2105,7 @@ $qWizardSteps = [
             border-bottom: 1px solid transparent;
             padding: 0.85rem 1rem;
             font-weight: 700;
-            font-size: 0.92rem;
+            font-size: 1rem;
             color: #0f172a;
             gap: 0.55rem;
         }
@@ -2142,7 +2142,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-card-accordions .q-accordion-head i.toggle-icon {
             flex-shrink: 0;
             color: #e11d2e;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             width: auto;
             transition: transform 0.2s ease;
         }
@@ -2216,7 +2216,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-day-head-label {
             font-weight: 500;
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             color: #0f172a;
             line-height: 1.25;
         }
@@ -2227,7 +2227,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-day-head-sub {
             margin-top: 0.05rem;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             font-weight: 500;
             color: #94a3b8;
         }
@@ -2249,7 +2249,7 @@ $qWizardSteps = [
             background: #fff;
             color: #334155;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             border-radius: 10px;
             padding: 0 0.65rem;
             display: inline-flex;
@@ -2282,7 +2282,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-svc-caret {
-            font-size: 0.58rem;
+            font-size: 0.66rem;
             opacity: 0.75;
         }
 
@@ -2299,7 +2299,7 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             gap: 0.45rem;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 600;
             color: #334155;
             padding: 0.45rem 0.85rem 0.45rem 0.7rem;
@@ -2317,7 +2317,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-day-svc-check {
             width: 0.85rem;
-            font-size: 0.65rem;
+            font-size: 0.73rem;
             opacity: 0;
             color: #c4121a;
             flex-shrink: 0;
@@ -2328,7 +2328,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-svc-option-sub {
-            font-size: 0.7rem;
+            font-size: 0.78rem;
             font-weight: 500;
             color: #94a3b8;
             margin-left: 0.15rem;
@@ -2343,7 +2343,7 @@ $qWizardSteps = [
             background: #fff;
             color: #334155;
             font-weight: 600;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             border-radius: 8px;
             padding: 0.45rem 0.8rem;
             display: inline-flex;
@@ -2409,7 +2409,7 @@ $qWizardSteps = [
             background: #fff;
             color: #e11d2e;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             padding: 0.4rem 0.85rem;
             line-height: 1.3;
         }
@@ -2435,14 +2435,14 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex: 0 0 auto;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
         }
 
         /* —— Itinerary redesign (package search + selected + suppliers) —— */
         .crm-quotation-gen .q-itin-section .q-wizard-section-subtitle {
             margin: 0.15rem 0 0;
             color: #64748b;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             font-weight: 500;
         }
 
@@ -2465,7 +2465,7 @@ $qWizardSteps = [
             min-height: 30px;
             padding: 0 0.7rem;
             border-radius: 10px;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             box-shadow: 0 2px 8px rgba(198, 40, 40, 0.16);
         }
 
@@ -2542,7 +2542,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             flex: 0 0 auto;
         }
 
@@ -2553,7 +2553,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-itin-pkg-hd-label {
             display: block;
             font-weight: 800;
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             color: #0f172a;
             line-height: 1.2;
         }
@@ -2561,7 +2561,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-itin-pkg-hd-sub {
             display: block;
             margin-top: 0.2rem;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: #94a3b8;
             font-weight: 500;
             line-height: 1.35;
@@ -2583,7 +2583,7 @@ $qWizardSteps = [
             min-height: 30px;
             border-radius: 10px;
             border: 1px solid #e2e8f0;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             background: #fff;
         }
 
@@ -2600,7 +2600,7 @@ $qWizardSteps = [
             color: #94a3b8;
             pointer-events: none;
             z-index: 2;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .crm-quotation-gen .q-itin-pkg-search-clear {
@@ -2688,7 +2688,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-itin-pkg-item-title {
             display: block;
             font-weight: 700;
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             color: #0f172a;
             line-height: 1.3;
             min-width: 0;
@@ -2700,7 +2700,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-pkg-item-days {
             display: block;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 500;
             color: #94a3b8;
             line-height: 1.4;
@@ -2716,7 +2716,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-itin-pkg-empty {
             padding: 0.9rem 0.75rem;
             color: #64748b;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             text-align: center;
         }
 
@@ -2744,12 +2744,12 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             flex: 0 0 auto;
         }
 
         .crm-quotation-gen .q-itin-selected-eyebrow {
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             font-weight: 800;
             color: #0f172a;
         }
@@ -2793,13 +2793,13 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
+            font-size: 1.08rem;
             margin-bottom: 0.4rem;
         }
 
         .crm-quotation-gen .q-itin-selected-empty p {
             margin: 0;
-            font-size: 0.76rem;
+            font-size: 0.84rem;
             max-width: 200px;
             line-height: 1.35;
         }
@@ -2854,7 +2854,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-selected-title {
             margin: 0 0 0.35rem;
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             font-weight: 800;
             color: #0f172a;
             line-height: 1.25;
@@ -2875,19 +2875,19 @@ $qWizardSteps = [
             color: #475569;
             border-radius: 999px;
             padding: 0.22rem 0.6rem;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 600;
             line-height: 1.2;
         }
 
         .crm-quotation-gen .q-itin-selected-meta i {
             color: #c62828;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
         }
 
         .crm-quotation-gen .q-itin-selected-updated {
             margin: 0;
-            font-size: 0.76rem;
+            font-size: 0.84rem;
             color: #94a3b8;
             display: flex;
             align-items: center;
@@ -2901,7 +2901,7 @@ $qWizardSteps = [
             background: #c62828;
             color: #fff;
             font-weight: 700;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             padding: 0.4rem 0.75rem;
             box-shadow: none;
             margin-top: auto;
@@ -2950,7 +2950,7 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.01em;
@@ -2959,7 +2959,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-comm-group-title i {
             color: #e11d2e;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             width: 1rem;
             text-align: center;
         }
@@ -2971,7 +2971,7 @@ $qWizardSteps = [
             background: #fff;
             border-radius: 999px;
             font-weight: 700;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             padding: 0.28rem 0.7rem;
             white-space: nowrap;
             flex-shrink: 0;
@@ -2990,7 +2990,7 @@ $qWizardSteps = [
             align-items: center;
             padding: 0.2rem 0.65rem 0.45rem;
             color: #64748b;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 700;
             letter-spacing: 0.01em;
         }
@@ -3011,7 +3011,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-itin-comm-col-labels i {
             color: #e11d2e;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             width: 0.85rem;
             text-align: center;
             flex-shrink: 0;
@@ -3059,7 +3059,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-itin-rate-prefix {
             color: #e11d2e;
             font-weight: 800;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             flex-shrink: 0;
             line-height: 1;
         }
@@ -3077,7 +3077,7 @@ $qWizardSteps = [
             min-width: 0;
             width: 1%;
             text-align: right;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
             -moz-appearance: textfield;
             appearance: textfield;
         }
@@ -3099,7 +3099,7 @@ $qWizardSteps = [
             min-height: 30px !important;
             height: 30px !important;
             padding: 0.1rem 0.55rem !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
         }
 
         .crm-quotation-gen .q-itin-comm-field-supplier .select2-container {
@@ -3125,7 +3125,7 @@ $qWizardSteps = [
             line-height: 1.25 !important;
             padding: 0 1.85rem 0 0.55rem !important;
             color: #0f172a !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
         }
 
         .crm-quotation-gen .q-itin-comm-field-supplier .select2-container--default .select2-selection--single .select2-selection__arrow {
@@ -3150,7 +3150,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             line-height: 1;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
         }
 
         .crm-quotation-gen .q-itin-supplier-more {
@@ -3225,7 +3225,7 @@ $qWizardSteps = [
             background: #fff;
             color: #c62828;
             font-weight: 700;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             border-radius: 10px;
             padding: 0.45rem 0.85rem;
             line-height: 1.2;
@@ -3269,7 +3269,7 @@ $qWizardSteps = [
         }
 
         .q-itin-loaded-msg {
-            font-size: 0.9rem;
+            font-size: 0.98rem;
             color: #64748b;
             line-height: 1.45;
         }
@@ -3321,13 +3321,13 @@ $qWizardSteps = [
         }
 
         .q-full-itin-modal .modal-title {
-            font-size: 1.05rem;
+            font-size: 1.13rem;
             font-weight: 800;
             color: #0f172a;
         }
 
         .q-full-itin-modal-sub {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: #64748b;
             margin-top: 0.15rem;
         }
@@ -3408,7 +3408,7 @@ $qWizardSteps = [
         }
 
         .q-full-itin-item-day {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 800;
             letter-spacing: 0.04em;
             text-transform: uppercase;
@@ -3416,14 +3416,14 @@ $qWizardSteps = [
         }
 
         .q-full-itin-item-date {
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             color: #94a3b8;
             font-weight: 500;
             white-space: nowrap;
         }
 
         .q-full-itin-item-title {
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             font-weight: 800;
             color: #0f172a;
             line-height: 1.3;
@@ -3431,7 +3431,7 @@ $qWizardSteps = [
         }
 
         .q-full-itin-item-desc {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: #64748b;
             line-height: 1.45;
             margin: 0 0 0.45rem;
@@ -3451,20 +3451,20 @@ $qWizardSteps = [
             color: #475569;
             border-radius: 999px;
             padding: 0.18rem 0.55rem;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
             font-weight: 600;
         }
 
         .q-full-itin-item-meta i {
             color: #c62828;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
         }
 
         .q-full-itin-empty {
             text-align: center;
             color: #94a3b8;
             padding: 2rem 1rem;
-            font-size: 0.9rem;
+            font-size: 0.98rem;
         }
 
         .crm-quotation-gen .q-day-title-row {
@@ -3513,7 +3513,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             height: 30px;
             min-height: 30px;
             padding: 0 0.65rem;
@@ -3548,7 +3548,7 @@ $qWizardSteps = [
             justify-content: center;
             gap: 0.3rem;
             font-weight: 700;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             height: 30px;
             min-height: 30px;
             padding: 0 0.7rem;
@@ -3603,13 +3603,13 @@ $qWizardSteps = [
         }
 
         .q-day-ai-modal .modal-title {
-            font-size: 1rem;
+            font-size: 1.08rem;
             font-weight: 700;
             color: #0f766e;
         }
 
         .q-day-ai-modal-sub {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: #64748b;
             margin-top: 0.15rem;
         }
@@ -3651,7 +3651,7 @@ $qWizardSteps = [
             border: 1px solid #c7d2fe;
             background: #eef2ff;
             color: #3730a3;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 700;
             border-radius: 999px;
             padding: 0.2rem 0.65rem;
@@ -3695,7 +3695,7 @@ $qWizardSteps = [
         }
 
         .q-ai-incl-modal .modal-title {
-            font-size: 1rem;
+            font-size: 1.08rem;
             font-weight: 700;
         }
 
@@ -3780,7 +3780,7 @@ $qWizardSteps = [
 
         .q-crm-confirm-msg,
         .q-ai-itin-confirm-msg {
-            font-size: 0.9rem;
+            font-size: 0.98rem;
             color: #475569;
             line-height: 1.5;
             word-break: break-word;
@@ -3835,7 +3835,7 @@ $qWizardSteps = [
             padding: 0.7rem 0.95rem;
             border-radius: 10px;
             color: #fff;
-            font-size: 0.86rem;
+            font-size: 0.94rem;
             font-weight: 600;
             box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2);
             opacity: 0;
@@ -3903,13 +3903,13 @@ $qWizardSteps = [
             color: #334155;
             border-radius: 999px;
             padding: 0.28rem 0.65rem;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             font-weight: 600;
         }
 
         .q-ai-incl-chips .q-ai-chip i {
             color: #6366f1;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
         }
 
         .q-ai-incl-chips .q-ai-chip.is-warn {
@@ -3925,7 +3925,7 @@ $qWizardSteps = [
         .q-ai-incl-modal #qAiInclNotes {
             border-radius: 10px;
             border-color: #e2e8f0;
-            font-size: 0.86rem;
+            font-size: 0.94rem;
         }
 
         .q-ai-incl-modal #qAiInclResult:focus,
@@ -3961,7 +3961,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             font-weight: 700;
             border-radius: 10px;
             padding: 0.45rem 1.1rem;
@@ -4030,7 +4030,7 @@ $qWizardSteps = [
 
         .q-ai-incl-doc .q-ai-incl-sec-title {
             margin: 0 0 0.35rem;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             font-weight: 700;
             color: #1f2937;
             display: flex;
@@ -4042,7 +4042,7 @@ $qWizardSteps = [
             width: 1.15rem;
             text-align: center;
             color: #4f46e5;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
         }
 
         .q-ai-incl-doc .q-ai-incl-sec[data-sec="airfare"] .q-ai-incl-sec-title i { color: #2563eb; }
@@ -4058,7 +4058,7 @@ $qWizardSteps = [
             align-items: center;
             gap: 0.45rem;
             margin: 0.85rem 0 0.35rem;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             font-weight: 700;
             color: #1f2937;
         }
@@ -4067,7 +4067,7 @@ $qWizardSteps = [
             width: 1.15rem;
             text-align: center;
             color: #7c3aed;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
         }
 
         .q-ai-incl-doc .q-ai-incl-sec ul {
@@ -4096,7 +4096,7 @@ $qWizardSteps = [
 
         .q-ai-excl-doc .q-ai-excl-sec-title {
             margin: 0 0 0.35rem;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             font-weight: 700;
             color: #1f2937;
             display: flex;
@@ -4108,7 +4108,7 @@ $qWizardSteps = [
             width: 1.15rem;
             text-align: center;
             color: #be123c;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
         }
 
         .q-ai-excl-doc .q-ai-excl-sec[data-sec="airfare"] .q-ai-excl-sec-title i { color: #2563eb; }
@@ -4163,7 +4163,7 @@ $qWizardSteps = [
             z-index: 2;
             background: #fff;
             padding: 0 0.22rem;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 700;
             color: #c62828;
             margin: 0;
@@ -4174,7 +4174,7 @@ $qWizardSteps = [
             border: 1px solid #c62828;
             border-radius: 10px;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: #0f172a;
             height: 30px;
             min-height: 30px;
@@ -4211,7 +4211,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-day-body .note-editing-area .note-editable {
             min-height: 140px;
-            font-size: 0.85rem;
+            font-size: 0.93rem;
             line-height: 1.5;
             color: #334155;
         }
@@ -4230,7 +4230,7 @@ $qWizardSteps = [
             text-align: right;
             margin-top: 0;
             margin-left: auto;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             color: #94a3b8;
             font-weight: 500;
             flex: 0 0 auto;
@@ -4265,7 +4265,7 @@ $qWizardSteps = [
             gap: 0.45rem;
             font-weight: 700;
             color: #0f172a;
-            font-size: 0.88rem;
+            font-size: 0.96rem;
         }
 
         .crm-quotation-gen .q-day-image-hd-left i {
@@ -4273,7 +4273,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-day-image-count {
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             color: #94a3b8;
             font-weight: 500;
         }
@@ -4306,7 +4306,7 @@ $qWizardSteps = [
             background: #fff;
             color: #334155;
             font-weight: 600;
-            font-size: 0.74rem;
+            font-size: 0.82rem;
             border-radius: 8px;
             padding: 0.4rem 0.65rem;
             line-height: 1.2;
@@ -4361,7 +4361,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex: 0 0 auto;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
         }
 
         .crm-quotation-gen .q-day-meta-text {
@@ -4375,7 +4375,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-day-meta-label {
             display: inline;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             color: #94a3b8;
             font-weight: 500;
             line-height: 1.2;
@@ -4388,7 +4388,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-day-meta-value {
             display: inline;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             color: #0f172a;
             line-height: 1.2;
@@ -4455,7 +4455,7 @@ $qWizardSteps = [
             border: 0;
             background: transparent;
             color: #64748b;
-            font-size: 0.74rem;
+            font-size: 0.82rem;
             font-weight: 600;
             padding: 0.25rem 0.4rem;
             line-height: 1.2;
@@ -4510,7 +4510,7 @@ $qWizardSteps = [
             text-align: center;
             padding: 0;
             margin: 0;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             color: var(--q-text-muted);
         }
 
@@ -4597,7 +4597,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 1rem;
+            font-size: 1.08rem;
             line-height: 1;
         }
 
@@ -4613,7 +4613,7 @@ $qWizardSteps = [
 
         .qii-image-search .qii-hd-title.modal-title,
         .qii-image-search .qii-modal-hd .modal-title {
-            font-size: 1.05rem !important;
+            font-size: 1.13rem !important;
             font-weight: 800 !important;
             color: #0f172a !important;
             line-height: 1.25 !important;
@@ -4622,7 +4622,7 @@ $qWizardSteps = [
         }
 
         .qii-image-search .qii-hd-sub {
-            font-size: 0.78rem !important;
+            font-size: 0.86rem !important;
             color: #64748b !important;
             opacity: 1 !important;
             margin-top: 0.12rem;
@@ -4660,7 +4660,7 @@ $qWizardSteps = [
             opacity: 1 !important;
             text-shadow: none !important;
             float: none !important;
-            font-size: 0.95rem !important;
+            font-size: 1.03rem !important;
             line-height: 1 !important;
             flex: 0 0 auto;
         }
@@ -4670,7 +4670,7 @@ $qWizardSteps = [
             color: inherit !important;
             opacity: 1 !important;
             visibility: visible !important;
-            font-size: 0.9rem !important;
+            font-size: 0.98rem !important;
             font-weight: 700 !important;
             line-height: 1 !important;
         }
@@ -4746,7 +4746,7 @@ $qWizardSteps = [
             box-shadow: none !important;
             background: transparent !important;
             color: #64748b;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             line-height: 1;
             padding: 0.45rem 0.95rem;
@@ -4805,7 +4805,7 @@ $qWizardSteps = [
         }
 
         .qii-image-search .qii-source-note {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             color: #64748b;
             margin-bottom: 0.55rem;
             min-height: 1.1rem;
@@ -4850,7 +4850,7 @@ $qWizardSteps = [
             align-items: center;
             gap: 0.35rem;
             color: #64748b;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 600;
         }
 
@@ -4894,7 +4894,7 @@ $qWizardSteps = [
             text-align: center;
             padding: 2rem 1rem;
             color: #64748b;
-            font-size: 0.85rem;
+            font-size: 0.93rem;
             min-height: 280px;
             display: flex;
             flex-direction: column;
@@ -4946,7 +4946,7 @@ $qWizardSteps = [
             border: 1px solid var(--qii-border);
             border-radius: 999px;
             font-weight: 600;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
         }
 
         @media (max-width: 767px) {
@@ -4977,7 +4977,7 @@ $qWizardSteps = [
             .qii-image-search .qii-provider-btn {
                 min-width: 76px;
                 padding: 0.4rem 0.75rem;
-                font-size: 0.74rem;
+                font-size: 0.82rem;
             }
         }
 
@@ -4996,7 +4996,7 @@ $qWizardSteps = [
 
             .qii-image-search .qii-hd-title.modal-title,
             .qii-image-search .qii-modal-hd .modal-title {
-                font-size: 0.98rem !important;
+                font-size: 1.06rem !important;
             }
         }
 
@@ -5011,7 +5011,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-cost-label {
             text-align: right;
             color: var(--q-text-muted);
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             font-weight: 500;
             padding-right: 0.5rem;
             padding-top: 0.28rem;
@@ -5052,7 +5052,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-pax-col .q-label {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             letter-spacing: 0;
         }
 
@@ -5133,7 +5133,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-flight-subtitle {
             margin: 0.28rem 0 0;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             color: #94a3b8;
             font-weight: 500;
         }
@@ -5148,7 +5148,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-btn {
             border-radius: 10px;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             padding: 0.45rem 0.9rem;
             white-space: nowrap;
         }
@@ -5231,7 +5231,7 @@ $qWizardSteps = [
             align-items: center;
             gap: 0.4rem;
             padding: 0.55rem 0.75rem 0.35rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.01em;
@@ -5243,7 +5243,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-flight-group-title i {
             color: #e11d2e;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             width: 1rem;
             text-align: center;
         }
@@ -5254,7 +5254,7 @@ $qWizardSteps = [
             align-items: center;
             padding: 0.2rem 0.65rem 0.55rem;
             color: #64748b;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 700;
             letter-spacing: 0.01em;
         }
@@ -5271,7 +5271,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-flight-col-labels i {
             color: #e11d2e;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             width: 0.85rem;
             text-align: center;
             flex-shrink: 0;
@@ -5438,7 +5438,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-rate-prefix {
             color: #e11d2e;
             font-weight: 800;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             flex-shrink: 0;
         }
 
@@ -5465,7 +5465,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-flight-datetime > i,
         .crm-quotation-gen .q-flight-fare > span {
             color: #94a3b8;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             flex-shrink: 0;
         }
 
@@ -5482,7 +5482,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.65rem;
+            font-size: 0.73rem;
             flex-shrink: 0;
         }
 
@@ -5497,7 +5497,7 @@ $qWizardSteps = [
             border-radius: 0 !important;
             box-shadow: none !important;
             background: transparent !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
             height: auto !important;
             min-height: 0 !important;
             padding: 0.15rem 0 !important;
@@ -5512,7 +5512,7 @@ $qWizardSteps = [
             min-height: 30px !important;
             height: 30px !important;
             padding: 0.1rem 0.55rem !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
         }
 
         .crm-quotation-gen .q-ft-col-supplier .form-control:focus {
@@ -5556,7 +5556,7 @@ $qWizardSteps = [
             padding: 0 1.85rem 0 0.55rem !important;
             margin: 0 !important;
             color: #0f172a !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
             float: none !important;
             display: flex !important;
             align-items: center !important;
@@ -5648,7 +5648,7 @@ $qWizardSteps = [
             background: #fff !important;
             box-shadow: none !important;
             outline: none !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
             line-height: 1.25 !important;
             color: #0f172a !important;
             z-index: 5 !important;
@@ -5658,7 +5658,7 @@ $qWizardSteps = [
             z-index: 6;
         }
         .q-supplier-s2-dropdown .select2-results__option {
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             padding: 0.45rem 0.7rem;
         }
         .q-supplier-s2-dropdown .select2-results__option--highlighted[aria-selected],
@@ -5693,7 +5693,7 @@ $qWizardSteps = [
             border-top: 1px solid #fee2e2;
             background: linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%);
             color: #e11d2e;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             font-weight: 700;
             cursor: pointer;
             text-align: center;
@@ -5706,7 +5706,7 @@ $qWizardSteps = [
             outline: none;
         }
         .q-supplier-create-footer i {
-            font-size: 0.95rem;
+            font-size: 1.03rem;
         }
 
         .crm-quotation-gen .q-flight-airline-combo .f-name {
@@ -5766,7 +5766,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             margin-bottom: 0;
         }
 
@@ -5786,7 +5786,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             line-height: 1;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             margin-bottom: 0;
             flex-shrink: 0;
         }
@@ -5825,7 +5825,7 @@ $qWizardSteps = [
             border: 1px solid #fde68a;
             border-radius: 10px;
             color: #92400e;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 600;
         }
 
@@ -5862,14 +5862,14 @@ $qWizardSteps = [
             border-radius: 999px;
             background: #f8fafc;
             color: #64748b;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 700;
             line-height: 1.2;
         }
 
         .crm-quotation-gen .q-flight-bag i {
             color: #c62828;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
         }
 
         .crm-quotation-gen .q-flight-bag .form-control {
@@ -5881,7 +5881,7 @@ $qWizardSteps = [
             height: auto !important;
             min-height: 0 !important;
             padding: 0.22rem 0 !important;
-            font-size: 0.78rem !important;
+            font-size: 0.86rem !important;
             font-weight: 600;
             color: #0f172a;
         }
@@ -5993,7 +5993,7 @@ $qWizardSteps = [
         #qWizardSection3 .q-wizard-section-subtitle {
             margin: 0.2rem 0 0;
             color: #6b7280;
-            font-size: 0.86rem;
+            font-size: 0.94rem;
             font-weight: 500;
         }
 
@@ -6061,7 +6061,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-ocr-thumb-empty {
-            font-size: 0.85rem;
+            font-size: 0.93rem;
             line-height: 1;
         }
 
@@ -6097,7 +6097,7 @@ $qWizardSteps = [
             display: none;
             align-items: center;
             justify-content: center;
-            font-size: 0.62rem;
+            font-size: 0.7rem;
             line-height: 1;
             cursor: pointer;
             z-index: 2;
@@ -6146,7 +6146,7 @@ $qWizardSteps = [
             text-overflow: ellipsis;
             white-space: nowrap;
             color: #94a3b8;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 500;
             line-height: 1.2;
         }
@@ -6162,7 +6162,7 @@ $qWizardSteps = [
             background: #fff;
             color: #e11d2e;
             border-radius: 999px;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 700;
             padding: 0.28rem 0.7rem;
             white-space: nowrap;
@@ -6183,7 +6183,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             color: #e11d2e;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             line-height: 1;
         }
 
@@ -6195,7 +6195,7 @@ $qWizardSteps = [
             flex: 1 1 100%;
             display: none;
             margin: 0;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             color: #6b7280;
         }
 
@@ -6259,7 +6259,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection2 .q-flight-ocr-thumb-empty {
-            font-size: 0.85rem;
+            font-size: 0.93rem;
             line-height: 1;
         }
 
@@ -6295,7 +6295,7 @@ $qWizardSteps = [
             display: none;
             align-items: center;
             justify-content: center;
-            font-size: 0.62rem;
+            font-size: 0.7rem;
             line-height: 1;
             cursor: pointer;
             z-index: 2;
@@ -6344,7 +6344,7 @@ $qWizardSteps = [
             text-overflow: ellipsis;
             white-space: nowrap;
             color: #94a3b8;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 500;
             line-height: 1.2;
         }
@@ -6360,7 +6360,7 @@ $qWizardSteps = [
             background: #fff;
             color: #e11d2e;
             border-radius: 999px;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 700;
             padding: 0.28rem 0.7rem;
             white-space: nowrap;
@@ -6381,7 +6381,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             color: #e11d2e;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             line-height: 1;
         }
 
@@ -6393,7 +6393,7 @@ $qWizardSteps = [
             flex: 1 1 100%;
             display: none;
             margin: 0;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             color: #6b7280;
         }
 
@@ -6423,7 +6423,7 @@ $qWizardSteps = [
         #qHotelOcrModal .form-control,
         #qFlightOcrModal .form-control {
             min-width: 6.5rem;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
         }
 
         #qHotelOcrModal .ocr-note,
@@ -6431,7 +6431,7 @@ $qWizardSteps = [
             display: block;
             margin-top: 0.2rem;
             color: #047857;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             line-height: 1.3;
         }
 
@@ -6463,7 +6463,7 @@ $qWizardSteps = [
             color: #111827;
             border-radius: 999px;
             padding: 0.42rem 1.05rem;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 700;
             cursor: pointer;
             line-height: 1.2;
@@ -6482,7 +6482,7 @@ $qWizardSteps = [
             color: #6b7280;
             border-radius: 999px;
             padding: 0.38rem 0.8rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             line-height: 1.2;
         }
@@ -6528,7 +6528,7 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-option-star i {
-            font-size: 0.92rem;
+            font-size: 1rem;
             line-height: 1;
             pointer-events: none;
         }
@@ -6558,7 +6558,7 @@ $qWizardSteps = [
             }
 
             #qWizardSection3 .q-hotel-option-star i {
-                font-size: 1rem;
+                font-size: 1.08rem;
             }
         }
 
@@ -6568,7 +6568,7 @@ $qWizardSteps = [
             border: 1px solid #e11d2e !important;
             color: #fff !important;
             font-weight: 700;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             border-radius: 999px !important;
             padding: 0.5rem 1.15rem !important;
             box-shadow: none !important;
@@ -6614,7 +6614,7 @@ $qWizardSteps = [
             align-items: center;
             gap: 0.4rem;
             padding: 0.55rem 0.75rem 0.35rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.01em;
@@ -6626,7 +6626,7 @@ $qWizardSteps = [
 
         #qWizardSection3 .q-hotel-group-title i {
             color: #e11d2e;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             width: 1rem;
             text-align: center;
         }
@@ -6637,7 +6637,7 @@ $qWizardSteps = [
             align-items: center;
             padding: 0.2rem 0.65rem 0.55rem;
             color: #64748b;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 700;
             letter-spacing: 0.01em;
         }
@@ -6654,7 +6654,7 @@ $qWizardSteps = [
 
         #qWizardSection3 .q-hotel-col-labels i {
             color: #e11d2e;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             width: 0.85rem;
             text-align: center;
             flex-shrink: 0;
@@ -6724,7 +6724,7 @@ $qWizardSteps = [
             min-height: 30px !important;
             height: 30px !important;
             padding: 0.1rem 0.55rem !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
         }
 
         #qWizardSection3 .q-hotel-field-supplier > .h-supplier.form-control:focus {
@@ -6801,7 +6801,7 @@ $qWizardSteps = [
             min-width: 0;
             width: 100%;
             text-align: right;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
         }
 
         #qWizardSection3 .q-hotel-rate-box .h-rate:focus {
@@ -6825,7 +6825,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             line-height: 1;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
         }
 
         #qWizardSection3 .q-hotel-row-more {
@@ -6878,7 +6878,7 @@ $qWizardSteps = [
             top: 50%;
             transform: translateY(-50%);
             color: #9ca3af;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             z-index: 2;
             pointer-events: none;
         }
@@ -6891,7 +6891,7 @@ $qWizardSteps = [
             box-shadow: none !important;
             background: transparent !important;
             padding: 0 1.6rem 0 0.55rem !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
             border-radius: 10px !important;
             color: #0f172a !important;
             width: 100%;
@@ -6916,7 +6916,7 @@ $qWizardSteps = [
             border: 1px solid #e2e8f0 !important;
             background: #fff !important;
             color: #dc2626 !important;
-            font-size: 0.72rem !important;
+            font-size: 0.8rem !important;
             position: static !important;
             top: auto !important;
             right: auto !important;
@@ -6945,7 +6945,7 @@ $qWizardSteps = [
             line-height: 1.25 !important;
             padding: 0 1.85rem 0 0.55rem !important;
             color: #0f172a !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
         }
 
         /* While searching, hide selected label so it does not stack under typed text. */
@@ -6971,7 +6971,7 @@ $qWizardSteps = [
             height: 100% !important;
             background: #fff !important;
             z-index: 5 !important;
-            font-size: 0.8rem !important;
+            font-size: 0.88rem !important;
             color: #0f172a !important;
         }
 
@@ -7025,7 +7025,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
+            font-size: 1.08rem;
             font-weight: 600;
             line-height: 1;
             cursor: pointer;
@@ -7064,7 +7064,7 @@ $qWizardSteps = [
             background: transparent !important;
             text-align: center;
             font-weight: 700;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: #9f1239 !important;
             padding: 0 0.1rem !important;
             min-height: 0 !important;
@@ -7192,7 +7192,7 @@ $qWizardSteps = [
             color: var(--q-text);
             text-align: left;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
         }
 
         .crm-quotation-gen .q-hotel-menu-item:hover,
@@ -7204,12 +7204,12 @@ $qWizardSteps = [
         .crm-quotation-gen .q-hotel-menu-empty {
             padding: 0.4rem 0.55rem;
             color: var(--q-text-muted);
-            font-size: 0.8rem;
+            font-size: 0.88rem;
         }
 
         .crm-quotation-gen .q-hotel-menu-item .q-hotel-menu-sub {
             display: block;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             color: var(--q-text-muted);
             margin-top: 0.1rem;
         }
@@ -7232,7 +7232,7 @@ $qWizardSteps = [
             border-radius: 0 0 var(--q-radius) var(--q-radius);
             background: linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%);
             color: #e11d2e;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 700;
             cursor: pointer;
             text-align: center;
@@ -7253,7 +7253,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-hotel-menu-create-footer i {
-            font-size: 0.95rem;
+            font-size: 1.03rem;
         }
 
         .crm-quotation-gen .q-hotel-menu-item-create {
@@ -7333,12 +7333,12 @@ $qWizardSteps = [
         .crm-quotation-gen .q-lead-item-title {
             display: block;
             font-weight: 600;
-            font-size: 0.8125rem;
+            font-size: 0.89rem;
         }
 
         .crm-quotation-gen .q-lead-item-meta {
             display: block;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             color: var(--q-text-muted);
             margin-top: 0.05rem;
         }
@@ -7346,7 +7346,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-lead-empty {
             padding: 0.45rem 0.6rem;
             color: var(--q-text-muted);
-            font-size: 0.8rem;
+            font-size: 0.88rem;
         }
 
         .qfs-flight-search .qfs-search-modal-content {
@@ -7371,18 +7371,18 @@ $qWizardSteps = [
 
         .qfs-flight-search .qfs-search-body label {
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.93rem;
             color: #334155;
             margin-bottom: 0.25rem;
         }
 
         .qfs-flight-search .qfs-pax-hint {
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             line-height: 1.35;
         }
 
         .qfs-flight-search .qfs-nonstop-check .form-check-label {
-            font-size: 0.9rem;
+            font-size: 0.98rem;
             color: #0f172a;
             cursor: pointer;
         }
@@ -7566,7 +7566,7 @@ $qWizardSteps = [
         }
         .qfs-search-status h5 {
             margin: 0 0 0.35rem;
-            font-size: 1.05rem;
+            font-size: 1.13rem;
             font-weight: 700;
             color: #0f172a;
         }
@@ -7574,7 +7574,7 @@ $qWizardSteps = [
             margin: 0 auto 1rem;
             max-width: 420px;
             color: #64748b;
-            font-size: 0.9rem;
+            font-size: 0.98rem;
         }
         .qfs-search-progress-wrap {
             max-width: 360px;
@@ -7598,7 +7598,7 @@ $qWizardSteps = [
             justify-content: space-between;
             gap: 0.75rem;
             margin-top: 0.45rem;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             color: #94a3b8;
             font-weight: 600;
         }
@@ -7703,7 +7703,7 @@ $qWizardSteps = [
 
         .qfs-flight-search .qfs-price-value {
             font-weight: 700;
-            font-size: 0.92rem;
+            font-size: 1rem;
             color: #e31b23;
             line-height: 1.2;
             white-space: nowrap;
@@ -7860,7 +7860,7 @@ $qWizardSteps = [
             z-index: 3;
             padding: 0.1rem 0.35rem;
             line-height: 1;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
         }
 
         .crm-quotation-gen .btn-q-primary {
@@ -7868,7 +7868,7 @@ $qWizardSteps = [
             border-color: var(--q-primary-dark);
             color: #fff;
             font-weight: 600;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             padding: 0.38rem 0.85rem;
             border-radius: 999px;
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
@@ -7886,7 +7886,7 @@ $qWizardSteps = [
         .crm-quotation-gen .btn-outline-secondary {
             border-radius: 999px;
             font-weight: 600;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             padding: 0.38rem 0.85rem;
             border-color: var(--q-border);
             color: #475569;
@@ -7904,7 +7904,7 @@ $qWizardSteps = [
             border-color: var(--q-accent-dark);
             color: #fff;
             font-weight: 700;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             padding: 0.5rem 1.15rem;
             border-radius: 999px;
             box-shadow: 0 2px 10px rgba(13, 148, 136, 0.25);
@@ -7922,7 +7922,7 @@ $qWizardSteps = [
             border-color: #0369a1;
             color: #fff;
             font-weight: 700;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             padding: 0.5rem 1.25rem;
             border-radius: 999px;
             box-shadow: 0 2px 10px rgba(2, 132, 199, 0.28);
@@ -7960,7 +7960,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-check-row .custom-control-label {
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 600;
             color: #475569;
         }
@@ -7971,20 +7971,20 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-check-row .custom-control-label {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: var(--q-text-muted);
             padding-top: 0.1rem;
         }
 
         .crm-quotation-gen .input-group-text {
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             padding: 0.2rem 0.45rem;
         }
 
         .crm-quotation-gen #qAlert .alert {
             padding: 0.4rem 0.65rem;
             margin-bottom: 0.4rem;
-            font-size: 0.8125rem;
+            font-size: 0.89rem;
         }
 
         .crm-quotation-gen .q-tour-fields {
@@ -8074,7 +8074,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-lead-sidebar-toggle i {
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             transition: transform 0.18s ease;
         }
 
@@ -8130,7 +8130,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-side-card-title {
-            font-size: 0.92rem;
+            font-size: 1rem;
             font-weight: 700;
             color: var(--q-text);
             margin: 0 0 0.65rem;
@@ -8177,7 +8177,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-side-card-toggle-icon {
             color: #64748b;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             transition: transform 0.15s ease;
             flex-shrink: 0;
         }
@@ -8208,7 +8208,7 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             gap: 0.35rem;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             color: var(--q-text-muted);
             margin-bottom: 0.15rem;
         }
@@ -8217,11 +8217,11 @@ $qWizardSteps = [
             color: #16a34a;
             width: 14px;
             text-align: center;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .crm-quotation-gen .q-side-grid-value {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             font-weight: 700;
             color: var(--q-text);
             line-height: 1.25;
@@ -8235,7 +8235,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-side-travellers-label {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             color: var(--q-text-muted);
             margin-bottom: 0.2rem;
         }
@@ -8244,7 +8244,7 @@ $qWizardSteps = [
             display: flex;
             align-items: flex-start;
             gap: 0.35rem;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             font-weight: 700;
             color: var(--q-text);
             line-height: 1.35;
@@ -8267,7 +8267,7 @@ $qWizardSteps = [
             display: flex;
             align-items: flex-start;
             gap: 0.45rem;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: var(--q-text);
             line-height: 1.35;
             word-break: break-word;
@@ -8285,7 +8285,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-side-description {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: var(--q-text-muted);
             line-height: 1.45;
             white-space: pre-wrap;
@@ -8299,14 +8299,14 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-side-kv dt {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             color: var(--q-text-muted);
             margin: 0;
             font-weight: 500;
         }
 
         .crm-quotation-gen .q-side-kv dd {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             font-weight: 700;
             color: var(--q-text);
             margin: 0.1rem 0 0;
@@ -8314,7 +8314,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-side-footer {
-            font-size: 0.74rem;
+            font-size: 0.82rem;
             color: var(--q-text-muted);
             padding: 0.15rem 0.1rem 0.35rem;
             line-height: 1.4;
@@ -8328,7 +8328,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 600;
             color: var(--q-primary);
             margin-bottom: 0.55rem;
@@ -8369,7 +8369,7 @@ $qWizardSteps = [
                 border-radius: 10px;
                 background: #fff;
                 color: #334155;
-                font-size: 1rem;
+                font-size: 1.08rem;
                 line-height: 1;
                 box-shadow: none;
             }
@@ -8576,7 +8576,7 @@ $qWizardSteps = [
             border: 1.5px solid #cfd8e3;
             background: #fff;
             color: #64748b;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
             position: relative;
             z-index: 2;
@@ -8590,7 +8590,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-stepper-dot .q-stepper-num {
             display: inline-block;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             line-height: 1;
             color: inherit;
@@ -8602,7 +8602,7 @@ $qWizardSteps = [
             min-width: 0;
             margin: 0 0 0 0.4rem;
             padding: 0;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 600;
             line-height: 1.2;
             color: #64748b;
@@ -8648,7 +8648,7 @@ $qWizardSteps = [
 
         @media (max-width: 1199.98px) {
             .crm-quotation-gen .q-stepper-label {
-                font-size: 0.72rem;
+                font-size: 0.8rem;
                 margin-left: 0.3rem;
             }
             .crm-quotation-gen .q-stepper-connector {
@@ -8797,7 +8797,7 @@ $qWizardSteps = [
             min-width: 0;
             white-space: nowrap;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             line-height: 1.2;
             border-radius: 8px;
             padding: 0.35rem 0.7rem;
@@ -8814,7 +8814,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-section-next-btn .fa-arrow-right {
-            font-size: 0.7rem;
+            font-size: 0.78rem;
         }
 
         @media (max-width: 575.98px) {
@@ -8823,12 +8823,12 @@ $qWizardSteps = [
             }
 
             .crm-quotation-gen .q-itin-ai-suggest-btn {
-                font-size: 0.7rem;
+                font-size: 0.78rem;
                 padding: 0 0.5rem;
             }
             .crm-quotation-gen .q-section-next-btn {
                 padding: 0.3rem 0.55rem;
-                font-size: 0.72rem;
+                font-size: 0.8rem;
             }
         }
 
@@ -8890,7 +8890,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-guest-tour-subtitle {
             margin: 0.28rem 0 0;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             color: #94a3b8;
             font-weight: 500;
         }
@@ -8926,14 +8926,14 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.62rem;
+            font-size: 0.7rem;
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(225, 29, 46, 0.25);
         }
 
         .crm-quotation-gen .q-gt-panel-title {
             margin: 0;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             font-weight: 800;
             color: #0f172a;
         }
@@ -8990,7 +8990,7 @@ $qWizardSteps = [
             background: #fff;
             color: #e11d2e;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             padding: 0.35rem 0.7rem;
             line-height: 1.3;
         }
@@ -9028,7 +9028,7 @@ $qWizardSteps = [
             flex: 0 0 auto;
             border-radius: 8px;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         #qHeaderAiModal .modal-header {
@@ -9099,7 +9099,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-wizard-step[data-q-step="1"] label.q-label {
-            font-size: 0.74rem;
+            font-size: 0.82rem;
             font-weight: 700;
             color: #0f172a;
             margin-bottom: 0.35rem;
@@ -9125,7 +9125,7 @@ $qWizardSteps = [
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             pointer-events: none;
             z-index: 2;
         }
@@ -9144,7 +9144,7 @@ $qWizardSteps = [
             left: 0.7rem;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             line-height: 1;
             z-index: 2;
             pointer-events: none;
@@ -9154,7 +9154,7 @@ $qWizardSteps = [
             border-radius: 10px;
             border-color: #e2e8f0;
             min-height: calc(0.4rem + 1px);
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             color: #0f172a;
             background: #fff;
         }
@@ -9185,7 +9185,7 @@ $qWizardSteps = [
             border-radius: 12px;
             box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
             padding: 0.55rem;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
         }
 
         .crm-q-datepicker .ui-datepicker-header {
@@ -9224,7 +9224,7 @@ $qWizardSteps = [
             border: 0;
             background: #f8fafc;
             color: #475569;
-            font-size: 1.05rem;
+            font-size: 1.13rem;
             font-weight: 700;
             line-height: 1;
             cursor: pointer;
@@ -9309,13 +9309,13 @@ $qWizardSteps = [
             text-align: left;
             padding: 0.5rem 0.8rem;
             color: #334155;
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             cursor: pointer;
         }
 
         .crm-quotation-gen .q-dest-item i {
             color: #94a3b8;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             width: 0.9rem;
             text-align: center;
         }
@@ -9336,7 +9336,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-dest-empty {
             padding: 0.65rem 0.8rem;
             color: #94a3b8;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
         }
 
         .crm-quotation-gen .q-dest-empty strong {
@@ -9460,7 +9460,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-compare-hd .q-hint {
             margin: 0.2rem 0 0;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: rgba(0, 0, 0, 0.82);
             font-weight: 500;
         }
@@ -9534,7 +9534,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-pricing-side-block h5 {
             margin: 0 0 0.55rem;
             height: auto;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 800;
             color: var(--q-text);
             text-transform: none;
@@ -9555,7 +9555,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             flex: 0 0 auto;
         }
 
@@ -9572,7 +9572,7 @@ $qWizardSteps = [
             min-height: 96px;
             height: auto;
             margin: 0;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             line-height: 1.4;
             resize: vertical;
             padding: 0.55rem 0.65rem;
@@ -9588,7 +9588,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-usd-box-side .q-label {
             display: block;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
             font-weight: 600;
             color: #64748b;
             margin: 0 0 0.2rem;
@@ -9597,7 +9597,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-usd-box-side .form-control {
             height: 36px;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             padding: 0.35rem 0.55rem;
             box-sizing: border-box;
             border-radius: 9px;
@@ -9677,7 +9677,7 @@ $qWizardSteps = [
             align-items: center;
             gap: 0.35rem;
             padding: 0 0.5rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             cursor: pointer;
             box-sizing: border-box;
         }
@@ -9699,7 +9699,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-fx-picker-btn .fa-chevron-down {
             margin-left: auto;
-            font-size: 0.62rem;
+            font-size: 0.7rem;
             color: #94a3b8;
             flex: 0 0 auto;
         }
@@ -9720,7 +9720,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-fx-search {
             height: 32px !important;
             margin-bottom: 0.35rem;
-            font-size: 0.78rem !important;
+            font-size: 0.86rem !important;
         }
 
         .crm-quotation-gen .q-fx-list {
@@ -9743,7 +9743,7 @@ $qWizardSteps = [
             align-items: baseline;
             cursor: pointer;
             color: #111827;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .crm-quotation-gen .q-fx-option:hover,
@@ -9767,7 +9767,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-fx-empty {
             padding: 0.45rem;
             color: #94a3b8;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
         }
 
         .crm-quotation-gen .q-fx-swap-row {
@@ -9802,7 +9802,7 @@ $qWizardSteps = [
             border: 1px solid var(--q-border);
             color: #be123c;
             font-weight: 800;
-            font-size: 0.92rem;
+            font-size: 1rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -9813,7 +9813,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-usd-result.is-empty {
             color: var(--q-text-muted);
             font-weight: 600;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .crm-quotation-gen .q-usd-result .q-usd-copy-btn,
@@ -9830,7 +9830,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-fx-updated {
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 600;
             color: #94a3b8;
             line-height: 1.2;
@@ -9839,7 +9839,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-usd-result.is-error {
             color: #be123c;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .crm-quotation-gen .q-pricing-calc-block {
@@ -9888,7 +9888,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-calc-expr {
             min-height: 0.95rem;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 600;
             color: #94a3b8;
             text-align: right;
@@ -9931,7 +9931,7 @@ $qWizardSteps = [
             justify-content: space-between;
             gap: 0.35rem;
             min-height: 1rem;
-            font-size: 0.62rem;
+            font-size: 0.7rem;
             color: #64748b;
             line-height: 1.2;
         }
@@ -9942,7 +9942,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-calc-feedback {
-            font-size: 0.62rem;
+            font-size: 0.7rem;
             font-weight: 700;
             color: #059669;
             opacity: 0;
@@ -9966,7 +9966,7 @@ $qWizardSteps = [
             background: var(--q-card-bg);
             border-radius: 8px;
             height: 34px;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 700;
             color: var(--q-text);
             cursor: pointer;
@@ -10011,7 +10011,7 @@ $qWizardSteps = [
             background: #e11d2e;
             border-color: #be123c;
             color: #fff;
-            font-size: 1rem;
+            font-size: 1.08rem;
         }
 
         .crm-quotation-gen .q-calc-keys button.q-calc-eq:hover {
@@ -10028,7 +10028,7 @@ $qWizardSteps = [
             background: #f1f5f9;
             border-color: #e2e8f0;
             color: #475569;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .crm-quotation-gen .q-calc-keys button.q-calc-zero {
@@ -10045,7 +10045,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-calc-actions .btn {
             width: 100%;
             margin: 0;
-            font-size: 0.66rem;
+            font-size: 0.74rem;
             font-weight: 700;
             padding: 0 0.25rem;
             height: 30px;
@@ -10059,12 +10059,12 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-calc-actions .btn i {
-            font-size: 0.65rem;
+            font-size: 0.73rem;
         }
 
         .crm-quotation-gen .q-calc-hint {
             margin: 0;
-            font-size: 0.58rem;
+            font-size: 0.66rem;
             color: #94a3b8;
             line-height: 1.25;
             text-align: center;
@@ -10122,7 +10122,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-labels-title {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 800;
             color: #94a3b8;
             text-transform: uppercase;
@@ -10203,14 +10203,14 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             flex: 0 0 auto;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
         }
 
         .crm-quotation-gen .q-pricing-option-hd h4 {
             margin: 0;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             font-weight: 800;
             color: #fff;
             line-height: 1.25;
@@ -10241,7 +10241,7 @@ $qWizardSteps = [
             gap: 0.3rem;
             background: #fff;
             color: #047857;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 700;
             padding: 0.22rem 0.6rem;
             border-radius: 999px;
@@ -10257,13 +10257,13 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-option-badge.is-selected i {
             color: #10b981;
-            font-size: 0.62rem;
+            font-size: 0.7rem;
         }
 
         .crm-quotation-gen .q-pricing-option-hd .q-set-active-pricing {
             width: auto;
             max-width: none;
-            font-size: 0.6rem;
+            font-size: 0.68rem;
             font-weight: 700;
             padding: 0.18rem 0.5rem;
             line-height: 1.2;
@@ -10306,7 +10306,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-row-label {
             color: #334155;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             font-weight: 700;
             line-height: 1.15;
             padding: 0rem 0.55rem;
@@ -10325,7 +10325,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-pricing-row-label i {
             width: 18px;
             color: #c4121a;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             text-align: center;
             flex: 0 0 auto;
         }
@@ -10378,7 +10378,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-sum-val {
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             font-weight: 800;
             color: #e11d2e;
             font-variant-numeric: tabular-nums;
@@ -10410,7 +10410,7 @@ $qWizardSteps = [
             border-radius: 6px;
             background: #f8fafc;
             text-align: center;
-            font-size: 0.74rem;
+            font-size: 0.82rem;
             font-weight: 700;
             color: #16a34a;
             padding: 0.15rem 0.2rem;
@@ -10421,7 +10421,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-sum-pct-sign {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 700;
             color: #16a34a;
             flex: 0 0 auto;
@@ -10460,7 +10460,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-sum-rupee {
             color: #e11d2e;
             font-weight: 800;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
         }
 
         .crm-quotation-gen .q-sum-ppa-wrap .q-sheet-price-per-adult {
@@ -10473,7 +10473,7 @@ $qWizardSteps = [
             box-shadow: none !important;
             color: #e11d2e !important;
             font-weight: 800 !important;
-            font-size: 0.95rem !important;
+            font-size: 1.03rem !important;
             padding: 0 !important;
             text-align: right;
         }
@@ -10576,7 +10576,7 @@ $qWizardSteps = [
             height: var(--q-price-field-h, 36px) !important;
             min-height: var(--q-price-field-h, 36px) !important;
             padding: 0rem 0.55rem 0rem 1.35rem !important;
-            font-size: 0.84rem !important;
+            font-size: 0.92rem !important;
             line-height: 1.2;
             border-radius: 8px !important;
             border: 1px solid #e5e7eb !important;
@@ -10611,7 +10611,7 @@ $qWizardSteps = [
             grid-column: 1;
             width: var(--q-price-ico, 18px);
             color: #6b7280;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             text-align: center;
             line-height: 1;
             display: inline-flex;
@@ -10624,7 +10624,7 @@ $qWizardSteps = [
             min-width: 0;
             max-width: 100%;
             width: 100%;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 600;
             color: #1f2937;
             line-height: 1.2;
@@ -10718,7 +10718,7 @@ $qWizardSteps = [
             background: #f8fafc;
             color: #94a3b8;
             line-height: 1;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
@@ -10749,7 +10749,7 @@ $qWizardSteps = [
             top: 50%;
             transform: translateY(-50%);
             color: #2563eb;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             z-index: 1;
             pointer-events: none;
@@ -10797,7 +10797,7 @@ $qWizardSteps = [
             text-align: center;
             margin: 0.85rem 0 0;
             color: #94a3b8;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
         }
 
         /* ——— Tour Cost Summary card (compact) ——— */
@@ -10852,7 +10852,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             flex-shrink: 0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
         }
@@ -10863,7 +10863,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-tour-cost-title {
             margin: 0;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 800;
             color: #fff;
             letter-spacing: -0.01em;
@@ -10872,7 +10872,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-tour-cost-sub {
             margin: 0.2rem 0 0;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
             font-weight: 500;
             color: rgba(255, 255, 255, 0.88);
             line-height: 1.3;
@@ -10888,7 +10888,7 @@ $qWizardSteps = [
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.18);
             color: #fff;
-            font-size: 0.66rem;
+            font-size: 0.74rem;
             font-weight: 700;
             white-space: nowrap;
             opacity: 0.7;
@@ -10902,7 +10902,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-cost-autosave i {
-            font-size: 0.58rem;
+            font-size: 0.66rem;
         }
 
         .crm-quotation-gen .q-tour-cost-body {
@@ -10945,7 +10945,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
         }
 
         .crm-quotation-gen .q-tour-cost-avatar-switch {
@@ -10981,7 +10981,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-tour-cost-traveller-name {
             display: block;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             font-weight: 800;
             color: #0f172a;
             line-height: 1.2;
@@ -11007,7 +11007,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             height: 24px;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 700;
             color: #64748b;
             line-height: 1;
@@ -11029,7 +11029,7 @@ $qWizardSteps = [
             border-radius: 6px !important;
             background: #f3f4f6 !important;
             color: #0f172a !important;
-            font-size: 0.75rem !important;
+            font-size: 0.83rem !important;
             font-weight: 800 !important;
             padding: 0 0.15rem !important;
             text-align: center;
@@ -11045,7 +11045,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-tour-cost-traveller-sub {
             display: block;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 500;
             color: #94a3b8;
             line-height: 1.25;
@@ -11079,7 +11079,7 @@ $qWizardSteps = [
             height: 30px;
             background: #e5e7eb;
             color: #64748b;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 700;
             line-height: 1;
             white-space: nowrap;
@@ -11089,7 +11089,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-tour-cost-meta-qty {
             color: #64748b;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             line-height: 1;
         }
 
@@ -11115,7 +11115,7 @@ $qWizardSteps = [
             border-radius: 8px !important;
             background: #f3f4f6 !important;
             color: #0f172a !important;
-            font-size: 0.78rem !important;
+            font-size: 0.86rem !important;
             font-weight: 700 !important;
             padding: 0 0.25rem !important;
             text-align: center;
@@ -11138,7 +11138,7 @@ $qWizardSteps = [
             min-height: 30px !important;
             border-radius: 8px !important;
             color: #0f172a !important;
-            font-size: 0.78rem !important;
+            font-size: 0.86rem !important;
             font-weight: 700 !important;
             padding: 0 0.45rem !important;
             text-align: right;
@@ -11148,7 +11148,7 @@ $qWizardSteps = [
             display: inline-block;
             min-width: 4.2rem;
             color: #0f172a;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             padding: 0 0.45rem;
             text-align: right;
@@ -11177,7 +11177,7 @@ $qWizardSteps = [
             min-height: 30px !important;
             border-radius: 0 !important;
             color: #0f172a !important;
-            font-size: 0.78rem !important;
+            font-size: 0.86rem !important;
             font-weight: 700 !important;
             padding: 0 0.3rem !important;
             text-align: center;
@@ -11190,7 +11190,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: flex-end;
             text-align: right;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             font-weight: 800;
             color: #111827;
             font-variant-numeric: tabular-nums;
@@ -11307,7 +11307,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-opt-text {
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 600;
             color: #475569;
             line-height: 1.2;
@@ -11343,7 +11343,7 @@ $qWizardSteps = [
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 0.85rem;
+            font-size: 0.93rem;
             font-weight: 800;
             font-style: normal;
             line-height: 1;
@@ -11355,7 +11355,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-tour-cost-grand-label {
             display: block;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 800;
             letter-spacing: 0.06em;
             text-transform: uppercase;
@@ -11365,7 +11365,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-grand .q-tour-cost-grand-label,
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-label {
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             letter-spacing: 0.04em;
             text-transform: none;
             font-weight: 800;
@@ -11380,7 +11380,7 @@ $qWizardSteps = [
             margin-left: auto;
             text-align: right;
             padding: 0 var(--q-price-pad-right, 0.55rem);
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             font-weight: 800;
             line-height: 1;
             border: 1px solid #fecdd3;
@@ -11393,7 +11393,7 @@ $qWizardSteps = [
         .crm-quotation-gen .q-tour-cost-grand-sub {
             display: block;
             margin-top: 0.12rem;
-            font-size: 0.62rem;
+            font-size: 0.7rem;
             color: #94a3b8;
             font-weight: 500;
         }
@@ -11407,7 +11407,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-tour-cost-grand-amount {
-            font-size: 1.05rem;
+            font-size: 1.13rem;
             font-weight: 800;
             color: #c4121a;
             font-variant-numeric: tabular-nums;
@@ -11490,7 +11490,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-cost .q-tour-cost-amount {
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             margin-left: auto;
             text-align: right;
         }
@@ -11553,7 +11553,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-sheet-tour-grand-wrap .q-tour-cost-grand-label {
-            font-size: 0.88rem;
+            font-size: 0.96rem;
             letter-spacing: 0.04em;
             text-transform: none;
             font-weight: 800;
@@ -11607,7 +11607,7 @@ $qWizardSteps = [
                 width: 100%;
                 text-align: left;
                 padding-left: 2.6rem;
-                font-size: 0.95rem;
+                font-size: 1.03rem;
             }
 
             .crm-quotation-gen .q-pricing-option-sheet .q-tour-cost-grand {
@@ -11677,7 +11677,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-line-label {
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             font-weight: 700;
             color: #1f2937;
             line-height: 1.3;
@@ -11694,7 +11694,7 @@ $qWizardSteps = [
             border-radius: 0;
             background: transparent;
             color: #111827;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             font-weight: 800;
             text-align: right;
             font-variant-numeric: tabular-nums;
@@ -11729,7 +11729,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             justify-content: flex-end;
-            font-size: 0.9rem;
+            font-size: 0.98rem;
             margin-left: auto;
             text-align: right;
             padding: 0 var(--q-price-pad-right);
@@ -11783,7 +11783,7 @@ $qWizardSteps = [
             height: 36px;
             min-height: 36px;
             margin: 0;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 700;
             text-align: center;
             padding: 0.2rem 0.3rem;
@@ -11810,7 +11810,7 @@ $qWizardSteps = [
             min-width: 2rem;
             height: 36px;
             padding: 0;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             background: #e5e7eb;
             color: #4b5563;
@@ -11822,7 +11822,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-option-sheet .q-profit-row .q-sheet-profit-amount {
             margin-left: auto;
-            font-size: 0.84rem;
+            font-size: 0.92rem;
             font-weight: 700;
             text-align: right;
             padding: 0.2rem var(--q-price-pad-right);
@@ -11840,7 +11840,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-profit-or {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 800;
             color: #2563eb;
             letter-spacing: 0.04em;
@@ -11855,7 +11855,7 @@ $qWizardSteps = [
 
         .crm-quotation-gen .q-pricing-sheets-host:not(.is-single-option) .q-pricing-option-sheet .q-profit-line-label {
             line-height: 1.3;
-            font-size: 0.74rem;
+            font-size: 0.82rem;
         }
 
         .crm-quotation-gen .q-pricing-sheets-host:not(.is-single-option) .q-pricing-option-sheet .q-profit-add-line .q-profit-line-label {
@@ -11920,7 +11920,7 @@ $qWizardSteps = [
             background: #fff;
             color: #c4121a;
             line-height: 1;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
             box-shadow: none;
         }
 
@@ -11932,7 +11932,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-pricing-labels-col .q-add-cost-row i {
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             margin: 0;
         }
 
@@ -11978,7 +11978,7 @@ $qWizardSteps = [
             box-shadow: none !important;
             padding: 0 !important;
             margin: 0 !important;
-            font-size: 0.78rem !important;
+            font-size: 0.86rem !important;
             font-weight: 600;
             color: #1f2937 !important;
             line-height: 1.2;
@@ -12041,7 +12041,7 @@ $qWizardSteps = [
 
         .q-extra-cost-modal .q-extra-cost-modal-sub {
             margin: 0 0 1.15rem;
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: #64748b;
             line-height: 1.35;
         }
@@ -12057,7 +12057,7 @@ $qWizardSteps = [
             border-radius: 0;
             background: transparent;
             padding: 0.45rem 0.1rem;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             color: #0f172a;
             box-shadow: none !important;
         }
@@ -12080,7 +12080,7 @@ $qWizardSteps = [
 
         .q-extra-cost-modal .modal-footer .btn-link {
             font-weight: 700;
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             letter-spacing: 0.04em;
             text-transform: uppercase;
             color: #64748b;
@@ -12097,7 +12097,7 @@ $qWizardSteps = [
         }
 
         .q-extra-cost-modal #qExtraCostError {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             margin-bottom: 0.75rem;
         }
 
@@ -12183,7 +12183,7 @@ $qWizardSteps = [
             border: 1px solid #fde68a;
             background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
             color: #92400e;
-            font-size: 0.85rem;
+            font-size: 0.93rem;
             padding: 0.65rem 0.9rem;
             margin-bottom: 0.85rem;
         }
@@ -12205,14 +12205,14 @@ $qWizardSteps = [
             border: 1px solid #e2e8f0;
             background: #f8fafc;
             color: #64748b;
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             font-weight: 600;
             line-height: 1.2;
             transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
         }
 
         .crm-quotation-gen .q-autosave-status i {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
         }
 
         .crm-quotation-gen .q-autosave-status.is-pending,
@@ -12255,7 +12255,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-wizard-step-indicator {
-            font-size: 0.8rem;
+            font-size: 0.88rem;
             color: var(--q-text-muted);
             font-weight: 700;
             padding: 0.35rem 0.85rem;
@@ -12268,7 +12268,7 @@ $qWizardSteps = [
             border-radius: var(--q-radius-sm);
             border: none;
             box-shadow: var(--q-shadow-sm);
-            font-size: 0.84rem;
+            font-size: 0.92rem;
         }
 
         .crm-quotation-gen .q-ai-suggest {
@@ -12295,20 +12295,20 @@ $qWizardSteps = [
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             flex-shrink: 0;
             box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
         }
 
         .crm-quotation-gen .q-ai-suggest-title {
             font-weight: 700;
-            font-size: 0.875rem;
+            font-size: 0.96rem;
             color: #065f46;
             margin-bottom: 0.1rem;
         }
 
         .crm-quotation-gen .q-ai-suggest-desc {
-            font-size: 0.76rem;
+            font-size: 0.84rem;
             color: #64748b;
             margin: 0;
         }
@@ -12324,7 +12324,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             gap: 0.25rem;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: #047857;
             background: rgba(255, 255, 255, 0.85);
@@ -12334,12 +12334,12 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-ai-chip i {
-            font-size: 0.65rem;
+            font-size: 0.73rem;
             opacity: 0.85;
         }
 
         .crm-quotation-gen .q-ai-suggest-notes {
-            font-size: 0.8125rem;
+            font-size: 0.89rem;
             border-radius: 10px;
             border-color: #a7f3d0;
             resize: vertical;
@@ -12383,7 +12383,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-ai-itin-preview-title {
-            font-size: 0.8125rem;
+            font-size: 0.89rem;
             font-weight: 700;
             color: #065f46;
             margin: 0 0 0.2rem;
@@ -12394,7 +12394,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-ai-itin-preview-sub {
-            font-size: 0.74rem;
+            font-size: 0.82rem;
             color: #64748b;
             margin: 0;
         }
@@ -12403,7 +12403,7 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
-            font-size: 0.7rem;
+            font-size: 0.78rem;
             font-weight: 700;
             letter-spacing: 0.01em;
             padding: 0.28rem 0.6rem;
@@ -12436,7 +12436,7 @@ $qWizardSteps = [
             display: flex;
             align-items: baseline;
             gap: 0.45rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             color: #334155;
             padding: 0.28rem 0;
             border-bottom: 1px dashed #e2e8f0;
@@ -12465,7 +12465,7 @@ $qWizardSteps = [
             border: 0;
             color: #fff;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             padding: 0.4rem 0.95rem;
             border-radius: 999px;
         }
@@ -12475,7 +12475,7 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen #qDismissAIItinerary {
-            font-size: 0.75rem;
+            font-size: 0.83rem;
             font-weight: 600;
         }
 
@@ -12485,7 +12485,7 @@ $qWizardSteps = [
             gap: 0.75rem;
             margin: 1rem 0;
             color: #94a3b8;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -12545,7 +12545,7 @@ $qWizardSteps = [
         }
 
         #qPreviewModal .qp-modal-header .modal-title {
-            font-size: 1.05rem;
+            font-size: 1.13rem;
             font-weight: 700;
             letter-spacing: 0.02em;
         }
@@ -12732,7 +12732,7 @@ $qWizardSteps = [
             display: inline-block;
             max-width: 100%;
             font-family: "Segoe Script", "Brush Script MT", "Lucida Handwriting", "Apple Chancery", cursive;
-            font-size: 1.05rem;
+            font-size: 1.13rem;
             font-weight: 500;
             letter-spacing: 0.02em;
             color: #475569;
@@ -12783,7 +12783,7 @@ $qWizardSteps = [
         }
 
         .qp-duration {
-            font-size: 0.95rem;
+            font-size: 1.03rem;
             font-weight: 700;
             color: var(--qp-ink);
             white-space: nowrap;
@@ -12801,7 +12801,7 @@ $qWizardSteps = [
 
         .qp-meta-value,
         .qp-meta-row .ref {
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 700;
             color: #0a1329;
             line-height: 1.25;
@@ -12855,7 +12855,7 @@ $qWizardSteps = [
             background: #fff;
             border-radius: 999px;
             padding: 0.32rem 0.85rem;
-            font-size: 0.78rem;
+            font-size: 0.86rem;
             font-weight: 600;
             line-height: 1.2;
             max-width: 240px;
@@ -12868,7 +12868,7 @@ $qWizardSteps = [
 
         .qp-route-arrow {
             color: var(--qp-red);
-            font-size: 0.9rem;
+            font-size: 0.98rem;
             font-weight: 700;
             line-height: 1;
             flex-shrink: 0;
@@ -13068,7 +13068,7 @@ $qWizardSteps = [
             margin: 0 0 6px;
             padding: 2px 8px;
             border-radius: 999px;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             font-weight: 700;
             letter-spacing: 0.03em;
             text-transform: uppercase;
@@ -13590,7 +13590,7 @@ $qWizardSteps = [
         .qp-hotel-option-tab {
             display: inline-flex;
             align-items: center;
-            padding: 5px 11px;
+            padding: 2px 6px;
             border-radius: 999px;
             border: 1px solid #d1d5db;
             background: #fff;
@@ -13613,7 +13613,7 @@ $qWizardSteps = [
             flex-wrap: wrap;
             align-items: center;
             gap: 8px;
-            margin-bottom: 8px;
+            margin-top: 8px;
         }
 
         .qp-hotel-option-heading .qp-hotel-option-tabs {
@@ -14319,7 +14319,7 @@ $qWizardSteps = [
             padding: 0.7rem 1rem;
         }
         .qp-tour-end-text {
-            font-size: 0.92rem;
+            font-size: 1rem;
             font-weight: 800;
             letter-spacing: 0.04em;
             text-transform: uppercase;
@@ -15625,7 +15625,7 @@ $qWizardSteps = [
         .qp-tour-cost .q-preview-cost tbody tr:last-child td:last-child,
         .q-preview-cost tr.qp-cost-total td:last-child {
             color: #ff6b73;
-            font-size: 1.05rem;
+            font-size: 1.13rem;
         }
 
         .q-preview-gst-note {
@@ -18356,6 +18356,25 @@ $qWizardSteps = [
             overflow: auto !important;
             padding-right: 0 !important;
         }
+        /* ——— Readability: keep section headings at original sizes ——— */
+        .crm-quotation-gen .page-title {
+            font-size: 1.35rem !important;
+        }
+        .crm-quotation-gen .q-section-title {
+            font-size: 0.95rem !important;
+        }
+        .crm-quotation-gen .q-section-accordion-head.q-guest-tour-head .q-section-title,
+        .crm-quotation-gen .q-section-accordion-head.q-flight-head .q-section-title,
+        .crm-quotation-gen .q-section-accordion-head.q-wizard-section-head .q-section-title {
+            font-size: 1.1rem !important;
+        }
+        .crm-quotation-gen .q-flight-head .q-section-title {
+            font-size: 1.2rem !important;
+        }
+        .crm-quotation-gen .q-guest-tour-head .q-section-title {
+            font-size: 1.2rem !important;
+        }
+
     </style>
 </head>
 
@@ -20072,8 +20091,8 @@ $qWizardSteps = [
         ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="crm/assets/quotation_generator.js?v=403"></script>
+    <script src="crm/assets/vendor/html2pdf.bundle.min.js?v=1"></script>
+    <script src="crm/assets/quotation_generator.js?v=409"></script>
     <script src="crm/assets/quotation_flight_search.js?v=38"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=8"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

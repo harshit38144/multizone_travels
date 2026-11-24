@@ -13614,6 +13614,103 @@
             '</svg>';
     }
 
+    /**
+     * Font Awesome Free 5 solid/regular paths used in the quotation preview.
+     * Inline SVGs print/PDF reliably (icon fonts often fail in headless Chrome).
+     */
+    var QP_FA_SVG_PATHS = {
+        'fa-star': 'M259.3 17.8L194 150.2 47.9 171.5c-26.2 3.8-36.7 36.1-17.7 54.6l105.7 103-25 145.5c-4.5 26.3 23.2 46 46.4 33.7L288 439.6l130.7 68.7c23.2 12.2 50.9-7.4 46.4-33.7l-25-145.5 105.7-103c19-18.5 8.5-50.8-17.7-54.6L382 150.2 316.7 17.8c-11.7-23.6-45.6-23.9-57.4 0z',
+        'fa-star-half-alt': 'M508.55 171.51L362.18 150.2 296.77 17.81C290.89 5.78 279.42 0 267.95 0c-11.4 0-22.79 5.78-28.67 17.81l-65.43 132.39-146.38 21.29c-26.25 3.8-36.77 36.09-17.74 54.59l105.89 103-25.06 145.48C86.98 495.33 96.58 512 111.96 512c4.93 0 10.03-1.17 14.89-3.6L267.95 416l141.1 92.4c4.86 2.43 9.96 3.6 14.89 3.6 15.38 0 25-16.67 20.48-36.81l-25.06-145.48 105.89-103c19.03-18.5 8.52-50.79-17.74-54.59zM288 384.5V64.74l52.57 106.43 5.24 10.62 11.65 1.7 117.82 17.14-85.23 82.95-8.55 8.32 2.02 11.76 20.18 117.14L288 384.5z',
+        'fa-check': 'M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z',
+        'fa-ban': 'M256 8C119.034 8 8 119.033 8 256s111.034 248 248 248 248-111.034 248-248S392.967 8 256 8zm130.458 358.458C347.042 397.942 304.536 416 256 416s-91.042-18.058-130.458-49.542L361.458 130.542C397.942 169.958 416 212.464 416 256c0 48.536-18.058 91.042-49.542 130.458zM150.542 130.542C169.958 114.058 212.464 96 256 96c48.536 0 91.042 18.058 130.458 49.542L150.542 381.458C114.058 342.042 96 299.536 96 256c0-48.536 18.058-91.042 49.542-130.458z',
+        'fa-file-alt': 'M288 248v28c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-28c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12zm-12 72H108c-6.6 0-12 5.4-12 12v28c0 6.6 5.4 12 12 12h168c6.6 0 12-5.4 12-12v-28c0-6.6-5.4-12-12-12zm108-188.1V452c0 6.6-5.4 12-12 12H28c-6.6 0-12-5.4-12-12V12C16 5.4 21.4 0 28 0h232.1c3.2 0 6.2 1.3 8.5 3.5l115.9 116c2.2 2.3 3.5 5.3 3.5 8.4zm-96-4.9V32H32v416h336V224H284c-12.6 0-24-10.8-24-24z',
+        'fa-external-link-alt': 'M432 320h-32a16 16 0 0 0-16 16v112H64V128h144a16 16 0 0 0 16-16V80a16 16 0 0 0-16-16H48A48 48 0 0 0 0 112v352a48 48 0 0 0 48 48h352a48 48 0 0 0 48-48V336a16 16 0 0 0-16-16zM488 0H336c-21.5 0-32.1 25.9-17 41l32.2 32.2L320 160.4a16 16 0 0 0 0 22.6l22.6 22.6a16 16 0 0 0 22.6 0L486.8 96.4 519 64c15.1-15.1 4.3-41-17-41z',
+        'fa-chevron-right': 'M285.476 272.971L91.132 467.314c-9.373 9.373-24.569 9.373-33.941 0l-22.667-22.667c-9.357-9.357-9.375-24.522-.04-33.901L188.505 256 34.484 101.255c-9.335-9.379-9.317-24.544.04-33.901l22.667-22.667c9.373-9.373 24.569-9.373 33.941 0L285.475 239.03c9.373 9.372 9.373 24.568.001 33.941z',
+        'fa-suitcase-rolling': 'M478.21 210.44L335.79 49.22A47.88 47.88 0 0 0 300.36 32H208a16 16 0 0 0-16 16v16H80a48 48 0 0 0-48 48v288a48 48 0 0 0 48 48h288a48 48 0 0 0 48-48V256h16a16 16 0 0 0 16-16v-21.56a16 16 0 0 0-1.79-7.99zM224 64h64v32h-64zm160 352H80V128h112v32a16 16 0 0 0 16 16h96a16 16 0 0 0 16-16v-32h48.36L448 256v160z',
+        'fa-users': 'M96 224c35.3 0 64-28.7 64-64s-28.7-64-64-64-64 28.7-64 64 28.7 64 64 64zm448 0c35.3 0 64-28.7 64-64s-28.7-64-64-64-64 28.7-64 64 28.7 64 64 64zm32 32h-64c-17.6 0-33.5 7.1-45.1 18.6 40.3 22.1 68.9 62 75.1 109.4h75c17.7 0 32-14.3 32-32v-32c0-35.3-28.7-64-64-64zm-256 0h-64c-35.3 0-64 28.7-64 64v32c0 17.7 14.3 32 32 32h192c17.7 0 32-14.3 32-32v-32c0-35.3-28.7-64-64-64zm-64-64c70.7 0 128-57.3 128-128S334.7 0 264 0 136 57.3 136 128s57.3 128 128 128zm266.1 18.6c-11.6-11.5-27.5-18.6-45.1-18.6h-16.7c23.3 16.9 39.4 41.5 45.1 70.2 18.1-6.3 32.8-20.1 38.4-38.1-2.2-4.9-7.7-8.5-13.5-8.5h-8.2zM96 288c-53 0-96 43-96 96v32c0 17.7 14.3 32 32 32h192c17.7 0 32-14.3 32-32v-32c0-53-43-96-96-96H96z',
+        'fa-map-marker-alt': 'M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0zM192 272c44.183 0 80-35.817 80-80s-35.817-80-80-80-80 35.817-80 80 35.817 80 80 80z',
+        'fa-flag': 'M349.565 98.783C295.978 98.783 251.721 64 184.565 64c-66.837 0-116.688 35.783-165 35.783V464c0 26.51 21.49 48 48 48h16c26.51 0 48-21.49 48-48V288c48.312 0 98.163-35.783 165-35.783 54.202 0 96.878 20.047 138.435 35.783V134.566c-41.557-15.736-84.233-35.783-138.435-35.783z',
+        'fa-award': 'M451.339 162.102l-67.877 28.215A166.688 166.688 0 0 1 392 240c0 91.962-74.563 166.45-166.225 166.45S59.55 331.962 59.55 240 134.113 73.55 225.775 73.55c41.401 0 79.153 15.199 108.041 40.259l67.877-28.215C361.589 39.158 297.489 0 225.775 0 101.017 0 0 101.017 0 225.775S101.017 451.55 225.775 451.55 451.55 350.533 451.55 225.775c0-22.206-3.239-43.641-9.211-63.673zM225.775 351.1c-60.939 0-110.325-49.386-110.325-110.325S164.836 130.45 225.775 130.45s110.325 49.386 110.325 110.325S286.714 351.1 225.775 351.1zm126.564-288.45l-40.909 98.182 98.182 40.909 40.909-98.182-98.182-40.909z',
+        'fa-utensils': 'M480 384H32c-17.67 0-32 14.33-32 32v32c0 17.67 14.33 32 32 32h448c17.67 0 32-14.33 32-32v-32c0-17.67-14.33-32-32-32zm-48-48c0-70.69-57.31-128-128-128H256V32c0-17.67-14.33-32-32-32s-32 14.33-32 32v176h-48c-70.69 0-128 57.31-128 128v16c0 8.84 7.16 16 16 16h416c8.84 0 16-7.16 16-16v-16z',
+        'fa-bed': 'M176 256c44.11 0 80-35.89 80-80s-35.89-80-80-80-80 35.89-80 80 35.89 80 80 80zm352-128H304c-8.84 0-16 7.16-16 16v144H64V48c0-8.84-7.16-16-16-16H16C7.16 32 0 39.16 0 48v416c0 8.84 7.16 16 16 16h32c8.84 0 16-7.16 16-16v-80h512v80c0 8.84 7.16 16 16 16h32c8.84 0 16-7.16 16-16V240c0-61.86-50.14-112-112-112z',
+        'fa-moon': 'M283.211 512c78.962 0 151.079-35.925 198.857-94.792 7.068-8.708-.639-21.43-11.562-19.35-124.203 23.654-238.262-71.61-238.262-196.954 0-72.221 38.662-136.524 98.208-171.15 9.405-5.459 7.03-20.209-3.7-22.009A258.156 258.156 0 0 0 283.211 0c-141.309 0-256 114.511-256 256 0 141.309 114.511 256 256 256z',
+        'fa-plane': 'M480 192H365.71L260.61 8.06A16.006 16.006 0 0 0 246.71 0h-65.5c-10.63 0-18.3 10.17-15.38 20.39L214.86 192H112l-43.2-57.6c-3.02-4.03-7.77-6.4-12.8-6.4H16.01C5.08 128-2.4 137.72.97 147.88L32 256 .97 364.12C-2.4 374.28 5.08 384 16.01 384H56c5.04 0 9.78-2.37 12.8-6.4L112 320h102.86l-49.03 171.61c-2.92 10.22 4.75 20.39 15.38 20.39h65.5c5.74 0 11.04-3.08 13.89-8.06L365.71 320H480c35.35 0 96-28.65 96-64s-60.65-64-96-64z',
+        'fa-user': 'M256 288c79.5 0 144-64.5 144-144S335.5 0 256 0 112 64.5 112 144s64.5 144 144 144zm128 32h-55.1c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16H128C57.31 320 0 377.31 0 448v16c0 26.51 21.49 48 48 48h416c26.51 0 48-21.49 48-48v-16c0-70.69-57.31-128-128-128z',
+        'fa-clipboard-list': 'M48 48h208v48H48V48zm0 96h208v48H48v-48zm0 96h208v48H48v-48zM432 0H144C117.5 0 96 21.5 96 48v416c0 26.5 21.5 48 48 48h288c26.5 0 48-21.5 48-48V128L336 0h-48v112h144V48c0-26.5-21.5-48-48-48z',
+        'fa-file-invoice-dollar': 'M377 105L279.1 7.1c-4.5-4.5-10.6-7.1-17-7.1H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V122.1c0-6.4-2.5-12.5-7-17zM256 32.5L351.5 128H256V32.5zM128 192h160c8.8 0 16 7.2 16 16v16c0 8.8-7.2 16-16 16H128c-8.8 0-16-7.2-16-16v-16c0-8.8 7.2-16 16-16zm160 96c0 35.3-28.7 64-64 64s-64-28.7-64-64 28.7-64 64-64 64 28.7 64 64z',
+        'fa-phone-alt': 'M497.39 361.8l-112-48a24 24 0 0 0-28 6.9l-49.6 60.6A370.66 370.66 0 0 1 130.6 204.11l60.6-49.6a23.94 23.94 0 0 0 6.9-28l-48-112A24.16 24.16 0 0 0 122.6.61l-104 24A24 24 0 0 0 0 48c0 256.5 207.9 464 464 464a24 24 0 0 0 23.4-18.6l24-104a24.29 24.29 0 0 0-14.01-27.6z',
+        'fa-globe': 'M256 8C119.034 8 8 119.033 8 256s111.034 248 248 248 248-111.034 248-248S392.967 8 256 8zm130.458 158.459c-3.4-5.1-6.5-10.5-9.5-16.1-22-31.4-52.3-56.1-87.1-71.5 10.9 27 18.8 57.1 23.3 89.2h71.4c.5-.7.8-1.1 1.9-1.6zm-96.4 0c-3.1-17.5-9.3-37.7-17.9-54.6-11.1-21.8-24.9-35.2-39.3-40.9V192h57.2zm-120.2 0H119.7c-3.1-17.5-9.3-37.7-17.9-54.6C90.7 115.6 76.9 102.2 62.5 96.5V192h57.25zm-31.9-95.2C90.7 81.4 121 56.7 155.8 41.3c-3 5.6-6.1 11-9.5 16.1-1.1.5-1.3.9-1.9 1.6H23.7c3-5.6 6.1-11 9.5-16.1 2.1 4.2 3.4 6.8 4.3 8.4zM23.7 224h71.4c-4.5 32.1-12.4 62.2-23.3 89.2-34.8-15.4-65.1-40.1-87.1-71.5-3.4-5.1-6.5-10.5-9.5-16.1 1.1-.5 1.3-.9 1.9-1.6h46.6zm96.4 0h88.2v95.5c-14.4-5.7-28.2-19.1-39.3-40.9-8.6-16.9-14.8-37.1-17.9-54.6h-31zm120.2 0h88.2c-3.1 17.5-9.3 37.7-17.9 54.6-11.1 21.8-24.9 35.2-39.3 40.9V224h-31zm31.9 95.2c22.5-12.4 41.9-31.4 55.8-55.2h71.4c-3 5.6-6.1 11-9.5 16.1-22 31.4-52.3 56.1-87.1 71.5 2.1-4.2 3.4-6.8 4.3-8.4z',
+        'fa-briefcase': 'M320 336c0 8.84-7.16 16-16 16h-96c-8.84 0-16-7.16-16-16v-48H0v144c0 25.6 22.4 48 48 48h416c25.6 0 48-22.4 48-48V288H320v48zm144-208h-80V80c0-25.6-22.4-48-48-48H176c-25.6 0-48 22.4-48 48v48H48c-25.6 0-48 22.4-48 48v80h512v-80c0-25.6-22.4-48-48-48zm-144 0H192V96h128v32z',
+        'fa-suitcase': 'M128 480h256V128H128v352zM480 96h-48V48c0-26.5-21.5-48-48-48H128C101.5 0 80 21.5 80 48v48H32C14.3 96 0 110.3 0 128v320c0 17.7 14.3 32 32 32h448c17.7 0 32-14.3 32-32V128c0-17.7-14.3-32-32-32zM176 48h160v48H176V48z',
+        'fa-calendar-alt': 'M0 464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V192H0v272zm320-240c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32zM176 288h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16zm-16 112h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16zm96 0h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16zm96 0h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16zm-96-112h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16zm192-192h-48V16c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v48H160V16c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v48H48C21.5 64 0 85.5 0 112v48h448v-48c0-26.5-21.5-48-48-48z',
+        'fa-clock': 'M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm61.8-104.4l-84.9-61.7c-3.1-2.3-4.9-5.9-4.9-9.7V116c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v141.7l66.8 48.6c5.4 3.9 6.5 11.4 2.6 16.8L334.6 376c-3.9 5.3-11.4 6.5-16.8 2.6z'
+    };
+
+    // Hollow star for far fa-star.
+    QP_FA_SVG_PATHS['fa-star-o'] =
+        'M528.1 171.5L382 150.2 316.7 17.8c-11.7-23.6-45.6-23.9-57.4 0L194 150.2 47.9 171.5c-26.2 3.8-36.7 36.1-17.7 54.6l105.7 103-25 145.5c-4.5 26.3 23.2 46 46.4 33.7L288 439.6l130.7 68.7c23.2 12.2 50.9-7.4 46.4-33.7l-25-145.5 105.7-103c19-18.5 8.5-50.8-17.7-54.6zM288 366.5l-92.3 48.5 17.6-102.6-74.7-72.8 103.2-15 46.2-93.5 46.2 93.5 103.2 15-74.7 72.8 17.6 102.6L288 366.5z';
+
+    function qpFaIconKeyFromClass(className) {
+        var classes = String(className || '').split(/\s+/);
+        var i;
+        for (i = 0; i < classes.length; i++) {
+            if (/^fa-[a-z0-9-]+$/i.test(classes[i]) && classes[i] !== 'fa-fw' && classes[i] !== 'fa-spin' && classes[i] !== 'fa-lg' && classes[i] !== 'fa-sm' && classes[i] !== 'fa-xs') {
+                return classes[i];
+            }
+        }
+        return '';
+    }
+
+    function qpFaSvgHtml(iconKey, className, opts) {
+        opts = opts || {};
+        var isRegularStar = iconKey === 'fa-star' && /\bfar\b/.test(String(className || ''));
+        var pathKey = isRegularStar ? 'fa-star-o' : iconKey;
+        var d = QP_FA_SVG_PATHS[pathKey] || QP_FA_SVG_PATHS[iconKey];
+        if (!d) {
+            return '';
+        }
+        var cls = String(className || '').replace(/\s+/g, ' ').trim();
+        if (cls.indexOf('qp-fa-svg') < 0) {
+            cls = (cls ? cls + ' ' : '') + 'qp-fa-svg';
+        }
+        var fill = opts.fill || 'currentColor';
+        var vbMap = {
+            'fa-star': '0 0 576 512',
+            'fa-star-half-alt': '0 0 536 512',
+            'fa-star-o': '0 0 576 512',
+            'fa-map-marker-alt': '0 0 384 512',
+            'fa-users': '0 0 640 512',
+            'fa-suitcase-rolling': '0 0 512 512',
+            'fa-bed': '0 0 640 512',
+            'fa-plane': '0 0 576 512',
+            'fa-calendar-alt': '0 0 448 512',
+            'fa-briefcase': '0 0 512 512'
+        };
+        var vb = vbMap[pathKey] || vbMap[iconKey] || '0 0 512 512';
+        return '<svg class="' + esc(cls) + '" viewBox="' + vb + '" width="1em" height="1em" fill="' + esc(fill) + '" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">' +
+            '<path d="' + d + '"></path>' +
+            '</svg>';
+    }
+
+    function qInlineFaIconsInPreviewClone($root) {
+        if (!$root || !$root.length) {
+            return;
+        }
+        $root.find('i.fa, i.fas, i.far, i.fal, i.fab').each(function () {
+            var $i = $(this);
+            var cls = $i.attr('class') || '';
+            var key = qpFaIconKeyFromClass(cls);
+            if (!key) {
+                return;
+            }
+            var svg = qpFaSvgHtml(key, cls);
+            if (!svg) {
+                return;
+            }
+            $i.replaceWith(svg);
+        });
+    }
+
     function qpReviewStarsHtml(count) {
         count = count || 5;
         var html = '<div class="qp-rev-stars" aria-hidden="true">';
@@ -14369,8 +14466,8 @@
                 }
                 html += '<div class="qp-sec qp-sec-tour-end">' +
                     '<div class="qp-tour-end-banner" role="note">' +
-                    '<span class="qp-tour-end-text">TOUR ENDS WITH WONDERFUL MEMORIES OF ' +
-                    esc(tourEndDest) + '!</span>' +
+                    '<span class="qp-tour-end-text">A JOURNEY TO REMEMBER, MEMORIES TO CHERISH – ' +
+                    esc(tourEndDest) + '! ❤️</span>' +
                     '</div></div>';
             }
         }
@@ -17836,10 +17933,10 @@
             }
         });
 
-        window.qPrintPreviewOnly = function () {
+        window.qBuildPreviewPrintHtml = function () {
             var $area = $('#qPreviewPrintArea');
             if (!$area.length || !$area.html()) {
-                return;
+                return null;
             }
             flushPreviewActiveEdit();
             var exportTitle = buildQuotationExportFilename({ withExt: false });
@@ -17854,6 +17951,8 @@
                     .removeAttr('data-q-type')
                     .removeAttr('data-q-multiline');
             });
+            // Icon fonts often fail in headless/print PDF — convert FA <i> to inline SVG.
+            qInlineFaIconsInPreviewClone($clone);
 
             var styles = '';
             $('style').each(function () {
@@ -17862,6 +17961,16 @@
                     styles = txt;
                 }
             });
+            styles +=
+                'svg.qp-fa-svg{display:inline-block;width:1em;height:1em;vertical-align:-.125em;' +
+                'fill:currentColor;overflow:visible;flex-shrink:0;}' +
+                '.qp-acc-ico svg.qp-fa-svg,.qp-terms-icon svg.qp-fa-svg,.qp-terms-check svg.qp-fa-svg,' +
+                '.qp-rev-rating-stars svg.qp-fa-svg,.qp-rev-stars svg.qp-fa-svg,.qp-rev-shield svg.qp-fa-svg,' +
+                '.qp-hotel-stars svg.qp-fa-svg,.qp-support-ico svg.qp-fa-svg,.qp-day-meta svg.qp-fa-svg,' +
+                '.qp-sec-ico svg.qp-fa-svg,.qp-notes-hd-ico svg.qp-fa-svg{width:1em;height:1em;}' +
+                '.qp-acc-ico svg.qp-fa-svg{width:1.05em;height:1.05em;}' +
+                '.qp-terms-check svg.qp-fa-svg{width:.72em;height:.72em;}' +
+                '.qp-rev-rating-stars svg.qp-fa-svg,.qp-hotel-stars svg.qp-fa-svg{width:.95em;height:.95em;}';
             // Remove page-level @media print rules (they hide everything outside #qPreviewPrintArea
             // and can blank the popup if matched incorrectly). Rebuild print styles below.
             (function stripPrintMedia() {
@@ -17979,33 +18088,26 @@
                 '}' +
                 '}';
 
-            // Same-tab print via a hidden iframe (no new tab / about:blank navigation).
-            var existingFrame = document.getElementById('qPreviewPrintFrame');
-            if (existingFrame && existingFrame.parentNode) {
-                existingFrame.parentNode.removeChild(existingFrame);
-            }
-            var printFrame = document.createElement('iframe');
-            printFrame.id = 'qPreviewPrintFrame';
-            printFrame.setAttribute('title', 'Quotation print');
-            printFrame.setAttribute('aria-hidden', 'true');
-            printFrame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;';
-            document.body.appendChild(printFrame);
-
-            var printWin = printFrame.contentWindow;
-            var printDoc = printFrame.contentDocument || (printWin && printWin.document);
-            if (!printWin || !printDoc) {
-                if (printFrame.parentNode) {
-                    printFrame.parentNode.removeChild(printFrame);
-                }
-                alert('Could not prepare print view. Please try again.');
-                return;
-            }
+            var faSolid = absUrl('plugins/fontawesome-free/webfonts/fa-solid-900.woff2');
+            var faRegular = absUrl('plugins/fontawesome-free/webfonts/fa-regular-400.woff2');
+            var faBrand = absUrl('plugins/fontawesome-free/webfonts/fa-brands-400.woff2');
+            var faFaceCss =
+                '@font-face{font-family:"Font Awesome 5 Free";font-style:normal;font-weight:900;font-display:block;' +
+                'src:url("' + faSolid + '") format("woff2")}' +
+                '@font-face{font-family:"Font Awesome 5 Free";font-style:normal;font-weight:400;font-display:block;' +
+                'src:url("' + faRegular + '") format("woff2")}' +
+                '@font-face{font-family:"Font Awesome 5 Brands";font-style:normal;font-weight:400;font-display:block;' +
+                'src:url("' + faBrand + '") format("woff2")}' +
+                '.fa,.fas{font-family:"Font Awesome 5 Free";font-weight:900}' +
+                '.far{font-family:"Font Awesome 5 Free";font-weight:400}' +
+                '.fab{font-family:"Font Awesome 5 Brands";font-weight:400}';
 
             var printHtml =
                 '<!DOCTYPE html><html><head><title>' + esc(exportTitle) + '</title><meta charset="utf-8">' +
                 '<meta name="viewport" content="width=device-width,initial-scale=1">' +
                 '<link rel="stylesheet" href="' + esc(absUrl('plugins/fontawesome-free/css/all.min.css')) + '">' +
                 '<style>' +
+                faFaceCss +
                 styles +
                 'html,body{margin:0!important;padding:0!important;background:#fff!important;}' +
                 'body.q-preview-print{margin:0!important;padding:0!important;background:#fff!important;}' +
@@ -18181,11 +18283,268 @@
                 '<div id="qPreviewPrintArea" class="q-preview-doc">' + $clone.html() + '</div>' +
                 '</body></html>';
 
+            return {
+                html: printHtml,
+                title: exportTitle,
+                filename: exportTitle + '.pdf'
+            };
+        };
+
+        function qGetQuotationPdfIds() {
+            var id = parseInt($('#q_id').val() || (window.QUOTATION_PREFILL && QUOTATION_PREFILL.id) || 0, 10) || 0;
+            var version = 0;
+            if (window.QUOTATION_PREFILL && typeof QUOTATION_PREFILL === 'object') {
+                version = parseInt(QUOTATION_PREFILL.view_version || QUOTATION_PREFILL.editing_from_version || QUOTATION_PREFILL.version || 0, 10) || 0;
+            }
+            var editFrom = parseInt($('#q_edit_from_version').val() || 0, 10) || 0;
+            if (editFrom > 0) {
+                version = editFrom;
+            }
+            return { id: id, version: version };
+        }
+
+        function qPdfHtmlFingerprint(html) {
+            var s = String(html || '');
+            var hash = 0;
+            var i;
+            for (i = 0; i < s.length; i++) {
+                hash = ((hash << 5) - hash) + s.charCodeAt(i);
+                hash |= 0;
+            }
+            return String(hash) + ':' + s.length;
+        }
+
+        function qPdfRememberHtml(ids, html) {
+            try {
+                sessionStorage.setItem(
+                    'qpdf_html_' + ids.id + '_v' + (ids.version || 0),
+                    qPdfHtmlFingerprint(html)
+                );
+            } catch (e) { /* ignore */ }
+        }
+
+        function qQuotationPdfStatusUrl(ids) {
+            ids = ids || qGetQuotationPdfIds();
+            return absUrl('crm/ajax/quotation_pdf_status.php')
+                + '?id=' + encodeURIComponent(ids.id)
+                + (ids.version > 0 ? ('&version=' + encodeURIComponent(ids.version)) : '');
+        }
+
+        function qQuotationPdfDownloadUrl(ids) {
+            ids = ids || qGetQuotationPdfIds();
+            return absUrl('crm/ajax/download_quotation_pdf.php')
+                + '?id=' + encodeURIComponent(ids.id)
+                + (ids.version > 0 ? ('&version=' + encodeURIComponent(ids.version)) : '')
+                + '&download=1';
+        }
+
+        function qFetchQuotationPdfStatus(ids) {
+            return $.ajax({
+                url: qQuotationPdfStatusUrl(ids),
+                type: 'GET',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            });
+        }
+
+        function qTriggerServerPdfDownload(ids) {
+            var url = qQuotationPdfDownloadUrl(ids) + '&_ts=' + Date.now();
+            var a = document.createElement('a');
+            a.href = url;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            window.setTimeout(function () {
+                try { document.body.removeChild(a); } catch (e) { /* ignore */ }
+            }, 1000);
+        }
+
+        /**
+         * Save PDF on the server from the same print HTML.
+         * Prefers Chrome headless on the server; falls back to client html2pdf upload.
+         */
+        function qPersistQuotationPdf(opts) {
+            opts = opts || {};
+            var silent = !!opts.silent;
+            var ids = opts.ids || qGetQuotationPdfIds();
+            var html = opts.html || '';
+            var filename = opts.filename || buildQuotationExportFilename({ withExt: true });
+            var clientPdfBlob = opts.pdfBlob || null;
+
+            if (!ids.id) {
+                return Promise.reject(new Error('Save the quotation before generating a PDF.'));
+            }
+            if (!html && !clientPdfBlob) {
+                return Promise.reject(new Error('Nothing to save as PDF.'));
+            }
+
+            var postOnce = function (blob) {
+                var fd = new FormData();
+                fd.append('quotation_id', String(ids.id));
+                if (ids.version > 0) {
+                    fd.append('version', String(ids.version));
+                }
+                fd.append('file_name', filename);
+                if (html) {
+                    fd.append('html', html);
+                }
+                if (blob) {
+                    fd.append('pdf', blob, filename);
+                }
+                return fetch(absUrl('crm/ajax/generate_quotation_pdf.php'), {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).then(function (res) {
+                    return res.json().then(function (data) {
+                        return { http: res, data: data };
+                    });
+                });
+            };
+
+            var makeClientPdfBlob = function () {
+                if (clientPdfBlob) {
+                    return Promise.resolve(clientPdfBlob);
+                }
+                if (typeof html2pdf !== 'function' || !html) {
+                    return Promise.reject(new Error('Client PDF fallback unavailable.'));
+                }
+                // Render print HTML into a same-document host and capture a PDF blob (no download).
+                var host = document.createElement('div');
+                host.id = 'qPreviewPdfFallbackHost';
+                host.style.cssText = 'position:fixed;left:0;top:0;width:794px;opacity:1;pointer-events:none;z-index:-1;background:#fff;';
+                var iframe = document.createElement('iframe');
+                iframe.style.cssText = 'width:794px;min-height:400px;border:0;';
+                host.appendChild(iframe);
+                document.body.appendChild(host);
+                var idoc = iframe.contentDocument || iframe.contentWindow.document;
+                idoc.open();
+                idoc.write(html);
+                idoc.close();
+
+                var cleanup = function () {
+                    try {
+                        if (host.parentNode) host.parentNode.removeChild(host);
+                    } catch (e) { /* ignore */ }
+                };
+
+                return new Promise(function (resolve) {
+                    window.setTimeout(resolve, 600);
+                }).then(function () {
+                    var src = idoc.getElementById('qPreviewPrintArea') || idoc.body;
+                    var stage = document.createElement('div');
+                    stage.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:-1;background:#fff;';
+                    var clone = document.createElement('div');
+                    clone.className = 'q-preview-doc q-preview-pdf-capture';
+                    clone.style.width = '794px';
+                    clone.style.maxWidth = '794px';
+                    clone.style.background = '#fff';
+                    clone.innerHTML = src.innerHTML;
+                    stage.appendChild(clone);
+                    document.body.appendChild(stage);
+                    void stage.offsetHeight;
+                    return qPreparePreviewImagesForPdf(clone)
+                        .then(function () { return qWaitForPdfImages(clone, 3000); })
+                        .then(function () {
+                            var scale = qPdfCaptureScale(clone);
+                            var opt = qPdfBaseOpt(filename, scale, 794);
+                            return Promise.resolve(html2pdf().set(opt).from(clone).outputPdf('blob'))
+                                .then(function (blob) {
+                                    try {
+                                        if (stage.parentNode) stage.parentNode.removeChild(stage);
+                                    } catch (e) { /* ignore */ }
+                                    cleanup();
+                                    return blob;
+                                }, function (err) {
+                                    try {
+                                        if (stage.parentNode) stage.parentNode.removeChild(stage);
+                                    } catch (e2) { /* ignore */ }
+                                    cleanup();
+                                    throw err;
+                                });
+                        });
+                });
+            };
+
+            return postOnce(null).then(function (resp) {
+                if (resp.data && resp.data.success) {
+                    if (html) {
+                        qPdfRememberHtml({
+                            id: ids.id,
+                            version: ids.version || resp.data.version || 0
+                        }, html);
+                    }
+                    return resp.data;
+                }
+                if (!html && !clientPdfBlob) {
+                    throw new Error((resp.data && resp.data.message) || 'Could not save PDF.');
+                }
+                // Server could not render (no Chrome / render error) — upload client PDF of same HTML.
+                return makeClientPdfBlob().then(function (blob) {
+                    if (!blob || !blob.size) {
+                        throw new Error('Could not build fallback PDF.');
+                    }
+                    return postOnce(blob).then(function (resp2) {
+                        if (resp2.data && resp2.data.success) {
+                            return resp2.data;
+                        }
+                        throw new Error((resp2.data && resp2.data.message) || 'Could not save PDF on server.');
+                    });
+                });
+            }).catch(function (err) {
+                if (!silent) {
+                    throw err;
+                }
+                console.warn('Quotation PDF persist skipped:', err);
+                return null;
+            });
+        }
+
+        window.qPrintPreviewOnly = function () {
+            var built = window.qBuildPreviewPrintHtml();
+            if (!built || !built.html) {
+                return;
+            }
+
+            // Persist server PDF copy from the exact print HTML (does not block the dialog).
+            try {
+                qPersistQuotationPdf({
+                    html: built.html,
+                    filename: built.filename,
+                    silent: true
+                });
+            } catch (persistErr) {
+                console.warn('Quotation PDF persist failed to start:', persistErr);
+            }
+
+            // Same-tab print via a hidden iframe (existing behaviour).
+            var existingFrame = document.getElementById('qPreviewPrintFrame');
+            if (existingFrame && existingFrame.parentNode) {
+                existingFrame.parentNode.removeChild(existingFrame);
+            }
+            var printFrame = document.createElement('iframe');
+            printFrame.id = 'qPreviewPrintFrame';
+            printFrame.setAttribute('title', 'Quotation print');
+            printFrame.setAttribute('aria-hidden', 'true');
+            printFrame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+            document.body.appendChild(printFrame);
+
+            var printWin = printFrame.contentWindow;
+            var printDoc = printFrame.contentDocument || (printWin && printWin.document);
+            if (!printWin || !printDoc) {
+                if (printFrame.parentNode) {
+                    printFrame.parentNode.removeChild(printFrame);
+                }
+                alert('Could not prepare print view. Please try again.');
+                return;
+            }
+
             printDoc.open();
-            printDoc.write(printHtml);
+            printDoc.write(built.html);
             printDoc.close();
             try {
-                printDoc.title = exportTitle;
+                printDoc.title = built.title;
             } catch (titleErr) { /* ignore */ }
 
             var cleanedUp = false;
@@ -18201,7 +18560,6 @@
             try {
                 printWin.addEventListener('afterprint', cleanupPrintFrame);
             } catch (afterErr) { /* ignore */ }
-            // Fallback if afterprint is delayed / unsupported
             window.setTimeout(cleanupPrintFrame, 120000);
 
             var triggerPrint = function () {
@@ -18213,7 +18571,6 @@
                 }
             };
 
-            // Wait for accreditation / logo images to load before printing
             (function waitForPrintImages() {
                 var doc = printDoc;
                 var imgs = doc ? Array.prototype.slice.call(doc.images || []) : [];
@@ -18249,91 +18606,426 @@
             })();
         };
 
+        /* ——— Quotation Preview → PDF helpers (client fallback capture) ——— */
+        function qImageToPdfDataUrl(imgEl, maxWidth) {
+            maxWidth = maxWidth || 480;
+            try {
+                var w = imgEl.naturalWidth || imgEl.width || 0;
+                var h = imgEl.naturalHeight || imgEl.height || 0;
+                if (w < 1 || h < 1) {
+                    return '';
+                }
+                var scale = w > maxWidth ? (maxWidth / w) : 1;
+                var cw = Math.max(1, Math.round(w * scale));
+                var ch = Math.max(1, Math.round(h * scale));
+                var canvas = document.createElement('canvas');
+                canvas.width = cw;
+                canvas.height = ch;
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, cw, ch);
+                ctx.drawImage(imgEl, 0, 0, cw, ch);
+                return canvas.toDataURL('image/jpeg', 0.82);
+            } catch (err) {
+                return '';
+            }
+        }
+
+        function qHidePdfImage(img) {
+            try {
+                img.style.visibility = 'hidden';
+                img.removeAttribute('src');
+                img.removeAttribute('srcset');
+            } catch (e) { /* ignore */ }
+        }
+
+        function qStripAllPdfImages(rootEl) {
+            if (!rootEl) return;
+            Array.prototype.forEach.call(rootEl.querySelectorAll('img'), qHidePdfImage);
+        }
+
+        function qPreparePreviewImagesForPdf(rootEl) {
+            var imgs = rootEl ? Array.prototype.slice.call(rootEl.querySelectorAll('img')) : [];
+            if (!imgs.length) {
+                return Promise.resolve();
+            }
+            var tasks = imgs.map(function (img) {
+                return new Promise(function (resolve) {
+                    var src = '';
+                    try {
+                        src = String(img.getAttribute('src') || img.currentSrc || img.src || '').trim();
+                    } catch (e) {
+                        src = '';
+                    }
+                    if (!src) {
+                        resolve();
+                        return;
+                    }
+
+                    var finishWithProbe = function (probe) {
+                        var dataUrl = qImageToPdfDataUrl(probe, 480);
+                        if (dataUrl) {
+                            img.setAttribute('src', dataUrl);
+                            img.removeAttribute('srcset');
+                        } else {
+                            qHidePdfImage(img);
+                        }
+                        resolve();
+                    };
+
+                    // Data URLs: recompress if already decoded.
+                    if (/^data:/i.test(src)) {
+                        if (img.complete && img.naturalWidth > 0) {
+                            finishWithProbe(img);
+                        } else {
+                            resolve();
+                        }
+                        return;
+                    }
+
+                    var probe = new Image();
+                    try { probe.crossOrigin = 'anonymous'; } catch (e1) { /* ignore */ }
+                    probe.onload = function () { finishWithProbe(probe); };
+                    probe.onerror = function () {
+                        var probe2 = new Image();
+                        probe2.onload = function () { finishWithProbe(probe2); };
+                        probe2.onerror = function () {
+                            qHidePdfImage(img);
+                            resolve();
+                        };
+                        try { probe2.src = src; } catch (e2) {
+                            qHidePdfImage(img);
+                            resolve();
+                        }
+                    };
+                    try { probe.src = src; } catch (e3) {
+                        qHidePdfImage(img);
+                        resolve();
+                    }
+                });
+            });
+            return Promise.all(tasks);
+        }
+
+        function qWaitForPdfImages(rootEl, timeoutMs) {
+            timeoutMs = timeoutMs || 5000;
+            var imgs = rootEl ? Array.prototype.slice.call(rootEl.querySelectorAll('img[src]')) : [];
+            if (!imgs.length) {
+                return Promise.resolve();
+            }
+            return new Promise(function (resolve) {
+                var pending = imgs.length;
+                var done = false;
+                var finish = function () {
+                    if (done) return;
+                    done = true;
+                    resolve();
+                };
+                var onOne = function () {
+                    pending -= 1;
+                    if (pending <= 0) finish();
+                };
+                imgs.forEach(function (img) {
+                    try {
+                        if (img.complete) {
+                            onOne();
+                            return;
+                        }
+                        img.addEventListener('load', onOne);
+                        img.addEventListener('error', onOne);
+                    } catch (e) {
+                        onOne();
+                    }
+                });
+                window.setTimeout(finish, timeoutMs);
+            });
+        }
+
+        function qTriggerBlobDownload(blob, filename) {
+            if (!blob) {
+                throw new Error('Empty PDF blob');
+            }
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'Quotation.pdf';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            window.setTimeout(function () {
+                try { document.body.removeChild(a); } catch (e) { /* ignore */ }
+                try { URL.revokeObjectURL(url); } catch (e2) { /* ignore */ }
+            }, 1200);
+        }
+
+        // Keep canvas under common browser limits (~8192–16384px / ~16M pixels).
+        var Q_PDF_MAX_CANVAS_H = 7800;
+        var Q_PDF_MAX_CANVAS_AREA = 14000000;
+
+        function qPdfCaptureScale(rootEl) {
+            var h = Math.max((rootEl && rootEl.scrollHeight) || 0, (rootEl && rootEl.offsetHeight) || 0, 1);
+            var w = Math.max((rootEl && rootEl.scrollWidth) || 0, (rootEl && rootEl.offsetWidth) || 0, 794);
+            var scaleH = Q_PDF_MAX_CANVAS_H / h;
+            var scaleA = Math.sqrt(Q_PDF_MAX_CANVAS_AREA / (w * h));
+            var scale = Math.min(1.25, scaleH, scaleA);
+            if (scale < 0.4) scale = 0.4;
+            return Math.round(scale * 100) / 100;
+        }
+
+        function qPdfNeedsSliceCapture(rootEl, scale) {
+            var h = Math.max((rootEl && rootEl.scrollHeight) || 0, (rootEl && rootEl.offsetHeight) || 0, 1);
+            var w = Math.max((rootEl && rootEl.scrollWidth) || 0, (rootEl && rootEl.offsetWidth) || 0, 794);
+            scale = scale || 1;
+            return (h * scale) > Q_PDF_MAX_CANVAS_H || (w * scale * h * scale) > Q_PDF_MAX_CANVAS_AREA;
+        }
+
+        function qPdfBaseOpt(filename, scale, windowWidth) {
+            return {
+                margin: [6, 8, 6, 8],
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.9 },
+                enableLinks: false,
+                html2canvas: {
+                    scale: scale || 1,
+                    useCORS: true,
+                    allowTaint: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    imageTimeout: 6000,
+                    removeContainer: true,
+                    foreignObjectRendering: false,
+                    windowWidth: windowWidth || 794
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+        }
+
+        function qExportElementToPdf(rootEl, filename, scale) {
+            var opt = qPdfBaseOpt(filename, scale || 1, Math.max(794, (rootEl && rootEl.scrollWidth) || 794));
+            return Promise.resolve(html2pdf().set(opt).from(rootEl).outputPdf('blob')).then(function (blob) {
+                if (!blob || !blob.size || blob.size < 50) {
+                    throw new Error('PDF blob invalid');
+                }
+                qTriggerBlobDownload(blob, filename);
+                return true;
+            });
+        }
+
+        /**
+         * Capture tall quotations page-by-page so html2canvas never builds one giant canvas.
+         * Uses html2pdf worker APIs (toCanvas / get('pdf')) — no separate library globals needed.
+         */
+        function qExportElementToPdfSliced(rootEl, filename) {
+            var pageWidthPx = 794;
+            var marginMm = 6;
+            var a4W = 210;
+            var a4H = 297;
+            var usableWmm = a4W - (marginMm * 2);
+            var usableHmm = a4H - (marginMm * 2);
+            var pageHeightPx = Math.max(900, Math.floor(pageWidthPx * usableHmm / usableWmm));
+            var scale = 1.05;
+            var totalH = Math.max(rootEl.scrollHeight || 0, rootEl.offsetHeight || 0, 1);
+            var pageCount = Math.max(1, Math.ceil(totalH / pageHeightPx));
+
+            var clip = document.createElement('div');
+            clip.id = 'qPreviewPdfClip';
+            clip.style.cssText = [
+                'position:fixed',
+                'left:0',
+                'top:0',
+                'width:' + pageWidthPx + 'px',
+                'height:' + pageHeightPx + 'px',
+                'overflow:hidden',
+                'background:#ffffff',
+                'opacity:1',
+                'pointer-events:none',
+                'z-index:-1'
+            ].join(';');
+
+            var mover = document.createElement('div');
+            mover.style.cssText = 'position:relative;width:' + pageWidthPx + 'px;margin:0;padding:0;top:0;';
+            var parent = rootEl.parentNode;
+            mover.appendChild(rootEl);
+            rootEl.style.width = pageWidthPx + 'px';
+            rootEl.style.maxWidth = pageWidthPx + 'px';
+            clip.appendChild(mover);
+            document.body.appendChild(clip);
+
+            var opt = qPdfBaseOpt(filename, scale, pageWidthPx);
+            opt.margin = 0;
+            opt.pagebreak = { mode: [] };
+            opt.html2canvas.height = pageHeightPx;
+            opt.html2canvas.width = pageWidthPx;
+            opt.html2canvas.windowHeight = pageHeightPx;
+            opt.html2canvas.x = 0;
+            opt.html2canvas.y = 0;
+
+            var cleanup = function () {
+                try {
+                    if (parent) parent.appendChild(rootEl);
+                    if (clip.parentNode) clip.parentNode.removeChild(clip);
+                } catch (e) { /* ignore */ }
+            };
+
+            var pageImages = [];
+            var captureAll = function (pageIndex) {
+                if (pageIndex >= pageCount) {
+                    return Promise.resolve();
+                }
+                mover.style.top = (-pageIndex * pageHeightPx) + 'px';
+                void clip.offsetHeight;
+                return Promise.resolve(
+                    html2pdf().set(opt).from(clip).toCanvas().get('canvas')
+                ).then(function (canvas) {
+                    if (!canvas || !canvas.width || !canvas.height) {
+                        throw new Error('PDF page canvas empty at page ' + (pageIndex + 1));
+                    }
+                    pageImages.push(canvas.toDataURL('image/jpeg', 0.88));
+                    return captureAll(pageIndex + 1);
+                });
+            };
+
+            return captureAll(0).then(function () {
+                // Bootstrap a jsPDF instance via html2pdf (bundle does not expose jsPDF globally).
+                var boot = document.createElement('div');
+                boot.textContent = '.';
+                boot.style.cssText = 'width:20px;height:12px;color:#fff;';
+                clip.appendChild(boot);
+                return Promise.resolve(
+                    html2pdf().set(opt).from(boot).toPdf().get('pdf')
+                ).then(function (pdf) {
+                    if (!pdf || typeof pdf.addImage !== 'function') {
+                        throw new Error('jsPDF instance unavailable');
+                    }
+                    pageImages.forEach(function (img, idx) {
+                        if (idx > 0) {
+                            pdf.addPage();
+                        }
+                        pdf.addImage(img, 'JPEG', marginMm, marginMm, usableWmm, usableHmm);
+                    });
+                    var blob = pdf.output('blob');
+                    if (!blob || !blob.size || blob.size < 50) {
+                        throw new Error('Sliced PDF blob invalid');
+                    }
+                    qTriggerBlobDownload(blob, filename);
+                    return true;
+                });
+            }).then(function (ok) {
+                cleanup();
+                return ok;
+            }, function (err) {
+                cleanup();
+                throw err;
+            });
+        }
+
+        function qSimplifyPreviewForPdf(rootEl) {
+            if (!rootEl) return;
+            try {
+                rootEl.querySelectorAll('*').forEach(function (node) {
+                    try {
+                        node.style.boxShadow = 'none';
+                        node.style.textShadow = 'none';
+                        node.style.filter = 'none';
+                        node.style.backdropFilter = 'none';
+                        node.style.transform = 'none';
+                        node.style.animation = 'none';
+                        node.style.transition = 'none';
+                    } catch (e) { /* ignore */ }
+                });
+            } catch (e2) { /* ignore */ }
+        }
+
         window.qDownloadPreviewPdf = function () {
             var $area = $('#qPreviewPrintArea');
             if (!$area.length || !$area.html()) {
                 return;
             }
-            if (typeof html2pdf === 'undefined') {
-                alert('PDF download is unavailable. Please refresh and try again.');
+
+            var ids = qGetQuotationPdfIds();
+            if (!ids.id) {
+                alert('Please save the quotation first, then download the PDF.');
                 return;
             }
+
             flushPreviewActiveEdit();
 
-            var filename = buildQuotationExportFilename({ withExt: true });
             var $btn = $('#qPreviewDownloadBtn');
             var prevHtml = $btn.length ? $btn.html() : '';
+            var restored = false;
+            var restoreBtn = function () {
+                if (restored) return;
+                restored = true;
+                if ($btn.length) {
+                    $btn.prop('disabled', false).html(prevHtml || '<i class="fas fa-download mr-1"></i> Download');
+                }
+            };
             if ($btn.length) {
                 $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Downloading…');
             }
 
-            var existing = document.getElementById('qPreviewPdfCaptureStage');
-            if (existing && existing.parentNode) {
-                existing.parentNode.removeChild(existing);
-            }
-
-            var stage = document.createElement('div');
-            stage.id = 'qPreviewPdfCaptureStage';
-            stage.style.cssText = 'position:fixed;left:-20000px;top:0;z-index:-1;width:210mm;background:#fff;overflow:visible;';
-
-            var $clone = $area.clone();
-            $clone.find('.q-preview-editable').each(function () {
-                var $el = $(this);
-                $el.removeAttr('contenteditable')
-                    .removeAttr('spellcheck')
-                    .removeClass('is-editing q-preview-editable q-preview-cell-edit')
-                    .removeAttr('data-q-edit')
-                    .removeAttr('data-q-type')
-                    .removeAttr('data-q-multiline');
-            });
-            var el = $clone.get(0);
-            el.style.width = '210mm';
-            el.style.maxWidth = '210mm';
-            el.style.margin = '0';
-            el.style.boxShadow = 'none';
-            el.style.border = '0';
-            el.style.borderRadius = '0';
-            el.style.background = '#fff';
-            stage.appendChild(el);
-            document.body.appendChild(stage);
-
-            var restoreBtn = function () {
-                if ($btn.length) {
-                    $btn.prop('disabled', false).html(prevHtml || '<i class="fas fa-download mr-1"></i> Download');
-                }
-                if (stage && stage.parentNode) {
-                    stage.parentNode.removeChild(stage);
-                }
+            var fail = function (err) {
+                console.error('Quotation PDF download failed:', err);
+                restoreBtn();
+                alert((err && err.message) ? err.message : 'Could not download PDF. Please try again.');
             };
 
-            var opt = {
-                margin: [5, 8, 5, 8],
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: true,
-                    scrollX: 0,
-                    scrollY: 0,
-                    backgroundColor: '#ffffff',
-                    logging: false
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['css', 'legacy'] }
+            var previewLooksModified = function (html) {
+                try {
+                    if (typeof previewDirty !== 'undefined' && previewDirty) return true;
+                } catch (e1) { /* ignore */ }
+                try {
+                    if (qDbAutoSave && qDbAutoSave.dirty) return true;
+                } catch (e2) { /* ignore */ }
+                try {
+                    var prev = sessionStorage.getItem('qpdf_html_' + ids.id + '_v' + (ids.version || 0));
+                    if (prev && prev !== qPdfHtmlFingerprint(html)) return true;
+                } catch (e3) { /* ignore */ }
+                return false;
             };
 
-            window.requestAnimationFrame(function () {
-                window.requestAnimationFrame(function () {
-                    html2pdf().set(opt).from(el).save().then(function () {
+            var ensureAndDownload = function () {
+                var built = window.qBuildPreviewPrintHtml();
+                if (!built || !built.html) {
+                    throw new Error('Could not prepare quotation for PDF.');
+                }
+
+                return qFetchQuotationPdfStatus(ids).then(function (status) {
+                    var canReuse = status && status.success && status.exists && status.fresh
+                        && !previewLooksModified(built.html);
+                    if (canReuse) {
+                        qTriggerServerPdfDownload(ids);
                         restoreBtn();
-                    }).catch(function (err) {
-                        console.error('Quotation PDF download failed:', err);
+                        return true;
+                    }
+                    return qPersistQuotationPdf({
+                        ids: ids,
+                        html: built.html,
+                        filename: built.filename,
+                        silent: false
+                    }).then(function (res) {
+                        if (!res || !res.success) {
+                            throw new Error((res && res.message) || 'Could not generate PDF on the server.');
+                        }
+                        if (res.version) {
+                            ids.version = parseInt(res.version, 10) || ids.version;
+                        }
+                        qPdfRememberHtml(ids, built.html);
+                        qTriggerServerPdfDownload(ids);
                         restoreBtn();
-                        alert('Could not download PDF. Please try again.');
+                        return true;
                     });
                 });
-            });
+            };
+
+            Promise.resolve(ensureAndDownload()).catch(fail);
+
+            window.setTimeout(function () {
+                if (!restored) restoreBtn();
+            }, 180000);
         };
 
         function postQuotationSave(p, saveMode, $btn, btnDefaultHtml, onSuccess) {
@@ -18371,11 +19063,23 @@
                         }
                         $('#q_edit_from_version').remove();
                         try {
+                            if (window.QUOTATION_PREFILL && typeof QUOTATION_PREFILL === 'object') {
+                                if (res.id) QUOTATION_PREFILL.id = res.id;
+                                if (res.version) {
+                                    QUOTATION_PREFILL.version = res.version;
+                                    QUOTATION_PREFILL.view_version = res.version;
+                                    delete QUOTATION_PREFILL.editing_from_version;
+                                }
+                            }
                             qDbAutoSave.lastFingerprint = buildAutosaveFingerprint(normalizeAutosavePayload($.extend({}, p, { id: res.id || p.id })));
                             qDbAutoSave.lastSavedAt = Date.now();
                             qDbAutoSave.dirty = false;
                             qDbAutoSave.pending = false;
                             setQuotationAutosaveStatus('saved');
+                            // Saved quotation content changed — stored PDF must be regenerated.
+                            try {
+                                sessionStorage.removeItem('qpdf_html_' + (res.id || p.id));
+                            } catch (eSs) { /* ignore */ }
                         } catch (eFp) {}
                         if (typeof onSuccess === 'function') {
                             onSuccess(res);
