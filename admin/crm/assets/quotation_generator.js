@@ -12723,8 +12723,22 @@
         return String(fallback || '').trim();
     }
 
-    function qpCalcSegmentTravelMinutes(seg) {
-        seg = seg || {};
+    function qpFlightDurationMinutesFromSeg(seg) {
+        seg = normalizeFlightData(seg || {});
+        var api = window.QAirportTz;
+        if (api && typeof api.flightDurationMinutes === 'function') {
+            return api.flightDurationMinutes({
+                depDate: seg.dep_date,
+                depTime: seg.dep_time,
+                arrDate: seg.arr_date || seg.dep_date,
+                arrTime: seg.arr_time || seg.dep_time,
+                depPlace: seg.from,
+                arrPlace: seg.to,
+                depIata: qpParseFlightPlace(seg.from).code,
+                arrIata: qpParseFlightPlace(seg.to).code
+            }) || 0;
+        }
+        // Fallback (same-zone) only if timezone helper failed to load
         var start = parseFlightDateTimeMoment(seg.dep_date, seg.dep_time);
         var end = parseFlightDateTimeMoment(seg.arr_date || seg.dep_date, seg.arr_time || seg.dep_time);
         if (!start || !end) {
@@ -12737,20 +12751,39 @@
         return mins > 0 ? mins : 0;
     }
 
+    function qpCalcSegmentTravelMinutes(seg) {
+        return qpFlightDurationMinutesFromSeg(seg);
+    }
+
     function qpCalcJourneyTravelTime(rows) {
         if (!rows || !rows.length) {
             return '';
         }
-        var first = rows[0];
-        var last = rows[rows.length - 1];
-        var start = parseFlightDateTimeMoment(first.dep_date, first.dep_time);
-        var end = parseFlightDateTimeMoment(last.arr_date || last.dep_date, last.arr_time || last.dep_time);
-        if (!start || !end) {
-            return '';
-        }
-        var mins = end.diff(start, 'minutes');
-        if (mins < 0) {
-            mins += 24 * 60;
+        var first = normalizeFlightData(rows[0]);
+        var last = normalizeFlightData(rows[rows.length - 1]);
+        var mins = 0;
+        var api = window.QAirportTz;
+        if (api && typeof api.flightDurationMinutes === 'function') {
+            mins = api.flightDurationMinutes({
+                depDate: first.dep_date,
+                depTime: first.dep_time,
+                arrDate: last.arr_date || last.dep_date,
+                arrTime: last.arr_time || last.dep_time,
+                depPlace: first.from,
+                arrPlace: last.to,
+                depIata: qpParseFlightPlace(first.from).code,
+                arrIata: qpParseFlightPlace(last.to).code
+            }) || 0;
+        } else {
+            var start = parseFlightDateTimeMoment(first.dep_date, first.dep_time);
+            var end = parseFlightDateTimeMoment(last.arr_date || last.dep_date, last.arr_time || last.dep_time);
+            if (!start || !end) {
+                return '';
+            }
+            mins = end.diff(start, 'minutes');
+            if (mins < 0) {
+                mins += 24 * 60;
+            }
         }
         return qpFormatDurationShort(mins);
     }
@@ -12953,7 +12986,25 @@
             String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0');
     }
 
-    /** Shared sanitized filename for PDF download + print: QTN0514 Mr Satyam Singh x 02 Maldives . 14 Dec */
+    /**
+     * PDF filename reference only — maps lead-style LD-0015 → QTN0015.
+     * Does not change quotation_uid / on-document REF display.
+     */
+    function quotationPdfFilenameRef(ref) {
+        ref = String(ref || '').trim();
+        var m = ref.match(/^LD-?(\d+)$/i);
+        if (m) {
+            return 'QTN' + m[1];
+        }
+        return ref;
+    }
+
+    /**
+     * Shared sanitized PDF filename for Print / Download / server storage:
+     * QTN0015 Mr Himanshu x 01 Goa 10 Jul.pdf
+     * Traveller count = additional guests excluding the main guest (2-digit).
+     * Travel date = DD MMM (day not zero-padded).
+     */
     function buildQuotationExportFilename(opts) {
         opts = opts || {};
         var withExt = !!opts.withExt;
@@ -12963,7 +13014,7 @@
         } catch (e) {
             p = {};
         }
-        var ref = String(previewRefNo(p) || 'Quotation').trim();
+        var ref = quotationPdfFilenameRef(previewRefNo(p) || 'Quotation');
         var guest = String(p.guest_name || '').trim() || 'Guest';
         var adults = parseInt(p.no_of_adults, 10);
         var children = parseInt(p.no_of_children, 10);
@@ -12972,7 +13023,9 @@
         if (isNaN(children) || children < 0) children = 0;
         if (isNaN(infants) || infants < 0) infants = 0;
         var total = adults + children + infants;
-        var pax = String(total).padStart(2, '0');
+        // Exclude main guest — e.g. 3 travellers → x 02
+        var additional = Math.max(0, total - 1);
+        var pax = String(additional).padStart(2, '0');
         var dest = String(p.destination || '').trim() || 'Destination';
         var travelLabel = '';
         var d = typeof parsePreviewDate === 'function' ? parsePreviewDate(p.tentative_date) : null;
@@ -12982,7 +13035,7 @@
         }
         var name = ref + ' ' + guest + ' x ' + pax + ' ' + dest;
         if (travelLabel) {
-            name += ' . ' + travelLabel;
+            name += ' ' + travelLabel;
         }
         name = String(name)
             .replace(/[\\/:*?"<>|]/g, '')
@@ -13000,6 +13053,58 @@
     }
 
     window.buildQuotationExportFilename = buildQuotationExportFilename;
+
+    /**
+     * Chrome "Save as PDF" uses the top-level browsing-context title when the
+     * quotation page is embedded in admin/app.php tabs. Set/restore the whole
+     * same-origin ancestor chain so the dialog filename matches export title
+     * (without the " — Multizone Travels" shell suffix).
+     */
+    function qCapturePrintDocumentTitles(title) {
+        var chain = [];
+        var seen = [];
+        var w = window;
+        title = String(title || '').trim();
+        if (!title) {
+            return chain;
+        }
+        while (w) {
+            if (seen.indexOf(w) >= 0) {
+                break;
+            }
+            seen.push(w);
+            try {
+                chain.push({ win: w, prev: String(w.document.title || '') });
+                w.document.title = title;
+            } catch (e) {
+                break;
+            }
+            if (w === w.top) {
+                break;
+            }
+            try {
+                w = w.parent;
+            } catch (e2) {
+                break;
+            }
+        }
+        return chain;
+    }
+
+    function qRestorePrintDocumentTitles(chain) {
+        if (!chain || !chain.length) {
+            return;
+        }
+        for (var i = 0; i < chain.length; i++) {
+            var item = chain[i];
+            if (!item || !item.win) {
+                continue;
+            }
+            try {
+                item.win.document.title = item.prev;
+            } catch (e) { /* ignore cross-origin / closed */ }
+        }
+    }
 
     function previewExpertInitial(name) {
         name = (name || '').trim();
@@ -17999,11 +18104,26 @@
                 }
             })();
 
-            // Neutralize A4 “card” chrome copied from the modal (border/shadow/min-height/margins)
+            // Neutralize A4 “card” chrome copied from the modal (border/shadow/min-height/margins).
+            // Keep itinerary photo shadows — restored below after the blanket strip.
             styles = styles
                 .replace(/box-shadow\s*:[^;]+;/gi, 'box-shadow:none!important;')
                 .replace(/min-height\s*:\s*var\(--qp-page-h\)\s*;/gi, 'min-height:0!important;')
                 .replace(/min-height\s*:\s*297mm\s*;/gi, 'min-height:0!important;');
+
+            // Match Quotation Preview itinerary image shadow exactly (color/intensity/radius).
+            styles +=
+                '.qp-day-photo{overflow:visible!important;}' +
+                '.qp-day-photo img,' +
+                '.q-preview-doc .qp-day-photo img,' +
+                '#qPreviewPrintArea .qp-day-photo img{' +
+                'box-shadow:0 6px 10px rgb(187 187 187 / 90%)!important;' +
+                '-webkit-box-shadow:0 6px 10px rgb(187 187 187 / 90%)!important;' +
+                'border-radius:14px!important;' +
+                '-webkit-print-color-adjust:exact!important;' +
+                'print-color-adjust:exact!important;' +
+                'color-adjust:exact!important;' +
+                '}';
 
             var printBleedCss =
                 /* Last rules win — force full-bleed print, no outer frame/margin */
@@ -18278,6 +18398,25 @@
                 '.q-preview-doc .qp-day-main.has-photo{grid-template-columns:minmax(0,1fr) 180px!important;}' +
                 '.q-preview-doc .qp-trust-stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
                 '.q-preview-doc .qp-foot-contacts{grid-template-columns:repeat(4,minmax(0,1fr))!important;}' +
+                /* Itinerary photo shadow must survive print/PDF (background graphics). */
+                '.qp-day,.q-preview-day{overflow:visible!important;}' +
+                '.qp-day-body,.q-preview-day-body,.qp-day-main,.qp-day-photo{overflow:visible!important;}' +
+                '.qp-day-photo img{' +
+                'box-shadow:0 6px 10px rgb(187 187 187 / 90%)!important;' +
+                '-webkit-box-shadow:0 6px 10px rgb(187 187 187 / 90%)!important;' +
+                'border-radius:14px!important;' +
+                '-webkit-print-color-adjust:exact!important;' +
+                'print-color-adjust:exact!important;' +
+                'color-adjust:exact!important;' +
+                '}' +
+                '@media print{' +
+                '.qp-day-photo img{' +
+                'box-shadow:0 6px 10px rgb(187 187 187 / 90%)!important;' +
+                '-webkit-box-shadow:0 6px 10px rgb(187 187 187 / 90%)!important;' +
+                '-webkit-print-color-adjust:exact!important;' +
+                'print-color-adjust:exact!important;' +
+                '}' +
+                '}' +
                 printBleedCss +
                 '</style></head><body class="q-preview-print q-preview-only">' +
                 '<div id="qPreviewPrintArea" class="q-preview-doc">' + $clone.html() + '</div>' +
@@ -18545,12 +18684,18 @@
             printDoc.close();
             try {
                 printDoc.title = built.title;
+                printFrame.setAttribute('title', built.title);
             } catch (titleErr) { /* ignore */ }
+
+            // Must update top/parent titles: Save as PDF reads the shell title
+            // (e.g. "Edit Quotation — Multizone Travels"), not the print iframe.
+            var titleChain = qCapturePrintDocumentTitles(built.title);
 
             var cleanedUp = false;
             var cleanupPrintFrame = function () {
                 if (cleanedUp) return;
                 cleanedUp = true;
+                qRestorePrintDocumentTitles(titleChain);
                 try {
                     if (printFrame && printFrame.parentNode) {
                         printFrame.parentNode.removeChild(printFrame);
@@ -18560,6 +18705,9 @@
             try {
                 printWin.addEventListener('afterprint', cleanupPrintFrame);
             } catch (afterErr) { /* ignore */ }
+            try {
+                window.addEventListener('afterprint', cleanupPrintFrame);
+            } catch (afterWinErr) { /* ignore */ }
             window.setTimeout(cleanupPrintFrame, 120000);
 
             var triggerPrint = function () {

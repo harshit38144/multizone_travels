@@ -318,6 +318,83 @@
         return parts.join(' ') || '0 min';
     }
 
+    /**
+     * Prefer timezone-aware duration from scheduled local times + airport codes.
+     * Absolute API timestamps are used when present; flyTime is a last resort.
+     */
+    function qfsComputeFlightDurationMinutes(f, fallbackFlyTime) {
+        f = f || {};
+        var depCode = (f.depDetail && f.depDetail.code) ? f.depDetail.code : (f.depCode || '');
+        var arrCode = (f.arrDetail && f.arrDetail.code) ? f.arrDetail.code : (f.arrCode || '');
+        var depRaw = (f.depDetail && f.depDetail.time) ? f.depDetail.time : (f.departureTime || f.depTime || '');
+        var arrRaw = (f.arrDetail && f.arrDetail.time) ? f.arrDetail.time : (f.arrivalTime || f.arrTime || '');
+        var api = window.QAirportTz;
+
+        if (api && typeof api.flightDurationMinutes === 'function') {
+            var depDate = '';
+            var depTime = '';
+            var arrDate = '';
+            var arrTime = '';
+            if (depRaw && moment(depRaw).isValid()) {
+                depDate = moment(depRaw).format('YYYY-MM-DD');
+                depTime = moment(depRaw).format('HH:mm');
+            }
+            if (arrRaw && moment(arrRaw).isValid()) {
+                arrDate = moment(arrRaw).format('YYYY-MM-DD');
+                arrTime = moment(arrRaw).format('HH:mm');
+            }
+            var mins = api.flightDurationMinutes({
+                depRaw: depRaw,
+                arrRaw: arrRaw,
+                depDate: depDate,
+                depTime: depTime,
+                arrDate: arrDate,
+                arrTime: arrTime,
+                depIata: depCode,
+                arrIata: arrCode,
+                depPlace: (f.depDetail && f.depDetail.name) ? (f.depDetail.name + ' (' + depCode + ')') : depCode,
+                arrPlace: (f.arrDetail && f.arrDetail.name) ? (f.arrDetail.name + ' (' + arrCode + ')') : arrCode
+            });
+            if (mins > 0) {
+                return mins;
+            }
+        }
+
+        // Absolute timestamp diff when API times are real datetimes
+        if (depRaw && arrRaw && moment(depRaw).isValid() && moment(arrRaw).isValid()) {
+            var abs = moment(arrRaw).diff(moment(depRaw), 'minutes');
+            if (abs > 0 && abs < 60 * 48) {
+                return abs;
+            }
+        }
+
+        var fly = fallbackFlyTime != null ? fallbackFlyTime : (f.flyTime || f.duration);
+        if (typeof fly === 'number' && fly > 0) {
+            return fly;
+        }
+        fly = parseInt(fly, 10);
+        return (!isNaN(fly) && fly > 0) ? fly : 0;
+    }
+
+    function qfsFormatDurationMinutes(mins) {
+        mins = parseInt(mins, 10);
+        if (isNaN(mins) || mins <= 0) {
+            return '';
+        }
+        if (window.QAirportTz && typeof window.QAirportTz.formatFlightDurationLong === 'function') {
+            return window.QAirportTz.formatFlightDurationLong(mins);
+        }
+        var h = Math.floor(mins / 60);
+        var m = mins % 60;
+        if (h > 0 && m > 0) {
+            return h + ' hrs ' + m + ' min';
+        }
+        if (h > 0) {
+            return h + ' hr' + (h > 1 ? 's' : '');
+        }
+        return m + ' min';
+    }
+
     function qfsNormalizeBaggageValue(val) {
         if (val == null || val === false) {
             return '';
@@ -613,11 +690,14 @@
         var stops = flightsArray.length > 1 ? (flightsArray.length - 1) : 0;
         var stopsStr = stops === 0 ? 'Non Stop' : stops + ' Stop(s)';
 
-        var pDurationRaw = item._qfsMeta
+        var pDurationRaw = item._qfsMeta && item._qfsMeta.duration
             ? item._qfsMeta.duration
-            : (primaryF.flyTime || primaryF.duration || 150);
+            : qfsComputeFlightDurationMinutes(primaryF, primaryF.flyTime || primaryF.duration);
+        if (!pDurationRaw) {
+            pDurationRaw = primaryF.flyTime || primaryF.duration || 0;
+        }
         var pDuration = typeof pDurationRaw === 'number'
-            ? Math.floor(pDurationRaw / 60) + ' hrs ' + (pDurationRaw % 60) + ' min'
+            ? (qfsFormatDurationMinutes(pDurationRaw) || (Math.floor(pDurationRaw / 60) + ' hrs ' + (pDurationRaw % 60) + ' min'))
             : pDurationRaw;
 
         var guestFares = (item._qfsMeta && item._qfsMeta.fares) ? item._qfsMeta.fares : qfsJourneyGuestFares(journey, primaryF);
@@ -698,15 +778,22 @@
             var legDTime = moment(legDTimeRaw).isValid() ? moment(legDTimeRaw).format('DD MMM YYYY | hh:mm A') : legDTimeRaw;
             var legATime = moment(legATimeRaw).isValid() ? moment(legATimeRaw).format('DD MMM YYYY | hh:mm A') : legATimeRaw;
 
-            var durationRaw = f.flyTime || f.duration || 150;
-            var duration = typeof durationRaw === 'number'
-                ? Math.floor(durationRaw / 60) + ' hrs ' + (durationRaw % 60) + ' min'
-                : durationRaw;
-
             var legDepCity = (f.depDetail && f.depDetail.name) ? f.depDetail.name : (index === 0 ? overallDepCityName : 'City');
             var legDepCode = (f.depDetail && f.depDetail.code) ? f.depDetail.code : (index === 0 ? overallDepCode : 'XXX');
             var legArrCity = (f.arrDetail && f.arrDetail.name) ? f.arrDetail.name : (index === flightsArray.length - 1 ? overallArrCityName : 'City');
             var legArrCode = (f.arrDetail && f.arrDetail.code) ? f.arrDetail.code : (index === flightsArray.length - 1 ? overallArrCode : 'XXX');
+
+            var durationRaw = qfsComputeFlightDurationMinutes({
+                depDetail: f.depDetail || { code: legDepCode, name: legDepCity, time: legDTimeRaw },
+                arrDetail: f.arrDetail || { code: legArrCode, name: legArrCity, time: legATimeRaw },
+                depCode: legDepCode,
+                arrCode: legArrCode,
+                flyTime: f.flyTime,
+                duration: f.duration
+            }, f.flyTime || f.duration);
+            var duration = typeof durationRaw === 'number'
+                ? (qfsFormatDurationMinutes(durationRaw) || (Math.floor(durationRaw / 60) + ' hrs ' + (durationRaw % 60) + ' min'))
+                : (durationRaw || '—');
 
             var depTerminal = (f.depDetail && f.depDetail.terminal) ? 'Terminal ' + f.depDetail.terminal : 'Terminal 1';
             var arrTerminal = (f.arrDetail && f.arrDetail.terminal) ? 'Terminal ' + f.arrDetail.terminal : 'Terminal 1';
@@ -1003,11 +1090,19 @@
             var primaryF = item.primaryFlight || flightsArray[0] || item;
             var guestFares = qfsJourneyGuestFares(journey, primaryF);
             var price = qfsGuestTotal(guestFares);
+            var lastF = flightsArray[flightsArray.length - 1] || primaryF;
             var dTimeRaw = (primaryF.depDetail && primaryF.depDetail.time) ? primaryF.depDetail.time : (primaryF.departureTime || primaryF.depTime || '');
-            var aTimeRaw = (primaryF.arrDetail && primaryF.arrDetail.time) ? primaryF.arrDetail.time : (primaryF.arrivalTime || primaryF.arrTime || '');
-            var duration = primaryF.flyTime || primaryF.duration || 150;
-            if (typeof duration !== 'number') {
-                duration = parseInt(duration, 10) || 150;
+            var aTimeRaw = (lastF.arrDetail && lastF.arrDetail.time) ? lastF.arrDetail.time : (lastF.arrivalTime || lastF.arrTime || primaryF.arrivalTime || primaryF.arrTime || '');
+            var duration = qfsComputeFlightDurationMinutes({
+                depDetail: primaryF.depDetail || { time: dTimeRaw, code: (primaryF.depDetail && primaryF.depDetail.code) || '' },
+                arrDetail: lastF.arrDetail || { time: aTimeRaw, code: (lastF.arrDetail && lastF.arrDetail.code) || '' },
+                departureTime: dTimeRaw,
+                arrivalTime: aTimeRaw,
+                flyTime: primaryF.flyTime || journey.flyTime,
+                duration: primaryF.duration || journey.duration
+            }, primaryF.flyTime || primaryF.duration || journey.flyTime || journey.duration);
+            if (!duration) {
+                duration = parseInt(primaryF.flyTime || primaryF.duration, 10) || 0;
             }
             var seatsLeft = parseInt(journey.seatsLeft, 10);
             if (isNaN(seatsLeft)) {

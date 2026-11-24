@@ -9,7 +9,7 @@ require_once __DIR__ . '/quotation_db.php';
 
 const CRM_QUOTATION_PDF_MAX_BYTES = 30 * 1024 * 1024;
 /** Bump when print/PDF markup rendering changes (forces stale PDFs to regenerate). */
-const CRM_QUOTATION_PDF_RENDER_REV = 'icons-svg-v1';
+const CRM_QUOTATION_PDF_RENDER_REV = 'icons-svg-v2-photo-shadow';
 
 function crmEnsureQuotationPdfTables(mysqli $conn): void
 {

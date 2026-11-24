@@ -238,16 +238,6 @@
                                                             aria-label="Open WhatsApp chat">
                                                             <i class="fab fa-whatsapp"></i>
                                                         </button>
-                                                        <?php if ($latestQuotationHref !== '') { ?>
-                                                        <a href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>"
-                                                            class="btn-icon btn-edit js-open-quotation-tab"
-                                                            data-lead-id="<?= (int) $lead['id'] ?>"
-                                                            <?php if ($latestQuotationId > 0) { ?>data-quotation-id="<?= $latestQuotationId ?>"<?php } ?>
-                                                            title="Edit Quotation"
-                                                            aria-label="Edit quotation">
-                                                            <i class="fas fa-pen"></i>
-                                                        </a>
-                                                        <?php } ?>
                                                         <?php if ($hasQuotationAction && $latestQuotationHref !== '') {
                                                             $latestIsDraft = (($lead['latest_quotation_status'] ?? '') === 'draft');
                                                             $latestTourConfirmed = !empty($lead['latest_is_tour_confirmed'])
@@ -273,6 +263,14 @@
                                                                 <i class="far fa-eye"></i>
                                                             </a>
                                                             <?php } ?>
+                                                            <a href="<?= htmlspecialchars($latestQuotationHref, ENT_QUOTES, 'UTF-8') ?>"
+                                                                class="btn-icon btn-edit js-open-quotation-tab"
+                                                                data-lead-id="<?= (int) $lead['id'] ?>"
+                                                                <?php if ($latestQuotationId > 0) { ?>data-quotation-id="<?= $latestQuotationId ?>"<?php } ?>
+                                                                title="Edit Quotation"
+                                                                aria-label="Edit quotation">
+                                                                <i class="fas fa-pen"></i>
+                                                            </a>
                                                             <?php if ($latestQuotationId > 0 && !$latestIsDraft) { ?>
                                                                 <button type="button"
                                                                     class="btn-icon js-q-book <?= $latestTourConfirmed ? 'btn-confirmed' : 'btn-book' ?>"
