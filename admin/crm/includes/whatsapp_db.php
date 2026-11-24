@@ -34,7 +34,26 @@ function crmWhatsappEnsureTables(mysqli $conn): bool
         KEY `idx_wa_lead_fp` (`lead_id`, `fingerprint`, `created_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
-    return (bool) $conn->query($sql);
+    if (!$conn->query($sql)) {
+        return false;
+    }
+
+    // Empty provider ids → NULL so UNIQUE allows multiple outbound rows without a SID yet.
+    @$conn->query(
+        "UPDATE `crm_whatsapp_messages`
+         SET `provider_message_id` = NULL
+         WHERE `provider_message_id` IS NOT NULL AND `provider_message_id` = ''"
+    );
+
+    $idx = $conn->query("SHOW INDEX FROM `crm_whatsapp_messages` WHERE Key_name = 'uniq_wa_provider_message_id'");
+    if ($idx && $idx->num_rows === 0) {
+        @$conn->query(
+            'ALTER TABLE `crm_whatsapp_messages`
+             ADD UNIQUE KEY `uniq_wa_provider_message_id` (`provider_message_id`)'
+        );
+    }
+
+    return true;
 }
 
 function crmWhatsappNewIdempotencyKey(int $leadId): string
@@ -224,4 +243,243 @@ function crmWhatsappListLeadMessages(mysqli $conn, int $leadId, int $limit = 200
     $stmt->close();
 
     return $rows;
+}
+
+/**
+ * Messages for a lead with id greater than $afterId (oldest first). Used by chat poll.
+ *
+ * @return list<array<string, mixed>>
+ */
+function crmWhatsappListLeadMessagesAfter(mysqli $conn, int $leadId, int $afterId, int $limit = 100): array
+{
+    if ($leadId <= 0) {
+        return [];
+    }
+    if (!crmWhatsappEnsureTables($conn)) {
+        return [];
+    }
+
+    $afterId = max(0, $afterId);
+    $limit = max(1, min(200, $limit));
+    $sql = 'SELECT `id`, `lead_id`, `direction`, `phone`, `channel`, `template_name`, `template_language`,
+                   `body_text`, `status`, `provider_message_id`, `error_message`, `created_by_name`, `created_at`, `updated_at`
+            FROM `crm_whatsapp_messages`
+            WHERE `lead_id` = ? AND `id` > ?
+            ORDER BY `id` ASC
+            LIMIT ' . $limit;
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return [];
+    }
+    $stmt->bind_param('ii', $leadId, $afterId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $rows = [];
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $rows[] = $row;
+        }
+    }
+    $stmt->close();
+
+    return $rows;
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function crmWhatsappFindByProviderMessageId(mysqli $conn, string $providerMessageId): ?array
+{
+    $providerMessageId = trim($providerMessageId);
+    if ($providerMessageId === '') {
+        return null;
+    }
+    if (!crmWhatsappEnsureTables($conn)) {
+        return null;
+    }
+
+    $stmt = $conn->prepare(
+        'SELECT `id`, `lead_id`, `direction`, `phone`, `provider_message_id`, `created_at`
+         FROM `crm_whatsapp_messages`
+         WHERE `provider_message_id` = ?
+         LIMIT 1'
+    );
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('s', $providerMessageId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    $stmt->close();
+
+    return $row ?: null;
+}
+
+/**
+ * Match a lead by registered mobile (last-10 / normalized digits).
+ * Returns 0 when no active lead matches.
+ */
+function crmWhatsappFindLeadIdByPhone(mysqli $conn, string $phoneDigits): int
+{
+    $phoneDigits = preg_replace('/\D+/', '', $phoneDigits);
+    if ($phoneDigits === null || $phoneDigits === '') {
+        return 0;
+    }
+
+    $last10 = strlen($phoneDigits) >= 10 ? substr($phoneDigits, -10) : $phoneDigits;
+    if ($last10 === '') {
+        return 0;
+    }
+
+    if (!function_exists('crmLeadActiveWhereSql')) {
+        require_once __DIR__ . '/lead_db.php';
+    }
+
+    $like = '%' . $last10;
+    $sql = 'SELECT `id`, `customer_phone`
+            FROM `crm_leads`
+            WHERE ' . crmLeadActiveWhereSql() . "
+              AND `customer_phone` IS NOT NULL
+              AND `customer_phone` <> ''
+              AND REPLACE(REPLACE(REPLACE(REPLACE(`customer_phone`, '+', ''), ' ', ''), '-', ''), '(', '') LIKE ?
+            ORDER BY `id` DESC
+            LIMIT 40";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return 0;
+    }
+    $stmt->bind_param('s', $like);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $candidates = [];
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $candidates[] = $row;
+        }
+    }
+    $stmt->close();
+
+    foreach ($candidates as $row) {
+        $stored = preg_replace('/\D+/', '', (string) ($row['customer_phone'] ?? ''));
+        if ($stored === null || $stored === '') {
+            continue;
+        }
+        if ($stored === $phoneDigits) {
+            return (int) $row['id'];
+        }
+        if (strlen($stored) >= 10 && substr($stored, -10) === $last10) {
+            return (int) $row['id'];
+        }
+        if (function_exists('crmWhatsappNormalizePhone')) {
+            $norm = crmWhatsappNormalizePhone((string) $row['customer_phone']);
+            if ($norm !== '' && ($norm === $phoneDigits || substr($norm, -10) === $last10)) {
+                return (int) $row['id'];
+            }
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Store an inbound WhatsApp message. Dedupes on provider_message_id (MessageSid).
+ *
+ * @param array{
+ *   lead_id:int,
+ *   phone:string,
+ *   body_text:string,
+ *   provider_message_id:string,
+ *   created_at?:string,
+ *   provider_response_json?:string
+ * } $row
+ * @return array{id:int,duplicate:bool,success:bool}
+ */
+function crmWhatsappInsertInbound(mysqli $conn, array $row): array
+{
+    $empty = ['id' => 0, 'duplicate' => false, 'success' => false];
+    if (!crmWhatsappEnsureTables($conn)) {
+        return $empty;
+    }
+
+    $leadId = (int) ($row['lead_id'] ?? 0);
+    $phone = preg_replace('/\D+/', '', (string) ($row['phone'] ?? ''));
+    $body = (string) ($row['body_text'] ?? '');
+    $sid = trim((string) ($row['provider_message_id'] ?? ''));
+    $createdAt = (string) ($row['created_at'] ?? date('Y-m-d H:i:s'));
+    $providerJson = (string) ($row['provider_response_json'] ?? '');
+
+    if ($leadId <= 0 || $phone === '' || $sid === '') {
+        return $empty;
+    }
+
+    $existing = crmWhatsappFindByProviderMessageId($conn, $sid);
+    if ($existing) {
+        return [
+            'id' => (int) ($existing['id'] ?? 0),
+            'duplicate' => true,
+            'success' => true,
+        ];
+    }
+
+    $idempotencyKey = 'twilio-' . $sid;
+    if (strlen($idempotencyKey) > 80) {
+        $idempotencyKey = 'twilio-' . substr(hash('sha256', $sid), 0, 64);
+    }
+    $fingerprint = hash('sha256', 'inbound|twilio|' . $sid);
+    $channel = 'twilio';
+    $direction = 'inbound';
+    $status = 'received';
+    $createdById = 0;
+    $createdByName = 'Twilio';
+
+    $stmt = $conn->prepare(
+        'INSERT INTO `crm_whatsapp_messages`
+        (`lead_id`, `direction`, `phone`, `channel`, `template_name`, `template_language`,
+         `body_text`, `variables_json`, `fingerprint`, `idempotency_key`, `provider_message_id`,
+         `status`, `http_status`, `error_message`, `provider_response_json`,
+         `created_by_id`, `created_by_name`, `created_at`)
+         VALUES (?, ?, ?, ?, NULL, NULL, ?, NULL, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)'
+    );
+    if (!$stmt) {
+        return $empty;
+    }
+
+    $stmt->bind_param(
+        'isssssssssiss',
+        $leadId,
+        $direction,
+        $phone,
+        $channel,
+        $body,
+        $fingerprint,
+        $idempotencyKey,
+        $sid,
+        $status,
+        $providerJson,
+        $createdById,
+        $createdByName,
+        $createdAt
+    );
+
+    $ok = $stmt->execute();
+    if (!$ok) {
+        $errno = (int) $stmt->errno;
+        $stmt->close();
+        // Duplicate idempotency or provider_message_id (race / Twilio retry).
+        if ($errno === 1062) {
+            $existing = crmWhatsappFindByProviderMessageId($conn, $sid);
+            return [
+                'id' => (int) ($existing['id'] ?? 0),
+                'duplicate' => true,
+                'success' => true,
+            ];
+        }
+        return $empty;
+    }
+
+    $id = (int) $stmt->insert_id;
+    $stmt->close();
+
+    return ['id' => $id, 'duplicate' => false, 'success' => $id > 0];
 }

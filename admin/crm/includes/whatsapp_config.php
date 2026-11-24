@@ -21,6 +21,12 @@ function crmWhatsappSettings(): array
         'template_name' => '',
         'template_language' => 'en_US',
         'template_variables' => ['guest', 'agent', 'company'],
+        'twilio_auth_token' => '',
+        'twilio_account_sid' => '',
+        'twilio_validate_signature' => true,
+        // Exact public URL Twilio calls (optional). Use when auto-detected URL
+        // mismatches (proxy / http vs https) and signature checks fail.
+        'twilio_webhook_url' => '',
     ];
 
     $localFile = __DIR__ . '/whatsapp_config.local.php';
@@ -34,6 +40,10 @@ function crmWhatsappSettings(): array
     $settings['richautomate_api_key'] = trim((string) ($settings['richautomate_api_key'] ?? ''));
     $settings['template_name'] = trim((string) ($settings['template_name'] ?? ''));
     $settings['template_language'] = trim((string) ($settings['template_language'] ?? 'en_US'));
+    $settings['twilio_auth_token'] = trim((string) ($settings['twilio_auth_token'] ?? ''));
+    $settings['twilio_account_sid'] = trim((string) ($settings['twilio_account_sid'] ?? ''));
+    $settings['twilio_webhook_url'] = trim((string) ($settings['twilio_webhook_url'] ?? ''));
+    $settings['twilio_validate_signature'] = !empty($settings['twilio_validate_signature']);
     if (!is_array($settings['template_variables'])) {
         $settings['template_variables'] = ['guest', 'agent', 'company'];
     }
@@ -45,7 +55,42 @@ function crmWhatsappSettings(): array
         }
     }
 
+    if ($settings['twilio_auth_token'] === '') {
+        $env = getenv('CRM_TWILIO_AUTH_TOKEN');
+        if ($env !== false && trim((string) $env) !== '') {
+            $settings['twilio_auth_token'] = trim((string) $env);
+        }
+    }
+
+    if ($settings['twilio_account_sid'] === '') {
+        $env = getenv('CRM_TWILIO_ACCOUNT_SID');
+        if ($env !== false && trim((string) $env) !== '') {
+            $settings['twilio_account_sid'] = trim((string) $env);
+        }
+    }
+
     return $settings;
+}
+
+function crmTwilioAuthToken(): string
+{
+    $cfg = crmWhatsappSettings();
+
+    return (string) ($cfg['twilio_auth_token'] ?? '');
+}
+
+function crmTwilioValidateSignatureEnabled(): bool
+{
+    $cfg = crmWhatsappSettings();
+
+    return !empty($cfg['twilio_validate_signature']);
+}
+
+function crmTwilioConfiguredWebhookUrl(): string
+{
+    $cfg = crmWhatsappSettings();
+
+    return (string) ($cfg['twilio_webhook_url'] ?? '');
 }
 
 function crmWhatsappApiKey(): string

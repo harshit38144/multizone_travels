@@ -40,7 +40,7 @@ if ($adminFooterPage === 'dashboard.php') :
 <!-- Theme force (after page styles) so dark mode wins over hardcoded light CSS -->
 <link rel="stylesheet" href="custom/theme-force.css">
 <!-- Custom JS -->
-<script src="custom/custom-js.js?v=3"></script>
+<script src="custom/custom-js.js?v=4"></script>
 <script src="custom/theme.js"></script>
 <?php
 if (!function_exists('mz_is_tab_shell')) {

@@ -476,6 +476,83 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
             background:#c81a28; border-color:#c81a28; color:#fff;
         }
 
+        /* Tour History */
+        #lcFamilyModal .lc-tour-history {
+            margin-top:1.15rem; padding-top:1rem;
+            border-top:1px solid #f1f5f9;
+        }
+        #lcFamilyModal .lc-tour-hd { margin-bottom:.65rem; }
+        #lcFamilyModal .lc-tour-filters {
+            display:grid; grid-template-columns:repeat(6, minmax(0,1fr));
+            gap:.45rem; margin-bottom:.75rem;
+        }
+        #lcFamilyModal .lc-tour-filters .form-control {
+            border-radius:8px; border-color:#e2e8f0; font-size:.8rem; height:34px;
+        }
+        #lcFamilyModal .lc-tour-summary {
+            display:grid; grid-template-columns:repeat(6, minmax(0,1fr));
+            gap:.55rem; margin-bottom:.75rem;
+        }
+        #lcFamilyModal .lc-tour-card {
+            background:#fff; border:1px solid #eef2f7; border-radius:12px;
+            padding:.65rem .7rem; min-width:0;
+            box-shadow:0 1px 2px rgba(15,23,42,.04);
+        }
+        #lcFamilyModal .lc-tour-card .k {
+            font-size:.68rem; font-weight:600; color:#64748b;
+            text-transform:uppercase; letter-spacing:.04em; margin-bottom:.2rem;
+        }
+        #lcFamilyModal .lc-tour-card .v {
+            font-size:1.05rem; font-weight:700; color:#0f172a; line-height:1.2;
+        }
+        #lcFamilyModal .lc-tour-card.is-out .v { color:#e11d48; }
+        #lcFamilyModal .lc-tour-table-wrap {
+            border:1px solid #e2e8f0; border-radius:12px; overflow:auto; background:#fff;
+        }
+        #lcFamilyModal .lc-tour-table {
+            width:100%; margin:0; border-collapse:collapse; min-width:980px;
+        }
+        #lcFamilyModal .lc-tour-table th {
+            background:#f8fafc; color:#475569; font-size:.72rem; font-weight:700;
+            text-transform:uppercase; letter-spacing:.04em; padding:.55rem .65rem;
+            border-bottom:1px solid #e2e8f0; white-space:nowrap;
+        }
+        #lcFamilyModal .lc-tour-table td {
+            padding:.55rem .65rem; font-size:.82rem; color:#1e293b;
+            border-bottom:1px solid #f1f5f9; vertical-align:middle;
+        }
+        #lcFamilyModal .lc-tour-table tr:last-child td { border-bottom:0; }
+        #lcFamilyModal .lc-pay-pill {
+            display:inline-flex; align-items:center; gap:.3rem;
+            font-size:.72rem; font-weight:700; padding:.2rem .5rem; border-radius:999px;
+        }
+        #lcFamilyModal .lc-pay-pill.is-paid { background:#dcfce7; color:#15803d; }
+        #lcFamilyModal .lc-pay-pill.is-partial { background:#ffedd5; color:#c2410c; }
+        #lcFamilyModal .lc-pay-pill.is-unpaid { background:#fee2e2; color:#b91c1c; }
+        #lcFamilyModal .lc-tour-empty {
+            text-align:center; color:#64748b; padding:1.5rem 1rem; font-size:.9rem;
+        }
+        #lcFamilyModal .lc-tour-pager {
+            display:flex; align-items:center; justify-content:flex-end; gap:.35rem;
+            margin-top:.65rem;
+        }
+        #lcFamilyModal .lc-tour-pager .btn {
+            min-width:32px; padding:.2rem .55rem; font-size:.78rem; border-radius:8px;
+        }
+        #lcFamilyModal .js-lc-view-tour {
+            border:1px solid #fecaca; color:#e11d48; background:#fff;
+            border-radius:8px; font-size:.75rem; font-weight:600; padding:.25rem .55rem;
+        }
+        #lcFamilyModal .js-lc-view-tour:hover { background:#fff1f2; }
+        @media (max-width: 991.98px) {
+            #lcFamilyModal .lc-tour-filters,
+            #lcFamilyModal .lc-tour-summary { grid-template-columns:repeat(2, minmax(0,1fr)); }
+        }
+        @media (max-width: 575.98px) {
+            #lcFamilyModal .lc-tour-filters,
+            #lcFamilyModal .lc-tour-summary { grid-template-columns:1fr; }
+        }
+
         /* Add / Edit Contact modal (supplier-style) */
         #lcProfileModal .lc-profile-dialog {
             max-width: 920px; width: calc(100% - 1.5rem); margin: 1rem auto;
@@ -1012,6 +1089,37 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
                             <div class="lc-pax-rows" id="lcPaxRows"></div>
                             <p class="lc-pax-err d-none mt-2 mb-0" id="lcFamilyFormErr"></p>
                         </div>
+
+                        <div class="lc-tour-history" id="lcTourHistory">
+                            <div class="lc-members-hd lc-tour-hd">
+                                <h6><i class="fas fa-suitcase-rolling"></i> Tour History</h6>
+                                <span class="lc-members-count" id="lcTourCount">0 tours</span>
+                            </div>
+                            <div class="lc-tour-filters">
+                                <input type="search" class="form-control form-control-sm" id="lcTourSearch" placeholder="Search booking, destination…">
+                                <input type="text" class="form-control form-control-sm" id="lcTourDest" placeholder="Destination">
+                                <input type="date" class="form-control form-control-sm" id="lcTourFrom" title="Travel from">
+                                <input type="date" class="form-control form-control-sm" id="lcTourTo" title="Travel to">
+                                <select class="form-control form-control-sm" id="lcTourStatus">
+                                    <option value="">Tour status</option>
+                                    <option value="upcoming">Upcoming</option>
+                                    <option value="ongoing">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                                <select class="form-control form-control-sm" id="lcTourPay">
+                                    <option value="">Payment status</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="partial">Partially Paid</option>
+                                    <option value="unpaid">Unpaid</option>
+                                </select>
+                            </div>
+                            <div class="lc-tour-summary" id="lcTourSummary"></div>
+                            <div class="lc-tour-table-wrap" id="lcTourTableWrap">
+                                <div class="text-muted text-center py-3">Loading tour history…</div>
+                            </div>
+                            <div class="lc-tour-pager" id="lcTourPager"></div>
+                        </div>
                     </div>
                     <div class="modal-footer lc-family-footer">
                         <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
@@ -1079,8 +1187,11 @@ require_once __DIR__ . '/includes/lead_contact_person_fields.php';
             </div>
         </div>
 
+        <?php include __DIR__ . '/crm/includes/confirm_tour_modals.php'; ?>
         <?php include 'includes/footer-links.php'; ?>
-        <script src="assets/lead_contacts.js?v=28"></script>
+        <link rel="stylesheet" href="crm/assets/quotation_confirm_tour_page.css?v=2">
+        <script src="crm/assets/quotation_confirm_tour.js?v=64"></script>
+        <script src="assets/lead_contacts.js?v=29"></script>
     </div>
 </body>
 </html>

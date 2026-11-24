@@ -222,6 +222,10 @@ function crmQuotationNormalizeConfirmPayload($raw)
                 'paid' => $paid,
                 'balance' => max(0, round($total - $paid, 2)),
             ];
+            $supplierId = (int) ($row['supplier_id'] ?? 0);
+            if ($supplierId > 0) {
+                $service['supplier_id'] = $supplierId;
+            }
             $sourceId = substr((string) preg_replace('/[^A-Za-z0-9_\-]/', '', (string) ($row['source_id'] ?? '')), 0, 40);
             if ($sourceId !== '') {
                 $service['source_id'] = $sourceId;
@@ -1277,11 +1281,18 @@ function crmQuotationMergeConfirmServices(array $quoteRows, array $storedRows): 
     };
 
     $finish = static function (array $row, array $stored) use ($map): array {
-        $total = round(crmQuotationConfirmMoney($row['total'] ?? 0), 2);
+        // Prefer Confirm Tour saved Total Cost so edits persist across reopen/reload.
+        // Quote total is only the autofill when there is no saved service match yet.
+        $quoteTotal = round(crmQuotationConfirmMoney($row['total'] ?? 0), 2);
+        if ($stored !== [] && array_key_exists('total', $stored)) {
+            $total = round(crmQuotationConfirmMoney($stored['total']), 2);
+        } else {
+            $total = $quoteTotal;
+        }
         $paid = round(max(0, crmQuotationConfirmMoney($stored['paid'] ?? 0)), 2);
-        $supplier = trim((string) ($row['supplier'] ?? ''));
+        $supplier = trim((string) ($stored['supplier'] ?? ''));
         if ($supplier === '') {
-            $supplier = trim((string) ($stored['supplier'] ?? ''));
+            $supplier = trim((string) ($row['supplier'] ?? ''));
         }
         $uid = trim((string) ($stored['uid'] ?? ''));
         if ($uid === '') {
@@ -1291,7 +1302,7 @@ function crmQuotationMergeConfirmServices(array $quoteRows, array $storedRows): 
         if ($label === '') {
             $label = $map[$row['key']] ?? (string) $row['key'];
         }
-        return [
+        $out = [
             'uid' => $uid,
             'key' => (string) $row['key'],
             'label' => $label,
@@ -1301,6 +1312,14 @@ function crmQuotationMergeConfirmServices(array $quoteRows, array $storedRows): 
             'balance' => max(0, round($total - $paid, 2)),
             'source_id' => (string) ($row['source_id'] ?? ''),
         ];
+        $supplierId = (int) ($stored['supplier_id'] ?? 0);
+        if ($supplierId < 1) {
+            $supplierId = (int) ($row['supplier_id'] ?? 0);
+        }
+        if ($supplierId > 0) {
+            $out['supplier_id'] = $supplierId;
+        }
+        return $out;
     };
 
     $merged = [];
@@ -1338,6 +1357,19 @@ function crmQuotationMergeConfirmServices(array $quoteRows, array $storedRows): 
     $claimExact = static function (array $row) use (&$storedRows, &$used, $take): ?int {
         $key = (string) ($row['key'] ?? '');
         $supplier = crmQuotationConfirmNormSupplier((string) ($row['supplier'] ?? ''));
+        $uid = trim((string) ($row['uid'] ?? ''));
+        // Prefer stable uid match so edited totals still reconnect to the saved row.
+        if ($uid !== '') {
+            foreach ($storedRows as $i => $stored) {
+                if (isset($used[$i])) {
+                    continue;
+                }
+                if (trim((string) ($stored['uid'] ?? '')) === $uid) {
+                    $take($i);
+                    return $i;
+                }
+            }
+        }
         $found = null;
         foreach ($storedRows as $i => $stored) {
             if (isset($used[$i]) || (string) ($stored['source_id'] ?? '') !== '') {
@@ -1346,16 +1378,18 @@ function crmQuotationMergeConfirmServices(array $quoteRows, array $storedRows): 
             if ((string) ($stored['key'] ?? '') !== $key) {
                 continue;
             }
-            if (!crmQuotationConfirmMoneySame($stored['total'] ?? 0, $row['total'] ?? 0)) {
-                continue;
-            }
             $storedSupplier = crmQuotationConfirmNormSupplier((string) ($stored['supplier'] ?? ''));
             if ($supplier !== '' && $storedSupplier !== '' && $supplier !== $storedSupplier) {
                 continue;
             }
+            // Same supplier: keep match even when Confirm Tour total was edited.
             if ($supplier !== '' && $storedSupplier !== '' && $supplier === $storedSupplier) {
                 $take($i);
                 return $i;
+            }
+            // No supplier on either side: only match when totals still agree (ambiguous otherwise).
+            if (!crmQuotationConfirmMoneySame($stored['total'] ?? 0, $row['total'] ?? 0)) {
+                continue;
             }
             if ($found === null && ($supplier === '' || $storedSupplier === '')) {
                 $found = $i;
@@ -1507,6 +1541,10 @@ function crmQuotationMergeConfirmServices(array $quoteRows, array $storedRows): 
         ];
         if ((string) ($stored['source_id'] ?? '') !== '') {
             $kept['source_id'] = (string) $stored['source_id'];
+        }
+        $keptSupplierId = (int) ($stored['supplier_id'] ?? 0);
+        if ($keptSupplierId > 0) {
+            $kept['supplier_id'] = $keptSupplierId;
         }
         $merged[] = $kept;
         $presentKeys[$key] = true;

@@ -23,9 +23,24 @@
     var RELATION_OPTS = ['Self', 'Spouse', 'Parent', 'Sibling', 'Son', 'Daughter', 'Friend', 'Relative', 'Other'];
     var LEGACY_AGE_TYPES = { Adult: 1, Child: 1, Infant: 1 };
     var TITLE_OPTS = ['Mr', 'Mrs', 'Ms', 'Master', 'Miss'];
+    var tourHistoryState = { page: 1, perPage: 10, timer: null, xhr: null };
 
     function esc(s) {
         return $('<div>').text(s == null ? '' : s).html();
+    }
+
+    function lcMoney(n) {
+        n = parseFloat(n);
+        if (isNaN(n)) n = 0;
+        return '₹ ' + Math.round(n).toLocaleString('en-IN');
+    }
+
+    function lcFmtDate(iso) {
+        var s = String(iso || '').trim();
+        var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return s || '—';
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return parseInt(m[3], 10) + ' ' + (months[parseInt(m[2], 10) - 1] || m[2]) + ' ' + m[1];
     }
 
     function showAlert(msg, type) {
@@ -1375,6 +1390,135 @@
         });
     }
 
+    function resetTourHistoryFilters() {
+        tourHistoryState.page = 1;
+        $('#lcTourSearch, #lcTourDest, #lcTourFrom, #lcTourTo').val('');
+        $('#lcTourStatus, #lcTourPay').val('');
+    }
+
+    function renderTourSummary(summary) {
+        summary = summary || {};
+        var cards = [
+            { k: 'Total Tours', v: summary.total_tours || 0 },
+            { k: 'Upcoming Tours', v: summary.upcoming_tours || 0 },
+            { k: 'Completed Tours', v: summary.completed_tours || 0 },
+            { k: 'Total Booking Value', v: lcMoney(summary.total_booking_value) },
+            { k: 'Total Paid Amount', v: lcMoney(summary.total_paid) },
+            { k: 'Total Outstanding', v: lcMoney(summary.total_outstanding), out: true }
+        ];
+        var html = cards.map(function (c) {
+            return '<div class="lc-tour-card' + (c.out ? ' is-out' : '') + '"><div class="k">' + esc(c.k) +
+                '</div><div class="v">' + esc(String(c.v)) + '</div></div>';
+        }).join('');
+        $('#lcTourSummary').html(html);
+    }
+
+    function renderTourPager(pagination) {
+        pagination = pagination || {};
+        var page = parseInt(pagination.page, 10) || 1;
+        var pages = parseInt(pagination.pages, 10) || 1;
+        var total = parseInt(pagination.total, 10) || 0;
+        $('#lcTourCount').text(total === 1 ? '1 tour' : (total + ' tours'));
+        if (pages <= 1) {
+            $('#lcTourPager').empty();
+            return;
+        }
+        var html = '';
+        html += '<button type="button" class="btn btn-sm btn-outline-secondary js-lc-tour-page" data-page="' +
+            (page - 1) + '"' + (page <= 1 ? ' disabled' : '') + '>&lsaquo;</button>';
+        html += '<span class="small text-muted px-1">' + page + ' / ' + pages + '</span>';
+        html += '<button type="button" class="btn btn-sm btn-outline-secondary js-lc-tour-page" data-page="' +
+            (page + 1) + '"' + (page >= pages ? ' disabled' : '') + '>&rsaquo;</button>';
+        $('#lcTourPager').html(html);
+    }
+
+    function renderTourTable(tours) {
+        tours = tours || [];
+        if (!tours.length) {
+            $('#lcTourTableWrap').html(
+                '<div class="lc-tour-empty"><i class="fas fa-suitcase-rolling mb-2 d-block" style="font-size:1.4rem;opacity:.45"></i>' +
+                'No tours associated with this contact yet.</div>'
+            );
+            return;
+        }
+        var html = '<table class="lc-tour-table"><thead><tr>' +
+            '<th>Booking ID</th><th>Destination</th><th>Travel Date</th><th>Duration</th>' +
+            '<th>Travellers</th><th>Included Services</th><th>Total Cost</th><th>Paid</th>' +
+            '<th>Outstanding</th><th>Payment</th><th>Tour Status</th><th>Actions</th>' +
+            '</tr></thead><tbody>';
+        tours.forEach(function (t) {
+            html += '<tr>' +
+                '<td><strong>' + esc(t.code || ('#' + t.id)) + '</strong></td>' +
+                '<td>' + esc(t.destination || '—') + '</td>' +
+                '<td>' + esc(lcFmtDate(t.travel_date)) + '</td>' +
+                '<td>' + esc(t.duration || '—') + '</td>' +
+                '<td>' + esc(String(t.pax != null ? t.pax : '—')) + '</td>' +
+                '<td title="' + esc(t.included_services || '') + '">' + esc(t.included_services || '—') + '</td>' +
+                '<td>' + esc(lcMoney(t.total)) + '</td>' +
+                '<td>' + esc(lcMoney(t.paid)) + '</td>' +
+                '<td>' + esc(lcMoney(t.outstanding)) + '</td>' +
+                '<td><span class="lc-pay-pill ' + esc(t.payment_cls || 'is-unpaid') + '">' +
+                esc(t.payment_label || 'Unpaid') + '</span></td>' +
+                '<td>' + esc(t.tour_status || '—') + '</td>' +
+                '<td><button type="button" class="btn btn-sm js-lc-view-tour" data-id="' +
+                esc(String(t.id || '')) + '"><i class="far fa-eye mr-1"></i>View</button></td>' +
+                '</tr>';
+        });
+        html += '</tbody></table>';
+        $('#lcTourTableWrap').html(html);
+    }
+
+    function loadTourHistory() {
+        if (!activeRef.refId) {
+            return;
+        }
+        if (tourHistoryState.xhr && typeof tourHistoryState.xhr.abort === 'function') {
+            try { tourHistoryState.xhr.abort(); } catch (e) { /* ignore */ }
+        }
+        $('#lcTourTableWrap').html('<div class="text-muted text-center py-3">Loading tour history…</div>');
+        tourHistoryState.xhr = $.getJSON('ajax/contact_tour_history.php', {
+            contact_source: activeRef.source,
+            ref_id: activeRef.refId,
+            q: $('#lcTourSearch').val() || '',
+            destination: $('#lcTourDest').val() || '',
+            date_from: $('#lcTourFrom').val() || '',
+            date_to: $('#lcTourTo').val() || '',
+            tour_status: $('#lcTourStatus').val() || '',
+            payment_status: $('#lcTourPay').val() || '',
+            page: tourHistoryState.page,
+            per_page: tourHistoryState.perPage
+        }).done(function (res) {
+            if (!res || !res.success) {
+                $('#lcTourTableWrap').html(
+                    '<div class="lc-tour-empty text-danger">' +
+                    esc((res && res.message) || 'Could not load tour history.') + '</div>'
+                );
+                renderTourSummary({});
+                renderTourPager({});
+                return;
+            }
+            renderTourSummary(res.summary || {});
+            renderTourTable(res.tours || []);
+            renderTourPager(res.pagination || {});
+        }).fail(function (xhr) {
+            if (xhr && xhr.statusText === 'abort') return;
+            $('#lcTourTableWrap').html(
+                '<div class="lc-tour-empty text-danger">Could not load tour history.</div>'
+            );
+        });
+    }
+
+    function scheduleTourHistoryReload() {
+        if (tourHistoryState.timer) {
+            window.clearTimeout(tourHistoryState.timer);
+        }
+        tourHistoryState.timer = window.setTimeout(function () {
+            tourHistoryState.timer = null;
+            tourHistoryState.page = 1;
+            loadTourHistory();
+        }, 220);
+    }
+
     function openMembersModal(source, refId, name, phone, email, opts) {
         opts = opts || {};
         setActiveRef(source, refId, { name: name, phone: phone, email: email });
@@ -1382,6 +1526,10 @@
         $('#lcPrimaryCard').html('<div class="text-muted text-center py-3">Loading…</div>');
         $('#lcFamilyListBody').html('');
         hideInlineFamilyForm();
+        resetTourHistoryFilters();
+        renderTourSummary({});
+        $('#lcTourTableWrap').html('<div class="text-muted text-center py-3">Loading tour history…</div>');
+        $('#lcTourPager').empty();
         $('#lcFamilyModal').modal('show');
 
         loadContactDetails(source, refId).done(function (res) {
@@ -1409,6 +1557,7 @@
             } else {
                 hideInlineFamilyForm();
             }
+            loadTourHistory();
         }).fail(function () {
             $('#lcPrimaryCard').html('<div class="text-danger text-center py-3">Could not load contact details.</div>');
         });
@@ -1424,6 +1573,7 @@
             contactCache = res.contact || res.lead || contactCache;
             familyCache = res.family || [];
             bindMembersListActions();
+            loadTourHistory();
         });
     }
 
@@ -1998,6 +2148,27 @@
             hideInlineFamilyForm();
             $('#lcAttachModal').modal('hide');
             $('#lcAttachViewerModal').modal('hide');
+        });
+
+        $('#lcTourSearch, #lcTourDest').on('input', scheduleTourHistoryReload);
+        $('#lcTourFrom, #lcTourTo, #lcTourStatus, #lcTourPay').on('change', scheduleTourHistoryReload);
+        $(document).on('click', '.js-lc-tour-page:not(:disabled)', function () {
+            tourHistoryState.page = parseInt($(this).attr('data-page'), 10) || 1;
+            loadTourHistory();
+        });
+        $(document).on('click', '.js-lc-view-tour', function () {
+            var id = parseInt($(this).attr('data-id'), 10) || 0;
+            if (!id) return;
+            if (window.CrmConfirmTour && typeof window.CrmConfirmTour.open === 'function') {
+                window.CrmConfirmTour.open(id, null);
+            } else {
+                window.alert('Confirm Tour is not available on this page.');
+            }
+        });
+        $(document).on('crm:tour-updated', function () {
+            if ($('#lcFamilyModal').hasClass('show') && activeRef.refId) {
+                loadTourHistory();
+            }
         });
 
         $('#lcContactSearch').on('input', function () {

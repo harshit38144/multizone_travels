@@ -50,7 +50,7 @@ $boot = json_encode([
     <title>All Bookings</title>
     <?php include __DIR__ . '/../includes/header-links.php'; ?>
     <link rel="stylesheet" href="crm/assets/quotation_confirm_tour_page.css?v=2">
-    <link rel="stylesheet" href="crm/assets/quotation_preview_modal.css?v=2">
+    <link rel="stylesheet" href="crm/assets/quotation_preview_modal.css?v=3">
     <style>
         .bk-page { background: #f4f7fb; }
         .bk-page .content-wrapper, .bk-page .content { background: #f4f7fb; }
@@ -139,14 +139,67 @@ $boot = json_encode([
         }
         .bk-table tr.is-highlight td { background: #fff1f2; }
         .bk-table tr.is-highlight td:first-child { box-shadow: inset 3px 0 0 #e53935; }
-        .bk-table .col-bk-id { width: 14%; }
-        .bk-table .col-bk-guest { width: 18%; }
-        .bk-table .col-bk-dest { width: 16%; }
-        .bk-table .col-bk-date { width: 12%; text-align: center; }
-        .bk-table .col-bk-svc { width: 12%; text-align: center; }
-        .bk-table .col-bk-stage { width: 10%; text-align: center; overflow: visible; }
-        .bk-table .col-bk-status { width: 10%; text-align: center; }
-        .bk-table .col-bk-actions { width: 10%; text-align: center; overflow: visible; }
+        .bk-table .col-bk-id { width: 12%; }
+        .bk-table .col-bk-guest { width: 15%; }
+        .bk-table .col-bk-dest { width: 13%; }
+        .bk-table .col-bk-date { width: 10%; text-align: center; }
+        .bk-table .col-bk-svc { width: 11%; text-align: center; }
+        .bk-table .col-bk-stage { width: 9%; text-align: center; overflow: visible; }
+        .bk-table .col-bk-status { width: 9%; text-align: center; }
+        .bk-table .col-bk-sup-pay { width: 12%; text-align: center; white-space: normal; }
+        .bk-table .col-bk-actions { width: 9%; text-align: center; overflow: visible; }
+        /* Supplier payment status — same traffic-light icons as leads.php */
+        .bk-page .ld-book-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+            max-width: 100%;
+            white-space: normal;
+        }
+        .bk-page .ld-book-status-empty {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .bk-page .ld-book-status-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 9px;
+            line-height: 1;
+            flex: 0 0 18px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+            cursor: pointer;
+        }
+        .bk-page .ld-book-status-icon:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+        .bk-page .ld-book-status-icon:focus {
+            outline: 2px solid rgba(37, 99, 235, 0.45);
+            outline-offset: 1px;
+        }
+        .bk-page .ld-book-status-icon.is-unpaid {
+            background: #dc2626;
+        }
+        .bk-page .ld-book-status-icon.is-partial {
+            background: #facc15;
+            color: #713f12;
+        }
+        .bk-page .ld-book-status-icon.is-paid {
+            background: #16a34a;
+        }
+        .bk-table tbody td.col-bk-sup-pay {
+            overflow: hidden;
+            white-space: normal !important;
+            text-align: center;
+            vertical-align: middle;
+        }
         .bk-table .lead-stage-select {
             font-weight: 700;
             padding: 0.35rem 0.75rem;
@@ -861,10 +914,11 @@ $boot = json_encode([
             '<th class="col-bk-svc">Services</th>' +
             '<th class="col-bk-stage">Stage</th>' +
             '<th class="col-bk-status">Status</th>' +
+            '<th class="col-bk-sup-pay">Supplier Payment Status</th>' +
             '<th class="col-bk-actions">Actions</th>' +
             '</tr></thead><tbody>';
         if (!slice.length) {
-            html += '<tr><td colspan="8" class="bk-empty">No confirmed tours match these filters. Tours appear here after Confirm Tour.</td></tr>';
+            html += '<tr><td colspan="9" class="bk-empty">No confirmed tours match these filters. Tours appear here after Confirm Tour.</td></tr>';
         }
         slice.forEach(function (b) {
             var createdMeta = fmtCreatedMeta(b.confirmed_at || b.created_at);
@@ -874,6 +928,7 @@ $boot = json_encode([
             var destSub = [];
             if (b.nights > 0) destSub.push(b.nights + ' N');
             if (b.tour_type) destSub.push(b.tour_type);
+            var supPayHtml = b.booking_status_html || '<span class="ld-book-status-empty">—</span>';
             html += '<tr class="' + (highlightId && b.id === highlightId ? 'is-highlight' : '') + '" data-booking="' + b.id + '">' +
                 '<td class="col-bk-id">' +
                 '<button type="button" class="bk-id-cell" data-act="view" data-id="' + b.id + '" title="Preview booking">' +
@@ -896,6 +951,7 @@ $boot = json_encode([
                 '<td class="col-bk-svc">' + servicesHtml(b) + '</td>' +
                 '<td class="col-bk-stage">' + stageSelectHtml(b) + '</td>' +
                 '<td class="col-bk-status">' + payStatusPill(b.customer_pay) + '</td>' +
+                '<td class="col-bk-sup-pay js-booking-status" data-id="' + b.id + '">' + supPayHtml + '</td>' +
                 '<td class="col-bk-actions">' + rowActions(b) + '</td></tr>';
         });
         html += '</tbody></table></div>';
@@ -1106,6 +1162,7 @@ $boot = json_encode([
     function postStatus(action, id) {
         $.post('crm/ajax/confirmed_bookings.php', { action: action, quotation_id: id }, function (res) {
             if (!res || !res.success) { alert((res && res.message) || 'Could not update.'); return; }
+            try { $(document).trigger('crm:tour-updated', [parseInt(id, 10) || 0]); } catch (e) {}
             window.location.reload();
         }, 'json').fail(function () { alert('Could not update.'); });
     }
@@ -1270,7 +1327,7 @@ $boot = json_encode([
     render();
 })(jQuery);
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=60"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=64"></script>
 <script src="crm/assets/quotation_preview_modal.js?v=2"></script>
 <script>
 (function () {

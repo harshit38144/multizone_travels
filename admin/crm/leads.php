@@ -2517,6 +2517,8 @@ foreach ($destinationLookup as $destId => $destName) {
             background: #fff;
             border-top: 1px solid #e8e8ea;
             padding: 12px 16px;
+            display: flex;
+            align-items: center;
             justify-content: flex-end;
             gap: 8px;
             flex: 0 0 auto;
@@ -2533,41 +2535,202 @@ foreach ($destinationLookup as $destId => $destName) {
             color: #a10e15;
             border-color: #a10e15;
         }
-        #leadQuotationPreviewModal .qp-btn-edit {
-            background: #c4121a;
-            border-color: #c4121a;
+        /* Edit Quotation — Uiverse Btn (scoped to this modal only) */
+        #leadQuotationPreviewModal a.Btn.lead-q-preview-edit-btn {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100px;
+            height: 40px;
+            border: none;
+            padding: 0 20px;
+            background-color: #000;
             color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            line-height: 1;
+            text-decoration: none;
+            cursor: pointer;
+            border-radius: 10px;
+            box-shadow: none;
+            transition-duration: 0.3s;
+            box-sizing: border-box;
+            flex: 0 0 auto;
+            margin: 0;
+        }
+        #leadQuotationPreviewModal a.Btn.lead-q-preview-edit-btn .svg {
+            width: 13px;
+            height: 13px;
+            position: absolute;
+            right: 0;
+            margin-right: 20px;
+            fill: #fff;
+            transition-duration: 0.3s;
+            pointer-events: none;
+        }
+        #leadQuotationPreviewModal a.Btn.lead-q-preview-edit-btn:hover,
+        #leadQuotationPreviewModal a.Btn.lead-q-preview-edit-btn:focus {
+            color: transparent;
+            text-decoration: none;
+            background-color: #000;
+            outline: none;
+        }
+        #leadQuotationPreviewModal a.Btn.lead-q-preview-edit-btn:hover .svg,
+        #leadQuotationPreviewModal a.Btn.lead-q-preview-edit-btn:focus .svg {
+            right: 43%;
+            margin: 0;
+            padding: 0;
+            border: none;
+            transition-duration: 0.3s;
+        }
+        #leadQuotationPreviewModal a.Btn.lead-q-preview-edit-btn:active {
+            transform: translate(3px, 3px);
+            transition-duration: 0.3s;
+            box-shadow: none;
+            color: transparent;
+        }
+        /* Download — Uiverse button (scoped to preview modal) */
+        #leadQuotationPreviewModal .qp-dl-btn {
+            --qp-dl-main-focus: #2d8cf0;
+            --qp-dl-font-color: #dedede;
+            --qp-dl-bg-color-sub: #222;
+            --qp-dl-bg-color: #323232;
+            --qp-dl-main-color: #dedede;
+            position: relative;
+            width: 150px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border: 2px solid var(--qp-dl-main-color);
+            box-shadow: none;
+            background-color: var(--qp-dl-bg-color);
+            border-radius: 10px;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+            flex: 0 0 auto;
+            box-sizing: border-box;
+            outline: none;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn,
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__icon,
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__text {
+            transition: all 0.3s;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__text {
+            transform: translateX(21px);
+            color: var(--qp-dl-font-color);
             font-weight: 600;
-            padding: 6px 16px;
+            font-size: 14px;
+            line-height: 1;
+            white-space: nowrap;
         }
-        #leadQuotationPreviewModal .qp-btn-edit:hover {
-            background: #a10e15;
-            border-color: #a10e15;
-            color: #fff;
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__icon {
+            position: absolute;
+            transform: translateX(109px);
+            height: 100%;
+            width: 39px;
+            background-color: var(--qp-dl-bg-color-sub);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #leadQuotationPreviewModal .qp-btn-download {
-            background: #0f766e;
-            border-color: #0f766e;
-            color: #fff;
-            font-weight: 600;
-            padding: 6px 16px;
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--qp-dl-main-color);
         }
-        #leadQuotationPreviewModal .qp-btn-download:hover {
-            background: #0d9488;
-            border-color: #0d9488;
-            color: #fff;
+        #leadQuotationPreviewModal .qp-dl-btn:hover,
+        #leadQuotationPreviewModal .qp-dl-btn:focus {
+            background: var(--qp-dl-bg-color);
+            color: inherit;
         }
-        #leadQuotationPreviewModal .qp-btn-print {
-            background: transparent;
-            border: 1px solid #c5c5c8;
-            color: #555;
+        #leadQuotationPreviewModal .qp-dl-btn:hover .qp-dl-btn__text,
+        #leadQuotationPreviewModal .qp-dl-btn:focus .qp-dl-btn__text {
+            color: transparent;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn:hover .qp-dl-btn__icon,
+        #leadQuotationPreviewModal .qp-dl-btn:focus .qp-dl-btn__icon {
+            width: 148px;
+            transform: translateX(0);
+        }
+        #leadQuotationPreviewModal .qp-dl-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: none;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn:disabled,
+        #leadQuotationPreviewModal .qp-dl-btn.is-loading {
+            opacity: 0.75;
+            cursor: wait;
+            pointer-events: none;
+        }
+        /* Print — Uiverse button (scoped to preview modal) */
+        #leadQuotationPreviewModal .qp-print-btn {
+            width: 100px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border: 1px solid rgb(213, 213, 213);
+            border-radius: 10px;
+            gap: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            overflow: hidden;
             font-weight: 500;
-            padding: 6px 14px;
+            box-shadow: 0px 10px 10px rgba(0, 0, 0, 0.065);
+            transition: all 0.3s;
+            flex-shrink: 0;
+            color: #000;
+            padding: 0;
+            margin: 0;
+            line-height: 1;
         }
-        #leadQuotationPreviewModal .qp-btn-print:hover {
-            background: #f5f5f5;
-            color: #333;
-            border-color: #b0b0b3;
+        #leadQuotationPreviewModal .qp-printer-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 100%;
+        }
+        #leadQuotationPreviewModal .qp-printer-container {
+            height: 50%;
+            width: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        #leadQuotationPreviewModal .qp-printer-container svg {
+            width: 100%;
+            height: auto;
+            transform: translateY(4px);
+        }
+        #leadQuotationPreviewModal .qp-printer-page-wrapper {
+            width: 100%;
+            height: 50%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        #leadQuotationPreviewModal .qp-printer-page {
+            width: 70%;
+            height: 10px;
+            border: 1px solid black;
+            background-color: white;
+            transform: translateY(0px);
+            transition: all 0.3s;
+            transform-origin: top;
+        }
+        #leadQuotationPreviewModal .qp-print-btn:hover .qp-printer-page {
+            height: 16px;
+            background-color: rgb(239, 239, 239);
+        }
+        #leadQuotationPreviewModal .qp-print-btn:hover {
+            background-color: rgb(239, 239, 239);
         }
 
         .crm-leads-ui .action-btns .btn-whatsapp {
@@ -6160,18 +6323,52 @@ foreach ($destinationLookup as $destId => $destName) {
                             title="Quotation Preview" src="about:blank"></iframe>
                     </div>
                     <div class="modal-footer qp-modal-footer">
-                        <button type="button" class="btn qp-btn-close btn-sm" data-dismiss="modal">Close</button>
-                        <a href="#" class="btn qp-btn-edit btn-sm" id="leadQPreviewEditBtn" title="Open full quotation editor">
-                            <i class="fas fa-edit mr-1"></i> Edit Quotation
+                        <a href="#" class="Btn lead-q-preview-edit-btn" id="leadQPreviewEditBtn" title="Open full quotation editor">
+                            Edit
+                            <svg viewBox="0 0 512 512" class="svg" aria-hidden="true" focusable="false">
+                                <path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231zM160 399.4l-9.1 22.7c-4 3.1-8.5 5.4-13.3 6.9L59.4 452l23-78.1c1.4-4.9 3.8-9.4 6.9-13.3l22.7-9.1v32c0 8.8 7.2 16 16 16h32zM362.7 18.7L348.3 33.2 325.7 55.8 314.3 67.1l33.9 33.9 62.1 62.1 33.9 33.9 11.3-11.3 22.6-22.6 14.5-14.5c25-25 25-65.5 0-90.5L453.3 18.7c-25-25-65.5-25-90.5 0zm-47.4 168l-144 144c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6l144-144c6.2-6.2 16.4-6.2 22.6 0s6.2 16.4 0 22.6z"></path>
+                            </svg>
                         </a>
                         <button type="button" class="btn btn-success btn-sm d-none" id="leadQPreviewSaveBtn" disabled>
                             <i class="fas fa-save mr-1"></i>Save Changes
                         </button>
-                        <button type="button" class="btn qp-btn-download btn-sm" id="leadQPreviewDownloadBtn">
-                            <i class="fas fa-download mr-1"></i> Download
+                        <button type="button" class="qp-dl-btn" id="leadQPreviewDownloadBtn" title="Download PDF">
+                            <span class="qp-dl-btn__text">Download</span>
+                            <span class="qp-dl-btn__icon" aria-hidden="true">
+                                <svg class="qp-dl-btn__svg" data-name="Layer 2" viewBox="0 0 35 35" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M17.5,22.131a1.249,1.249,0,0,1-1.25-1.25V2.187a1.25,1.25,0,0,1,2.5,0V20.881A1.25,1.25,0,0,1,17.5,22.131Z"></path>
+                                    <path d="M17.5,22.693a3.189,3.189,0,0,1-2.262-.936L8.487,15.006a1.249,1.249,0,0,1,1.767-1.767l6.751,6.751a.7.7,0,0,0,.99,0l6.751-6.751a1.25,1.25,0,0,1,1.768,1.767l-6.752,6.751A3.191,3.191,0,0,1,17.5,22.693Z"></path>
+                                    <path d="M31.436,34.063H3.564A3.318,3.318,0,0,1,.25,30.749V22.011a1.25,1.25,0,0,1,2.5,0v8.738a.815.815,0,0,0,.814.814H31.436a.815.815,0,0,0,.814-.814V22.011a1.25,1.25,0,1,1,2.5,0v8.738A3.318,3.318,0,0,1,31.436,34.063Z"></path>
+                                </svg>
+                            </span>
                         </button>
-                        <button type="button" class="btn qp-btn-print btn-sm" id="leadQPreviewPrintBtn">
-                            <i class="fas fa-print mr-1"></i> Print
+                        <button type="button" class="qp-print-btn" id="leadQPreviewPrintBtn" title="Print">
+                            <span class="qp-printer-wrapper">
+                                <span class="qp-printer-container">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 92 75" aria-hidden="true" focusable="false">
+                                        <path
+                                            stroke-width="5"
+                                            stroke="black"
+                                            d="M12 37.5H80C85.2467 37.5 89.5 41.7533 89.5 47V69C89.5 70.933 87.933 72.5 86 72.5H6C4.067 72.5 2.5 70.933 2.5 69V47C2.5 41.7533 6.75329 37.5 12 37.5Z"
+                                        ></path>
+                                        <mask fill="white" id="qp-print-mask-lead">
+                                            <path
+                                                d="M12 12C12 5.37258 17.3726 0 24 0H57C70.2548 0 81 10.7452 81 24V29H12V12Z"
+                                            ></path>
+                                        </mask>
+                                        <path
+                                            mask="url(#qp-print-mask-lead)"
+                                            fill="black"
+                                            d="M7 12C7 2.61116 14.6112 -5 24 -5H57C73.0163 -5 86 7.98374 86 24H76C76 13.5066 67.4934 5 57 5H24C20.134 5 17 8.13401 17 12H7ZM81 29H12H81ZM7 29V12C7 2.61116 14.6112 -5 24 -5V5C20.134 5 17 8.13401 17 12V29H7ZM57 -5C73.0163 -5 86 7.98374 86 24V29H76V24C76 13.5066 67.4934 5 57 5V-5Z"
+                                        ></path>
+                                        <circle fill="black" r="3" cy="49" cx="78"></circle>
+                                    </svg>
+                                </span>
+                                <span class="qp-printer-page-wrapper">
+                                    <span class="qp-printer-page"></span>
+                                </span>
+                            </span>
+                            Print
                         </button>
                     </div>
                 </div>
@@ -7954,6 +8151,8 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     var waChatState = {
+        lastMsgId: 0,
+        pollTimer: null,
         leadId: 0,
         name: '',
         phone: '',
@@ -8012,9 +8211,19 @@ foreach ($destinationLookup as $destId => $destName) {
         }
     }
 
+    function waChatTrackLastMsgId(messages) {
+        var maxId = waChatState.lastMsgId || 0;
+        (Array.isArray(messages) ? messages : []).forEach(function (msg) {
+            var id = Number(msg && msg.id ? msg.id : 0);
+            if (id > maxId) maxId = id;
+        });
+        waChatState.lastMsgId = maxId;
+    }
+
     function waChatRenderMessages(messages) {
         var $box = $('#waChatMessages').empty();
         messages = Array.isArray(messages) ? messages : [];
+        waChatTrackLastMsgId(messages);
         if (!messages.length) {
             $box.html('<div class="wa-empty">No messages yet. Say hello to start the conversation.</div>');
             return;
@@ -8048,6 +8257,53 @@ foreach ($destinationLookup as $destId => $destName) {
         });
         $box.html(html);
         $box.scrollTop($box[0].scrollHeight);
+    }
+
+    function waChatStopPoll() {
+        if (waChatState.pollTimer) {
+            clearInterval(waChatState.pollTimer);
+            waChatState.pollTimer = null;
+        }
+    }
+
+    function waChatStartPoll() {
+        waChatStopPoll();
+        waChatState.pollTimer = setInterval(function () {
+            waChatPollNew();
+        }, 4000);
+    }
+
+    function waChatPollNew() {
+        if (!waChatState.leadId || waChatState.loading || waChatState.sending) return;
+        if (!$('#waChatModal').hasClass('show')) return;
+        $.getJSON('crm/ajax/whatsapp_chat.php', {
+            action: 'poll',
+            lead_id: waChatState.leadId,
+            after_id: waChatState.lastMsgId || 0
+        }).done(function (res) {
+            res = res || {};
+            if (!res.success) return;
+            var msgs = res.messages || [];
+            if (!msgs.length) return;
+            // Reload full thread so day separators / layout stay consistent (no modal redesign).
+            waChatLoadThreadQuiet();
+        });
+    }
+
+    function waChatLoadThreadQuiet() {
+        if (!waChatState.leadId || waChatState.loading) return;
+        waChatState.loading = true;
+        $.getJSON('crm/ajax/whatsapp_chat.php', {
+            action: 'list',
+            lead_id: waChatState.leadId
+        }).done(function (res) {
+            waChatState.loading = false;
+            res = res || {};
+            if (!res.success) return;
+            waChatRenderMessages(res.messages || []);
+        }).fail(function () {
+            waChatState.loading = false;
+        });
     }
 
     function waChatBuildEmojiPanel() {
@@ -8086,6 +8342,7 @@ foreach ($destinationLookup as $destId => $destName) {
 
     function openWaChat(opts) {
         opts = opts || {};
+        waChatStopPoll();
         waChatState.leadId = Number(opts.leadId || 0);
         waChatState.name = String(opts.name || '').trim();
         waChatState.phone = String(opts.phone || '').trim();
@@ -8093,6 +8350,7 @@ foreach ($destinationLookup as $destId => $destName) {
         waChatState.letters = String(opts.letters || '').trim();
         waChatState.dest = String(opts.dest || '').trim();
         waChatState.uid = String(opts.uid || '').trim();
+        waChatState.lastMsgId = 0;
         waChatClearAttach();
         $('#waChatInput').val('');
         waChatAutoSizeInput();
@@ -8126,6 +8384,7 @@ foreach ($destinationLookup as $destId => $destName) {
             if (lead.destination && !waChatState.dest) waChatState.dest = lead.destination;
             waChatRenderHeader();
             waChatRenderMessages(res.messages || []);
+            waChatStartPoll();
             var api = res.api || {};
             if (!api.key_configured) {
                 waChatSetStatus('API key not configured — messages will not deliver until RichAutomate is set up.', 'err');
@@ -8241,6 +8500,10 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 
     $('#waChatRefresh').on('click', function () { waChatLoadThread(); });
+    $('#waChatModal').on('hidden.bs.modal', function () {
+        waChatStopPoll();
+        waChatState.lastMsgId = 0;
+    });
     $('#waChatEmojiBtn').on('click', function () {
         var $panel = $('#waChatEmojiPanel');
         var open = !$panel.hasClass('is-open');
@@ -9595,7 +9858,7 @@ foreach ($destinationLookup as $destId => $destName) {
     });
 })();
 </script>
-<script src="crm/assets/quotation_confirm_tour.js?v=60"></script>
+<script src="crm/assets/quotation_confirm_tour.js?v=64"></script>
 <script src="crm/assets/quotation_supplier_mail.js?v=20"></script>
 <script>
 (function () {

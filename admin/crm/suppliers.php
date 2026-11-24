@@ -347,6 +347,86 @@ function crmSupplierUpdatedLabel($value)
             .crm-suppliers-page .supplier-toolbar { justify-content: flex-start; }
             .crm-suppliers-page .supplier-search { max-width: none; flex-basis: 100%; }
         }
+
+        /* Supplier portfolio — Associated Tours */
+        #supplierPortfolioModal .sp-portfolio-content {
+            border: 0; border-radius: 16px; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(15,23,42,.18);
+        }
+        #supplierPortfolioModal .sp-portfolio-header {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            gap: .75rem; border: 0; padding: 1.1rem 1.25rem .85rem; background: #fff;
+        }
+        #supplierPortfolioModal .sp-portfolio-sub { color: #64748b; font-size: .82rem; margin-top: .2rem; }
+        #supplierPortfolioModal .sp-portfolio-head-actions {
+            display: flex; align-items: center; gap: .5rem;
+        }
+        #supplierPortfolioModal .sp-portfolio-head-actions .close { margin: 0; padding: .1rem .35rem; }
+        #supplierPortfolioModal .sp-assoc-filters {
+            display: grid; grid-template-columns: repeat(6, minmax(0,1fr));
+            gap: .45rem; margin-bottom: .75rem;
+        }
+        #supplierPortfolioModal .sp-assoc-summary {
+            display: grid; grid-template-columns: repeat(6, minmax(0,1fr));
+            gap: .55rem; margin-bottom: .85rem;
+        }
+        #supplierPortfolioModal .sp-assoc-card {
+            background: #fff; border: 1px solid #eef2f7; border-radius: 12px;
+            padding: .65rem .7rem; box-shadow: 0 1px 2px rgba(15,23,42,.04);
+        }
+        #supplierPortfolioModal .sp-assoc-card .k {
+            font-size: .68rem; font-weight: 600; color: #64748b;
+            text-transform: uppercase; letter-spacing: .04em; margin-bottom: .2rem;
+        }
+        #supplierPortfolioModal .sp-assoc-card .v {
+            font-size: 1.05rem; font-weight: 700; color: #0f172a; line-height: 1.2;
+        }
+        #supplierPortfolioModal .sp-assoc-card.is-out .v { color: #e11d48; }
+        #supplierPortfolioModal .sp-assoc-hd {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: .55rem;
+        }
+        #supplierPortfolioModal .sp-assoc-hd h6 {
+            font-size: .95rem; font-weight: 700; color: #0f172a;
+        }
+        #supplierPortfolioModal .sp-assoc-table-wrap {
+            border: 1px solid #e2e8f0; border-radius: 12px; overflow: auto; background: #fff;
+        }
+        #supplierPortfolioModal .sp-assoc-table {
+            width: 100%; margin: 0; border-collapse: collapse; min-width: 980px;
+        }
+        #supplierPortfolioModal .sp-assoc-table th {
+            background: #f8fafc; color: #475569; font-size: .72rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .04em; padding: .55rem .65rem;
+            border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+        }
+        #supplierPortfolioModal .sp-assoc-table td {
+            padding: .55rem .65rem; font-size: .82rem; color: #1e293b;
+            border-bottom: 1px solid #f1f5f9; vertical-align: middle;
+        }
+        #supplierPortfolioModal .sp-pay-pill {
+            display: inline-flex; font-size: .72rem; font-weight: 700;
+            padding: .2rem .5rem; border-radius: 999px;
+        }
+        #supplierPortfolioModal .sp-pay-pill.is-paid { background: #dcfce7; color: #15803d; }
+        #supplierPortfolioModal .sp-pay-pill.is-partial { background: #ffedd5; color: #c2410c; }
+        #supplierPortfolioModal .sp-pay-pill.is-unpaid { background: #fee2e2; color: #b91c1c; }
+        #supplierPortfolioModal .sp-assoc-empty {
+            text-align: center; color: #64748b; padding: 1.5rem 1rem; font-size: .9rem;
+        }
+        #supplierPortfolioModal .sp-assoc-pager {
+            display: flex; justify-content: flex-end; align-items: center; gap: .35rem; margin-top: .65rem;
+        }
+        #supplierPortfolioModal .js-sp-view-tour {
+            border: 1px solid #fecaca; color: #e11d48; background: #fff;
+            border-radius: 8px; font-size: .75rem; font-weight: 600; padding: .25rem .55rem;
+        }
+        #supplierPortfolioModal .js-sp-view-tour:hover { background: #fff1f2; }
+        @media (max-width: 991.98px) {
+            #supplierPortfolioModal .sp-assoc-filters,
+            #supplierPortfolioModal .sp-assoc-summary { grid-template-columns: repeat(2, minmax(0,1fr)); }
+        }
+
         /* Supplier Add/Edit modal — reference layout */
         #supplierModal .supplier-modal-dialog {
             max-width: 920px; width: calc(100% - 1.5rem); margin: 1rem auto;
@@ -683,6 +763,61 @@ function crmSupplierUpdatedLabel($value)
         </div>
     </div>
 
+    <div class="modal fade" id="supplierPortfolioModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content sp-portfolio-content">
+                <div class="modal-header sp-portfolio-header">
+                    <div>
+                        <h5 class="modal-title mb-0" id="spPortfolioTitle">Supplier Portfolio</h5>
+                        <p class="sp-portfolio-sub mb-0" id="spPortfolioSub">Associated tours and service payments</p>
+                    </div>
+                    <div class="sp-portfolio-head-actions">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="spPortfolioEditBtn">
+                            <i class="fas fa-pen mr-1"></i>Edit Supplier
+                        </button>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="spPortfolioId" value="0">
+                    <div class="sp-assoc-filters">
+                        <input type="search" class="form-control form-control-sm" id="spTourSearch" placeholder="Search booking, guest, service…">
+                        <input type="text" class="form-control form-control-sm" id="spTourDest" placeholder="Destination">
+                        <input type="date" class="form-control form-control-sm" id="spTourFrom" title="Travel from">
+                        <input type="date" class="form-control form-control-sm" id="spTourTo" title="Travel to">
+                        <select class="form-control form-control-sm" id="spTourStatus">
+                            <option value="">Booking status</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="ongoing">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <select class="form-control form-control-sm" id="spTourPay">
+                            <option value="">Payment status</option>
+                            <option value="paid">Paid</option>
+                            <option value="partial">Partially Paid</option>
+                            <option value="unpaid">Unpaid</option>
+                        </select>
+                    </div>
+                    <div class="sp-assoc-summary" id="spAssocSummary"></div>
+                    <div class="sp-assoc-hd">
+                        <h6 class="mb-0"><i class="fas fa-link mr-1"></i>Associated Tours</h6>
+                        <span class="text-muted small" id="spAssocCount">0 services</span>
+                    </div>
+                    <div class="sp-assoc-table-wrap" id="spAssocTableWrap">
+                        <div class="text-muted text-center py-3">Loading associated tours…</div>
+                    </div>
+                    <div class="sp-assoc-pager" id="spAssocPager"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="supplierModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered supplier-modal-dialog" role="document">
             <div class="modal-content supplier-modal-content">
@@ -766,11 +901,14 @@ function crmSupplierUpdatedLabel($value)
         </div>
     </div>
 
+    <?php include __DIR__ . '/includes/confirm_tour_modals.php'; ?>
     <?php include __DIR__ . '/../includes/footer-links.php'; ?>
+    <link rel="stylesheet" href="crm/assets/quotation_confirm_tour_page.css?v=2">
     <script>
         window.SUPPLIER_SERVICE_MAP = <?= json_encode($serviceMap, JSON_UNESCAPED_UNICODE) ?>;
         window.SUPPLIER_TYPE_MAP = <?= json_encode($supplierTypeMap, JSON_UNESCAPED_UNICODE) ?>;
     </script>
-    <script src="crm/assets/suppliers.js?v=19"></script>
+    <script src="crm/assets/quotation_confirm_tour.js?v=64"></script>
+    <script src="crm/assets/suppliers.js?v=20"></script>
 </body>
 </html>

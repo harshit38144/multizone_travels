@@ -58,6 +58,8 @@ $payload['services'] = crmQuotationMergeConfirmServices(
     crmQuotationBuildConfirmServicesFromQuote($row),
     $payload['services']
 );
+require_once __DIR__ . '/../includes/tour_portfolio.php';
+$payload = tpAttachSupplierIdsToPayload($conn, $payload);
 require_once __DIR__ . '/../includes/service_vouchers.php';
 svEnsureTable($conn);
 $payload['services'] = svAttachCounts($conn, $id, $payload['services']);

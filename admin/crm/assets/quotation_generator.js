@@ -2662,20 +2662,93 @@
         $panel.find('.q-hotel-option-star-val').val(n === '' ? '' : String(n));
     }
 
-    function syncHotelOptionStarUi() {
-        var $wrap = $('#qHotelOptionStars');
-        if (!$wrap.length) {
-            return;
-        }
-        var stars = getHotelOptionStar(getActiveHotelCategoryPanel());
-        $wrap.find('.q-hotel-option-star').each(function () {
-            var n = parseInt($(this).attr('data-star'), 10) || 0;
-            var on = stars !== '' && n <= stars;
-            $(this)
-                .toggleClass('is-on', on)
-                .attr('aria-checked', on && n === stars ? 'true' : 'false');
+    function syncHotelOptionStarUi($panel) {
+        var $panels = $panel && $panel.length ? $panel : getHotelCategoryPanels();
+        $panels.each(function () {
+            var $p = $(this);
+            var stars = getHotelOptionStar($p);
+            var $wrap = $p.find('.q-hotel-option-stars').first();
+            if (!$wrap.length) {
+                return;
+            }
+            $wrap.find('.q-hotel-option-star').each(function () {
+                var n = parseInt($(this).attr('data-star'), 10) || 0;
+                var on = stars !== '' && n <= stars;
+                $(this)
+                    .toggleClass('is-on', on)
+                    .attr('aria-checked', on && n === stars ? 'true' : 'false');
+            });
+            $wrap.removeClass('is-hovering').find('.q-hotel-option-star').removeClass('is-hover');
         });
-        $wrap.removeClass('is-hovering').find('.q-hotel-option-star').removeClass('is-hover');
+    }
+
+    function hotelOptionStarsHtml() {
+        var html = '<div class="q-hotel-option-stars" role="radiogroup" aria-label="Hotel star category">';
+        var i;
+        for (i = 1; i <= 5; i++) {
+            html += '<button type="button" class="q-hotel-option-star" data-star="' + i + '" title="' + i + '-Star Hotels" aria-label="' + i + '-Star Hotels" aria-checked="false">' +
+                '<i class="fas fa-star" aria-hidden="true"></i></button>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function hotelOptionTableHeadHtml() {
+        return '' +
+            '<div class="q-hotel-table-head">' +
+            '<div class="q-hotel-head-accom">' +
+            '<div class="q-hotel-group-title">' +
+            '<i class="fas fa-bed" aria-hidden="true"></i>' +
+            '<span>Accommodation Details</span>' +
+            '</div>' +
+            '<div class="q-hotel-col-labels q-hotel-col-labels-accom">' +
+            '<span><i class="fas fa-map-marker-alt" aria-hidden="true"></i>City</span>' +
+            '<span><i class="fas fa-hotel" aria-hidden="true"></i>Hotel</span>' +
+            '<span><i class="fas fa-bed" aria-hidden="true"></i>Room Type</span>' +
+            '<span><i class="fas fa-user-friends" aria-hidden="true"></i>Rooms</span>' +
+            '<span><i class="fas fa-utensils" aria-hidden="true"></i>Meal</span>' +
+            '<span><i class="fas fa-moon" aria-hidden="true"></i>Nights</span>' +
+            '<span><i class="far fa-calendar-alt" aria-hidden="true"></i>Check-in</span>' +
+            '<span><i class="far fa-calendar-alt" aria-hidden="true"></i>Check-out</span>' +
+            '</div></div>' +
+            '<div class="q-hotel-head-commercial q-commercial-block">' +
+            '<div class="q-hotel-group-title">' +
+            '<span class="q-commercial-head-label">' +
+            '<i class="fas fa-coins" aria-hidden="true"></i>' +
+            '<span>Commercial Details</span>' +
+            '</span>' +
+            '<span class="q-commercial-head-total q-hotel-commercial-total" aria-label="Hotel commercial total">₹ 0</span>' +
+            '</div>' +
+            '<div class="q-hotel-col-labels q-hotel-col-labels-commercial">' +
+            '<span><i class="fas fa-rupee-sign" aria-hidden="true"></i>Rate (₹)</span>' +
+            '<span><i class="fas fa-building" aria-hidden="true"></i>Supplier</span>' +
+            '<span class="q-hotel-col-head-action">Actions</span>' +
+            '</div></div></div>';
+    }
+
+    function hotelOptionOcrHtml() {
+        return '' +
+            '<div class="q-hotel-ocr-wrap">' +
+            '<div class="q-hotel-ocr-bar">' +
+            '<span class="q-hotel-ocr-thumb">' +
+            '<img class="q-hotel-ocr-preview-img" alt="Hotel quotation preview">' +
+            '<span class="q-hotel-ocr-thumb-empty" aria-hidden="true"><i class="fas fa-image"></i></span>' +
+            '<button type="button" class="q-hotel-ocr-clear" title="Remove image" aria-label="Remove hotel quotation image">' +
+            '<i class="fas fa-times"></i></button>' +
+            '</span>' +
+            '<button type="button" class="q-hotel-ocr-drop" title="Paste hotel quotation or upload">' +
+            '<span class="q-hotel-ocr-placeholder">Paste hotel quotation or upload</span>' +
+            '</button>' +
+            '<button type="button" class="btn q-hotel-ocr-upload">' +
+            '<i class="fas fa-upload mr-1"></i>Upload image' +
+            '</button>' +
+            '<input type="file" class="q-hotel-ocr-file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>' +
+            '</div>' +
+            '<span class="q-hotel-ocr-spin" role="status" aria-live="polite" aria-hidden="true" aria-label="Reading hotel quotation">' +
+            '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>' +
+            '</span>' +
+            '<p class="q-hotel-ocr-status" role="status"></p>' +
+            '</div>';
     }
 
     function hotelCategoryPanelHtml(cat) {
@@ -2687,6 +2760,16 @@
             '<div class="q-hotel-category" data-cat-id="' + esc(id) + '">' +
             '<input type="hidden" class="q-hotel-cat-label" value="' + esc(label) + '">' +
             '<input type="hidden" class="q-hotel-option-star-val" value="' + esc(optionStar === '' ? '' : String(optionStar)) + '">' +
+            '<div class="q-hotel-category-toolbar q-hotel-cat-toolbar">' +
+            '<span class="q-hotel-option-label">' + esc(label) + '</span>' +
+            '<button type="button" class="btn q-hotel-remove-option-btn" title="Remove this option" style="display:none;">' +
+            '<i class="fas fa-trash-alt"></i></button>' +
+            hotelOptionStarsHtml() +
+            hotelOptionOcrHtml() +
+            '<button type="button" class="btn q-hotel-add-btn">' +
+            '<i class="fas fa-plus mr-1"></i>Add Hotel</button>' +
+            '</div>' +
+            hotelOptionTableHeadHtml() +
             '<div class="q-hotel-rows"></div>' +
             '</div>';
     }
@@ -2697,7 +2780,6 @@
 
     function refreshHotelCategoryTabs() {
         renumberHotelCategoryLabels();
-        var $tabs = $('#qHotelCatTabs').empty();
         var $panels = getHotelCategoryPanels();
         var canAddOption = $panels.length < Q_MAX_HOTEL_OPTIONS;
         $('#qAddHotelCategory')
@@ -2705,8 +2787,8 @@
             .toggle(canAddOption)
             .attr('title', canAddOption ? 'Add pricing option' : 'Maximum ' + Q_MAX_HOTEL_OPTIONS + ' options allowed');
         if (!$panels.length) {
-            $('#qRemoveHotelCategory').prop('disabled', true).hide();
             syncHotelOptionStarUi();
+            updateCommercialHeaderTotals();
             return;
         }
         var activeExists = false;
@@ -2719,26 +2801,18 @@
         if (!qActiveHotelCategoryId || !activeExists) {
             qActiveHotelCategoryId = String($panels.first().attr('data-cat-id') || '');
         }
+        var canRemove = $panels.length > 1;
         $panels.each(function (idx) {
             var $panel = $(this);
             var id = String($panel.attr('data-cat-id') || '');
             var label = defaultHotelCategoryLabel(idx);
             $panel.find('.q-hotel-cat-label').val(label);
-            var $btn = $('<button type="button" class="q-hotel-cat-tab"></button>')
-                .attr('data-cat-id', id)
-                .text(label);
-            if (id === String(qActiveHotelCategoryId || '')) {
-                $btn.addClass('is-active');
-            }
-            $tabs.append($btn);
+            $panel.find('.q-hotel-option-label').text(label);
+            $panel.toggleClass('is-active', id === String(qActiveHotelCategoryId || ''));
+            $panel.find('.q-hotel-remove-option-btn').prop('disabled', !canRemove).toggle(canRemove);
         });
-        $panels.removeClass('is-active');
-        $panels.filter(function () {
-            return String($(this).attr('data-cat-id') || '') === String(qActiveHotelCategoryId || '');
-        }).addClass('is-active');
-        var canRemove = $panels.length > 1;
-        $('#qRemoveHotelCategory').prop('disabled', !canRemove).toggle(canRemove);
         syncHotelOptionStarUi();
+        updateCommercialHeaderTotals();
     }
 
     function getPrimaryHotelCategoryPanel() {
@@ -3824,12 +3898,61 @@
         return { id: '', name: String(name || '').trim() };
     }
 
+    var qHotelOcrContextRoot = null;
+    var qHotelOcrTargetCatId = '';
+
     function hotelOcrSectionVisible() {
         return $('#qSectionBody3').is(':visible');
     }
 
+    function hotelOcrUi($from) {
+        var $wrap = $();
+        if ($from && $from.length) {
+            $wrap = $from.closest('.q-hotel-ocr-wrap');
+            if (!$wrap.length) {
+                $wrap = $from.find('.q-hotel-ocr-wrap').first();
+            }
+        }
+        if (!$wrap.length && qHotelOcrContextRoot && qHotelOcrContextRoot.length) {
+            $wrap = qHotelOcrContextRoot;
+        }
+        if (!$wrap.length) {
+            $wrap = getActiveHotelCategoryPanel().find('.q-hotel-ocr-wrap').first();
+        }
+        if (!$wrap.length) {
+            $wrap = $('.q-hotel-ocr-wrap').first();
+        }
+        return {
+            wrap: $wrap,
+            bar: $wrap.find('.q-hotel-ocr-bar').first(),
+            img: $wrap.find('.q-hotel-ocr-preview-img').first(),
+            placeholder: $wrap.find('.q-hotel-ocr-placeholder').first(),
+            spin: $wrap.find('.q-hotel-ocr-spin').first(),
+            status: $wrap.find('.q-hotel-ocr-status').first(),
+            upload: $wrap.find('.q-hotel-ocr-upload').first(),
+            drop: $wrap.find('.q-hotel-ocr-drop').first(),
+            file: $wrap.find('.q-hotel-ocr-file').first(),
+            clear: $wrap.find('.q-hotel-ocr-clear').first(),
+            panel: $wrap.closest('.q-hotel-category')
+        };
+    }
+
+    function hotelOcrBindContext($from) {
+        var ui = hotelOcrUi($from);
+        qHotelOcrContextRoot = ui.wrap;
+        if (ui.panel.length) {
+            qHotelOcrTargetCatId = String(ui.panel.attr('data-cat-id') || '');
+            qActiveHotelCategoryId = qHotelOcrTargetCatId;
+            refreshHotelCategoryTabs();
+        }
+        return ui;
+    }
+
     function hotelOcrSetStatus(msg, isError) {
-        var $s = $('#qHotelOcrStatus');
+        var $s = hotelOcrUi().status;
+        if (!$s.length) {
+            return;
+        }
         if (!msg) {
             $s.hide().text('').removeClass('is-error');
             return;
@@ -3839,15 +3962,17 @@
 
     function hotelOcrSetBusy(on) {
         var busy = !!on;
-        $('#qHotelOcrSpin').toggleClass('is-on', busy).attr('aria-hidden', busy ? 'false' : 'true');
-        $('#qHotelOcrBar').toggleClass('is-busy', busy);
+        var ui = hotelOcrUi();
+        ui.spin.toggleClass('is-on', busy).attr('aria-hidden', busy ? 'false' : 'true');
+        ui.bar.toggleClass('is-busy', busy);
         if (busy) {
             hotelOcrSetStatus('', false);
         }
     }
 
-    function hotelOcrClearPreview() {
-        var $img = $('#qHotelOcrPreviewImg');
+    function hotelOcrClearPreview($from) {
+        var ui = hotelOcrUi($from);
+        var $img = ui.img;
         var url = $img.data('objectUrl');
         if (url) {
             try {
@@ -3856,17 +3981,18 @@
             $img.removeData('objectUrl');
         }
         $img.attr('src', '').attr('alt', 'Hotel quotation preview');
-        $('#qHotelOcrBar').removeClass('has-preview');
-        $('#qHotelOcrPlaceholder').text('Paste hotel quotation or upload');
-        $('#qHotelOcrFile').val('');
+        ui.bar.removeClass('has-preview');
+        ui.placeholder.text('Paste hotel quotation or upload');
+        ui.file.val('');
     }
 
-    function hotelOcrSetPreview(file) {
+    function hotelOcrSetPreview(file, $from) {
         if (!file) {
-            hotelOcrClearPreview();
+            hotelOcrClearPreview($from);
             return;
         }
-        var $img = $('#qHotelOcrPreviewImg');
+        var ui = hotelOcrUi($from);
+        var $img = ui.img;
         var prev = $img.data('objectUrl');
         if (prev) {
             try {
@@ -3875,9 +4001,9 @@
         }
         var url = URL.createObjectURL(file);
         $img.data('objectUrl', url).attr('src', url).attr('alt', file.name || 'Hotel quotation preview');
-        $('#qHotelOcrBar').addClass('has-preview');
+        ui.bar.addClass('has-preview');
         var label = file.name && file.name !== 'image.png' ? file.name : 'Hotel quotation';
-        $('#qHotelOcrPlaceholder').text(label);
+        ui.placeholder.text(label);
     }
 
     function hotelOcrFileFromClipboard(e) {
@@ -4047,7 +4173,8 @@
         }
         fd.append('image', file, name);
         hotelOcrSetBusy(true);
-        $('#qHotelOcrUploadBtn, #qHotelOcrDrop').prop('disabled', true);
+        var uiBusy = hotelOcrUi();
+        uiBusy.upload.add(uiBusy.drop).prop('disabled', true);
         $.ajax({
             url: 'crm/ajax/scan_hotel_quote.php',
             method: 'POST',
@@ -4074,19 +4201,31 @@
             hotelOcrSetStatus(msg, true);
         }).always(function () {
             hotelOcrSetBusy(false);
-            $('#qHotelOcrUploadBtn, #qHotelOcrDrop').prop('disabled', false);
-            $('#qHotelOcrFile').val('');
+            var uiDone = hotelOcrUi();
+            uiDone.upload.add(uiDone.drop).prop('disabled', false);
+            uiDone.file.val('');
         });
     }
 
     function applyHotelOcrRows() {
-        var $panel = getHotelCategoryPanels().filter('.is-active').first();
+        var $panel = $();
+        if (qHotelOcrTargetCatId) {
+            $panel = getHotelCategoryPanels().filter(function () {
+                return String($(this).attr('data-cat-id') || '') === String(qHotelOcrTargetCatId);
+            }).first();
+        }
+        if (!$panel.length) {
+            $panel = getHotelCategoryPanels().filter('.is-active').first();
+        }
         if (!$panel.length) {
             $panel = getHotelCategoryPanels().first();
         }
         if (!$panel.length) {
             addHotelCategory();
             $panel = getHotelCategoryPanels().first();
+        }
+        if ($panel.length) {
+            qActiveHotelCategoryId = String($panel.attr('data-cat-id') || '');
         }
         var rows = [];
         $('#qHotelOcrTable tbody tr').each(function () {
@@ -9714,9 +9853,20 @@
         if ($flight.length) {
             $flight.text(formatInrDisplay(sumNumericFields('#qFlightRows .f-fare')));
         }
-        var $hotel = $('#qHotelCommercialTotal');
-        if ($hotel.length) {
-            $hotel.text(formatInrDisplay(getActiveHotelCommercialTotal()));
+        getHotelCategoryPanels().each(function () {
+            var $panel = $(this);
+            var total = 0;
+            $panel.find('.q-hotel-rows .h-rate').each(function () {
+                var n = parseFloat(String($(this).val() || '').replace(/,/g, ''));
+                if (!isNaN(n)) {
+                    total += n;
+                }
+            });
+            $panel.find('.q-hotel-commercial-total').text(formatInrDisplay(total));
+        });
+        var $hotelLegacy = $('#qHotelCommercialTotal');
+        if ($hotelLegacy.length) {
+            $hotelLegacy.text(formatInrDisplay(getActiveHotelCommercialTotal()));
         }
         var $itin = $('#qItinCommercialTotal');
         if ($itin.length) {
@@ -14454,11 +14604,15 @@
             }
         });
         if (hotelCatsWithRows.length) {
-            html += '<div class="qp-sec qp-sec-hotels">';
+            html += '<div class="qp-sec qp-sec-hotels' + (multiHotelOptions ? ' has-multi-options' : '') + '">';
             html += qpHotelSectionHead();
             hotelCatsWithRows.forEach(function (item, viewIdx) {
                 var cat = item.cat;
                 var idx = item.idx;
+                var wrapMulti = multiHotelOptions;
+                if (wrapMulti) {
+                    html += '<div class="qp-hotel-option-block qp-hotel-option-tone-' + (viewIdx % 3) + '">';
+                }
                 html += qpHotelOptionHeadingHtml(cat, idx, multiHotelOptions);
                 html += buildPreviewHotelCardsHtml(cat.hotels || [], idx);
 
@@ -14473,6 +14627,9 @@
                             showGst: true
                         });
                     }
+                }
+                if (wrapMulti) {
+                    html += '</div>';
                 }
             });
             html += '</div>';
@@ -16734,8 +16891,11 @@
             addHotelCategory();
             saveFormDraftToStorage();
         });
-        $('#qAddHotelBtn').on('click', function () {
-            var $panel = getHotelCategoryPanels().filter('.is-active').first();
+        $(document).on('click', '.q-hotel-add-btn', function () {
+            var $panel = $(this).closest('.q-hotel-category');
+            if (!$panel.length) {
+                $panel = getHotelCategoryPanels().filter('.is-active').first();
+            }
             if (!$panel.length) {
                 $panel = getHotelCategoryPanels().first();
             }
@@ -16754,38 +16914,45 @@
             saveFormDraftToStorage();
         });
 
-        $('#qHotelOcrDrop').on('click', function () {
+        $(document).on('click', '.q-hotel-ocr-drop', function () {
+            hotelOcrBindContext($(this));
             this.focus();
         });
-        $('#qHotelOcrBar').on('click', function (e) {
-            if ($(e.target).closest('#qHotelOcrUploadBtn, #qHotelOcrClear, #qHotelOcrFile').length) {
+        $(document).on('click', '.q-hotel-ocr-bar', function (e) {
+            if ($(e.target).closest('.q-hotel-ocr-upload, .q-hotel-ocr-clear, .q-hotel-ocr-file').length) {
                 return;
             }
-            $('#qHotelOcrDrop').trigger('focus');
+            var ui = hotelOcrBindContext($(this));
+            ui.drop.trigger('focus');
         });
-        $('#qHotelOcrClear').on('click', function (e) {
+        $(document).on('click', '.q-hotel-ocr-clear', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            hotelOcrClearPreview();
+            var ui = hotelOcrBindContext($(this));
+            hotelOcrClearPreview($(this));
             hotelOcrSetBusy(false);
             hotelOcrSetStatus('', false);
-            $('#qHotelOcrDrop').trigger('focus');
+            ui.drop.trigger('focus');
         });
-        $('#qHotelOcrUploadBtn').on('click', function () {
-            $('#qHotelOcrFile').trigger('click');
+        $(document).on('click', '.q-hotel-ocr-upload', function () {
+            var ui = hotelOcrBindContext($(this));
+            ui.file.trigger('click');
         });
-        $('#qHotelOcrFile').on('change', function () {
+        $(document).on('change', '.q-hotel-ocr-file', function () {
+            hotelOcrBindContext($(this));
             var file = this.files && this.files[0];
             if (file) {
                 hotelOcrReadFile(file);
             }
         });
-        $('#qHotelOcrBar').on('dragover', function (e) {
+        $(document).on('dragover', '.q-hotel-ocr-bar', function (e) {
             e.preventDefault();
-            $('#qHotelOcrBar').addClass('is-drag');
-        }).on('dragleave drop', function (e) {
+            hotelOcrBindContext($(this)).bar.addClass('is-drag');
+        });
+        $(document).on('dragleave drop', '.q-hotel-ocr-bar', function (e) {
             e.preventDefault();
-            $('#qHotelOcrBar').removeClass('is-drag');
+            var ui = hotelOcrBindContext($(this));
+            ui.bar.removeClass('is-drag');
             if (e.type !== 'drop') {
                 return;
             }
@@ -16806,7 +16973,21 @@
                 return;
             }
             e.preventDefault();
+            hotelOcrBindContext(getActiveHotelCategoryPanel());
             hotelOcrReadFile(file);
+        });
+        $(document).on('focusin', '#qHotelCategories .q-hotel-category', function () {
+            var id = String($(this).attr('data-cat-id') || '');
+            if (!id || id === String(qActiveHotelCategoryId || '')) {
+                return;
+            }
+            qActiveHotelCategoryId = id;
+            getHotelCategoryPanels().removeClass('is-active');
+            $(this).addClass('is-active');
+            $('#qPricingSheetsHost .q-pricing-option-sheet').removeClass('is-active');
+            $('#qPricingSheetsHost .q-pricing-option-sheet').filter(function () {
+                return String($(this).attr('data-cat-id') || '') === id;
+            }).addClass('is-active');
         });
         $(document).on('click', '#qHotelOcrTable .ocr-remove', function () {
             $(this).closest('tr').remove();
@@ -16986,14 +17167,10 @@
             renderPricingSheets();
             saveFormDraftToStorage();
         });
-        $(document).on('click', '.q-hotel-cat-tab', function () {
-            setActiveHotelCategory($(this).attr('data-cat-id'));
-            saveFormDraftToStorage();
-        });
-        $(document).on('click', '#qHotelOptionStars .q-hotel-option-star', function (e) {
+        $(document).on('click', '.q-hotel-option-star', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            var $panel = getActiveHotelCategoryPanel();
+            var $panel = $(this).closest('.q-hotel-category');
             if (!$panel.length) {
                 ensureHotelCategoriesReady();
                 $panel = getActiveHotelCategoryPanel();
@@ -17001,18 +17178,20 @@
             if (!$panel.length) {
                 return;
             }
+            qActiveHotelCategoryId = String($panel.attr('data-cat-id') || qActiveHotelCategoryId || '');
             var clicked = normalizeOptionStar($(this).attr('data-star'));
             if (!clicked) {
                 return;
             }
             var current = getHotelOptionStar($panel);
             setHotelOptionStar($panel, current === clicked ? '' : clicked);
-            syncHotelOptionStarUi();
+            syncHotelOptionStarUi($panel);
+            refreshHotelCategoryTabs();
             refreshPricingOptionTitles();
             saveFormDraftToStorage();
         });
-        $(document).on('mouseenter', '#qHotelOptionStars .q-hotel-option-star', function () {
-            var $wrap = $('#qHotelOptionStars');
+        $(document).on('mouseenter', '.q-hotel-option-star', function () {
+            var $wrap = $(this).closest('.q-hotel-option-stars');
             var hoverN = parseInt($(this).attr('data-star'), 10) || 0;
             $wrap.addClass('is-hovering');
             $wrap.find('.q-hotel-option-star').each(function () {
@@ -17020,7 +17199,7 @@
                 $(this).toggleClass('is-hover', n > 0 && n <= hoverN);
             });
         });
-        $(document).on('mouseleave', '#qHotelOptionStars', function () {
+        $(document).on('mouseleave', '.q-hotel-option-stars', function () {
             $(this).removeClass('is-hovering').find('.q-hotel-option-star').removeClass('is-hover');
         });
         $(document).on('input', '.q-hotel-cat-label', function () {
@@ -17028,14 +17207,14 @@
             renderPricingSheets();
             saveFormDraftToStorage();
         });
-        $('#qRemoveHotelCategory').on('click', function () {
+        $(document).on('click', '.q-hotel-remove-option-btn', function () {
             if (getHotelCategoryPanels().length <= 1) {
                 qCrmToast('At least one hotel option is required.', 'error');
                 return;
             }
-            var $panel = getHotelCategoryPanels().filter('.is-active').first();
+            var $panel = $(this).closest('.q-hotel-category');
             if (!$panel.length) {
-                qCrmToast('No active hotel option was found to remove.', 'error');
+                qCrmToast('No hotel option was found to remove.', 'error');
                 return;
             }
             qCrmConfirm({
@@ -18393,6 +18572,24 @@
                 '.q-preview-doc .qp-info-cell:last-child{border-right:none!important;}' +
                 '.q-preview-doc .qp-doc-head-top{flex-direction:row!important;align-items:flex-start!important;text-align:left!important;}' +
                 '.q-preview-doc .qp-cost-notes-row{flex-direction:row!important;}' +
+                '.qp-sec-hotels.has-multi-options .qp-hotel-option-block{' +
+                'border-radius:12px!important;padding:10px 10px 8px!important;margin:0 0 12px!important;' +
+                'box-sizing:border-box!important;' +
+                '-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;' +
+                '}' +
+                '.qp-sec-hotels.has-multi-options .qp-hotel-option-tone-0{' +
+                'background:#f4f7fb!important;border:1px solid #dbe4f0!important;' +
+                '}' +
+                '.qp-sec-hotels.has-multi-options .qp-hotel-option-tone-1{' +
+                'background:#faf6f2!important;border:1px solid #ebe0d4!important;' +
+                '}' +
+                '.qp-sec-hotels.has-multi-options .qp-hotel-option-tone-2{' +
+                'background:#f3f8f5!important;border:1px solid #d5e6dc!important;' +
+                '}' +
+                '.qp-sec-hotels.has-multi-options .qp-hotel-option-block .qp-hotel-option-heading{margin-top:0!important;margin-bottom:8px!important;}' +
+                '.qp-sec-hotels.has-multi-options .qp-hotel-option-block .qp-cost-notes-row{margin:10px 0 2px!important;}' +
+                '.qp-sec-hotels.has-multi-options .qp-hotel-option-block .qp-hotel-panel{margin-bottom:0!important;}' +
+                '.qp-hotel-option-block{break-inside:avoid;page-break-inside:avoid;}' +
                 '.q-preview-doc .qp-flight-sec-rule{display:block!important;}' +
                 '.q-preview-doc .qp-flight-seg-card{min-width:0!important;}' +
                 '.q-preview-doc .qp-day-main.has-photo{grid-template-columns:minmax(0,1fr) 180px!important;}' +
@@ -19102,17 +19299,18 @@
             flushPreviewActiveEdit();
 
             var $btn = $('#qPreviewDownloadBtn');
-            var prevHtml = $btn.length ? $btn.html() : '';
             var restored = false;
             var restoreBtn = function () {
                 if (restored) return;
                 restored = true;
                 if ($btn.length) {
-                    $btn.prop('disabled', false).html(prevHtml || '<i class="fas fa-download mr-1"></i> Download');
+                    $btn.prop('disabled', false).removeClass('is-loading');
+                    $btn.find('.qp-dl-btn__text').text('Download');
                 }
             };
             if ($btn.length) {
-                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Downloading…');
+                $btn.prop('disabled', true).addClass('is-loading');
+                $btn.find('.qp-dl-btn__text').text('Downloading…');
             }
 
             var fail = function (err) {

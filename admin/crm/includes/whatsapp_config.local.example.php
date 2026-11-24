@@ -17,4 +17,11 @@ return [
     'template_name' => '',
     'template_language' => 'en_US',
     'template_variables' => ['guest', 'agent', 'company'],
+
+    // Twilio WhatsApp inbound webhook (Message comes in → webhook.php)
+    'twilio_account_sid' => '',
+    'twilio_auth_token' => '',
+    'twilio_validate_signature' => true,
+    // Must match the URL set in Twilio Console (used for signature validation).
+    'twilio_webhook_url' => 'https://admin.multizonetravels.com/crm/webhook.php',
 ];

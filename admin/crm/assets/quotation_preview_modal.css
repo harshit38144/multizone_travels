@@ -115,27 +115,144 @@
             border-color: #a10e15;
             color: #fff;
         }
-        #leadQuotationPreviewModal .qp-btn-download {
-            background: #0f766e;
-            border-color: #0f766e;
-            color: #fff;
+        #leadQuotationPreviewModal .qp-dl-btn {
+            --qp-dl-main-focus: #2d8cf0;
+            --qp-dl-font-color: #dedede;
+            --qp-dl-bg-color-sub: #222;
+            --qp-dl-bg-color: #323232;
+            --qp-dl-main-color: #dedede;
+            position: relative;
+            width: 150px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border: 2px solid var(--qp-dl-main-color);
+            box-shadow: none;
+            background-color: var(--qp-dl-bg-color);
+            border-radius: 10px;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+            flex: 0 0 auto;
+            box-sizing: border-box;
+            outline: none;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn,
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__icon,
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__text {
+            transition: all 0.3s;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__text {
+            transform: translateX(21px);
+            color: var(--qp-dl-font-color);
             font-weight: 600;
-            padding: 6px 16px;
+            font-size: 14px;
+            line-height: 1;
+            white-space: nowrap;
         }
-        #leadQuotationPreviewModal .qp-btn-download:hover {
-            background: #0d9488;
-            border-color: #0d9488;
-            color: #fff;
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__icon {
+            position: absolute;
+            transform: translateX(109px);
+            height: 100%;
+            width: 39px;
+            background-color: var(--qp-dl-bg-color-sub);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #leadQuotationPreviewModal .qp-btn-print {
-            background: transparent;
-            border: 1px solid #c5c5c8;
-            color: #555;
+        #leadQuotationPreviewModal .qp-dl-btn .qp-dl-btn__svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--qp-dl-main-color);
+        }
+        #leadQuotationPreviewModal .qp-dl-btn:hover,
+        #leadQuotationPreviewModal .qp-dl-btn:focus {
+            background: var(--qp-dl-bg-color);
+            color: inherit;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn:hover .qp-dl-btn__text,
+        #leadQuotationPreviewModal .qp-dl-btn:focus .qp-dl-btn__text {
+            color: transparent;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn:hover .qp-dl-btn__icon,
+        #leadQuotationPreviewModal .qp-dl-btn:focus .qp-dl-btn__icon {
+            width: 148px;
+            transform: translateX(0);
+        }
+        #leadQuotationPreviewModal .qp-dl-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: none;
+        }
+        #leadQuotationPreviewModal .qp-dl-btn:disabled,
+        #leadQuotationPreviewModal .qp-dl-btn.is-loading {
+            opacity: 0.75;
+            cursor: wait;
+            pointer-events: none;
+        }
+        /* Print — Uiverse button (scoped to preview modal) */
+        #leadQuotationPreviewModal .qp-print-btn {
+            width: 100px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border: 1px solid rgb(213, 213, 213);
+            border-radius: 10px;
+            gap: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            overflow: hidden;
             font-weight: 500;
-            padding: 6px 14px;
+            box-shadow: 0px 10px 10px rgba(0, 0, 0, 0.065);
+            transition: all 0.3s;
+            flex-shrink: 0;
+            color: #000;
+            padding: 0;
+            margin: 0;
+            line-height: 1;
         }
-        #leadQuotationPreviewModal .qp-btn-print:hover {
-            background: #f5f5f5;
-            color: #333;
-            border-color: #b0b0b3;
+        #leadQuotationPreviewModal .qp-printer-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 100%;
+        }
+        #leadQuotationPreviewModal .qp-printer-container {
+            height: 50%;
+            width: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        #leadQuotationPreviewModal .qp-printer-container svg {
+            width: 100%;
+            height: auto;
+            transform: translateY(4px);
+        }
+        #leadQuotationPreviewModal .qp-printer-page-wrapper {
+            width: 100%;
+            height: 50%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        #leadQuotationPreviewModal .qp-printer-page {
+            width: 70%;
+            height: 10px;
+            border: 1px solid black;
+            background-color: white;
+            transform: translateY(0px);
+            transition: all 0.3s;
+            transform-origin: top;
+        }
+        #leadQuotationPreviewModal .qp-print-btn:hover .qp-printer-page {
+            height: 16px;
+            background-color: rgb(239, 239, 239);
+        }
+        #leadQuotationPreviewModal .qp-print-btn:hover {
+            background-color: rgb(239, 239, 239);
         }

@@ -272,7 +272,7 @@ function cbList(mysqli $conn): array
             if ($supplier !== '' && !in_array($supplier, $supplierNames, true)) {
                 $supplierNames[] = $supplier;
             }
-            $services[] = [
+            $svcRow = [
                 'uid' => (string) ($svc['uid'] ?? ''),
                 'key' => $key,
                 'label' => (string) ($svc['label'] ?? $key),
@@ -281,6 +281,11 @@ function cbList(mysqli $conn): array
                 'paid' => $paid,
                 'balance' => max(0, round($total - $paid, 2)),
             ];
+            $supplierId = (int) ($svc['supplier_id'] ?? 0);
+            if ($supplierId > 0) {
+                $svcRow['supplier_id'] = $supplierId;
+            }
+            $services[] = $svcRow;
         }
 
         $start = cbIso($quote['tentative_date'] ?? '');
@@ -365,6 +370,10 @@ function cbList(mysqli $conn): array
             'hotel_count' => $hotelCount,
             'flight_count' => $flightCount,
             'services' => $services,
+            // Per-service supplier payment traffic lights (same helper as leads.php).
+            'booking_status_html' => crmQuotationBookingStatusIconsHtml(
+                json_encode(['services' => $services], JSON_UNESCAPED_UNICODE)
+            ),
         ];
     }
     return $bookings;

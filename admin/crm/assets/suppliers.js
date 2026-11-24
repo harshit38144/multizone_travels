@@ -7,6 +7,7 @@
     var placeTimer = null;
     var cityRequest = null;
     var table = null;
+    var assocState = { supplierId: 0, page: 1, perPage: 10, timer: null, xhr: null };
 
     // admin root URL (page lives at .../admin/crm/suppliers.php)
     var ADMIN_BASE = location.href.replace(/[?#].*$/, '').replace(/\/crm\/[^\/]*$/, '/');
@@ -68,6 +69,168 @@
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    function moneyInr(n) {
+        n = parseFloat(n);
+        if (isNaN(n)) n = 0;
+        return '₹ ' + Math.round(n).toLocaleString('en-IN');
+    }
+
+    function fmtDate(iso) {
+        var s = String(iso || '').trim();
+        var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return s || '—';
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return parseInt(m[3], 10) + ' ' + (months[parseInt(m[2], 10) - 1] || m[2]) + ' ' + m[1];
+    }
+
+    function renderAssocSummary(summary) {
+        summary = summary || {};
+        var cards = [
+            { k: 'Total Associated Tours', v: summary.total_associated_tours || 0 },
+            { k: 'Total Services Provided', v: summary.total_services || 0 },
+            { k: 'Total Business Value', v: moneyInr(summary.total_business_value) },
+            { k: 'Total Paid Amount', v: moneyInr(summary.total_paid) },
+            { k: 'Total Outstanding', v: moneyInr(summary.total_outstanding), out: true },
+            { k: 'Pending Payments', v: summary.pending_payments || 0, out: true }
+        ];
+        $('#spAssocSummary').html(cards.map(function (c) {
+            return '<div class="sp-assoc-card' + (c.out ? ' is-out' : '') + '"><div class="k">' +
+                escapeHtml(c.k) + '</div><div class="v">' + escapeHtml(String(c.v)) + '</div></div>';
+        }).join(''));
+    }
+
+    function renderAssocPager(pagination) {
+        pagination = pagination || {};
+        var page = parseInt(pagination.page, 10) || 1;
+        var pages = parseInt(pagination.pages, 10) || 1;
+        var total = parseInt(pagination.total, 10) || 0;
+        $('#spAssocCount').text(total === 1 ? '1 service' : (total + ' services'));
+        if (pages <= 1) {
+            $('#spAssocPager').empty();
+            return;
+        }
+        $('#spAssocPager').html(
+            '<button type="button" class="btn btn-sm btn-outline-secondary js-sp-assoc-page" data-page="' +
+            (page - 1) + '"' + (page <= 1 ? ' disabled' : '') + '>&lsaquo;</button>' +
+            '<span class="small text-muted px-1">' + page + ' / ' + pages + '</span>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary js-sp-assoc-page" data-page="' +
+            (page + 1) + '"' + (page >= pages ? ' disabled' : '') + '>&rsaquo;</button>'
+        );
+    }
+
+    function renderAssocTable(rows) {
+        rows = rows || [];
+        if (!rows.length) {
+            $('#spAssocTableWrap').html(
+                '<div class="sp-assoc-empty"><i class="fas fa-link mb-2 d-block" style="font-size:1.4rem;opacity:.45"></i>' +
+                'No tours or services associated with this supplier yet.</div>'
+            );
+            return;
+        }
+        var html = '<table class="sp-assoc-table"><thead><tr>' +
+            '<th>Booking ID</th><th>Guest Name</th><th>Destination</th><th>Travel Date</th>' +
+            '<th>Assigned Service</th><th>Total Cost</th><th>Paid</th><th>Outstanding</th>' +
+            '<th>Payment</th><th>Booking Status</th><th>Actions</th>' +
+            '</tr></thead><tbody>';
+        var lastBooking = null;
+        rows.forEach(function (r) {
+            var bookingId = parseInt(r.booking_id, 10) || 0;
+            var groupStart = lastBooking !== bookingId;
+            lastBooking = bookingId;
+            html += '<tr' + (groupStart ? ' class="is-group-start"' : '') + '>' +
+                '<td><strong>' + escapeHtml(r.code || ('#' + bookingId)) + '</strong></td>' +
+                '<td>' + escapeHtml(r.guest || '—') + '</td>' +
+                '<td>' + escapeHtml(r.destination || '—') + '</td>' +
+                '<td>' + escapeHtml(fmtDate(r.travel_date)) + '</td>' +
+                '<td>' + escapeHtml(r.service_label || '—') + '</td>' +
+                '<td>' + escapeHtml(moneyInr(r.total)) + '</td>' +
+                '<td>' + escapeHtml(moneyInr(r.paid)) + '</td>' +
+                '<td>' + escapeHtml(moneyInr(r.outstanding)) + '</td>' +
+                '<td><span class="sp-pay-pill ' + escapeHtml(r.payment_cls || 'is-unpaid') + '">' +
+                escapeHtml(r.payment_label || 'Unpaid') + '</span></td>' +
+                '<td>' + escapeHtml(r.booking_status || '—') + '</td>' +
+                '<td><button type="button" class="btn btn-sm js-sp-view-tour" data-id="' +
+                escapeHtml(String(bookingId)) + '"><i class="far fa-eye mr-1"></i>View</button></td>' +
+                '</tr>';
+        });
+        html += '</tbody></table>';
+        $('#spAssocTableWrap').html(html);
+    }
+
+    function loadAssociatedTours() {
+        var id = assocState.supplierId;
+        if (!id) return;
+        if (assocState.xhr && typeof assocState.xhr.abort === 'function') {
+            try { assocState.xhr.abort(); } catch (e) { /* ignore */ }
+        }
+        $('#spAssocTableWrap').html('<div class="text-muted text-center py-3">Loading associated tours…</div>');
+        assocState.xhr = $.getJSON(absUrl('crm/ajax/supplier_associated_tours.php'), {
+            supplier_id: id,
+            q: $('#spTourSearch').val() || '',
+            destination: $('#spTourDest').val() || '',
+            date_from: $('#spTourFrom').val() || '',
+            date_to: $('#spTourTo').val() || '',
+            tour_status: $('#spTourStatus').val() || '',
+            payment_status: $('#spTourPay').val() || '',
+            page: assocState.page,
+            per_page: assocState.perPage
+        }).done(function (res) {
+            if (!res || !res.success) {
+                $('#spAssocTableWrap').html(
+                    '<div class="sp-assoc-empty text-danger">' +
+                    escapeHtml((res && res.message) || 'Could not load associated tours.') + '</div>'
+                );
+                renderAssocSummary({});
+                renderAssocPager({});
+                return;
+            }
+            if (res.supplier) {
+                $('#spPortfolioTitle').text(res.supplier.name || 'Supplier Portfolio');
+                $('#spPortfolioSub').text(
+                    (res.supplier.company_name && res.supplier.company_name !== res.supplier.name)
+                        ? res.supplier.company_name
+                        : 'Associated tours and service payments'
+                );
+            }
+            renderAssocSummary(res.summary || {});
+            renderAssocTable(res.rows || []);
+            renderAssocPager(res.pagination || {});
+        }).fail(function (xhr) {
+            if (xhr && xhr.statusText === 'abort') return;
+            $('#spAssocTableWrap').html(
+                '<div class="sp-assoc-empty text-danger">Could not load associated tours.</div>'
+            );
+        });
+    }
+
+    function scheduleAssocReload() {
+        if (assocState.timer) {
+            window.clearTimeout(assocState.timer);
+        }
+        assocState.timer = window.setTimeout(function () {
+            assocState.timer = null;
+            assocState.page = 1;
+            loadAssociatedTours();
+        }, 220);
+    }
+
+    function openSupplierPortfolio(id, name) {
+        id = parseInt(id, 10) || 0;
+        if (!id) return;
+        assocState.supplierId = id;
+        assocState.page = 1;
+        $('#spPortfolioId').val(id);
+        $('#spPortfolioTitle').text(name || 'Supplier Portfolio');
+        $('#spPortfolioSub').text('Associated tours and service payments');
+        $('#spTourSearch, #spTourDest, #spTourFrom, #spTourTo').val('');
+        $('#spTourStatus, #spTourPay').val('');
+        renderAssocSummary({});
+        $('#spAssocTableWrap').html('<div class="text-muted text-center py-3">Loading associated tours…</div>');
+        $('#spAssocPager').empty();
+        $('#supplierPortfolioModal').modal('show');
+        loadAssociatedTours();
     }
 
     function defaultContact() {
@@ -616,9 +779,39 @@
         $('#btnSaveSupplier').on('click', saveSupplier);
 
         $(document).on('click', '.js-view-supplier', function () {
-            var id = $(this).closest('tr').data('id');
+            var $row = $(this).closest('tr');
+            var id = $row.data('id');
+            var name = $.trim($row.find('.sup-name').first().text()) || 'Supplier Portfolio';
             if (id) {
-                loadSupplier(id);
+                openSupplierPortfolio(id, name);
+            }
+        });
+
+        $('#spPortfolioEditBtn').on('click', function () {
+            var id = parseInt($('#spPortfolioId').val(), 10) || 0;
+            if (!id) return;
+            $('#supplierPortfolioModal').modal('hide');
+            loadSupplier(id);
+        });
+
+        $('#spTourSearch, #spTourDest').on('input', scheduleAssocReload);
+        $('#spTourFrom, #spTourTo, #spTourStatus, #spTourPay').on('change', scheduleAssocReload);
+        $(document).on('click', '.js-sp-assoc-page:not(:disabled)', function () {
+            assocState.page = parseInt($(this).attr('data-page'), 10) || 1;
+            loadAssociatedTours();
+        });
+        $(document).on('click', '.js-sp-view-tour', function () {
+            var id = parseInt($(this).attr('data-id'), 10) || 0;
+            if (!id) return;
+            if (window.CrmConfirmTour && typeof window.CrmConfirmTour.open === 'function') {
+                window.CrmConfirmTour.open(id, null);
+            } else {
+                window.alert('Confirm Tour is not available on this page.');
+            }
+        });
+        $(document).on('crm:tour-updated', function () {
+            if ($('#supplierPortfolioModal').hasClass('show') && assocState.supplierId) {
+                loadAssociatedTours();
             }
         });
 

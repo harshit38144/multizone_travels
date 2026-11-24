@@ -12,6 +12,8 @@ if ($mzEmbed) {
 $scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
 if (strpos($scriptPath, '/crm/') !== false || preg_match('#/crm/[^/]+\.php$#', $scriptPath)) {
   $page = 'crm_' . basename($_SERVER['SCRIPT_NAME'], '.php');
+} elseif (strpos($scriptPath, '/credit_cards/') !== false || preg_match('#/credit_cards/[^/]+\.php$#', $scriptPath)) {
+  $page = 'cc_' . basename($_SERVER['SCRIPT_NAME'], '.php');
 } elseif (strpos($scriptPath, '/mail/') !== false || preg_match('#/mail/[^/]+\.php$#', $scriptPath)) {
   $page = 'mail_' . basename($_SERVER['SCRIPT_NAME'], '.php');
 } else {
@@ -37,7 +39,23 @@ $customerPages = ['queries', 'testimonials', 'live_counters'];
 $settingsPages = ['site_settings', 'menu_manager'];
 $paymentPages = ['payment_links', 'payment_link_create'];
 $mailPages = ['mail_inbox'];
-
+$creditCardPages = [
+  'cc_dashboard',
+  'cc_cards',
+  'cc_bills',
+  'cc_bill_entry',
+  'cc_bill_history',
+  'cc_payments',
+  'cc_payment_entry',
+  'cc_payment_history',
+  'cc_rewards',
+  'cc_due_calendar',
+  'cc_reports',
+  'cc_notifications',
+  'cc_settings',
+];
+$creditCardBillsPages = ['cc_bills', 'cc_bill_entry', 'cc_bill_history'];
+$creditCardPaymentsPages = ['cc_payments', 'cc_payment_entry', 'cc_payment_history'];
 $websiteParentPages = array_merge($contentPages, $packagePages, $settingsPages, ['privilege']);
 $crmParentPages = array_merge(
   $crmPages,
@@ -736,6 +754,107 @@ $crmParentPages = array_merge(
             <i class="nav-icon fas fa-envelope"></i>
             <p>Mail</p>
           </a>
+        </li>
+
+        <!-- Credit Cards -->
+        <li class="nav-item has-treeview <?= in_array($page, $creditCardPages, true) ? 'menu-open' : '' ?>">
+          <a href="#" class="nav-link <?= in_array($page, $creditCardPages, true) ? 'active' : '' ?>">
+            <i class="nav-icon fas fa-credit-card"></i>
+            <p>
+              Credit Card
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="credit_cards/dashboard.php" class="nav-link <?= ($page === 'cc_dashboard') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-tachometer-alt"></i>
+                <p>Dashboard</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="credit_cards/cards.php" class="nav-link <?= ($page === 'cc_cards') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-credit-card"></i>
+                <p>Credit Cards</p>
+              </a>
+            </li>
+            <li class="nav-item has-treeview <?= in_array($page, $creditCardBillsPages, true) ? 'menu-open' : '' ?>">
+              <a href="#" class="nav-link <?= in_array($page, $creditCardBillsPages, true) ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-file-invoice"></i>
+                <p>
+                  Bills
+                  <i class="right fas fa-angle-left"></i>
+                </p>
+              </a>
+              <ul class="nav nav-treeview">
+                <li class="nav-item">
+                  <a href="credit_cards/bill_entry.php" class="nav-link <?= ($page === 'cc_bill_entry') ? 'active' : '' ?>">
+                    <i class="nav-icon fas fa-edit"></i>
+                    <p>Monthly Bill Entry</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="credit_cards/bill_history.php" class="nav-link <?= ($page === 'cc_bill_history') ? 'active' : '' ?>">
+                    <i class="nav-icon fas fa-history"></i>
+                    <p>Bill History</p>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            <li class="nav-item has-treeview <?= in_array($page, $creditCardPaymentsPages, true) ? 'menu-open' : '' ?>">
+              <a href="#" class="nav-link <?= in_array($page, $creditCardPaymentsPages, true) ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-money-check-alt"></i>
+                <p>
+                  Payments
+                  <i class="right fas fa-angle-left"></i>
+                </p>
+              </a>
+              <ul class="nav nav-treeview">
+                <li class="nav-item">
+                  <a href="credit_cards/payment_entry.php" class="nav-link <?= ($page === 'cc_payment_entry') ? 'active' : '' ?>">
+                    <i class="nav-icon fas fa-rupee-sign"></i>
+                    <p>Payment Entry</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="credit_cards/payment_history.php" class="nav-link <?= ($page === 'cc_payment_history') ? 'active' : '' ?>">
+                    <i class="nav-icon fas fa-receipt"></i>
+                    <p>Payment History</p>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            <li class="nav-item">
+              <a href="credit_cards/rewards.php" class="nav-link <?= ($page === 'cc_rewards') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-gift"></i>
+                <p>Rewards</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="credit_cards/due_calendar.php" class="nav-link <?= ($page === 'cc_due_calendar') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-calendar-alt"></i>
+                <p>Due Calendar</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="credit_cards/reports.php" class="nav-link <?= ($page === 'cc_reports') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-chart-line"></i>
+                <p>Reports</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="credit_cards/notifications.php" class="nav-link <?= ($page === 'cc_notifications') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-bell"></i>
+                <p>Notifications</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="credit_cards/settings.php" class="nav-link <?= ($page === 'cc_settings') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-cog"></i>
+                <p>Settings</p>
+              </a>
+            </li>
+          </ul>
         </li>
 
         <!-- Payment Links -->

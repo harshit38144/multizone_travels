@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../includes/lead_contacts_db.php';
 require_once __DIR__ . '/../includes/traveller_documents.php';
 require_once __DIR__ . '/../includes/service_vouchers.php';
 require_once __DIR__ . '/../includes/service_payments.php';
+require_once __DIR__ . '/../includes/tour_portfolio.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -123,6 +124,7 @@ $payload = crmQuotationNormalizeConfirmPayload([
     'travellers' => $travellers,
     'services' => $decoded,
 ]);
+$payload = tpAttachSupplierIdsToPayload($conn, $payload);
 
 $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
 if ($json === false) {

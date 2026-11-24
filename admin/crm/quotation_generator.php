@@ -6005,14 +6005,62 @@ $qWizardSteps = [
             margin-bottom: 0.75rem;
         }
 
+        #qWizardSection3 .q-hotel-options-topbar {
+            margin-bottom: 0.65rem;
+        }
+
+        #qWizardSection3 .q-hotel-categories-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1.15rem;
+        }
+
+        #qWizardSection3 .q-hotel-category-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.65rem;
+        }
+
+        #qWizardSection3 .q-hotel-option-label {
+            border: 1px solid #e11d2e;
+            background: #e11d2e;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0.42rem 1.05rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+            line-height: 1.2;
+            cursor: default;
+            user-select: none;
+        }
+
+        #qWizardSection3 .q-hotel-category.is-active .q-hotel-option-label {
+            background: #e11d2e;
+            border-color: #e11d2e;
+            color: #fff;
+        }
+
+        #qWizardSection3 .q-hotel-category:not(.is-active) .q-hotel-option-label {
+            background: #fff;
+            border-color: #d1d5db;
+            color: #111827;
+        }
+
         #qWizardSection3 .q-hotel-ocr-wrap {
             flex: 1 1 280px;
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 0.4rem;
             min-width: 240px;
             max-width: 480px;
             margin: 0 0 0 auto;
+        }
+
+        #qWizardSection3 .q-hotel-category-toolbar .q-hotel-ocr-wrap {
+            margin-left: auto;
         }
 
         #qWizardSection3 .q-hotel-ocr-bar {
@@ -6661,7 +6709,8 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-col-labels-accom {
-            grid-template-columns: 1.05fr 1.15fr 1.05fr 0.55fr 0.55fr 0.5fr 0.85fr 0.85fr;
+            /* City | Hotel (wider) | Room | Rooms | Meal | Nights | Check-in | Check-out (tighter) */
+            grid-template-columns: 1.05fr minmax(0, 1.7fr) 1.05fr 0.55fr 0.55fr 0.5fr minmax(5.5rem, 0.58fr) minmax(5.5rem, 0.58fr);
         }
 
         #qWizardSection3 .q-hotel-col-labels-commercial {
@@ -6678,15 +6727,18 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-category {
-            display: none;
-            border: 0;
-            background: transparent;
-            padding: 0;
+            display: block;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            padding: 0.85rem 0.75rem 0.75rem;
             margin: 0;
+            border-radius: 14px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         }
 
         #qWizardSection3 .q-hotel-category.is-active {
-            display: block;
+            border-color: #fecaca;
+            box-shadow: 0 0 0 1px rgba(225, 29, 46, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
         }
 
         #qWizardSection3 .q-hotel-rows {
@@ -6759,7 +6811,8 @@ $qWizardSteps = [
         }
 
         #qWizardSection3 .q-hotel-accom {
-            grid-template-columns: 1.05fr 1.15fr 1.05fr 0.55fr 0.55fr 0.5fr 0.85fr 0.85fr;
+            /* City | Hotel (wider) | Room | Rooms | Meal | Nights | Check-in | Check-out (tighter) */
+            grid-template-columns: 1.05fr minmax(0, 1.7fr) 1.05fr 0.55fr 0.55fr 0.5fr minmax(5.5rem, 0.58fr) minmax(5.5rem, 0.58fr);
         }
 
         #qWizardSection3 .q-hotel-commercial {
@@ -7915,6 +7968,36 @@ $qWizardSteps = [
             border-color: #115e59;
             color: #fff;
             transform: translateY(-1px);
+        }
+
+        /* Fixed floating Preview Quotation — always reachable while scrolling */
+        .crm-quotation-gen .q-preview-fab {
+            position: fixed;
+            right: max(1.1rem, env(safe-area-inset-right, 0px));
+            bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+            z-index: 1040;
+            margin: 0;
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(13, 148, 136, 0.35), 0 2px 8px rgba(15, 23, 42, 0.12);
+        }
+
+        .crm-quotation-gen .q-preview-fab:hover,
+        .crm-quotation-gen .q-preview-fab:focus {
+            color: #fff;
+        }
+
+        body.modal-open .crm-quotation-gen .q-preview-fab,
+        body.q-preview-only .crm-quotation-gen .q-preview-fab {
+            display: none !important;
+        }
+
+        @media (max-width: 640px) {
+            .crm-quotation-gen .q-preview-fab {
+                right: max(0.75rem, env(safe-area-inset-right, 0px));
+                bottom: max(0.9rem, env(safe-area-inset-bottom, 0px));
+                font-size: 0.86rem;
+                padding: 0.48rem 0.95rem;
+            }
         }
 
         .crm-quotation-gen .btn-save {
@@ -12571,6 +12654,8 @@ $qWizardSteps = [
             background: #fff;
             border-top: 1px solid #e8e8ea;
             padding: 12px 16px;
+            display: flex;
+            align-items: center;
             justify-content: flex-end;
             gap: 8px;
         }
@@ -12621,35 +12706,148 @@ $qWizardSteps = [
             opacity: 0.75;
         }
 
-        #qPreviewModal .qp-btn-download {
-            background: #0f766e;
-            border-color: #0f766e;
-            color: #fff;
+        /* Download — Uiverse button (scoped to preview modal) */
+        #qPreviewModal .qp-dl-btn {
+            --qp-dl-main-focus: #2d8cf0;
+            --qp-dl-font-color: #dedede;
+            --qp-dl-bg-color-sub: #222;
+            --qp-dl-bg-color: #323232;
+            --qp-dl-main-color: #dedede;
+            position: relative;
+            width: 150px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border: 2px solid var(--qp-dl-main-color);
+            box-shadow: none;
+            background-color: var(--qp-dl-bg-color);
+            border-radius: 10px;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+            flex: 0 0 auto;
+            box-sizing: border-box;
+            outline: none;
+        }
+        #qPreviewModal .qp-dl-btn,
+        #qPreviewModal .qp-dl-btn .qp-dl-btn__icon,
+        #qPreviewModal .qp-dl-btn .qp-dl-btn__text {
+            transition: all 0.3s;
+        }
+        #qPreviewModal .qp-dl-btn .qp-dl-btn__text {
+            transform: translateX(21px);
+            color: var(--qp-dl-font-color);
             font-weight: 600;
-            padding: 6px 16px;
+            font-size: 14px;
+            line-height: 1;
+            white-space: nowrap;
         }
-
-        #qPreviewModal .qp-btn-download:hover {
-            background: #0d9488;
-            border-color: #0d9488;
-            color: #fff;
+        #qPreviewModal .qp-dl-btn .qp-dl-btn__icon {
+            position: absolute;
+            transform: translateX(109px);
+            height: 100%;
+            width: 39px;
+            background-color: var(--qp-dl-bg-color-sub);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
-        #qPreviewModal .qp-btn-download:disabled {
+        #qPreviewModal .qp-dl-btn .qp-dl-btn__svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--qp-dl-main-color);
+        }
+        #qPreviewModal .qp-dl-btn:hover,
+        #qPreviewModal .qp-dl-btn:focus {
+            background: var(--qp-dl-bg-color);
+            color: inherit;
+        }
+        #qPreviewModal .qp-dl-btn:hover .qp-dl-btn__text,
+        #qPreviewModal .qp-dl-btn:focus .qp-dl-btn__text {
+            color: transparent;
+        }
+        #qPreviewModal .qp-dl-btn:hover .qp-dl-btn__icon,
+        #qPreviewModal .qp-dl-btn:focus .qp-dl-btn__icon {
+            width: 148px;
+            transform: translateX(0);
+        }
+        #qPreviewModal .qp-dl-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: none;
+        }
+        #qPreviewModal .qp-dl-btn:disabled,
+        #qPreviewModal .qp-dl-btn.is-loading {
             opacity: 0.75;
+            cursor: wait;
+            pointer-events: none;
         }
 
-        #qPreviewModal .qp-btn-print {
-            background: transparent;
-            border: 1px solid #c5c5c8;
-            color: #555;
+        /* Print — Uiverse button (scoped to preview modal) */
+        #qPreviewModal .qp-print-btn {
+            width: 100px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border: 1px solid rgb(213, 213, 213);
+            border-radius: 10px;
+            gap: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            overflow: hidden;
             font-weight: 500;
-            padding: 6px 14px;
+            box-shadow: 0px 10px 10px rgba(0, 0, 0, 0.065);
+            transition: all 0.3s;
+            flex-shrink: 0;
+            color: #000;
+            padding: 0;
+            margin: 0;
+            line-height: 1;
         }
-
-        #qPreviewModal .qp-btn-print:hover {
-            background: #f3f3f4;
-            color: #333;
+        #qPreviewModal .qp-printer-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 100%;
+        }
+        #qPreviewModal .qp-printer-container {
+            height: 50%;
+            width: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        #qPreviewModal .qp-printer-container svg {
+            width: 100%;
+            height: auto;
+            transform: translateY(4px);
+        }
+        #qPreviewModal .qp-printer-page-wrapper {
+            width: 100%;
+            height: 50%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        #qPreviewModal .qp-printer-page {
+            width: 70%;
+            height: 10px;
+            border: 1px solid black;
+            background-color: white;
+            transform: translateY(0px);
+            transition: all 0.3s;
+            transform-origin: top;
+        }
+        #qPreviewModal .qp-print-btn:hover .qp-printer-page {
+            height: 16px;
+            background-color: rgb(239, 239, 239);
+        }
+        #qPreviewModal .qp-print-btn:hover {
+            background-color: rgb(239, 239, 239);
         }
 
         .q-preview-doc {
@@ -13618,6 +13816,50 @@ $qWizardSteps = [
 
         .qp-hotel-option-heading .qp-hotel-option-tabs {
             margin-bottom: 0;
+        }
+
+        /* Multi hotel-option grouping (preview / print / PDF) */
+        .qp-sec-hotels.has-multi-options .qp-hotel-option-block {
+            border-radius: 14px;
+            padding: 12px 12px 10px;
+            margin: 0 0 16px;
+            border: 1px solid transparent;
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .qp-sec-hotels.has-multi-options .qp-hotel-option-block:last-child {
+            margin-bottom: 8px;
+        }
+
+        .qp-sec-hotels.has-multi-options .qp-hotel-option-block .qp-hotel-option-heading {
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+
+        .qp-sec-hotels.has-multi-options .qp-hotel-option-block .qp-hotel-panel {
+            margin-bottom: 0;
+            box-shadow: 0 1px 4px rgba(17, 24, 39, 0.04);
+        }
+
+        .qp-sec-hotels.has-multi-options .qp-hotel-option-block .qp-cost-notes-row {
+            margin: 12px 0 2px;
+        }
+
+        .qp-sec-hotels.has-multi-options .qp-hotel-option-tone-0 {
+            background: #f4f7fb;
+            border-color: #dbe4f0;
+        }
+
+        .qp-sec-hotels.has-multi-options .qp-hotel-option-tone-1 {
+            background: #faf6f2;
+            border-color: #ebe0d4;
+        }
+
+        .qp-sec-hotels.has-multi-options .qp-hotel-option-tone-2 {
+            background: #f3f8f5;
+            border-color: #d5e6dc;
         }
 
         .qp-hotel-option-star-label {
@@ -17008,8 +17250,32 @@ $qWizardSteps = [
             .qp-rev-grid,
             .qp-rev-wrap,
             .qp-sec-reviews,
+            .qp-sec-hotels.has-multi-options .qp-hotel-option-block {
+                border-radius: 12px !important;
+                padding: 10px 10px 8px !important;
+                margin: 0 0 12px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .qp-sec-hotels.has-multi-options .qp-hotel-option-tone-0 {
+                background: #f4f7fb !important;
+                border: 1px solid #dbe4f0 !important;
+            }
+            .qp-sec-hotels.has-multi-options .qp-hotel-option-tone-1 {
+                background: #faf6f2 !important;
+                border: 1px solid #ebe0d4 !important;
+            }
+            .qp-sec-hotels.has-multi-options .qp-hotel-option-tone-2 {
+                background: #f3f8f5 !important;
+                border: 1px solid #d5e6dc !important;
+            }
+            .qp-sec-hotels.has-multi-options .qp-hotel-option-block .qp-cost-notes-row {
+                margin-top: 10px !important;
+            }
+
             .qp-hotel-row-card,
             .qp-hotel-panel,
+            .qp-hotel-option-block,
             .qp-flight-seg-card,
             .qp-flight-journey,
             .qp-info-card,
@@ -18870,80 +19136,12 @@ $qWizardSteps = [
                                 </div>
                             </div>
                             <div class="q-section-accordion-body" id="qSectionBody3" style="display:none;">
-                            <div class="q-hotel-cat-toolbar">
-                                <div class="q-hotel-cat-tabs" id="qHotelCatTabs" role="tablist"></div>
+                            <div class="q-hotel-cat-toolbar q-hotel-options-topbar">
                                 <button type="button" class="btn q-hotel-add-option-btn" id="qAddHotelCategory" title="Add pricing option">
                                     <i class="fas fa-plus mr-1"></i>Add Option
                                 </button>
-                                <button type="button" class="btn q-hotel-remove-option-btn" id="qRemoveHotelCategory" title="Remove this option" style="display:none;">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                                <div class="q-hotel-option-stars" id="qHotelOptionStars" role="radiogroup" aria-label="Hotel star category">
-                                    <button type="button" class="q-hotel-option-star" data-star="1" title="1-Star Hotels" aria-label="1-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
-                                    <button type="button" class="q-hotel-option-star" data-star="2" title="2-Star Hotels" aria-label="2-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
-                                    <button type="button" class="q-hotel-option-star" data-star="3" title="3-Star Hotels" aria-label="3-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
-                                    <button type="button" class="q-hotel-option-star" data-star="4" title="4-Star Hotels" aria-label="4-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
-                                    <button type="button" class="q-hotel-option-star" data-star="5" title="5-Star Hotels" aria-label="5-Star Hotels" aria-checked="false"><i class="fas fa-star" aria-hidden="true"></i></button>
-                                </div>
-                            <div class="q-hotel-ocr-wrap">
-                            <div class="q-hotel-ocr-bar" id="qHotelOcrBar">
-                                <span class="q-hotel-ocr-thumb" id="qHotelOcrThumb">
-                                    <img id="qHotelOcrPreviewImg" alt="Hotel quotation preview">
-                                    <span class="q-hotel-ocr-thumb-empty" aria-hidden="true"><i class="fas fa-image"></i></span>
-                                    <button type="button" class="q-hotel-ocr-clear" id="qHotelOcrClear" title="Remove image" aria-label="Remove hotel quotation image">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </span>
-                                <button type="button" class="q-hotel-ocr-drop" id="qHotelOcrDrop" title="Paste hotel quotation or upload">
-                                    <span class="q-hotel-ocr-placeholder" id="qHotelOcrPlaceholder">Paste hotel quotation or upload</span>
-                                </button>
-                                <button type="button" class="btn q-hotel-ocr-upload" id="qHotelOcrUploadBtn">
-                                    <i class="fas fa-upload mr-1"></i>Upload image
-                                </button>
-                                <input type="file" id="qHotelOcrFile" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
                             </div>
-                                <span class="q-hotel-ocr-spin" id="qHotelOcrSpin" role="status" aria-live="polite" aria-hidden="true" aria-label="Reading hotel quotation">
-                                    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-                                </span>
-                            </div>
-                                <button type="button" class="btn q-hotel-add-btn" id="qAddHotelBtn">
-                                    <i class="fas fa-plus mr-1"></i>Add Hotel
-                                </button>
-                                <p class="q-hotel-ocr-status" id="qHotelOcrStatus" role="status"></p>
-                            </div>
-                            <div class="q-hotel-table-head" id="qHotelColHead">
-                                <div class="q-hotel-head-accom">
-                                    <div class="q-hotel-group-title">
-                                        <i class="fas fa-bed" aria-hidden="true"></i>
-                                        <span>Accommodation Details</span>
-                                    </div>
-                                    <div class="q-hotel-col-labels q-hotel-col-labels-accom">
-                                        <span><i class="fas fa-map-marker-alt" aria-hidden="true"></i>City</span>
-                                        <span><i class="fas fa-hotel" aria-hidden="true"></i>Hotel</span>
-                                        <span><i class="fas fa-bed" aria-hidden="true"></i>Room Type</span>
-                                        <span><i class="fas fa-user-friends" aria-hidden="true"></i>Rooms</span>
-                                        <span><i class="fas fa-utensils" aria-hidden="true"></i>Meal</span>
-                                        <span><i class="fas fa-moon" aria-hidden="true"></i>Nights</span>
-                                        <span><i class="far fa-calendar-alt" aria-hidden="true"></i>Check-in</span>
-                                        <span><i class="far fa-calendar-alt" aria-hidden="true"></i>Check-out</span>
-                                    </div>
-                                </div>
-                                <div class="q-hotel-head-commercial q-commercial-block">
-                                    <div class="q-hotel-group-title">
-                                        <span class="q-commercial-head-label">
-                                            <i class="fas fa-coins" aria-hidden="true"></i>
-                                            <span>Commercial Details</span>
-                                        </span>
-                                        <span class="q-commercial-head-total" id="qHotelCommercialTotal" aria-label="Hotel commercial total">₹ 0</span>
-                                    </div>
-                                    <div class="q-hotel-col-labels q-hotel-col-labels-commercial">
-                                        <span><i class="fas fa-rupee-sign" aria-hidden="true"></i>Rate (₹)</span>
-                                        <span><i class="fas fa-building" aria-hidden="true"></i>Supplier</span>
-                                        <span class="q-hotel-col-head-action">Actions</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="qHotelCategories"></div>
+                            <div id="qHotelCategories" class="q-hotel-categories-stack"></div>
                             <div class="q-section-next-bar" data-accordion-ignore>
                                 <button type="button" class="btn btn-sm q-section-next-btn" data-q-next-from="3" data-accordion-ignore>
                                     Next <i class="fas fa-arrow-right ml-1"></i>
@@ -19361,9 +19559,6 @@ $qWizardSteps = [
                                 </div>
                             </div>
 
-                            <div class="q-actions-bar">
-                                <button type="button" class="btn btn-preview" id="qPreviewBtn"><i class="fas fa-eye mr-1"></i>Preview Quotation</button>
-                            </div>
                             </div>
                         </div>
                         </div>
@@ -19385,6 +19580,12 @@ $qWizardSteps = [
                         </div>
 
                     </form>
+
+                    <?php if (empty($qPreviewOnly)) { ?>
+                    <button type="button" class="btn btn-preview q-preview-fab" id="qPreviewBtn" title="Preview Quotation">
+                        <i class="fas fa-eye mr-1"></i>Preview Quotation
+                    </button>
+                    <?php } ?>
 
                         </div>
                     </div>
@@ -19991,8 +20192,8 @@ $qWizardSteps = [
                     <div id="qPreviewPrintArea" class="q-preview-doc"></div>
                 </div>
                 <div class="modal-footer qp-modal-footer">
-                    <button type="button" class="btn qp-btn-close btn-sm" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn qp-btn-edit btn-sm" id="qPreviewEditBtn" title="Open full quotation editor">
+                    <?php /* Edit Quotation is for Leads preview; hide here — user is already on the editor. */ ?>
+                    <button type="button" class="btn qp-btn-edit btn-sm d-none" id="qPreviewEditBtn" title="Open full quotation editor" aria-hidden="true" tabindex="-1">
                         <i class="fas fa-edit mr-1"></i> Edit Quotation
                     </button>
                     <button type="button" class="btn btn-success btn-sm d-none" id="qPreviewSaveBtn" disabled>
@@ -20001,11 +20202,43 @@ $qWizardSteps = [
                     <button type="button" class="btn qp-btn-save btn-sm" id="qSaveBtn">
                         <i class="fas fa-save mr-1"></i>Save Quotation
                     </button>
-                    <button type="button" class="btn qp-btn-download btn-sm" id="qPreviewDownloadBtn">
-                        <i class="fas fa-download mr-1"></i> Download
+                    <button type="button" class="qp-dl-btn" id="qPreviewDownloadBtn" title="Download PDF">
+                        <span class="qp-dl-btn__text">Download</span>
+                        <span class="qp-dl-btn__icon" aria-hidden="true">
+                            <svg class="qp-dl-btn__svg" data-name="Layer 2" viewBox="0 0 35 35" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17.5,22.131a1.249,1.249,0,0,1-1.25-1.25V2.187a1.25,1.25,0,0,1,2.5,0V20.881A1.25,1.25,0,0,1,17.5,22.131Z"></path>
+                                <path d="M17.5,22.693a3.189,3.189,0,0,1-2.262-.936L8.487,15.006a1.249,1.249,0,0,1,1.767-1.767l6.751,6.751a.7.7,0,0,0,.99,0l6.751-6.751a1.25,1.25,0,0,1,1.768,1.767l-6.752,6.751A3.191,3.191,0,0,1,17.5,22.693Z"></path>
+                                <path d="M31.436,34.063H3.564A3.318,3.318,0,0,1,.25,30.749V22.011a1.25,1.25,0,0,1,2.5,0v8.738a.815.815,0,0,0,.814.814H31.436a.815.815,0,0,0,.814-.814V22.011a1.25,1.25,0,1,1,2.5,0v8.738A3.318,3.318,0,0,1,31.436,34.063Z"></path>
+                            </svg>
+                        </span>
                     </button>
-                    <button type="button" class="btn qp-btn-print btn-sm" id="qPreviewPrintBtn">
-                        <i class="fas fa-print mr-1"></i> Print
+                    <button type="button" class="qp-print-btn" id="qPreviewPrintBtn" title="Print">
+                        <span class="qp-printer-wrapper">
+                            <span class="qp-printer-container">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 92 75" aria-hidden="true" focusable="false">
+                                    <path
+                                        stroke-width="5"
+                                        stroke="black"
+                                        d="M12 37.5H80C85.2467 37.5 89.5 41.7533 89.5 47V69C89.5 70.933 87.933 72.5 86 72.5H6C4.067 72.5 2.5 70.933 2.5 69V47C2.5 41.7533 6.75329 37.5 12 37.5Z"
+                                    ></path>
+                                    <mask fill="white" id="qp-print-mask-gen">
+                                        <path
+                                            d="M12 12C12 5.37258 17.3726 0 24 0H57C70.2548 0 81 10.7452 81 24V29H12V12Z"
+                                        ></path>
+                                    </mask>
+                                    <path
+                                        mask="url(#qp-print-mask-gen)"
+                                        fill="black"
+                                        d="M7 12C7 2.61116 14.6112 -5 24 -5H57C73.0163 -5 86 7.98374 86 24H76C76 13.5066 67.4934 5 57 5H24C20.134 5 17 8.13401 17 12H7ZM81 29H12H81ZM7 29V12C7 2.61116 14.6112 -5 24 -5V5C20.134 5 17 8.13401 17 12V29H7ZM57 -5C73.0163 -5 86 7.98374 86 24V29H76V24C76 13.5066 67.4934 5 57 5V-5Z"
+                                    ></path>
+                                    <circle fill="black" r="3" cy="49" cx="78"></circle>
+                                </svg>
+                            </span>
+                            <span class="qp-printer-page-wrapper">
+                                <span class="qp-printer-page"></span>
+                            </span>
+                        </span>
+                        Print
                     </button>
                 </div>
             </div>
@@ -20093,7 +20326,7 @@ $qWizardSteps = [
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="crm/assets/vendor/html2pdf.bundle.min.js?v=1"></script>
     <script src="crm/assets/airport_timezones.js?v=3"></script>
-    <script src="crm/assets/quotation_generator.js?v=414"></script>
+    <script src="crm/assets/quotation_generator.js?v=417"></script>
     <script src="crm/assets/quotation_flight_search.js?v=39"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=8"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

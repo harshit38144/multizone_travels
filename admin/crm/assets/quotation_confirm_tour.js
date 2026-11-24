@@ -126,9 +126,10 @@
             var sub = company && company.toLowerCase() !== name.toLowerCase()
                 ? '<span class="ct-supplier-item-sub">' + esc(company) + '</span>'
                 : '';
+            var sid = parseInt(item.id, 10) || 0;
             return '' +
                 '<button type="button" class="ct-supplier-item' + (idx === 0 ? ' is-active' : '') + '"' +
-                ' data-name="' + esc(name) + '" role="option">' +
+                ' data-name="' + esc(name) + '" data-id="' + sid + '" role="option">' +
                 esc(name) + sub +
                 '</button>';
         }).join('');
@@ -179,9 +180,13 @@
         }, 160);
     }
 
-    function selectSupplierSuggestion(name) {
+    function selectSupplierSuggestion(name, supplierId) {
         if ($activeSupplierInput && $activeSupplierInput.length) {
-            $activeSupplierInput.val(name).trigger('change');
+            $activeSupplierInput.val(name);
+            var sid = parseInt(supplierId, 10) || 0;
+            $activeSupplierInput.attr('data-supplier-id', sid > 0 ? String(sid) : '');
+            $activeSupplierInput.closest('.ct-detail-row').attr('data-supplier-id', sid > 0 ? String(sid) : '');
+            $activeSupplierInput.trigger('change');
         }
         hideSupplierSuggest();
     }
@@ -434,13 +439,13 @@
         var paidNum = parseNum(paid);
 
         return '' +
-            '<div class="ct-detail-row' + (paidNum > 0 ? ' has-paid' : '') + '" data-key="' + esc(key) + '" data-uid="' + esc(uid) + '" data-source="' + esc(sourceId) + '" data-label="' + esc(label) + '" data-vouchers="' + voucherCount + '" data-payments="' + paymentCount + '">' +
+            '<div class="ct-detail-row' + (paidNum > 0 ? ' has-paid' : '') + '" data-key="' + esc(key) + '" data-uid="' + esc(uid) + '" data-source="' + esc(sourceId) + '" data-label="' + esc(label) + '" data-supplier-id="' + esc(row.supplier_id || '') + '" data-vouchers="' + voucherCount + '" data-payments="' + paymentCount + '">' +
             (v2 ? '' : '<div class="ct-row-no" aria-hidden="true"></div>') +
             '<div class="ct-detail-label"><span class="ct-svc-icon is-' + esc(key) + '"><i class="fas ' + (SERVICE_ICONS[key] || 'fa-concierge-bell') + '"></i></span>' +
             '<span title="' + esc(label) + '">' + esc(label) + '</span></div>' +
             '<div class="ct-detail-field ct-supplier-wrap">' +
             '<input type="text" class="form-control ct-supplier" placeholder="Type supplier name" ' +
-            'autocomplete="off" spellcheck="false" value="' + esc(row.supplier || '') + '">' +
+            'autocomplete="off" spellcheck="false" data-supplier-id="' + esc(row.supplier_id || '') + '" value="' + esc(row.supplier || '') + '">' +
             '</div>' +
             '<div class="ct-detail-attach">' + voucherBtnHtml(voucherCount) + '</div>' +
             '<div class="ct-detail-field ct-num"><input type="text" inputmode="numeric" class="form-control ct-total" placeholder="0" aria-label="Total" value="' + esc(amountInputValue(total)) + '"></div>' +
@@ -497,15 +502,21 @@
             if (!label) {
                 label = serviceMap[key] || key;
             }
-            list.push({
+            var $sup = $row.find('.ct-supplier');
+            var supplierId = parseInt($row.attr('data-supplier-id') || $sup.attr('data-supplier-id') || '0', 10) || 0;
+            var item = {
                 uid: String($row.attr('data-uid') || ''),
                 source_id: String($row.attr('data-source') || ''),
                 key: key,
                 label: label,
-                supplier: $row.find('.ct-supplier').val(),
+                supplier: $sup.val(),
                 total: parseNum($row.find('.ct-total').val()),
                 paid: parseNum($row.find('.ct-paid').val())
-            });
+            };
+            if (supplierId > 0) {
+                item.supplier_id = supplierId;
+            }
+            list.push(item);
         });
         return list;
     }
@@ -879,20 +890,21 @@
             $pay.find('.js-pay-due').text(custLoaded ? '\u20B9 ' + money(custDue) : '—');
         }
 
-        // Supplier Payment = Quotation TOTAL COST; paid/due from supplier service rows
-        var supplierTotal = activeSupplierTotal !== null ? activeSupplierTotal : total;
-        var supplierDue = Math.max(0, Math.round((supplierTotal - paid) * 100) / 100);
+        // Supplier Payment footer: live sum of service Total Cost / Paid (not quotation total_cost).
+        var supplierTotal = Math.round(total * 100) / 100;
+        var supplierPaid = Math.round(paid * 100) / 100;
+        var supplierDue = Math.max(0, Math.round((supplierTotal - supplierPaid) * 100) / 100);
         var $sum = $('#ctSvcSummary');
         if ($sum.length) {
             $sum.find('.js-sum-total').text('\u20B9 ' + money2(supplierTotal));
-            $sum.find('.js-sum-paid').text('\u20B9 ' + money2(paid));
+            $sum.find('.js-sum-paid').text('\u20B9 ' + money2(supplierPaid));
             $sum.find('.js-sum-due').text('\u20B9 ' + money2(supplierDue));
             $sum.find('.js-sum-payments').text(String(payments));
         }
         var $foot = $('#ctSvcSummary.ct-foot-pay');
         if ($foot.length) {
-            $foot.find('.js-foot-total').text(activeSupplierTotal === null && !total ? '—' : '\u20B9 ' + money(supplierTotal));
-            $foot.find('.js-foot-paid').text('\u20B9 ' + money(paid));
+            $foot.find('.js-foot-total').text('\u20B9 ' + money(supplierTotal));
+            $foot.find('.js-foot-paid').text('\u20B9 ' + money(supplierPaid));
             $foot.find('.js-foot-due').text('\u20B9 ' + money(supplierDue));
         }
     }
@@ -1869,6 +1881,12 @@
             });
     }
 
+    function notifyTourPortfolios(quotationId) {
+        try {
+            $(document).trigger('crm:tour-updated', [parseInt(quotationId, 10) || 0]);
+        } catch (err) { /* ignore */ }
+    }
+
     function updateListRow(res) {
         if (!activeRow || !activeRow.length) {
             return;
@@ -1878,6 +1896,12 @@
         }
         if (res.booking_status_html) {
             activeRow.find('.js-booking-status').html(res.booking_status_html);
+            // Keep All Bookings row data/icons in sync after Confirm Tour save.
+            if (window.CrmBookings && typeof window.CrmBookings.refresh === 'function') {
+                window.CrmBookings.refresh({
+                    highlightId: parseInt(res.id || activeQuotationId, 10) || 0
+                });
+            }
         }
         var $bookBtn = activeRow.find('.js-q-book');
         if (parseInt(res.tour_confirmed, 10) === 1) {
@@ -2277,15 +2301,24 @@
             if (clean !== v) {
                 $(this).val(clean);
                 recalcRowBalance($(this).closest('.ct-detail-row'));
+                updatePrimaryStats();
             }
         });
 
         $(document).on('blur', '#ctDetailRows .ct-total, #ctDetailRows .ct-paid', function () {
             $(this).val(amountInputValue($.trim(String($(this).val() || ''))));
+            recalcRowBalance($(this).closest('.ct-detail-row'));
+            updatePrimaryStats();
         });
 
         $(document).on('focus input', '#confirmTourModal .ct-supplier', function () {
             scheduleSupplierSuggest($(this));
+        });
+
+        // Manual typing clears linked supplier_id until a suggestion is chosen again.
+        $(document).on('input', '#confirmTourModal .ct-supplier', function () {
+            $(this).attr('data-supplier-id', '');
+            $(this).closest('.ct-detail-row').attr('data-supplier-id', '');
         });
 
         $(document).on('keydown', '#confirmTourModal .ct-supplier', function (e) {
@@ -2314,7 +2347,10 @@
             } else if (e.key === 'Enter') {
                 if ($active.length) {
                     e.preventDefault();
-                    selectSupplierSuggestion(String($active.attr('data-name') || ''));
+                    selectSupplierSuggestion(
+                        String($active.attr('data-name') || ''),
+                        $active.attr('data-id')
+                    );
                 }
             } else if (e.key === 'Escape') {
                 e.preventDefault();
@@ -2324,7 +2360,10 @@
 
         $(document).on('mousedown', '#ctSupplierSuggestMenu .ct-supplier-item', function (e) {
             e.preventDefault();
-            selectSupplierSuggestion(String($(this).attr('data-name') || ''));
+            selectSupplierSuggestion(
+                String($(this).attr('data-name') || ''),
+                $(this).attr('data-id')
+            );
         });
 
         $(document).on('blur', '#confirmTourModal .ct-supplier', function () {
@@ -4394,15 +4433,27 @@
 
             spUseUiDate = !!($.datepicker && $.fn.datepicker);
             if (spUseUiDate) {
-                $('#ctSpDateText').datepicker({
+                var $spDate = $('#ctSpDateText');
+                if ($spDate.hasClass('hasDatepicker')) {
+                    try { $spDate.datepicker('destroy'); } catch (errSpDestroy) { /* ignore */ }
+                }
+                $spDate.datepicker({
                     dateFormat: 'dd/mm/yy',
                     altField: '#ctSpDate',
                     altFormat: 'yy-mm-dd',
                     maxDate: 0,
-                    beforeShow: function () {
-                        window.setTimeout(function () { $('#ui-datepicker-div').css('z-index', 2200); }, 0);
+                    beforeShow: function (input, inst) {
+                        window.setTimeout(function () {
+                            $(inst.dpDiv).css('z-index', 2200).addClass('ct-ui-datepicker');
+                        }, 0);
+                    },
+                    onClose: function () {
+                        $(this).blur();
                     }
                 });
+                // First .datepicker() appends #ui-datepicker-div to body; keep it closed.
+                try { $spDate.datepicker('hide'); } catch (errSpHide) { /* ignore */ }
+                $('#ui-datepicker-div').hide();
             } else {
                 $('#ctSpDateText').attr({ type: 'date', placeholder: '' });
             }
@@ -4425,10 +4476,35 @@
             }
         }
 
+        function hideUiDatepicker() {
+            try {
+                if (spUseUiDate && $('#ctSpDateText').hasClass('hasDatepicker')) {
+                    $('#ctSpDateText').datepicker('hide');
+                }
+            } catch (errSp) { /* ignore */ }
+            try {
+                if (cpUseUiDate && $('#ctCpDateText').hasClass('hasDatepicker')) {
+                    $('#ctCpDateText').datepicker('hide');
+                }
+            } catch (errCp) { /* ignore */ }
+            $('#ui-datepicker-div').hide();
+        }
+
+        // Close popup if Confirm Tour / payment modals close (avoids leftover calendar on page).
+        $(document)
+            .off('hide.bs.modal.ctDatepicker hidden.bs.modal.ctDatepicker')
+            .on('hide.bs.modal.ctDatepicker hidden.bs.modal.ctDatepicker',
+                '#confirmTourModal, #ctSvcPayModal, #ctCustPayModal',
+                function () {
+                    hideUiDatepicker();
+                });
+
         function spSetDate(ymd) {
             if (spUseUiDate) {
                 var m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
                 $('#ctSpDateText').datepicker('setDate', m ? new Date(+m[1], +m[2] - 1, +m[3]) : null);
+                // setDate updates #ui-datepicker-div HTML; keep popup closed until focus.
+                hideUiDatepicker();
             } else {
                 $('#ctSpDateText').val(ymd).attr('max', spTodayYmd());
             }
@@ -4676,6 +4752,10 @@
                         renderPaymentModal();
                     }
                     showToast(res.message || 'Payment recorded.', 'success');
+                    if (window.CrmBookings && typeof window.CrmBookings.refresh === 'function') {
+                        window.CrmBookings.refresh({ highlightId: quotationId });
+                    }
+                    notifyTourPortfolios(quotationId);
                 })
                 .fail(function (xhr) {
                     $err.text((xhr && xhr.responseJSON && xhr.responseJSON.message) || 'Could not save payment. Please try again.');
@@ -4712,6 +4792,10 @@
                         renderPaymentModal();
                     }
                     showToast('Payment deleted.', 'success');
+                    if (window.CrmBookings && typeof window.CrmBookings.refresh === 'function') {
+                        window.CrmBookings.refresh({ highlightId: quotationId });
+                    }
+                    notifyTourPortfolios(quotationId);
                 })
                 .fail(function () {
                     showToast('Could not delete payment. Please try again.', 'error');
@@ -4727,9 +4811,7 @@
             $modal.on('hidden.bs.modal', function () {
                 spSeq++;
                 spState.uid = '';
-                if (spUseUiDate) {
-                    $('#ctSpDateText').datepicker('hide');
-                }
+                hideUiDatepicker();
                 if ($('#confirmTourModal').hasClass('show')) {
                     $('body').addClass('modal-open');
                 }
@@ -4830,13 +4912,24 @@
 
             cpUseUiDate = !!($.datepicker && $.fn.datepicker);
             if (cpUseUiDate) {
-                $('#ctCpDateText').datepicker({
+                var $cpDate = $('#ctCpDateText');
+                if ($cpDate.hasClass('hasDatepicker')) {
+                    try { $cpDate.datepicker('destroy'); } catch (errCpDestroy) { /* ignore */ }
+                }
+                $cpDate.datepicker({
                     dateFormat: 'dd/mm/yy',
                     maxDate: 0,
-                    beforeShow: function () {
-                        window.setTimeout(function () { $('#ui-datepicker-div').css('z-index', 2200); }, 0);
+                    beforeShow: function (input, inst) {
+                        window.setTimeout(function () {
+                            $(inst.dpDiv).css('z-index', 2200).addClass('ct-ui-datepicker');
+                        }, 0);
+                    },
+                    onClose: function () {
+                        $(this).blur();
                     }
                 });
+                try { $cpDate.datepicker('hide'); } catch (errCpHide) { /* ignore */ }
+                $('#ui-datepicker-div').hide();
             } else {
                 $('#ctCpDateText').attr({ type: 'date', placeholder: '' });
             }
@@ -4860,6 +4953,7 @@
             if (cpUseUiDate) {
                 var m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
                 $('#ctCpDateText').datepicker('setDate', m ? new Date(+m[1], +m[2] - 1, +m[3]) : null);
+                hideUiDatepicker();
             } else {
                 $('#ctCpDateText').val(ymd).attr('max', spTodayYmd());
             }
@@ -5053,6 +5147,7 @@
                     cpShowForm(false);
                     renderCustomerPayModal();
                     showToast(res.message || 'Payment received.', 'success');
+                    notifyTourPortfolios(quotationId);
                 })
                 .fail(function (xhr) {
                     $err.text((xhr && xhr.responseJSON && xhr.responseJSON.message) || 'Could not save payment. Please try again.');
@@ -5087,6 +5182,7 @@
                     cpApplyTotals(res);
                     renderCustomerPayModal();
                     showToast('Payment deleted.', 'success');
+                    notifyTourPortfolios(quotationId);
                 })
                 .fail(function () {
                     showToast('Could not delete payment. Please try again.', 'error');
@@ -5101,9 +5197,7 @@
             });
             $modal.on('hidden.bs.modal', function () {
                 cpSeq++;
-                if (cpUseUiDate) {
-                    $('#ctCpDateText').datepicker('hide');
-                }
+                hideUiDatepicker();
                 if ($('#confirmTourModal').hasClass('show')) {
                     $('body').addClass('modal-open');
                 }
@@ -5333,6 +5427,7 @@
                             tourWasConfirmed = true;
                         }
                         updateListRow(res);
+                        notifyTourPortfolios(quotationId);
                         if (justConfirmed) {
                             forceHideConfirmTourModal();
                             openBookingsAfterConfirm(quotationId);

@@ -1,12 +1,64 @@
 /**
  * Admin sidebar: leaf links navigate without collapsing parents; branch toggles open/close normally.
  * When the multi-tab shell is active, leaf navigation is handled by tabs.js instead.
+ *
+ * Also fixes mini-sidebar hover expand: AdminLTE adds .sidebar-focused on link focusin, which
+ * keeps the collapsed sidebar expanded after a click until the user clicks elsewhere. Clear
+ * that lock when the pointer leaves so hover-expand collapses again without an extra click.
  */
 ;(function ($) {
   'use strict'
 
   var SIDEBAR_SELECTOR = '.nav-sidebar[data-widget="treeview"]'
   var LINK_SELECTOR = '[data-widget="treeview"] .nav-link'
+  var MAIN_SIDEBAR = '.main-sidebar'
+
+  function isMiniSidebarCollapsed () {
+    var $body = $('body')
+    return $body.hasClass('sidebar-collapse') &&
+      ($body.hasClass('sidebar-mini') || $body.hasClass('sidebar-mini-md'))
+  }
+
+  /** Drop focus-lock so :hover alone controls temporary expand while collapsed. */
+  function clearSidebarFocusLock ($sidebar) {
+    var $target = $sidebar && $sidebar.length ? $sidebar : $(MAIN_SIDEBAR)
+    var $focused = $target.find('a:focus, button:focus, [tabindex]:focus')
+    if ($focused.length) {
+      $focused.blur()
+    }
+    $target.removeClass('sidebar-focused')
+  }
+
+  function bindMiniSidebarHoverCollapse () {
+    $(document)
+      .off('mouseleave.mzSidebarHover', MAIN_SIDEBAR)
+      .on('mouseleave.mzSidebarHover', MAIN_SIDEBAR, function () {
+        if (!isMiniSidebarCollapsed()) {
+          return
+        }
+        clearSidebarFocusLock($(this))
+      })
+
+    // After leaf/submenu navigation in collapsed mini mode, release focus if the
+    // pointer already left (SPA/tab clicks often keep the link focused).
+    $(document)
+      .off('click.mzSidebarHover', MAIN_SIDEBAR + ' .nav-link')
+      .on('click.mzSidebarHover', MAIN_SIDEBAR + ' .nav-link', function () {
+        if (!isMiniSidebarCollapsed()) {
+          return
+        }
+        var $sidebar = $(this).closest(MAIN_SIDEBAR)
+        window.setTimeout(function () {
+          if (!$sidebar.length || !isMiniSidebarCollapsed()) {
+            return
+          }
+          if ($sidebar.is(':hover')) {
+            return
+          }
+          clearSidebarFocusLock($sidebar)
+        }, 0)
+      })
+  }
 
   function patchTreeviewAccordion () {
     $(SIDEBAR_SELECTOR).each(function () {
@@ -95,11 +147,13 @@
     patchTreeviewAccordion()
     rebindSidebarTreeview()
     openActiveMenuAncestors()
+    bindMiniSidebarHoverCollapse()
   })
 
   // Expose for tab shell sidebar sync
   window.MZSidebarTree = {
     fixOpenTreeviewLayout: fixOpenTreeviewLayout,
-    openActiveMenuAncestors: openActiveMenuAncestors
+    openActiveMenuAncestors: openActiveMenuAncestors,
+    clearSidebarFocusLock: clearSidebarFocusLock
   }
 })(jQuery)

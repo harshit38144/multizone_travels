@@ -114,6 +114,8 @@ $mzAdminWebRoot = defined('ADMIN_WEB_ROOT') ? ADMIN_WEB_ROOT : '/admin';
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Font Awesome -->
 <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
+<!-- jQuery UI (required with plugins/jquery-ui/jquery-ui.min.js — hides #ui-datepicker-div until opened) -->
+<link rel="stylesheet" href="plugins/jquery-ui/jquery-ui.min.css">
 <!-- Ionicons -->
 <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
 <!-- Tempusdominus Bbootstrap 4 -->

@@ -88,6 +88,19 @@ if ($action === 'list' || $action === 'thread') {
     ]);
 }
 
+if ($action === 'poll') {
+    $afterId = (int) ($_REQUEST['after_id'] ?? 0);
+    $rows = crmWhatsappListLeadMessagesAfter($conn, $leadId, $afterId, 100);
+    $messages = array_map('waChatFormatMessage', $rows);
+    waChatJson([
+        'success' => true,
+        'message' => 'OK',
+        'lead' => $leadPayload,
+        'messages' => $messages,
+        'after_id' => $afterId,
+    ]);
+}
+
 if ($action === 'send') {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
         waChatJson(['success' => false, 'message' => 'Invalid request method.']);
