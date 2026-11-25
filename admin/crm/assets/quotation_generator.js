@@ -18938,6 +18938,25 @@
             var cleanedUp = false;
             var persistStarted = false;
             var onAfterPrint = null;
+
+            // Start server PDF save as soon as print is ready (parallel with the dialog).
+            // Download can then serve this file immediately without regenerating.
+            // No client html2pdf here — that freezes the CRM; Download will generate if needed.
+            var startPrintPdfPersist = function () {
+                if (persistStarted) return;
+                persistStarted = true;
+                try {
+                    qPersistQuotationPdf({
+                        html: built.html,
+                        filename: built.filename,
+                        silent: true,
+                        allowClientFallback: false
+                    });
+                } catch (persistErr) {
+                    console.warn('Quotation PDF persist failed to start:', persistErr);
+                }
+            };
+
             var cleanupPrintFrame = function () {
                 if (cleanedUp) return;
                 cleanedUp = true;
@@ -18953,22 +18972,8 @@
                         printFrame.parentNode.removeChild(printFrame);
                     }
                 } catch (cleanupErr) { /* ignore */ }
-                // Lightweight server-only persist AFTER print closes — never client html2pdf.
-                if (!persistStarted) {
-                    persistStarted = true;
-                    window.setTimeout(function () {
-                        try {
-                            qPersistQuotationPdf({
-                                html: built.html,
-                                filename: built.filename,
-                                silent: true,
-                                allowClientFallback: false
-                            });
-                        } catch (persistErr) {
-                            console.warn('Quotation PDF persist failed to start:', persistErr);
-                        }
-                    }, 250);
-                }
+                // Ensure persist ran even if print was cancelled early.
+                startPrintPdfPersist();
             };
             onAfterPrint = cleanupPrintFrame;
             try {
@@ -18981,6 +18986,8 @@
             window.setTimeout(cleanupPrintFrame, 45000);
 
             var triggerPrint = function () {
+                // Kick off save before the system print dialog blocks the UI thread.
+                startPrintPdfPersist();
                 try {
                     printWin.focus();
                     printWin.print();
@@ -19540,13 +19547,17 @@
                 alert((err && err.message) ? err.message : 'Could not download PDF. Please try again.');
             };
 
-            var previewLooksModified = function (html) {
+            var previewHasUnsavedEdits = function () {
                 try {
                     if (typeof previewDirty !== 'undefined' && previewDirty) return true;
                 } catch (e1) { /* ignore */ }
                 try {
                     if (qDbAutoSave && qDbAutoSave.dirty) return true;
                 } catch (e2) { /* ignore */ }
+                return false;
+            };
+
+            var previewHtmlDriftedFromSavedPdf = function (html) {
                 try {
                     var prev = sessionStorage.getItem('qpdf_html_' + ids.id + '_v' + (ids.version || 0));
                     if (prev && prev !== qPdfHtmlFingerprint(html)) return true;
@@ -19554,42 +19565,96 @@
                 return false;
             };
 
-            var ensureAndDownload = function () {
+            var startDownload = function () {
+                qTriggerServerPdfDownload(ids);
+                restoreBtn();
+                return true;
+            };
+
+            /**
+             * Fast path: if Print (or a prior generate) already saved a fresh PDF and the
+             * preview has no unsaved edits, download that file immediately — no HTML rebuild.
+             */
+            var tryImmediateServerDownload = function () {
+                return qFetchQuotationPdfStatus(ids).then(function (status) {
+                    if (!(status && status.success && status.exists && status.fresh)) {
+                        return { reused: false, status: status || null };
+                    }
+                    if (status.version) {
+                        ids.version = parseInt(status.version, 10) || ids.version;
+                    }
+                    if (previewHasUnsavedEdits()) {
+                        return { reused: false, status: status };
+                    }
+                    startDownload();
+                    return { reused: true, status: status };
+                });
+            };
+
+            var regenerateThenDownload = function () {
                 var built = window.qBuildPreviewPrintHtml();
                 if (!built || !built.html) {
                     throw new Error('Could not prepare quotation for PDF.');
                 }
-
-                return qFetchQuotationPdfStatus(ids).then(function (status) {
-                    var canReuse = status && status.success && status.exists && status.fresh
-                        && !previewLooksModified(built.html);
-                    if (canReuse) {
-                        qTriggerServerPdfDownload(ids);
-                        restoreBtn();
-                        return true;
-                    }
-                    return qPersistQuotationPdf({
-                        ids: ids,
-                        html: built.html,
-                        filename: built.filename,
-                        silent: false,
-                        allowClientFallback: true
-                    }).then(function (res) {
-                        if (!res || !res.success) {
-                            throw new Error((res && res.message) || 'Could not generate PDF on the server.');
+                // If server says fresh but local preview HTML drifted (rare), still regenerate.
+                if (!previewHasUnsavedEdits() && !previewHtmlDriftedFromSavedPdf(built.html)) {
+                    return qFetchQuotationPdfStatus(ids).then(function (status) {
+                        if (status && status.success && status.exists && status.fresh) {
+                            if (status.version) {
+                                ids.version = parseInt(status.version, 10) || ids.version;
+                            }
+                            return startDownload();
                         }
-                        if (res.version) {
-                            ids.version = parseInt(res.version, 10) || ids.version;
-                        }
-                        qPdfRememberHtml(ids, built.html);
-                        qTriggerServerPdfDownload(ids);
-                        restoreBtn();
-                        return true;
+                        return qPersistQuotationPdf({
+                            ids: ids,
+                            html: built.html,
+                            filename: built.filename,
+                            silent: false,
+                            allowClientFallback: true
+                        }).then(function (res) {
+                            if (!res || !res.success) {
+                                throw new Error((res && res.message) || 'Could not generate PDF on the server.');
+                            }
+                            if (res.version) {
+                                ids.version = parseInt(res.version, 10) || ids.version;
+                            }
+                            qPdfRememberHtml(ids, built.html);
+                            return startDownload();
+                        });
                     });
+                }
+                return qPersistQuotationPdf({
+                    ids: ids,
+                    html: built.html,
+                    filename: built.filename,
+                    silent: false,
+                    allowClientFallback: true
+                }).then(function (res) {
+                    if (!res || !res.success) {
+                        throw new Error((res && res.message) || 'Could not generate PDF on the server.');
+                    }
+                    if (res.version) {
+                        ids.version = parseInt(res.version, 10) || ids.version;
+                    }
+                    qPdfRememberHtml(ids, built.html);
+                    return startDownload();
                 });
             };
 
-            Promise.resolve(ensureAndDownload()).catch(fail);
+            // Wait briefly if Print just kicked off a server persist, then prefer that file.
+            var pendingPersist = qPersistPdfInFlight || Promise.resolve(null);
+            Promise.resolve(pendingPersist)
+                .catch(function () { return null; })
+                .then(function () {
+                    return tryImmediateServerDownload();
+                })
+                .then(function (result) {
+                    if (result && result.reused) {
+                        return true;
+                    }
+                    return regenerateThenDownload();
+                })
+                .catch(fail);
 
             window.setTimeout(function () {
                 if (!restored) restoreBtn();
