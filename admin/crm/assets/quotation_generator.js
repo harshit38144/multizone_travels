@@ -18755,9 +18755,10 @@
                 var host = document.createElement('div');
                 host.id = 'qPreviewPdfFallbackHost';
                 host.setAttribute('aria-hidden', 'true');
-                host.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;height:0;overflow:hidden;opacity:0;pointer-events:none;z-index:-1;';
+                // Must stay opacity:1 — html2canvas paints transparent ancestors as blank white pages.
+                host.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;height:1px;overflow:hidden;opacity:1;pointer-events:none;z-index:-1;';
                 var iframe = document.createElement('iframe');
-                iframe.style.cssText = 'width:794px;min-height:400px;border:0;';
+                iframe.style.cssText = 'width:794px;min-height:400px;border:0;opacity:1;';
                 host.appendChild(iframe);
                 document.body.appendChild(host);
 
@@ -18790,10 +18791,10 @@
                     qSanitizeDomForHtml2Canvas(idoc.documentElement || idoc.body);
                     var src = idoc.getElementById('qPreviewPrintArea') || idoc.body;
                     stage = document.createElement('div');
-                    stage.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;opacity:0;pointer-events:none;z-index:-1;background:#fff;';
+                    stage.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;opacity:1;pointer-events:none;z-index:-1;background:#fff;';
                     var clone = document.createElement('div');
                     clone.className = 'q-preview-doc q-preview-pdf-capture';
-                    clone.style.cssText = 'width:794px;max-width:794px;background:#fff;margin:0;padding:0;';
+                    clone.style.cssText = 'width:794px;max-width:794px;background:#fff;margin:0;padding:0;opacity:1;';
                     clone.innerHTML = src ? src.innerHTML : '';
                     try {
                         var styleNodes = idoc.querySelectorAll('style');
@@ -18863,8 +18864,8 @@
                     throw new Error((resp.data && resp.data.message) || 'Could not save PDF.');
                 }
                 return makeClientPdfBlob().then(function (blob) {
-                    if (!blob || !blob.size) {
-                        throw new Error('Could not build fallback PDF.');
+                    if (!blob || !blob.size || blob.size < 40000) {
+                        throw new Error('Could not build a complete fallback PDF (output was blank or too small).');
                     }
                     return postOnce(blob).then(function (resp2) {
                         if (resp2.data && resp2.data.success) {
@@ -19310,6 +19311,38 @@
             });
         }
 
+        /** True when a canvas is essentially blank white (would yield empty PDF pages). */
+        function qCanvasHasVisibleInk(canvas) {
+            try {
+                var w = canvas.width || 0;
+                var h = canvas.height || 0;
+                if (w < 8 || h < 8) return false;
+                var ctx = canvas.getContext('2d');
+                if (!ctx) return false;
+                var stepX = Math.max(1, Math.floor(w / 24));
+                var stepY = Math.max(1, Math.floor(h / 24));
+                var data = ctx.getImageData(0, 0, w, h).data;
+                var ink = 0;
+                var total = 0;
+                var y;
+                var x;
+                for (y = 0; y < h; y += stepY) {
+                    for (x = 0; x < w; x += stepX) {
+                        var i = ((y * w) + x) * 4;
+                        total += 1;
+                        // Non-near-white pixel counts as content.
+                        if (data[i] < 248 || data[i + 1] < 248 || data[i + 2] < 248) {
+                            ink += 1;
+                        }
+                    }
+                }
+                return total > 0 && (ink / total) >= 0.004;
+            } catch (e) {
+                // If we cannot sample (tainted canvas), assume content exists.
+                return true;
+            }
+        }
+
         /**
          * Capture tall quotations page-by-page as JPEG slices, then assemble a PDF blob.
          * Only JPEG data URLs are passed to jsPDF — avoids "Unsupported image type".
@@ -19330,6 +19363,7 @@
 
             var clip = document.createElement('div');
             clip.id = 'qPreviewPdfClip';
+            // opacity MUST be 1 — transparent capture hosts produce blank white PDF pages.
             clip.style.cssText = [
                 'position:fixed',
                 'left:-14000px',
@@ -19338,17 +19372,19 @@
                 'height:' + pageHeightPx + 'px',
                 'overflow:hidden',
                 'background:#ffffff',
-                'opacity:0',
+                'opacity:1',
                 'pointer-events:none',
                 'z-index:-1'
             ].join(';');
 
             var mover = document.createElement('div');
-            mover.style.cssText = 'position:relative;width:' + pageWidthPx + 'px;margin:0;padding:0;top:0;';
+            mover.style.cssText = 'position:relative;width:' + pageWidthPx + 'px;margin:0;padding:0;top:0;opacity:1;';
             var parent = rootEl.parentNode;
             mover.appendChild(rootEl);
             rootEl.style.width = pageWidthPx + 'px';
             rootEl.style.maxWidth = pageWidthPx + 'px';
+            rootEl.style.opacity = '1';
+            rootEl.style.visibility = 'visible';
             clip.appendChild(mover);
             document.body.appendChild(clip);
 
@@ -19381,6 +19417,9 @@
                     if (!canvas || !canvas.width || !canvas.height) {
                         throw new Error('PDF page canvas empty at page ' + (pageIndex + 1));
                     }
+                    if (!qCanvasHasVisibleInk(canvas)) {
+                        throw new Error('PDF page capture is blank at page ' + (pageIndex + 1));
+                    }
                     pageImages.push(canvas.toDataURL('image/jpeg', 0.88));
                     return captureAll(pageIndex + 1);
                 });
@@ -19397,7 +19436,6 @@
                     if (!pdf || typeof pdf.addImage !== 'function') {
                         throw new Error('jsPDF instance unavailable');
                     }
-                    // Replace blank bootstrap page content with JPEG slices only.
                     pageImages.forEach(function (img, idx) {
                         if (idx > 0) {
                             pdf.addPage();
@@ -19405,8 +19443,8 @@
                         pdf.addImage(img, 'JPEG', marginMm, marginMm, usableWmm, usableHmm);
                     });
                     var blob = pdf.output('blob');
-                    if (!blob || !blob.size || blob.size < 50) {
-                        throw new Error('Sliced PDF blob invalid');
+                    if (!blob || !blob.size || blob.size < 40000) {
+                        throw new Error('Sliced PDF blob is blank or too small.');
                     }
                     return blob;
                 });
@@ -19577,8 +19615,11 @@
              */
             var tryImmediateServerDownload = function () {
                 return qFetchQuotationPdfStatus(ids).then(function (status) {
-                    if (!(status && status.success && status.exists && status.fresh)) {
+                    if (!(status && status.success && status.exists && status.fresh) || status.invalid_blank) {
                         return { reused: false, status: status || null };
+                    }
+                    if (status.byte_size && parseInt(status.byte_size, 10) < 40000) {
+                        return { reused: false, status: status };
                     }
                     if (status.version) {
                         ids.version = parseInt(status.version, 10) || ids.version;

@@ -40,6 +40,8 @@ if (isset($_GET['check']) || isset($_GET['status'])) {
         'success' => true,
         'exists' => !empty($status['exists']),
         'fresh' => !empty($status['fresh']),
+        'invalid_blank' => !empty($status['invalid_blank']),
+        'byte_size' => (int) ($status['byte_size'] ?? 0),
         'version' => (int) ($status['version'] ?? $version),
         'file_name' => (string) ($status['file_name'] ?? ''),
         'generated_at' => (string) ($status['generated_at'] ?? ''),
@@ -83,19 +85,23 @@ if (!$pdf) {
 }
 
 $abs = crmQuotationPdfAbsolutePath((string) $pdf['file_path']);
-if (!is_file($abs)) {
-    http_response_code(404);
+if (!is_file($abs) || !crmQuotationPdfLooksContentful($abs)) {
+    if (is_file($abs)) {
+        @unlink($abs);
+    }
+    http_response_code(409);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'success' => false,
-        'message' => 'PDF file is missing on the server.',
+        'message' => 'Saved PDF is missing or blank. Regenerate before download.',
         'need_generate' => true,
+        'invalid_blank' => true,
     ]);
     exit;
 }
 
 $fileName = crmQuotationPdfSanitizeFileName((string) ($pdf['file_name'] ?? 'Quotation.pdf'));
-$etag = '"qpdf' . $quotationId . '-v' . $version . '-' . filemtime($abs) . '"';
+$etag = '"qpdf' . $quotationId . '-v' . $version . '-' . filemtime($abs) . '-' . filesize($abs) . '"';
 
 header_remove('Pragma');
 header_remove('Expires');

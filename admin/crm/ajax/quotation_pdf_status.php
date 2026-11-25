@@ -30,6 +30,8 @@ echo json_encode([
     'success' => true,
     'exists' => !empty($status['exists']),
     'fresh' => !empty($status['fresh']),
+    'invalid_blank' => !empty($status['invalid_blank']),
+    'byte_size' => (int) ($status['byte_size'] ?? 0),
     'version' => (int) ($status['version'] ?? $version),
     'file_name' => (string) ($status['file_name'] ?? ''),
     'generated_at' => (string) ($status['generated_at'] ?? ''),

@@ -8,8 +8,162 @@
 require_once __DIR__ . '/quotation_db.php';
 
 const CRM_QUOTATION_PDF_MAX_BYTES = 30 * 1024 * 1024;
+/** Absolute floor — blank multi-page Chrome shells are typically ~15–25KB. */
+const CRM_QUOTATION_PDF_MIN_BYTES = 40000;
 /** Bump when print/PDF markup rendering changes (forces stale PDFs to regenerate). */
-const CRM_QUOTATION_PDF_RENDER_REV = 'icons-svg-v4-h2c-css-sanitize';
+const CRM_QUOTATION_PDF_RENDER_REV = 'icons-svg-v6-chrome-paint-no-blank';
+
+function crmQuotationPdfRenderHtmlPath(string $token): string
+{
+    $token = preg_replace('/[^a-f0-9]/i', '', $token);
+    return crmQuotationPdfStorageDir() . '/_render_' . $token . '.html';
+}
+
+/**
+ * Ajax-dir path segment for quotation_pdf_html.php (from the current SCRIPT_NAME).
+ */
+function crmQuotationPdfAjaxBasePath(): string
+{
+    $script = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    $base = preg_replace('#/[^/]+$#', '', $script);
+    if ($base === null || $base === '') {
+        $base = '/admin/crm/ajax';
+    }
+    return $base;
+}
+
+/**
+ * Public absolute HTTP(S) URL Chrome can load (file:// often paints blank on live hosts).
+ */
+function crmQuotationPdfRenderHtmlUrl(string $token): string
+{
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ((int) ($_SERVER['SERVER_PORT'] ?? 0) === 443)
+        || (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost'));
+    $scheme = $https ? 'https' : 'http';
+    $base = crmQuotationPdfAjaxBasePath();
+    return $scheme . '://' . $host . $base . '/quotation_pdf_html.php?t=' . rawurlencode($token);
+}
+
+/**
+ * Loopback URL so headless Chrome on the same machine does not depend on public DNS/hairpin NAT.
+ */
+function crmQuotationPdfRenderHtmlLoopbackUrl(string $token): string
+{
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ((int) ($_SERVER['SERVER_PORT'] ?? 0) === 443)
+        || (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
+    $port = (int) ($_SERVER['SERVER_PORT'] ?? 0);
+    $base = crmQuotationPdfAjaxBasePath();
+    $path = $base . '/quotation_pdf_html.php?t=' . rawurlencode($token);
+    if ($https) {
+        if ($port <= 0 || $port === 443) {
+            return 'https://127.0.0.1' . $path;
+        }
+        return 'https://127.0.0.1:' . $port . $path;
+    }
+    if ($port <= 0 || $port === 80) {
+        return 'http://127.0.0.1' . $path;
+    }
+    return 'http://127.0.0.1:' . $port . $path;
+}
+
+/**
+ * Public origin used as <base href> so relative assets resolve when Chrome loads via loopback/file.
+ */
+function crmQuotationPdfPublicOriginBase(): string
+{
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ((int) ($_SERVER['SERVER_PORT'] ?? 0) === 443)
+        || (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost'));
+    $scheme = $https ? 'https' : 'http';
+    $script = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    // /admin/crm/ajax/generate_quotation_pdf.php → /admin/
+    $adminBase = preg_replace('#/crm/ajax/[^/]*$#', '/', $script);
+    if ($adminBase === null || $adminBase === '') {
+        $adminBase = '/admin/';
+    }
+    return $scheme . '://' . $host . $adminBase;
+}
+
+/**
+ * Ensure print HTML is paint-ready for headless Chrome (visible, with a public base href).
+ */
+function crmQuotationPdfPrepareHtmlForChrome(string $html): string
+{
+    $base = htmlspecialchars(crmQuotationPdfPublicOriginBase(), ENT_QUOTES, 'UTF-8');
+    $inject = '<base href="' . $base . '">'
+        . '<meta charset="utf-8">'
+        . '<style id="q-pdf-force-paint">'
+        . 'html,body{opacity:1!important;visibility:visible!important;background:#fff!important;}'
+        . '#qPreviewPrintArea,.q-preview-doc,.q-preview-doc *{'
+        . 'opacity:1!important;visibility:visible!important;'
+        . '-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;'
+        . '}'
+        . '</style>';
+    if (preg_match('/<head([^>]*)>/i', $html)) {
+        return (string) preg_replace('/<head([^>]*)>/i', '<head$1>' . $inject, $html, 1);
+    }
+    return '<!DOCTYPE html><html><head>' . $inject . '</head><body>' . $html . '</body></html>';
+}
+
+/**
+ * Reject empty / near-empty PDFs (blank page shells) before they are stored or served.
+ */
+function crmQuotationPdfLooksContentful(string $absPath, string $html = ''): bool
+{
+    if (!is_file($absPath)) {
+        return false;
+    }
+    $size = (int) filesize($absPath);
+    if ($size < CRM_QUOTATION_PDF_MIN_BYTES) {
+        return false;
+    }
+    $htmlLen = strlen($html);
+    $min = CRM_QUOTATION_PDF_MIN_BYTES;
+    if ($htmlLen > 40000) {
+        $min = 80000;
+    }
+    if ($htmlLen > 120000) {
+        $min = 150000;
+    }
+    if ($size < $min) {
+        return false;
+    }
+    $head = (string) @file_get_contents($absPath, false, null, 0, 5);
+    if (strpos($head, '%PDF') !== 0) {
+        return false;
+    }
+    $sampleLen = (int) min(1200000, $size);
+    $sample = (string) @file_get_contents($absPath, false, null, 0, $sampleLen);
+    if ($sample === '') {
+        return false;
+    }
+
+    // Blank Chrome shells often have many /Page objects but almost no ink (~20KB for 7 pages).
+    $pageCount = preg_match_all('/\/Type\s*\/Page(?!\s*s)/', $sample);
+    if ($pageCount >= 2 && $size < ($pageCount * 18000)) {
+        return false;
+    }
+
+    // Real text operators (escaped slash — previous pattern was invalid PHP regex).
+    $hasText = (bool) preg_match('/(\/TJ|\/Tj|\bBT\b|\bET\b|\/Font\b)/', $sample);
+    $hasImage = (bool) preg_match('/\/(XObject|Image|DCTDecode|JPXDecode|JBIG2Decode)\b/', $sample);
+    $streamCount = substr_count($sample, 'stream');
+
+    if ($hasText || $hasImage) {
+        // Still reject tiny "font-only" shells with empty content streams.
+        if ($pageCount >= 2 && $size < 50000 && !$hasImage) {
+            return false;
+        }
+        return true;
+    }
+
+    // Image-only PDFs (html2canvas JPEG slices) must still be reasonably large.
+    return $streamCount >= 2 && $size >= max($min, 90000);
+}
 
 function crmEnsureQuotationPdfTables(mysqli $conn): void
 {
@@ -158,6 +312,7 @@ function crmQuotationPdfChromeAvailable(): bool
 
 /**
  * Render HTML to PDF with Chrome/Edge headless (matches browser Print → Save as PDF).
+ * Prefers loopback/public HTTP so CSS/images/fonts paint; file:// is last resort.
  */
 function crmQuotationPdfRenderWithChrome(string $html, string $outPdfAbs): array
 {
@@ -167,77 +322,115 @@ function crmQuotationPdfRenderWithChrome(string $html, string $outPdfAbs): array
     }
 
     $dir = crmQuotationPdfStorageDir();
-    $tmpHtml = $dir . '/_tmp_' . bin2hex(random_bytes(8)) . '.html';
+    $token = bin2hex(random_bytes(16));
+    $tmpHtml = crmQuotationPdfRenderHtmlPath($token);
     $tmpPdf = $dir . '/_tmp_' . bin2hex(random_bytes(8)) . '.pdf';
+    $html = crmQuotationPdfPrepareHtmlForChrome($html);
 
-    // Prefer absolute http(s) asset URLs already present in print HTML.
     if (@file_put_contents($tmpHtml, $html) === false) {
         return ['ok' => false, 'message' => 'Could not write temporary HTML for PDF generation.'];
     }
 
-    $htmlUrl = 'file:///' . str_replace('\\', '/', $tmpHtml);
-    if (stripos(PHP_OS, 'WIN') === 0) {
-        $htmlUrl = 'file:///' . str_replace('\\', '/', $tmpHtml);
+    $loopUrl = crmQuotationPdfRenderHtmlLoopbackUrl($token);
+    $httpUrl = crmQuotationPdfRenderHtmlUrl($token);
+    $fileUrl = 'file:///' . str_replace('\\', '/', $tmpHtml);
+    $urlsToTry = [];
+    foreach ([$loopUrl, $httpUrl, $fileUrl] as $candidate) {
+        if ($candidate === '' || isset($urlsToTry[$candidate])) {
+            continue;
+        }
+        // Deduplicate while preserving order.
+        $urlsToTry[$candidate] = $candidate;
     }
+    $urlsToTry = array_values($urlsToTry);
 
-    $cmd = [
-        $chrome,
-        '--headless=new',
-        '--disable-gpu',
-        '--allow-file-access-from-files',
-        '--hide-scrollbars',
-        '--no-pdf-header-footer',
-        '--run-all-compositor-stages-before-draw',
-        '--virtual-time-budget=8000',
-        '--print-to-pdf=' . $tmpPdf,
-        $htmlUrl,
-    ];
+    $isWin = stripos(PHP_OS, 'WIN') === 0;
+    $runChrome = static function (string $chromeBin, string $pdfOut, string $pageUrl) use ($isWin) {
+        $cmd = [
+            $chromeBin,
+            '--headless=new',
+            '--disable-gpu',
+            '--disable-dev-shm-usage',
+            '--hide-scrollbars',
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--no-pdf-header-footer',
+            '--run-all-compositor-stages-before-draw',
+            '--virtual-time-budget=30000',
+            '--font-render-hinting=none',
+            '--ignore-certificate-errors',
+            '--allow-file-access-from-files',
+            '--disable-web-security',
+            '--print-to-pdf-no-header',
+            '--print-to-pdf=' . $pdfOut,
+            $pageUrl,
+        ];
+        // Linux servers almost always need --no-sandbox for headless Chrome under PHP/Apache.
+        if (!$isWin) {
+            array_splice($cmd, 2, 0, ['--no-sandbox', '--disable-setuid-sandbox']);
+        }
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $stderr = '';
+        $exitCode = 1;
+        $proc = @proc_open($cmd, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
+        if (is_resource($proc)) {
+            fclose($pipes[0]);
+            stream_set_timeout($pipes[1], 180);
+            stream_set_timeout($pipes[2], 180);
+            stream_get_contents($pipes[1]);
+            $stderr = (string) stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            $exitCode = proc_close($proc);
+        } else {
+            $q = static function ($s) {
+                return '"' . str_replace('"', '\\"', $s) . '"';
+            };
+            $extra = $isWin ? '' : ' --no-sandbox --disable-setuid-sandbox';
+            $line = $q($chromeBin)
+                . ' --headless=new --disable-gpu --disable-dev-shm-usage --hide-scrollbars'
+                . $extra
+                . ' --no-pdf-header-footer --run-all-compositor-stages-before-draw'
+                . ' --virtual-time-budget=30000 --ignore-certificate-errors'
+                . ' --allow-file-access-from-files --disable-web-security'
+                . ' --print-to-pdf=' . $q($pdfOut) . ' ' . $q($pageUrl);
+            @exec($line . ' 2>&1', $out, $exitCode);
+            $stderr = is_array($out) ? implode("\n", $out) : '';
+        }
+        return ['exit' => $exitCode, 'stderr' => $stderr];
+    };
 
-    $descriptors = [
-        0 => ['pipe', 'r'],
-        1 => ['pipe', 'w'],
-        2 => ['pipe', 'w'],
-    ];
-    $proc = @proc_open($cmd, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
     $stderr = '';
     $exitCode = 1;
-    if (is_resource($proc)) {
-        fclose($pipes[0]);
-        stream_set_timeout($pipes[1], 90);
-        stream_set_timeout($pipes[2], 90);
-        $stdout = stream_get_contents($pipes[1]);
-        $stderr = (string) stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        $exitCode = proc_close($proc);
-        unset($stdout);
-    } else {
-        // Fallback via shell on hosts that block proc_open arrays.
-        $q = static function ($s) {
-            return '"' . str_replace('"', '\\"', $s) . '"';
-        };
-        $line = $q($chrome)
-            . ' --headless=new --disable-gpu --allow-file-access-from-files --no-pdf-header-footer '
-            . '--print-to-pdf=' . $q($tmpPdf) . ' ' . $q($htmlUrl);
-        @exec($line . ' 2>&1', $out, $exitCode);
-        $stderr = is_array($out) ? implode("\n", $out) : '';
+    $okPdf = false;
+    foreach ($urlsToTry as $htmlUrl) {
+        @unlink($tmpPdf);
+        $run = $runChrome($chrome, $tmpPdf, $htmlUrl);
+        $stderr = (string) ($run['stderr'] ?? '');
+        $exitCode = (int) ($run['exit'] ?? 1);
+        if (is_file($tmpPdf) && crmQuotationPdfLooksContentful($tmpPdf, $html)) {
+            $okPdf = true;
+            break;
+        }
+        // Drop blank attempt before trying the next URL strategy.
+        @unlink($tmpPdf);
     }
 
     @unlink($tmpHtml);
 
-    if (!is_file($tmpPdf) || filesize($tmpPdf) < 50) {
+    if (!$okPdf) {
         @unlink($tmpPdf);
         return [
             'ok' => false,
-            'message' => 'Chrome PDF render failed.' . ($stderr !== '' ? ' ' . substr($stderr, 0, 240) : ''),
+            'message' => 'Chrome PDF render failed or produced a blank PDF.'
+                . ($stderr !== '' ? ' ' . substr($stderr, 0, 240) : ''),
             'exit_code' => $exitCode,
+            'need_client_pdf' => true,
         ];
-    }
-
-    $head = (string) @file_get_contents($tmpPdf, false, null, 0, 5);
-    if (strpos($head, '%PDF') !== 0) {
-        @unlink($tmpPdf);
-        return ['ok' => false, 'message' => 'Chrome produced an invalid PDF.'];
     }
 
     if (!@rename($tmpPdf, $outPdfAbs)) {
@@ -254,16 +447,20 @@ function crmQuotationPdfRenderWithChrome(string $html, string $outPdfAbs): array
 /**
  * Validate and store an uploaded PDF binary as fallback when Chrome is unavailable.
  */
-function crmQuotationPdfStoreBinary(string $binary, string $outPdfAbs): array
+function crmQuotationPdfStoreBinary(string $binary, string $outPdfAbs, string $html = ''): array
 {
-    if (strlen($binary) < 50 || strlen($binary) > CRM_QUOTATION_PDF_MAX_BYTES) {
-        return ['ok' => false, 'message' => 'PDF size is invalid.'];
+    if (strlen($binary) < CRM_QUOTATION_PDF_MIN_BYTES || strlen($binary) > CRM_QUOTATION_PDF_MAX_BYTES) {
+        return ['ok' => false, 'message' => 'PDF size is invalid or appears blank.'];
     }
     if (strpos($binary, '%PDF') !== 0) {
         return ['ok' => false, 'message' => 'Uploaded file is not a valid PDF.'];
     }
     if (@file_put_contents($outPdfAbs, $binary) === false) {
         return ['ok' => false, 'message' => 'Could not store uploaded PDF.'];
+    }
+    if (!crmQuotationPdfLooksContentful($outPdfAbs, $html)) {
+        @unlink($outPdfAbs);
+        return ['ok' => false, 'message' => 'Uploaded PDF appears blank or incomplete.'];
     }
     return ['ok' => true, 'path' => $outPdfAbs, 'bytes' => (int) filesize($outPdfAbs)];
 }
@@ -435,7 +632,15 @@ function crmQuotationPdfStatus(mysqli $conn, int $quotationId, int $version = 0)
     }
 
     $abs = crmQuotationPdfAbsolutePath((string) $pdf['file_path']);
-    $exists = is_file($abs) && filesize($abs) > 50;
+    $filePresent = is_file($abs) && filesize($abs) > 50;
+    $contentful = $filePresent && crmQuotationPdfLooksContentful($abs);
+    $invalidBlank = $filePresent && !$contentful;
+    // Drop blank/undersized shells so Download never reuses them.
+    if ($invalidBlank) {
+        @unlink($abs);
+        $filePresent = false;
+    }
+    $exists = $filePresent && $contentful;
     $fresh = $exists && hash_equals((string) $pdf['content_token'], $token);
 
     return [
@@ -445,7 +650,9 @@ function crmQuotationPdfStatus(mysqli $conn, int $quotationId, int $version = 0)
         'version' => $version,
         'file_name' => (string) ($pdf['file_name'] ?? 'Quotation.pdf'),
         'generated_at' => (string) ($pdf['generated_at'] ?? ''),
+        'byte_size' => $exists ? (int) filesize($abs) : 0,
         'chrome' => crmQuotationPdfChromeAvailable(),
+        'invalid_blank' => $invalidBlank,
     ];
 }
 
@@ -477,24 +684,43 @@ function crmQuotationPdfGenerateAndSave(
 
     $result = ['ok' => false, 'message' => 'PDF generation failed.'];
     $method = '';
+    $needClient = false;
 
     $html = trim($html);
-    if ($html !== '' && crmQuotationPdfChromeAvailable()) {
-        $result = crmQuotationPdfRenderWithChrome($html, $abs);
-        $method = 'chrome';
+    // Drop any previous blank/invalid file for this version before writing a new one.
+    $existing = crmQuotationPdfLoadRow($conn, $quotationId, $version);
+    if ($existing) {
+        $oldAbs = crmQuotationPdfAbsolutePath((string) ($existing['file_path'] ?? ''));
+        if (is_file($oldAbs) && !crmQuotationPdfLooksContentful($oldAbs, $html)) {
+            @unlink($oldAbs);
+        }
     }
 
-    if (empty($result['ok']) && is_string($uploadedPdfBinary) && $uploadedPdfBinary !== '') {
-        $result = crmQuotationPdfStoreBinary($uploadedPdfBinary, $abs);
+    // Client upload wins when present (avoids re-running Chrome after a blank failure).
+    // Print/Download without an upload still prefer Chrome headless for best fidelity.
+    $hasUpload = is_string($uploadedPdfBinary) && $uploadedPdfBinary !== '';
+
+    if ($hasUpload) {
+        $result = crmQuotationPdfStoreBinary($uploadedPdfBinary, $abs, $html);
         $method = 'upload';
     }
 
-    if (empty($result['ok']) && $html !== '' && !crmQuotationPdfChromeAvailable()) {
+    if (empty($result['ok']) && $html !== '' && crmQuotationPdfChromeAvailable()) {
+        $result = crmQuotationPdfRenderWithChrome($html, $abs);
+        $method = 'chrome';
+        if (empty($result['ok']) && !empty($result['need_client_pdf'])) {
+            $needClient = true;
+        }
+    } elseif (empty($result['ok'])) {
+        $needClient = ($html !== '' && !$hasUpload);
+    }
+
+    if (empty($result['ok']) && $needClient && !$hasUpload) {
         return [
             'ok' => false,
-            'message' => 'Server PDF engine unavailable. Please retry so the browser can upload a PDF copy.',
+            'message' => 'Server PDF engine unavailable or produced a blank PDF. Please retry so the browser can upload a PDF copy.',
             'need_client_pdf' => true,
-            'chrome' => false,
+            'chrome' => crmQuotationPdfChromeAvailable(),
         ];
     }
 
@@ -502,6 +728,17 @@ function crmQuotationPdfGenerateAndSave(
         return [
             'ok' => false,
             'message' => (string) ($result['message'] ?? 'Could not generate PDF.'),
+            'need_client_pdf' => $needClient,
+            'chrome' => crmQuotationPdfChromeAvailable(),
+        ];
+    }
+
+    if (!crmQuotationPdfLooksContentful($abs, $html)) {
+        @unlink($abs);
+        return [
+            'ok' => false,
+            'message' => 'Generated PDF appears blank or incomplete.',
+            'need_client_pdf' => true,
             'chrome' => crmQuotationPdfChromeAvailable(),
         ];
     }
