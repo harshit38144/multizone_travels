@@ -18749,7 +18749,9 @@
                 if (typeof html2pdf !== 'function' || !html) {
                     return Promise.reject(new Error('Client PDF fallback unavailable.'));
                 }
-                // Off-screen host + iframe so print CSS/fonts from the full HTML still apply.
+                // Sanitize SVG data-URI backgrounds in print HTML before html2canvas sees them.
+                var safeHtml = qSanitizeCssTextForHtml2Canvas(html);
+
                 var host = document.createElement('div');
                 host.id = 'qPreviewPdfFallbackHost';
                 host.setAttribute('aria-hidden', 'true');
@@ -18759,7 +18761,11 @@
                 host.appendChild(iframe);
                 document.body.appendChild(host);
 
+                var stage = null;
                 var cleanup = function () {
+                    try {
+                        if (stage && stage.parentNode) stage.parentNode.removeChild(stage);
+                    } catch (e0) { /* ignore */ }
                     try {
                         if (host.parentNode) host.parentNode.removeChild(host);
                     } catch (e) { /* ignore */ }
@@ -18775,31 +18781,32 @@
                     return Promise.reject(new Error('Could not open PDF capture frame.'));
                 }
                 idoc.open();
-                idoc.write(html);
+                idoc.write(safeHtml);
                 idoc.close();
 
                 return new Promise(function (resolve) {
                     window.setTimeout(resolve, 400);
                 }).then(function () {
+                    qSanitizeDomForHtml2Canvas(idoc.documentElement || idoc.body);
                     var src = idoc.getElementById('qPreviewPrintArea') || idoc.body;
-                    var stage = document.createElement('div');
+                    stage = document.createElement('div');
                     stage.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;opacity:0;pointer-events:none;z-index:-1;background:#fff;';
                     var clone = document.createElement('div');
                     clone.className = 'q-preview-doc q-preview-pdf-capture';
                     clone.style.cssText = 'width:794px;max-width:794px;background:#fff;margin:0;padding:0;';
                     clone.innerHTML = src ? src.innerHTML : '';
-                    // Copy critical computed stylesheet text into the capture stage.
                     try {
                         var styleNodes = idoc.querySelectorAll('style');
                         Array.prototype.forEach.call(styleNodes, function (st) {
                             var s = document.createElement('style');
-                            s.textContent = st.textContent || '';
+                            s.textContent = qSanitizeCssTextForHtml2Canvas(st.textContent || '');
                             stage.appendChild(s);
                         });
                     } catch (styleErr) { /* ignore */ }
                     stage.appendChild(clone);
                     document.body.appendChild(stage);
                     void stage.offsetHeight;
+                    qSanitizeDomForHtml2Canvas(stage);
 
                     var prep = stripImages
                         ? Promise.resolve().then(function () { qStripAllPdfImages(clone); })
@@ -18809,26 +18816,13 @@
 
                     return prep.then(function () {
                         qSimplifyPreviewForPdf(clone);
-                        var scale = qPdfCaptureScale(clone);
-                        var opt = qPdfBaseOpt(filename, scale, 794);
-                        return Promise.resolve(html2pdf().set(opt).from(clone).outputPdf('blob'))
-                            .then(function (blob) {
-                                try {
-                                    if (stage.parentNode) stage.parentNode.removeChild(stage);
-                                } catch (e) { /* ignore */ }
-                                cleanup();
-                                return blob;
-                            }, function (err) {
-                                try {
-                                    if (stage.parentNode) stage.parentNode.removeChild(stage);
-                                } catch (e2) { /* ignore */ }
-                                cleanup();
-                                throw err;
-                            });
+                        qSanitizeDomForHtml2Canvas(clone);
+                        // JPEG-only page slices — never feed SVG/CSS images into jsPDF.
+                        return qCaptureElementToPdfBlobSliced(clone, filename);
+                    }).then(function (blob) {
+                        cleanup();
+                        return blob;
                     }, function (err) {
-                        try {
-                            if (stage.parentNode) stage.parentNode.removeChild(stage);
-                        } catch (e3) { /* ignore */ }
                         cleanup();
                         throw err;
                     });
@@ -18838,9 +18832,8 @@
             var makeClientPdfBlob = function () {
                 return runClientCapture(false).catch(function (err) {
                     var msg = String((err && err.message) || err || '');
-                    // jsPDF throws this for WEBP/SVG/unknown formats — retry with images stripped.
-                    if (/unsupported image type/i.test(msg) || /image type/i.test(msg)) {
-                        console.warn('PDF capture retry without raster images:', msg);
+                    if (/unsupported image type|unsupported image function|image type/i.test(msg)) {
+                        console.warn('PDF capture retry after CSS/image sanitize strip:', msg);
                         return runClientCapture(true);
                     }
                     throw err;
@@ -19287,7 +19280,12 @@
                     imageTimeout: 6000,
                     removeContainer: true,
                     foreignObjectRendering: false,
-                    windowWidth: windowWidth || 794
+                    windowWidth: windowWidth || 794,
+                    onclone: function (clonedDoc) {
+                        try {
+                            qSanitizeDomForHtml2Canvas(clonedDoc.documentElement || clonedDoc.body);
+                        } catch (eOnclone) { /* ignore */ }
+                    }
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
                 pagebreak: { mode: ['css', 'legacy'] }
@@ -19306,10 +19304,10 @@
         }
 
         /**
-         * Capture tall quotations page-by-page so html2canvas never builds one giant canvas.
-         * Uses html2pdf worker APIs (toCanvas / get('pdf')) — no separate library globals needed.
+         * Capture tall quotations page-by-page as JPEG slices, then assemble a PDF blob.
+         * Only JPEG data URLs are passed to jsPDF — avoids "Unsupported image type".
          */
-        function qExportElementToPdfSliced(rootEl, filename) {
+        function qCaptureElementToPdfBlobSliced(rootEl, filename) {
             var pageWidthPx = 794;
             var marginMm = 6;
             var a4W = 210;
@@ -19321,17 +19319,19 @@
             var totalH = Math.max(rootEl.scrollHeight || 0, rootEl.offsetHeight || 0, 1);
             var pageCount = Math.max(1, Math.ceil(totalH / pageHeightPx));
 
+            qSanitizeDomForHtml2Canvas(rootEl);
+
             var clip = document.createElement('div');
             clip.id = 'qPreviewPdfClip';
             clip.style.cssText = [
                 'position:fixed',
-                'left:0',
+                'left:-14000px',
                 'top:0',
                 'width:' + pageWidthPx + 'px',
                 'height:' + pageHeightPx + 'px',
                 'overflow:hidden',
                 'background:#ffffff',
-                'opacity:1',
+                'opacity:0',
                 'pointer-events:none',
                 'z-index:-1'
             ].join(';');
@@ -19345,7 +19345,7 @@
             clip.appendChild(mover);
             document.body.appendChild(clip);
 
-            var opt = qPdfBaseOpt(filename, scale, pageWidthPx);
+            var opt = qPdfBaseOpt(filename || 'Quotation.pdf', scale, pageWidthPx);
             opt.margin = 0;
             opt.pagebreak = { mode: [] };
             opt.html2canvas.height = pageHeightPx;
@@ -19380,10 +19380,9 @@
             };
 
             return captureAll(0).then(function () {
-                // Bootstrap a jsPDF instance via html2pdf (bundle does not expose jsPDF globally).
                 var boot = document.createElement('div');
                 boot.textContent = '.';
-                boot.style.cssText = 'width:20px;height:12px;color:#fff;';
+                boot.style.cssText = 'width:20px;height:12px;color:#fff;background:#fff;';
                 clip.appendChild(boot);
                 return Promise.resolve(
                     html2pdf().set(opt).from(boot).toPdf().get('pdf')
@@ -19391,6 +19390,7 @@
                     if (!pdf || typeof pdf.addImage !== 'function') {
                         throw new Error('jsPDF instance unavailable');
                     }
+                    // Replace blank bootstrap page content with JPEG slices only.
                     pageImages.forEach(function (img, idx) {
                         if (idx > 0) {
                             pdf.addPage();
@@ -19401,15 +19401,21 @@
                     if (!blob || !blob.size || blob.size < 50) {
                         throw new Error('Sliced PDF blob invalid');
                     }
-                    qTriggerBlobDownload(blob, filename);
-                    return true;
+                    return blob;
                 });
-            }).then(function (ok) {
+            }).then(function (blob) {
                 cleanup();
-                return ok;
+                return blob;
             }, function (err) {
                 cleanup();
                 throw err;
+            });
+        }
+
+        function qExportElementToPdfSliced(rootEl, filename) {
+            return qCaptureElementToPdfBlobSliced(rootEl, filename).then(function (blob) {
+                qTriggerBlobDownload(blob, filename);
+                return true;
             });
         }
 
@@ -19428,6 +19434,75 @@
                     } catch (e) { /* ignore */ }
                 });
             } catch (e2) { /* ignore */ }
+        }
+
+        /**
+         * html2canvas (bundled in html2pdf) only understands linear-gradient() as a CSS
+         * image function. Quotation CSS uses background-image: url("data:image/svg+xml,…")
+         * for inclusion icons — that throws "Unsupported image type" on live (no Chrome
+         * headless → client capture). Strip those values before capture.
+         */
+        function qSanitizeCssTextForHtml2Canvas(css) {
+            css = String(css || '');
+            // background-image: url("data:image/svg+xml…");
+            css = css.replace(
+                /background-image\s*:\s*url\(\s*(['"]?)data:image\/svg\+xml[\s\S]*?\1\s*\)\s*;?/gi,
+                'background-image:none;'
+            );
+            css = css.replace(
+                /background-image\s*:\s*url\(\s*data:image\/svg\+xml[^)]*\)\s*;?/gi,
+                'background-image:none;'
+            );
+            // Unsupported CSS image functions (html2canvas only allows linear-gradient)
+            css = css.replace(
+                /background-image\s*:\s*(?:-webkit-)?(?:radial-gradient|conic-gradient|repeating-linear-gradient|repeating-radial-gradient|image-set|cross-fade)\([^;]*\)\s*;?/gi,
+                'background-image:none;'
+            );
+            // Shorthand background: … url(data:image/svg+xml…) …
+            css = css.replace(
+                /url\(\s*(['"]?)data:image\/svg\+xml[\s\S]*?\1\s*\)/gi,
+                'none'
+            );
+            return css;
+        }
+
+        function qSanitizeDomForHtml2Canvas(rootEl) {
+            if (!rootEl) return;
+            var doc = rootEl.ownerDocument || document;
+            try {
+                Array.prototype.forEach.call(doc.querySelectorAll('style'), function (st) {
+                    st.textContent = qSanitizeCssTextForHtml2Canvas(st.textContent || '');
+                });
+            } catch (eStyle) { /* ignore */ }
+            try {
+                var nodes = rootEl.querySelectorAll ? rootEl.querySelectorAll('*') : [];
+                Array.prototype.forEach.call(nodes, function (el) {
+                    try {
+                        if (!el.style) return;
+                        var bi = String(el.style.backgroundImage || '');
+                        if (/svg\+xml|radial-gradient|conic-gradient|image-set|cross-fade|repeating-/i.test(bi)) {
+                            el.style.backgroundImage = 'none';
+                        }
+                        var bg = String(el.style.background || '');
+                        if (/svg\+xml|radial-gradient|conic-gradient|image-set|cross-fade/i.test(bg)) {
+                            el.style.backgroundImage = 'none';
+                        }
+                    } catch (eNode) { /* ignore */ }
+                });
+            } catch (eAll) { /* ignore */ }
+            // Neutralize stylesheet-applied SVG backgrounds via computed style override.
+            try {
+                var view = doc.defaultView || window;
+                Array.prototype.forEach.call(rootEl.querySelectorAll('*'), function (el) {
+                    try {
+                        var cs = view.getComputedStyle(el);
+                        var cbi = cs ? String(cs.backgroundImage || '') : '';
+                        if (cbi && cbi !== 'none' && /svg\+xml|radial-gradient|conic-gradient|image-set|cross-fade|repeating-/i.test(cbi)) {
+                            el.style.setProperty('background-image', 'none', 'important');
+                        }
+                    } catch (eCs) { /* ignore */ }
+                });
+            } catch (eComp) { /* ignore */ }
         }
 
         window.qDownloadPreviewPdf = function () {
