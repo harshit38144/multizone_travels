@@ -3646,7 +3646,7 @@ $qWizardSteps = [
 
         /* —— AI Inclusions modal —— */
         .crm-quotation-gen .q-ai-incl-inline-btn {
-            margin-left: auto;
+            margin-left: 0;
             flex-shrink: 0;
             border: 1px solid #c7d2fe;
             background: #eef2ff;
@@ -3663,10 +3663,49 @@ $qWizardSteps = [
             color: #312e81;
         }
 
+        .crm-quotation-gen .q-incl-travel-insurance {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-shrink: 0;
+            padding: 0.15rem 0.55rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 0.78rem;
+            font-weight: 600;
+            line-height: 1.25;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .crm-quotation-gen .q-incl-travel-insurance:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .crm-quotation-gen .q-incl-travel-insurance input[type="checkbox"] {
+            margin: 0;
+            width: 0.9rem;
+            height: 0.9rem;
+            accent-color: #e11d2e;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
         .crm-quotation-gen .q-inclusions-section .q-terms-item-head {
             display: flex;
             align-items: center;
             gap: 0.5rem;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-incl-travel-insurance {
+            background: var(--mz-theme-bg-muted, #323744) !important;
+            border-color: var(--mz-theme-border, #454b58) !important;
+            color: var(--q-text, #e2e8f0) !important;
         }
 
         .q-ai-incl-modal .modal-content {
@@ -5264,6 +5303,43 @@ $qWizardSteps = [
             gap: 0.55rem;
         }
 
+        /* Direct / Connecting journey containers with alternating light tints */
+        .crm-quotation-gen .q-flight-journey-kind {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            align-self: flex-start;
+            margin: 0.2rem 0.55rem 0.3rem;
+            padding: 0.18rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.78);
+            color: #475569;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .crm-quotation-gen .q-flight-journey-kind i {
+            font-size: 0.68rem;
+            width: 0.85rem;
+            text-align: center;
+        }
+
+        .crm-quotation-gen .q-flight-journey-kind.is-direct {
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+            background: rgba(239, 246, 255, 0.92);
+        }
+
+        .crm-quotation-gen .q-flight-journey-kind.is-connecting {
+            color: #9a3412;
+            border-color: #fed7aa;
+            background: rgba(255, 247, 237, 0.92);
+        }
+
         .crm-quotation-gen .q-flight-table-head {
             display: grid;
             grid-template-columns: minmax(0, 1fr) var(--q-commercial-col);
@@ -5360,17 +5436,22 @@ $qWizardSteps = [
         }
 
         .crm-quotation-gen .q-flight-journey-card {
-            background: transparent;
-            border: 0;
-            border-radius: 0;
-            padding: 0;
+            background: #f8fafc;
+            border: 1px solid #e8eef5;
+            border-radius: 10px;
+            padding: 0.25rem 0.15rem 0.4rem;
             box-shadow: none;
             display: flex;
             flex-direction: column;
             gap: 0;
         }
 
-        /* Journey type kept in DOM for pricing; not shown as a summary row. */
+        .crm-quotation-gen .q-flight-journey-card:nth-child(even) {
+            background: #f3f7fb;
+            border-color: #dde8f2;
+        }
+
+        /* Onward/Return kept in DOM for pricing; not shown as a summary row. */
         .crm-quotation-gen .q-flight-journey-type-wrap {
             position: absolute;
             width: 1px;
@@ -13854,11 +13935,11 @@ $qWizardSteps = [
             display: inline-flex;
             align-items: center;
             padding: 2px 6px;
-            border-radius: 999px;
+            border-radius: 3px;
             border: 1px solid #d1d5db;
             background: #fff;
             color: #111827;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             line-height: 1;
         }
@@ -13913,8 +13994,8 @@ $qWizardSteps = [
         }
 
         .qp-sec-hotels.has-multi-options .qp-hotel-option-tone-0 {
-            background: #f4f7fb;
-            border-color: #dbe4f0;
+            background: #faf6f2;
+            border-color: #ebe0d4;
         }
 
         .qp-sec-hotels.has-multi-options .qp-hotel-option-tone-1 {
@@ -18058,8 +18139,29 @@ $qWizardSteps = [
         }
 
         [data-theme="dark"] .crm-quotation-gen .q-flight-journey-card {
-            background: transparent !important;
-            border: 0 !important;
+            background: rgba(255, 255, 255, 0.035) !important;
+            border: 1px solid var(--mz-theme-border, #454b58) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-journey-card:nth-child(even) {
+            background: rgba(255, 255, 255, 0.07) !important;
+            border-color: var(--mz-theme-border, #454b58) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-journey-kind {
+            background: rgba(15, 23, 42, 0.45) !important;
+            border-color: var(--mz-theme-border, #454b58) !important;
+            color: var(--q-text-muted, #94a3b8) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-journey-kind.is-direct {
+            color: #93c5fd !important;
+            border-color: rgba(59, 130, 246, 0.35) !important;
+        }
+
+        [data-theme="dark"] .crm-quotation-gen .q-flight-journey-kind.is-connecting {
+            color: #fdba74 !important;
+            border-color: rgba(251, 146, 60, 0.35) !important;
         }
 
         /* Hotel / repeat rows */
@@ -19363,7 +19465,11 @@ $qWizardSteps = [
                                         <span class="q-terms-item-label"><?= htmlspecialchars($label) ?></span>
                                     </div>
                                     <?php if ($field === 'inclusion'): ?>
-                                    <button type="button" class="btn btn-sm q-ai-incl-inline-btn" id="qAiInclusionsInlineBtn" title="AI Generate inclusions">
+                                    <label class="q-incl-travel-insurance" data-accordion-ignore title="Add Travel Insurance to inclusions">
+                                        <input type="checkbox" id="qAddTravelInsurance" data-accordion-ignore>
+                                        <span>Add Travel Insurance</span>
+                                    </label>
+                                    <button type="button" class="btn btn-sm q-ai-incl-inline-btn" id="qAiInclusionsInlineBtn" title="AI Generate inclusions" data-accordion-ignore>
                                         <i class="fas fa-magic"></i><span> AI Generate</span>
                                     </button>
                                     <?php elseif ($field === 'exclusion'): ?>
@@ -20399,7 +20505,7 @@ $qWizardSteps = [
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="crm/assets/vendor/html2pdf.bundle.min.js?v=1"></script>
     <script src="crm/assets/airport_timezones.js?v=3"></script>
-    <script src="crm/assets/quotation_generator.js?v=423"></script>
+    <script src="crm/assets/quotation_generator.js?v=426"></script>
     <script src="crm/assets/quotation_flight_search.js?v=39"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=8"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

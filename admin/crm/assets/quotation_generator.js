@@ -499,6 +499,36 @@
         }
     }
 
+    function flightJourneyKindLabel(segmentCount) {
+        return segmentCount > 1 ? 'Connecting Flight' : 'Direct Flight';
+    }
+
+    function updateFlightJourneyKindLabels() {
+        $('#qFlightRows > .q-flight-journey-card').each(function () {
+            var $card = $(this);
+            var count = $card.find('.q-flight-row').length;
+            var isConnecting = count > 1;
+            var kind = flightJourneyKindLabel(count);
+            var $badge = $card.children('.q-flight-journey-kind').first();
+            if (!$badge.length) {
+                $badge = $('<div class="q-flight-journey-kind" role="status"></div>');
+                var $typeWrap = $card.children('.q-flight-journey-type-wrap').first();
+                if ($typeWrap.length) {
+                    $typeWrap.after($badge);
+                } else {
+                    $card.prepend($badge);
+                }
+            }
+            $badge
+                .toggleClass('is-connecting', isConnecting)
+                .toggleClass('is-direct', !isConnecting)
+                .html(
+                    '<i class="fas ' + (isConnecting ? 'fa-project-diagram' : 'fa-plane') + '" aria-hidden="true"></i>' +
+                    '<span>' + kind + '</span>'
+                );
+        });
+    }
+
     function refreshFlightJourneyTypes() {
         var $cards = $('#qFlightRows > .q-flight-journey-card');
         $cards.each(function (index) {
@@ -514,7 +544,7 @@
             } else if (!current) {
                 current = 'Return';
             }
-            // Keep journey type in the DOM (hidden) for pricing / collectFlights — no visible journey heading.
+            // Keep Onward/Return in the DOM (hidden) for pricing / collectFlights.
             var $wrap = $card.children('.q-flight-journey-type-wrap').first();
             if (!$wrap.length) {
                 $wrap = $('<span class="q-flight-journey-type-wrap" aria-hidden="true"></span>');
@@ -523,6 +553,7 @@
             $wrap.html(flightJourneyTypeMarkup(current, isFirst));
             syncFlightJourneyCardType($card, current);
         });
+        updateFlightJourneyKindLabels();
     }
 
     function parseFlightDateTimeMoment(dateVal, timeVal) {
@@ -557,6 +588,9 @@
         return minutes + ' min';
     }
 
+    /** Connections longer than this are treated as a new journey, not a layover. */
+    var Q_FLIGHT_MAX_LAYOVER_MINUTES = 24 * 60;
+
     function calcLayoverMinutesBetweenData(prev, cur) {
         prev = normalizeFlightData(prev);
         cur = normalizeFlightData(cur);
@@ -571,21 +605,55 @@
         return curDep.diff(prevArr, 'minutes');
     }
 
+    function flightSegmentFareAmount(data) {
+        var n = parseFloat(data && data.fare);
+        return (!isNaN(n) && n > 0) ? n : 0;
+    }
+
+    /**
+     * Decide whether `nextData` starts a new independently selected journey.
+     * Never merge separate selections just because airports happen to match.
+     */
+    function shouldStartNewFlightGroup(currentGroup, nextData) {
+        if (!currentGroup || !currentGroup.rows || !currentGroup.rows.length) {
+            return true;
+        }
+        var d = normalizeFlightData(nextData);
+        if (d.journey_start) {
+            return true;
+        }
+        // Incomplete draft follow-on ("Add Another Segment") stays in the current journey
+        // until both airports are filled and can be evaluated.
+        var fromFilled = !!String(d.from || '').trim();
+        var toFilled = !!String(d.to || '').trim();
+        if ((!fromFilled || !toFilled) && flightSegmentFareAmount(d) <= 0) {
+            return false;
+        }
+        var prev = currentGroup.rows[currentGroup.rows.length - 1];
+        var layMins = calcLayoverMinutesBetweenData(prev, d);
+        // Not connected, or gap too long for a connection layover → new journey.
+        if (layMins < 0 || layMins > Q_FLIGHT_MAX_LAYOVER_MINUTES) {
+            return true;
+        }
+        // A priced leg after a group that already has a fare is a separate selection
+        // (connecting follow-on legs are normally stored with fare 0).
+        if (flightSegmentFareAmount(d) > 0) {
+            var groupHasFare = currentGroup.rows.some(function (r) {
+                return flightSegmentFareAmount(r) > 0;
+            });
+            if (groupHasFare) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function groupFlightsForDisplay(flights) {
         var groups = [];
         var current = null;
         (flights || []).forEach(function (f) {
             var d = normalizeFlightData(f);
-            var startNew = d.journey_start || !current;
-            if (!startNew && current && current.rows.length) {
-                var prev = current.rows[current.rows.length - 1];
-                var layMins = calcLayoverMinutesBetweenData(prev, d);
-                // Long gap between connected airports usually means outbound vs return, not a layover.
-                if (layMins > (24 * 60)) {
-                    startNew = true;
-                }
-            }
-            if (startNew) {
+            if (shouldStartNewFlightGroup(current, d)) {
                 if (current) {
                     groups.push(current);
                 }
@@ -639,7 +707,7 @@
         var $card = $('<div class="q-flight-journey-card"></div>');
         var isFirstCard = $('#qFlightRows > .q-flight-journey-card').length === 0;
         var typeLabel = isFirstCard ? 'Onward' : (normalizeFlightJourneyType(summary.label) || 'Return');
-        // Journey type stays hidden; segments render as flat rows (hotel-style), no summary heading.
+        // Onward/Return stays hidden for pricing; Direct/Connecting badge is shown via refreshFlightJourneyTypes.
         $card.append(
             '<span class="q-flight-journey-type-wrap" aria-hidden="true">' +
             flightJourneyTypeMarkup(typeLabel, isFirstCard) +
@@ -1833,10 +1901,12 @@
             return String(h || '').replace(/\s+/g, ' ').trim();
         };
         var visaText = getAutoTouristVisaInclusionText();
+        var wantInsurance = isTravelInsuranceInclusionEnabled();
         // AI docs: keep "[Destination] Tourist Visa" under Visa at the end.
         if (/data-q-ai-inclusions/i.test(String(current || ''))) {
             var cleanedAi = stripAutoTouristVisaHtml(current);
             var nextAi = appendAutoTouristVisaHtml(cleanedAi, visaText);
+            nextAi = appendAutoTravelInsuranceHtml(nextAi, wantInsurance);
             if (norm(nextAi) === norm(current)) {
                 return;
             }
@@ -1846,10 +1916,101 @@
         var prefix = buildAutoInclusionPrefixHtml();
         var cleaned = stripAutoReturnAirfareHtml(current);
         var next = appendAutoTouristVisaHtml(prefix + cleaned, visaText);
+        next = appendAutoTravelInsuranceHtml(next, wantInsurance);
         if (norm(next) === norm(current)) {
             return;
         }
         writeInclusionEditorHtml($ta, next);
+    }
+
+    var Q_TRAVEL_INSURANCE_INCLUSION_TEXT = 'Travel Insurance';
+
+    function isTravelInsuranceInclusionEnabled() {
+        return $('#qAddTravelInsurance').is(':checked');
+    }
+
+    function inclusionHasTravelInsurance(html) {
+        html = String(html || '');
+        if (/data-q-auto-travel-insurance/i.test(html)) {
+            return true;
+        }
+        return /<(p|li)(?:\s[^>]*)?>\s*(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*Travel\s+Insurance\.?(?:\s*<\/(?:strong|b|em|span)>)?\s*<\/\1>/i.test(html);
+    }
+
+    function stripAutoTravelInsuranceHtml(html) {
+        html = String(html || '');
+        html = html.replace(
+            /<(p|div|li)([^>]*)\sdata-q-auto-travel-insurance(?:=["'][^"']*["'])?([^>]*)>[\s\S]*?<\/\1>/gi,
+            ''
+        );
+        // Exact "Travel Insurance" lines only — do not touch longer insurance phrases.
+        html = html.replace(
+            /<(p|li)(?:\s[^>]*)?>\s*(?:<(?:strong|b|em|span)(?:\s[^>]*)?>\s*)*Travel\s+Insurance\.?(?:\s*<\/(?:strong|b|em|span)>)?\s*<\/\1>/gi,
+            ''
+        );
+        html = html.replace(/(?:\s*<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+\s*$/i, '');
+        return html;
+    }
+
+    function buildAutoTravelInsuranceHtml() {
+        return '<p data-q-auto-travel-insurance="1">' + esc(Q_TRAVEL_INSURANCE_INCLUSION_TEXT) + '</p>';
+    }
+
+    /** Append Travel Insurance as the last inclusion line (deduped). */
+    function appendAutoTravelInsuranceHtml(html, enabled) {
+        html = stripAutoTravelInsuranceHtml(html);
+        if (!enabled) {
+            return html;
+        }
+        var block = buildAutoTravelInsuranceHtml();
+        var wrapped = String(html || '').match(/^(<div\b[^>]*\bdata-q-ai-inclusions\b[^>]*>)([\s\S]*)(<\/div>\s*)$/i);
+        if (wrapped) {
+            return wrapped[1] + wrapped[2] + block + wrapped[3];
+        }
+        return String(html || '').replace(/(?:\s*<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+\s*$/i, '') + block;
+    }
+
+    function syncTravelInsuranceInclusion(force) {
+        var $ta = $('#qed_inclusion');
+        if (!$ta.length) {
+            return;
+        }
+        if (!force && isInclusionEditorFocused()) {
+            return;
+        }
+        var current = readSummernoteHtml($ta);
+        var next = appendAutoTravelInsuranceHtml(current, isTravelInsuranceInclusionEnabled());
+        var norm = function (h) {
+            return String(h || '').replace(/\s+/g, ' ').trim();
+        };
+        if (norm(next) === norm(current)) {
+            return;
+        }
+        writeInclusionEditorHtml($ta, next);
+    }
+
+    function setTravelInsuranceInclusionChecked(checked, opts) {
+        opts = opts || {};
+        $('#qAddTravelInsurance').prop('checked', !!checked);
+        if (opts.sync !== false) {
+            syncTravelInsuranceInclusion(true);
+        }
+    }
+
+    function restoreTravelInsuranceInclusionState(p, cs) {
+        p = p || {};
+        cs = cs || p.cost_sheet || {};
+        var flag = cs.include_travel_insurance;
+        if (flag == null && p.include_travel_insurance != null) {
+            flag = p.include_travel_insurance;
+        }
+        var checked;
+        if (flag == null || flag === '') {
+            checked = inclusionHasTravelInsurance(p.inclusion || readSummernoteHtml($('#qed_inclusion')));
+        } else {
+            checked = parseInt(flag, 10) === 1 || flag === true || flag === 'true' || flag === 'on';
+        }
+        setTravelInsuranceInclusionChecked(checked, { sync: true });
     }
 
     function scheduleSyncReturnAirfareInclusion(force) {
@@ -1886,11 +2047,25 @@
             '</div>';
     }
 
+    function flightRowDataFromDom($row) {
+        if (!$row || !$row.length) {
+            return normalizeFlightData({});
+        }
+        return normalizeFlightData({
+            from: $row.find('.f-from').val(),
+            to: $row.find('.f-to').val(),
+            dep_date: $row.find('.f-dep-date').val(),
+            dep_time: $row.find('.f-dep-time').val(),
+            arr_date: $row.find('.f-arr-date').val(),
+            arr_time: $row.find('.f-arr-time').val(),
+            fare: $row.find('.f-fare').val(),
+            journey_start: $row.find('.f-journey-start').val() === '1',
+            journey_label: $row.find('.f-journey-label').val()
+        });
+    }
+
     function isFlightJourneyBoundary($prev, $row) {
         if (!$prev || !$prev.length || !$row || !$row.length) {
-            return true;
-        }
-        if ($row.find('.f-journey-start').val() === '1') {
             return true;
         }
         var $prevJourney = $prev.closest('.q-flight-journey-card');
@@ -1898,7 +2073,17 @@
         if ($prevJourney.length && $curJourney.length && $prevJourney[0] !== $curJourney[0]) {
             return true;
         }
-        return false;
+        // Logical boundary even inside one card (legacy / edited routes / new priced selection).
+        var priorRows = [];
+        if ($prevJourney.length && $curJourney.length && $prevJourney[0] === $curJourney[0]) {
+            $row.prevAll('.q-flight-row').get().reverse().forEach(function (el) {
+                priorRows.push(flightRowDataFromDom($(el)));
+            });
+        }
+        if (!priorRows.length) {
+            priorRows = [flightRowDataFromDom($prev)];
+        }
+        return shouldStartNewFlightGroup({ rows: priorRows }, flightRowDataFromDom($row));
     }
 
     function calcLayoverBetweenRows($prev, $row) {
@@ -1913,7 +2098,7 @@
             return { at: '', time: '' };
         }
         var mins = curDep.diff(prevArr, 'minutes');
-        if (mins < 0) {
+        if (mins < 0 || mins > Q_FLIGHT_MAX_LAYOVER_MINUTES) {
             return { at: '', time: '' };
         }
         return {
@@ -1922,7 +2107,70 @@
         };
     }
 
+    /**
+     * Ensure connecting segments stay in one card and independent journeys are split
+     * into separate cards (Direct / Connecting containers).
+     */
+    function reconcileFlightJourneyCards() {
+        var guard = 0;
+        while (guard < 40) {
+            guard += 1;
+            var didSplit = false;
+            $('#qFlightRows > .q-flight-journey-card').each(function () {
+                if (didSplit) {
+                    return;
+                }
+                var $card = $(this);
+                var $body = $card.children('.q-flight-journey-body').first();
+                if (!$body.length) {
+                    return;
+                }
+                var $rows = $body.children('.q-flight-row');
+                if ($rows.length < 2) {
+                    return;
+                }
+                var i;
+                for (i = 1; i < $rows.length; i++) {
+                    var $row = $rows.eq(i);
+                    var $prev = $rows.eq(i - 1);
+                    if (!isFlightJourneyBoundary($prev, $row)) {
+                        continue;
+                    }
+                    var $toMove = $rows.slice(i);
+                    $toMove.eq(0).find('.f-journey-start').val('1');
+                    $toMove.eq(0).find('.f-journey-label').val(
+                        normalizeFlightJourneyType($toMove.eq(0).find('.f-journey-label').val()) || 'Return'
+                    );
+                    var $newCard = $('<div class="q-flight-journey-card"></div>');
+                    $newCard.append('<span class="q-flight-journey-type-wrap" aria-hidden="true"></span>');
+                    var $newBody = $('<div class="q-flight-journey-body"></div>');
+                    $newBody.append($toMove);
+                    $newCard.append($newBody);
+                    $card.after($newCard);
+                    didSplit = true;
+                    return false;
+                }
+            });
+            if (!didSplit) {
+                break;
+            }
+        }
+
+        $('#qFlightRows > .q-flight-journey-card').each(function () {
+            var $rows = $(this).find('.q-flight-row');
+            $rows.each(function (idx) {
+                $(this).find('.f-journey-start').val(idx === 0 ? '1' : '0');
+                if (idx > 0) {
+                    $(this).find('.f-journey-label').val('');
+                }
+            });
+        });
+        refreshFlightJourneyTypes();
+    }
+
     function refreshFlightLayovers() {
+        reconcileFlightJourneyCards();
+
         var $rows = $('#qFlightRows .q-flight-row');
         $rows.each(function (index) {
             var $row = $(this);
@@ -1939,6 +2187,7 @@
             var layoverAt = '';
             var layoverTime = '';
 
+            // Layovers only between connecting segments inside the same journey group.
             if (!isFlightJourneyBoundary($prev, $row)) {
                 var lay = calcLayoverBetweenRows($prev, $row);
                 layoverAt = lay.at;
@@ -1960,6 +2209,7 @@
             }
         });
         syncConnectingSegmentFareSupplier();
+        updateFlightJourneyKindLabels();
     }
 
     function flightRowHtml(data, opts) {
@@ -8000,8 +8250,11 @@
             $ta.trigger('change');
         } catch (e1) { /* ignore */ }
 
-        // Re-apply destination tourist visa (and strip AI duplicates) after insert.
+        // Re-apply destination tourist visa + Travel Insurance (if checked) after insert.
         scheduleSyncReturnAirfareInclusion(true);
+        window.setTimeout(function () {
+            syncTravelInsuranceInclusion(true);
+        }, 160);
 
         // After sync settles, force textarea sync for save / preview / PDF payloads.
         window.setTimeout(function () {
@@ -8758,6 +9011,18 @@
             openAiInclusionsModal();
         });
 
+        $(document).on('click', '.q-incl-travel-insurance, #qAddTravelInsurance', function (e) {
+            e.stopPropagation();
+        });
+
+        $(document).on('change', '#qAddTravelInsurance', function (e) {
+            e.stopPropagation();
+            syncTravelInsuranceInclusion(true);
+            try {
+                saveFormDraftToStorage();
+            } catch (err) { /* ignore */ }
+        });
+
         $('#qAiInclGenerate, #qAiInclRegenerate').on('click', function () {
             requestAiInclusionsGenerate();
         });
@@ -9467,15 +9732,11 @@
         var groups = [];
         var current = null;
         (flights || []).forEach(function (f, idx) {
-            var startNew = !!(f && f.journey_start) || !current;
-            if (!startNew && current && current.items.length) {
-                var prev = current.items[current.items.length - 1].flight;
-                var layMins = calcLayoverMinutesBetweenData(prev, f);
-                if (layMins < 0 || layMins > (24 * 60)) {
-                    startNew = true;
-                }
-            }
-            if (startNew) {
+            var d = normalizeFlightData(f);
+            var pseudo = current
+                ? { rows: current.items.map(function (it) { return normalizeFlightData(it.flight); }) }
+                : null;
+            if (shouldStartNewFlightGroup(pseudo, d)) {
                 if (current) {
                     groups.push(current);
                 }
@@ -11675,6 +11936,7 @@
             options: options,
             active_option_id: active ? active.category_id : activeId,
             pricing_notes: $.trim($('#q_pricing_notes').val() || ''),
+            include_travel_insurance: isTravelInsuranceInclusionEnabled() ? 1 : 0,
             tour_cost: active && active.tour_cost ? active.tour_cost : collectTourCostPayload(),
             hotel_categories: {
                 active_category_id: data.active_category_id,
@@ -13340,6 +13602,10 @@
 
     function qpFlightLayoverHtml(prev, cur) {
         var mins = calcLayoverMinutesBetweenData(prev, cur);
+        // Never show a "layover" between independent journeys (long gap / not connected).
+        if (mins < 0 || mins > Q_FLIGHT_MAX_LAYOVER_MINUTES) {
+            return '';
+        }
         var duration = qpFormatLayoverBadge(mins, cur && cur.layover_time);
         if (!duration) {
             return '';
@@ -15669,6 +15935,12 @@
                 setRichEditorValue('qed_' + field, p[field]);
             }
         });
+        var tiSource = cs;
+        if ((cs.include_travel_insurance == null || cs.include_travel_insurance === '')
+            && draft && draft.cost_sheet && draft.cost_sheet.include_travel_insurance != null) {
+            tiSource = draft.cost_sheet;
+        }
+        restoreTravelInsuranceInclusionState(p, tiSource);
         resumeItineraryRebuild();
         if (!tourCostRowsPresent()) {
             renderTourCostRows();
