@@ -14456,7 +14456,7 @@
                 desc: 'Business Network International, Business Referral Organization'
             },
             {
-                img: 'crm/assets/accreditations/FJCCI-Logo.webp',
+                img: 'crm/assets/accreditations/FJCCI-Logo.png',
                 title: 'FJCCI Member',
                 desc: 'Federation of Jharkhand Chamber of Commerce & Industries'
             },
@@ -19074,11 +19074,14 @@
 
         /**
          * Save PDF on the server from the same print HTML.
-         * Prefers Chrome headless on the server; falls back to client html2pdf upload.
+         * Prefers Chrome headless on the server; optionally falls back to client html2pdf upload.
+         * Print passes allowClientFallback:false so the UI is not frozen by a heavy canvas capture.
          */
+        var qPersistPdfInFlight = null;
         function qPersistQuotationPdf(opts) {
             opts = opts || {};
             var silent = !!opts.silent;
+            var allowClientFallback = opts.allowClientFallback !== false;
             var ids = opts.ids || qGetQuotationPdfIds();
             var html = opts.html || '';
             var filename = opts.filename || buildQuotationExportFilename({ withExt: true });
@@ -19116,71 +19119,106 @@
                 });
             };
 
-            var makeClientPdfBlob = function () {
+            var runClientCapture = function (stripImages) {
                 if (clientPdfBlob) {
                     return Promise.resolve(clientPdfBlob);
                 }
                 if (typeof html2pdf !== 'function' || !html) {
                     return Promise.reject(new Error('Client PDF fallback unavailable.'));
                 }
-                // Render print HTML into a same-document host and capture a PDF blob (no download).
+                // Sanitize SVG data-URI backgrounds in print HTML before html2canvas sees them.
+                var safeHtml = qSanitizeCssTextForHtml2Canvas(html);
+
                 var host = document.createElement('div');
                 host.id = 'qPreviewPdfFallbackHost';
-                host.style.cssText = 'position:fixed;left:0;top:0;width:794px;opacity:1;pointer-events:none;z-index:-1;background:#fff;';
+                host.setAttribute('aria-hidden', 'true');
+                // Must stay opacity:1 — html2canvas paints transparent ancestors as blank white pages.
+                host.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;height:1px;overflow:hidden;opacity:1;pointer-events:none;z-index:-1;';
                 var iframe = document.createElement('iframe');
-                iframe.style.cssText = 'width:794px;min-height:400px;border:0;';
+                iframe.style.cssText = 'width:794px;min-height:400px;border:0;opacity:1;';
                 host.appendChild(iframe);
                 document.body.appendChild(host);
-                var idoc = iframe.contentDocument || iframe.contentWindow.document;
-                idoc.open();
-                idoc.write(html);
-                idoc.close();
 
+                var stage = null;
                 var cleanup = function () {
+                    try {
+                        if (stage && stage.parentNode) stage.parentNode.removeChild(stage);
+                    } catch (e0) { /* ignore */ }
                     try {
                         if (host.parentNode) host.parentNode.removeChild(host);
                     } catch (e) { /* ignore */ }
+                    try {
+                        var leftover = document.getElementById('qPreviewPdfFallbackHost');
+                        if (leftover && leftover.parentNode) leftover.parentNode.removeChild(leftover);
+                    } catch (e2) { /* ignore */ }
                 };
 
+                var idoc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+                if (!idoc) {
+                    cleanup();
+                    return Promise.reject(new Error('Could not open PDF capture frame.'));
+                }
+                idoc.open();
+                idoc.write(safeHtml);
+                idoc.close();
+
                 return new Promise(function (resolve) {
-                    window.setTimeout(resolve, 600);
+                    window.setTimeout(resolve, 400);
                 }).then(function () {
+                    qSanitizeDomForHtml2Canvas(idoc.documentElement || idoc.body);
                     var src = idoc.getElementById('qPreviewPrintArea') || idoc.body;
-                    var stage = document.createElement('div');
-                    stage.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:-1;background:#fff;';
+                    stage = document.createElement('div');
+                    stage.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;opacity:1;pointer-events:none;z-index:-1;background:#fff;';
                     var clone = document.createElement('div');
                     clone.className = 'q-preview-doc q-preview-pdf-capture';
-                    clone.style.width = '794px';
-                    clone.style.maxWidth = '794px';
-                    clone.style.background = '#fff';
-                    clone.innerHTML = src.innerHTML;
+                    clone.style.cssText = 'width:794px;max-width:794px;background:#fff;margin:0;padding:0;opacity:1;';
+                    clone.innerHTML = src ? src.innerHTML : '';
+                    try {
+                        var styleNodes = idoc.querySelectorAll('style');
+                        Array.prototype.forEach.call(styleNodes, function (st) {
+                            var s = document.createElement('style');
+                            s.textContent = qSanitizeCssTextForHtml2Canvas(st.textContent || '');
+                            stage.appendChild(s);
+                        });
+                    } catch (styleErr) { /* ignore */ }
                     stage.appendChild(clone);
                     document.body.appendChild(stage);
                     void stage.offsetHeight;
-                    return qPreparePreviewImagesForPdf(clone)
-                        .then(function () { return qWaitForPdfImages(clone, 3000); })
-                        .then(function () {
-                            var scale = qPdfCaptureScale(clone);
-                            var opt = qPdfBaseOpt(filename, scale, 794);
-                            return Promise.resolve(html2pdf().set(opt).from(clone).outputPdf('blob'))
-                                .then(function (blob) {
-                                    try {
-                                        if (stage.parentNode) stage.parentNode.removeChild(stage);
-                                    } catch (e) { /* ignore */ }
-                                    cleanup();
-                                    return blob;
-                                }, function (err) {
-                                    try {
-                                        if (stage.parentNode) stage.parentNode.removeChild(stage);
-                                    } catch (e2) { /* ignore */ }
-                                    cleanup();
-                                    throw err;
-                                });
+                    qSanitizeDomForHtml2Canvas(stage);
+
+                    var prep = stripImages
+                        ? Promise.resolve().then(function () { qStripAllPdfImages(clone); })
+                        : qPreparePreviewImagesForPdf(clone).then(function () {
+                            return qWaitForPdfImages(clone, 4000);
                         });
+
+                    return prep.then(function () {
+                        qSimplifyPreviewForPdf(clone);
+                        qSanitizeDomForHtml2Canvas(clone);
+                        // JPEG-only page slices — never feed SVG/CSS images into jsPDF.
+                        return qCaptureElementToPdfBlobSliced(clone, filename);
+                    }).then(function (blob) {
+                        cleanup();
+                        return blob;
+                    }, function (err) {
+                        cleanup();
+                        throw err;
+                    });
                 });
             };
 
-            return postOnce(null).then(function (resp) {
+            var makeClientPdfBlob = function () {
+                return runClientCapture(false).catch(function (err) {
+                    var msg = String((err && err.message) || err || '');
+                    if (/unsupported image type|unsupported image function|image type/i.test(msg)) {
+                        console.warn('PDF capture retry after CSS/image sanitize strip:', msg);
+                        return runClientCapture(true);
+                    }
+                    throw err;
+                });
+            };
+
+            var job = postOnce(null).then(function (resp) {
                 if (resp.data && resp.data.success) {
                     if (html) {
                         qPdfRememberHtml({
@@ -19190,13 +19228,21 @@
                     }
                     return resp.data;
                 }
+                if (!allowClientFallback) {
+                    // Print path: never run heavy client capture — keep CRM responsive.
+                    if (silent) {
+                        console.warn('Quotation PDF server persist skipped (no client fallback):',
+                            (resp.data && resp.data.message) || 'server render unavailable');
+                        return null;
+                    }
+                    throw new Error((resp.data && resp.data.message) || 'Could not save PDF on the server.');
+                }
                 if (!html && !clientPdfBlob) {
                     throw new Error((resp.data && resp.data.message) || 'Could not save PDF.');
                 }
-                // Server could not render (no Chrome / render error) — upload client PDF of same HTML.
                 return makeClientPdfBlob().then(function (blob) {
-                    if (!blob || !blob.size) {
-                        throw new Error('Could not build fallback PDF.');
+                    if (!blob || !blob.size || blob.size < 40000) {
+                        throw new Error('Could not build a complete fallback PDF (output was blank or too small).');
                     }
                     return postOnce(blob).then(function (resp2) {
                         if (resp2.data && resp2.data.success) {
@@ -19212,23 +19258,25 @@
                 console.warn('Quotation PDF persist skipped:', err);
                 return null;
             });
+
+            qPersistPdfInFlight = job.then(function (res) {
+                if (qPersistPdfInFlight === job) {
+                    qPersistPdfInFlight = null;
+                }
+                return res;
+            }, function (err) {
+                if (qPersistPdfInFlight === job) {
+                    qPersistPdfInFlight = null;
+                }
+                throw err;
+            });
+            return qPersistPdfInFlight;
         }
 
         window.qPrintPreviewOnly = function () {
             var built = window.qBuildPreviewPrintHtml();
             if (!built || !built.html) {
                 return;
-            }
-
-            // Persist server PDF copy from the exact print HTML (does not block the dialog).
-            try {
-                qPersistQuotationPdf({
-                    html: built.html,
-                    filename: built.filename,
-                    silent: true
-                });
-            } catch (persistErr) {
-                console.warn('Quotation PDF persist failed to start:', persistErr);
             }
 
             // Same-tab print via a hidden iframe (existing behaviour).
@@ -19266,25 +19314,58 @@
             var titleChain = qCapturePrintDocumentTitles(built.title);
 
             var cleanedUp = false;
+            var persistStarted = false;
+            var onAfterPrint = null;
+
+            // Start server PDF save as soon as print is ready (parallel with the dialog).
+            // Download can then serve this file immediately without regenerating.
+            // No client html2pdf here — that freezes the CRM; Download will generate if needed.
+            var startPrintPdfPersist = function () {
+                if (persistStarted) return;
+                persistStarted = true;
+                try {
+                    qPersistQuotationPdf({
+                        html: built.html,
+                        filename: built.filename,
+                        silent: true,
+                        allowClientFallback: false
+                    });
+                } catch (persistErr) {
+                    console.warn('Quotation PDF persist failed to start:', persistErr);
+                }
+            };
+
             var cleanupPrintFrame = function () {
                 if (cleanedUp) return;
                 cleanedUp = true;
                 qRestorePrintDocumentTitles(titleChain);
                 try {
+                    if (onAfterPrint) {
+                        printWin.removeEventListener('afterprint', onAfterPrint);
+                        window.removeEventListener('afterprint', onAfterPrint);
+                    }
+                } catch (rmErr) { /* ignore */ }
+                try {
                     if (printFrame && printFrame.parentNode) {
                         printFrame.parentNode.removeChild(printFrame);
                     }
                 } catch (cleanupErr) { /* ignore */ }
+                // Ensure persist ran even if print was cancelled early.
+                startPrintPdfPersist();
             };
+            onAfterPrint = cleanupPrintFrame;
             try {
-                printWin.addEventListener('afterprint', cleanupPrintFrame);
+                printWin.addEventListener('afterprint', onAfterPrint);
             } catch (afterErr) { /* ignore */ }
             try {
-                window.addEventListener('afterprint', cleanupPrintFrame);
+                window.addEventListener('afterprint', onAfterPrint);
             } catch (afterWinErr) { /* ignore */ }
-            window.setTimeout(cleanupPrintFrame, 120000);
+            // Safety net — do not keep the print iframe for 2 minutes.
+            window.setTimeout(cleanupPrintFrame, 45000);
 
             var triggerPrint = function () {
+                // Kick off save before the system print dialog blocks the UI thread.
+                startPrintPdfPersist();
                 try {
                     printWin.focus();
                     printWin.print();
@@ -19297,7 +19378,7 @@
                 var doc = printDoc;
                 var imgs = doc ? Array.prototype.slice.call(doc.images || []) : [];
                 if (!imgs.length) {
-                    window.setTimeout(triggerPrint, 400);
+                    window.setTimeout(triggerPrint, 200);
                     return;
                 }
                 var pending = imgs.length;
@@ -19305,7 +19386,7 @@
                 var finish = function () {
                     if (finished) return;
                     finished = true;
-                    window.setTimeout(triggerPrint, 150);
+                    window.setTimeout(triggerPrint, 100);
                 };
                 var onOne = function () {
                     pending -= 1;
@@ -19318,13 +19399,14 @@
                             onOne();
                             return;
                         }
-                        img.addEventListener('load', onOne);
-                        img.addEventListener('error', onOne);
+                        img.addEventListener('load', onOne, { once: true });
+                        img.addEventListener('error', onOne, { once: true });
                     } catch (e) {
                         onOne();
                     }
                 });
-                window.setTimeout(finish, 6000);
+                // Cap wait so a single broken image cannot stall print.
+                window.setTimeout(finish, 3500);
             })();
         };
 
@@ -19344,6 +19426,7 @@
                 canvas.width = cw;
                 canvas.height = ch;
                 var ctx = canvas.getContext('2d');
+                // White fill so transparent WEBP/PNG become valid JPEG for jsPDF.
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, cw, ch);
                 ctx.drawImage(imgEl, 0, 0, cw, ch);
@@ -19356,14 +19439,28 @@
         function qHidePdfImage(img) {
             try {
                 img.style.visibility = 'hidden';
+                img.style.display = 'none';
                 img.removeAttribute('src');
                 img.removeAttribute('srcset');
+                img.removeAttribute('data-src');
             } catch (e) { /* ignore */ }
         }
 
         function qStripAllPdfImages(rootEl) {
             if (!rootEl) return;
             Array.prototype.forEach.call(rootEl.querySelectorAll('img'), qHidePdfImage);
+        }
+
+        function qIsPdfUnsafeImageSrc(src) {
+            src = String(src || '').trim().toLowerCase();
+            if (!src) return true;
+            if (/^data:image\/(svg\+xml|webp|gif|bmp|x-icon|vnd\.microsoft\.icon)/i.test(src)) {
+                return true;
+            }
+            if (/\.(webp|svg|gif|bmp|ico)(\?|#|$)/i.test(src)) {
+                return true;
+            }
+            return false;
         }
 
         function qPreparePreviewImagesForPdf(rootEl) {
@@ -19380,26 +19477,47 @@
                         src = '';
                     }
                     if (!src) {
+                        qHidePdfImage(img);
                         resolve();
                         return;
                     }
 
                     var finishWithProbe = function (probe) {
                         var dataUrl = qImageToPdfDataUrl(probe, 480);
-                        if (dataUrl) {
+                        if (dataUrl && /^data:image\/jpeg/i.test(dataUrl)) {
                             img.setAttribute('src', dataUrl);
                             img.removeAttribute('srcset');
+                            img.removeAttribute('crossorigin');
                         } else {
                             qHidePdfImage(img);
                         }
                         resolve();
                     };
 
-                    // Data URLs: recompress if already decoded.
+                    // Always rasterize to JPEG — including already-safe PNG/JPEG — so jsPDF
+                    // never sees WEBP/SVG/GIF which throw "Unsupported image type".
+                    var needsRaster = true;
+                    if (/^data:image\/jpeg/i.test(src) && img.complete && img.naturalWidth > 0) {
+                        // Already a JPEG data URL — keep as-is.
+                        needsRaster = false;
+                        resolve();
+                        return;
+                    }
+                    void needsRaster;
+
                     if (/^data:/i.test(src)) {
                         if (img.complete && img.naturalWidth > 0) {
                             finishWithProbe(img);
-                        } else {
+                            return;
+                        }
+                        var dataProbe = new Image();
+                        dataProbe.onload = function () { finishWithProbe(dataProbe); };
+                        dataProbe.onerror = function () {
+                            qHidePdfImage(img);
+                            resolve();
+                        };
+                        try { dataProbe.src = src; } catch (eData) {
+                            qHidePdfImage(img);
                             resolve();
                         }
                         return;
@@ -19407,26 +19525,55 @@
 
                     var probe = new Image();
                     try { probe.crossOrigin = 'anonymous'; } catch (e1) { /* ignore */ }
-                    probe.onload = function () { finishWithProbe(probe); };
+                    var settled = false;
+                    var settle = function (fn) {
+                        if (settled) return;
+                        settled = true;
+                        fn();
+                    };
+                    probe.onload = function () { settle(function () { finishWithProbe(probe); }); };
                     probe.onerror = function () {
-                        var probe2 = new Image();
-                        probe2.onload = function () { finishWithProbe(probe2); };
-                        probe2.onerror = function () {
-                            qHidePdfImage(img);
-                            resolve();
-                        };
-                        try { probe2.src = src; } catch (e2) {
-                            qHidePdfImage(img);
-                            resolve();
-                        }
+                        settle(function () {
+                            // Retry without CORS (may taint canvas — then we hide).
+                            var probe2 = new Image();
+                            probe2.onload = function () { finishWithProbe(probe2); };
+                            probe2.onerror = function () {
+                                qHidePdfImage(img);
+                                resolve();
+                            };
+                            try { probe2.src = src; } catch (e2) {
+                                qHidePdfImage(img);
+                                resolve();
+                            }
+                        });
                     };
                     try { probe.src = src; } catch (e3) {
                         qHidePdfImage(img);
                         resolve();
                     }
+                    // Don't hang forever on a single image.
+                    window.setTimeout(function () {
+                        settle(function () {
+                            if (probe.complete && probe.naturalWidth > 0) {
+                                finishWithProbe(probe);
+                            } else {
+                                qHidePdfImage(img);
+                                resolve();
+                            }
+                        });
+                    }, 4500);
                 });
             });
-            return Promise.all(tasks);
+            return Promise.all(tasks).then(function () {
+                // Final sweep: hide anything still unsafe for jsPDF.
+                Array.prototype.forEach.call(rootEl.querySelectorAll('img'), function (img) {
+                    var s = '';
+                    try { s = String(img.getAttribute('src') || ''); } catch (e) { s = ''; }
+                    if (!s || qIsPdfUnsafeImageSrc(s)) {
+                        qHidePdfImage(img);
+                    }
+                });
+            });
         }
 
         function qWaitForPdfImages(rootEl, timeoutMs) {
@@ -19518,7 +19665,12 @@
                     imageTimeout: 6000,
                     removeContainer: true,
                     foreignObjectRendering: false,
-                    windowWidth: windowWidth || 794
+                    windowWidth: windowWidth || 794,
+                    onclone: function (clonedDoc) {
+                        try {
+                            qSanitizeDomForHtml2Canvas(clonedDoc.documentElement || clonedDoc.body);
+                        } catch (eOnclone) { /* ignore */ }
+                    }
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
                 pagebreak: { mode: ['css', 'legacy'] }
@@ -19536,11 +19688,43 @@
             });
         }
 
+        /** True when a canvas is essentially blank white (would yield empty PDF pages). */
+        function qCanvasHasVisibleInk(canvas) {
+            try {
+                var w = canvas.width || 0;
+                var h = canvas.height || 0;
+                if (w < 8 || h < 8) return false;
+                var ctx = canvas.getContext('2d');
+                if (!ctx) return false;
+                var stepX = Math.max(1, Math.floor(w / 24));
+                var stepY = Math.max(1, Math.floor(h / 24));
+                var data = ctx.getImageData(0, 0, w, h).data;
+                var ink = 0;
+                var total = 0;
+                var y;
+                var x;
+                for (y = 0; y < h; y += stepY) {
+                    for (x = 0; x < w; x += stepX) {
+                        var i = ((y * w) + x) * 4;
+                        total += 1;
+                        // Non-near-white pixel counts as content.
+                        if (data[i] < 248 || data[i + 1] < 248 || data[i + 2] < 248) {
+                            ink += 1;
+                        }
+                    }
+                }
+                return total > 0 && (ink / total) >= 0.004;
+            } catch (e) {
+                // If we cannot sample (tainted canvas), assume content exists.
+                return true;
+            }
+        }
+
         /**
-         * Capture tall quotations page-by-page so html2canvas never builds one giant canvas.
-         * Uses html2pdf worker APIs (toCanvas / get('pdf')) — no separate library globals needed.
+         * Capture tall quotations page-by-page as JPEG slices, then assemble a PDF blob.
+         * Only JPEG data URLs are passed to jsPDF — avoids "Unsupported image type".
          */
-        function qExportElementToPdfSliced(rootEl, filename) {
+        function qCaptureElementToPdfBlobSliced(rootEl, filename) {
             var pageWidthPx = 794;
             var marginMm = 6;
             var a4W = 210;
@@ -19552,11 +19736,14 @@
             var totalH = Math.max(rootEl.scrollHeight || 0, rootEl.offsetHeight || 0, 1);
             var pageCount = Math.max(1, Math.ceil(totalH / pageHeightPx));
 
+            qSanitizeDomForHtml2Canvas(rootEl);
+
             var clip = document.createElement('div');
             clip.id = 'qPreviewPdfClip';
+            // opacity MUST be 1 — transparent capture hosts produce blank white PDF pages.
             clip.style.cssText = [
                 'position:fixed',
-                'left:0',
+                'left:-14000px',
                 'top:0',
                 'width:' + pageWidthPx + 'px',
                 'height:' + pageHeightPx + 'px',
@@ -19568,15 +19755,17 @@
             ].join(';');
 
             var mover = document.createElement('div');
-            mover.style.cssText = 'position:relative;width:' + pageWidthPx + 'px;margin:0;padding:0;top:0;';
+            mover.style.cssText = 'position:relative;width:' + pageWidthPx + 'px;margin:0;padding:0;top:0;opacity:1;';
             var parent = rootEl.parentNode;
             mover.appendChild(rootEl);
             rootEl.style.width = pageWidthPx + 'px';
             rootEl.style.maxWidth = pageWidthPx + 'px';
+            rootEl.style.opacity = '1';
+            rootEl.style.visibility = 'visible';
             clip.appendChild(mover);
             document.body.appendChild(clip);
 
-            var opt = qPdfBaseOpt(filename, scale, pageWidthPx);
+            var opt = qPdfBaseOpt(filename || 'Quotation.pdf', scale, pageWidthPx);
             opt.margin = 0;
             opt.pagebreak = { mode: [] };
             opt.html2canvas.height = pageHeightPx;
@@ -19605,16 +19794,18 @@
                     if (!canvas || !canvas.width || !canvas.height) {
                         throw new Error('PDF page canvas empty at page ' + (pageIndex + 1));
                     }
+                    if (!qCanvasHasVisibleInk(canvas)) {
+                        throw new Error('PDF page capture is blank at page ' + (pageIndex + 1));
+                    }
                     pageImages.push(canvas.toDataURL('image/jpeg', 0.88));
                     return captureAll(pageIndex + 1);
                 });
             };
 
             return captureAll(0).then(function () {
-                // Bootstrap a jsPDF instance via html2pdf (bundle does not expose jsPDF globally).
                 var boot = document.createElement('div');
                 boot.textContent = '.';
-                boot.style.cssText = 'width:20px;height:12px;color:#fff;';
+                boot.style.cssText = 'width:20px;height:12px;color:#fff;background:#fff;';
                 clip.appendChild(boot);
                 return Promise.resolve(
                     html2pdf().set(opt).from(boot).toPdf().get('pdf')
@@ -19629,18 +19820,24 @@
                         pdf.addImage(img, 'JPEG', marginMm, marginMm, usableWmm, usableHmm);
                     });
                     var blob = pdf.output('blob');
-                    if (!blob || !blob.size || blob.size < 50) {
-                        throw new Error('Sliced PDF blob invalid');
+                    if (!blob || !blob.size || blob.size < 40000) {
+                        throw new Error('Sliced PDF blob is blank or too small.');
                     }
-                    qTriggerBlobDownload(blob, filename);
-                    return true;
+                    return blob;
                 });
-            }).then(function (ok) {
+            }).then(function (blob) {
                 cleanup();
-                return ok;
+                return blob;
             }, function (err) {
                 cleanup();
                 throw err;
+            });
+        }
+
+        function qExportElementToPdfSliced(rootEl, filename) {
+            return qCaptureElementToPdfBlobSliced(rootEl, filename).then(function (blob) {
+                qTriggerBlobDownload(blob, filename);
+                return true;
             });
         }
 
@@ -19659,6 +19856,75 @@
                     } catch (e) { /* ignore */ }
                 });
             } catch (e2) { /* ignore */ }
+        }
+
+        /**
+         * html2canvas (bundled in html2pdf) only understands linear-gradient() as a CSS
+         * image function. Quotation CSS uses background-image: url("data:image/svg+xml,…")
+         * for inclusion icons — that throws "Unsupported image type" on live (no Chrome
+         * headless → client capture). Strip those values before capture.
+         */
+        function qSanitizeCssTextForHtml2Canvas(css) {
+            css = String(css || '');
+            // background-image: url("data:image/svg+xml…");
+            css = css.replace(
+                /background-image\s*:\s*url\(\s*(['"]?)data:image\/svg\+xml[\s\S]*?\1\s*\)\s*;?/gi,
+                'background-image:none;'
+            );
+            css = css.replace(
+                /background-image\s*:\s*url\(\s*data:image\/svg\+xml[^)]*\)\s*;?/gi,
+                'background-image:none;'
+            );
+            // Unsupported CSS image functions (html2canvas only allows linear-gradient)
+            css = css.replace(
+                /background-image\s*:\s*(?:-webkit-)?(?:radial-gradient|conic-gradient|repeating-linear-gradient|repeating-radial-gradient|image-set|cross-fade)\([^;]*\)\s*;?/gi,
+                'background-image:none;'
+            );
+            // Shorthand background: … url(data:image/svg+xml…) …
+            css = css.replace(
+                /url\(\s*(['"]?)data:image\/svg\+xml[\s\S]*?\1\s*\)/gi,
+                'none'
+            );
+            return css;
+        }
+
+        function qSanitizeDomForHtml2Canvas(rootEl) {
+            if (!rootEl) return;
+            var doc = rootEl.ownerDocument || document;
+            try {
+                Array.prototype.forEach.call(doc.querySelectorAll('style'), function (st) {
+                    st.textContent = qSanitizeCssTextForHtml2Canvas(st.textContent || '');
+                });
+            } catch (eStyle) { /* ignore */ }
+            try {
+                var nodes = rootEl.querySelectorAll ? rootEl.querySelectorAll('*') : [];
+                Array.prototype.forEach.call(nodes, function (el) {
+                    try {
+                        if (!el.style) return;
+                        var bi = String(el.style.backgroundImage || '');
+                        if (/svg\+xml|radial-gradient|conic-gradient|image-set|cross-fade|repeating-/i.test(bi)) {
+                            el.style.backgroundImage = 'none';
+                        }
+                        var bg = String(el.style.background || '');
+                        if (/svg\+xml|radial-gradient|conic-gradient|image-set|cross-fade/i.test(bg)) {
+                            el.style.backgroundImage = 'none';
+                        }
+                    } catch (eNode) { /* ignore */ }
+                });
+            } catch (eAll) { /* ignore */ }
+            // Neutralize stylesheet-applied SVG backgrounds via computed style override.
+            try {
+                var view = doc.defaultView || window;
+                Array.prototype.forEach.call(rootEl.querySelectorAll('*'), function (el) {
+                    try {
+                        var cs = view.getComputedStyle(el);
+                        var cbi = cs ? String(cs.backgroundImage || '') : '';
+                        if (cbi && cbi !== 'none' && /svg\+xml|radial-gradient|conic-gradient|image-set|cross-fade|repeating-/i.test(cbi)) {
+                            el.style.setProperty('background-image', 'none', 'important');
+                        }
+                    } catch (eCs) { /* ignore */ }
+                });
+            } catch (eComp) { /* ignore */ }
         }
 
         window.qDownloadPreviewPdf = function () {
@@ -19696,13 +19962,17 @@
                 alert((err && err.message) ? err.message : 'Could not download PDF. Please try again.');
             };
 
-            var previewLooksModified = function (html) {
+            var previewHasUnsavedEdits = function () {
                 try {
                     if (typeof previewDirty !== 'undefined' && previewDirty) return true;
                 } catch (e1) { /* ignore */ }
                 try {
                     if (qDbAutoSave && qDbAutoSave.dirty) return true;
                 } catch (e2) { /* ignore */ }
+                return false;
+            };
+
+            var previewHtmlDriftedFromSavedPdf = function (html) {
                 try {
                     var prev = sessionStorage.getItem('qpdf_html_' + ids.id + '_v' + (ids.version || 0));
                     if (prev && prev !== qPdfHtmlFingerprint(html)) return true;
@@ -19710,41 +19980,99 @@
                 return false;
             };
 
-            var ensureAndDownload = function () {
+            var startDownload = function () {
+                qTriggerServerPdfDownload(ids);
+                restoreBtn();
+                return true;
+            };
+
+            /**
+             * Fast path: if Print (or a prior generate) already saved a fresh PDF and the
+             * preview has no unsaved edits, download that file immediately — no HTML rebuild.
+             */
+            var tryImmediateServerDownload = function () {
+                return qFetchQuotationPdfStatus(ids).then(function (status) {
+                    if (!(status && status.success && status.exists && status.fresh) || status.invalid_blank) {
+                        return { reused: false, status: status || null };
+                    }
+                    if (status.byte_size && parseInt(status.byte_size, 10) < 40000) {
+                        return { reused: false, status: status };
+                    }
+                    if (status.version) {
+                        ids.version = parseInt(status.version, 10) || ids.version;
+                    }
+                    if (previewHasUnsavedEdits()) {
+                        return { reused: false, status: status };
+                    }
+                    startDownload();
+                    return { reused: true, status: status };
+                });
+            };
+
+            var regenerateThenDownload = function () {
                 var built = window.qBuildPreviewPrintHtml();
                 if (!built || !built.html) {
                     throw new Error('Could not prepare quotation for PDF.');
                 }
-
-                return qFetchQuotationPdfStatus(ids).then(function (status) {
-                    var canReuse = status && status.success && status.exists && status.fresh
-                        && !previewLooksModified(built.html);
-                    if (canReuse) {
-                        qTriggerServerPdfDownload(ids);
-                        restoreBtn();
-                        return true;
-                    }
-                    return qPersistQuotationPdf({
-                        ids: ids,
-                        html: built.html,
-                        filename: built.filename,
-                        silent: false
-                    }).then(function (res) {
-                        if (!res || !res.success) {
-                            throw new Error((res && res.message) || 'Could not generate PDF on the server.');
+                // If server says fresh but local preview HTML drifted (rare), still regenerate.
+                if (!previewHasUnsavedEdits() && !previewHtmlDriftedFromSavedPdf(built.html)) {
+                    return qFetchQuotationPdfStatus(ids).then(function (status) {
+                        if (status && status.success && status.exists && status.fresh) {
+                            if (status.version) {
+                                ids.version = parseInt(status.version, 10) || ids.version;
+                            }
+                            return startDownload();
                         }
-                        if (res.version) {
-                            ids.version = parseInt(res.version, 10) || ids.version;
-                        }
-                        qPdfRememberHtml(ids, built.html);
-                        qTriggerServerPdfDownload(ids);
-                        restoreBtn();
-                        return true;
+                        return qPersistQuotationPdf({
+                            ids: ids,
+                            html: built.html,
+                            filename: built.filename,
+                            silent: false,
+                            allowClientFallback: true
+                        }).then(function (res) {
+                            if (!res || !res.success) {
+                                throw new Error((res && res.message) || 'Could not generate PDF on the server.');
+                            }
+                            if (res.version) {
+                                ids.version = parseInt(res.version, 10) || ids.version;
+                            }
+                            qPdfRememberHtml(ids, built.html);
+                            return startDownload();
+                        });
                     });
+                }
+                return qPersistQuotationPdf({
+                    ids: ids,
+                    html: built.html,
+                    filename: built.filename,
+                    silent: false,
+                    allowClientFallback: true
+                }).then(function (res) {
+                    if (!res || !res.success) {
+                        throw new Error((res && res.message) || 'Could not generate PDF on the server.');
+                    }
+                    if (res.version) {
+                        ids.version = parseInt(res.version, 10) || ids.version;
+                    }
+                    qPdfRememberHtml(ids, built.html);
+                    return startDownload();
                 });
             };
 
-            Promise.resolve(ensureAndDownload()).catch(fail);
+            // Wait briefly if Print just kicked off a server persist, then prefer that file.
+            var pendingPersist = qPersistPdfInFlight || Promise.resolve(null);
+            Promise.resolve(pendingPersist)
+                .catch(function () { return null; })
+                .then(function () {
+                    return tryImmediateServerDownload();
+                })
+                .then(function (result) {
+                    if (result && result.reused) {
+                        return true;
+                    }
+                    return regenerateThenDownload();
+                })
+                .catch(fail);
 
             window.setTimeout(function () {
                 if (!restored) restoreBtn();
