@@ -1372,9 +1372,9 @@
                 return isAutoTouristVisaLabel(label) ? '' : full;
             }
         );
-        // Drop empty Other Inclusions sections left after visa removal.
+        // Drop empty Other / Visa sections left after visa removal.
         html = html.replace(
-            /<div[^>]*\bdata-sec=["']other["'][^>]*>\s*<p[^>]*class=["'][^"']*q-ai-incl-sec-title[^"']*["'][^>]*>[\s\S]*?<\/p>\s*<ul[^>]*>\s*<\/ul>\s*<\/div>/gi,
+            /<div[^>]*\bdata-sec=["'](?:other|visa)["'][^>]*>\s*<p[^>]*class=["'][^"']*q-ai-incl-sec-title[^"']*["'][^>]*>[\s\S]*?<\/p>\s*<ul[^>]*>\s*<\/ul>\s*<\/div>/gi,
             ''
         );
         return html;
@@ -1437,8 +1437,8 @@
         if (!dest) {
             return '';
         }
-        // Match quotation style: "MAURITIUS VISA"
-        return String(dest).replace(/\s+/g, ' ').trim().toUpperCase() + ' VISA';
+        // "[Destination] Tourist Visa" — destination from quotation details.
+        return String(dest).replace(/\s+/g, ' ').trim() + ' Tourist Visa';
     }
 
     function buildAutoTouristVisaListItemHtml(text) {
@@ -1454,17 +1454,17 @@
         if (!text) {
             return '';
         }
-        // Same layout as reference: Other Inclusions heading + bullet "DESTINATION VISA".
-        return '<div class="q-ai-incl-sec" data-sec="other">' +
+        // Same section layout as Accommodation / Meals — Visa heading at the end.
+        return '<div class="q-ai-incl-sec" data-sec="visa">' +
             '<p class="q-ai-incl-sec-title">' +
-            '<i class="fas fa-clipboard-list" aria-hidden="true"></i> ' +
-            '<strong>Other Inclusions</strong>' +
+            '<i class="fas fa-passport" aria-hidden="true"></i> ' +
+            '<strong>Visa</strong>' +
             '</p>' +
             '<ul>' + buildAutoTouristVisaListItemHtml(text) + '</ul>' +
             '</div>';
     }
 
-    /** Append visa under Other Inclusions at the end (merge if that section already exists). */
+    /** Append visa under a dedicated Visa section at the end (merge if that section already exists). */
     function appendAutoTouristVisaHtml(html, visaText) {
         html = String(html || '');
         visaText = String(visaText || '').trim();
@@ -1474,7 +1474,7 @@
         var li = buildAutoTouristVisaListItemHtml(visaText);
         var injected = false;
         html = html.replace(
-            /(<div\b[^>]*\bdata-sec=["']other["'][^>]*>[\s\S]*?<ul\b[^>]*>)([\s\S]*?)(<\/ul>)/i,
+            /(<div\b[^>]*\bdata-sec=["']visa["'][^>]*>[\s\S]*?<ul\b[^>]*>)([\s\S]*?)(<\/ul>)/i,
             function (_full, open, mid, close) {
                 injected = true;
                 return open + mid + li + close;
@@ -1833,7 +1833,7 @@
             return String(h || '').replace(/\s+/g, ' ').trim();
         };
         var visaText = getAutoTouristVisaInclusionText();
-        // AI docs: keep DESTINATION VISA under Other Inclusions at the end.
+        // AI docs: keep "[Destination] Tourist Visa" under Visa at the end.
         if (/data-q-ai-inclusions/i.test(String(current || ''))) {
             var cleanedAi = stripAutoTouristVisaHtml(current);
             var nextAi = appendAutoTouristVisaHtml(cleanedAi, visaText);
@@ -7777,6 +7777,7 @@
         if (/meal|food|breakfast|lunch|dinner/.test(title)) return 'meals';
         if (/sight|activit|tour|excursion/.test(title)) return 'sightseeing';
         if (/transfer|transport/.test(title)) return 'transfers';
+        if (/^visa\b|\bvisa\b/.test(title) && !/other/.test(title)) return 'visa';
         return 'other';
     }
 
@@ -7787,9 +7788,11 @@
             meals: { label: 'Meals', icon: 'fas fa-utensils' },
             sightseeing: { label: 'Sightseeing & Activities', icon: 'fas fa-ticket-alt' },
             transfers: { label: 'Transfers & Transportation', icon: 'fas fa-shuttle-van' },
-            other: { label: 'Other Inclusions', icon: 'fas fa-clipboard-list' }
+            other: { label: 'Other Inclusions', icon: 'fas fa-clipboard-list' },
+            visa: { label: 'Visa', icon: 'fas fa-passport' }
         };
-        var order = ['airfare', 'accommodation', 'meals', 'sightseeing', 'transfers', 'other'];
+        // Visa stays last so it appears at the end of the Inclusions list.
+        var order = ['airfare', 'accommodation', 'meals', 'sightseeing', 'transfers', 'other', 'visa'];
         var sections = {};
         order.forEach(function (k) { sections[k] = []; });
         var current = 'other';
@@ -7804,7 +7807,7 @@
             var heading = line.replace(/^[\s#]+/, '');
             var isHeading = !/^[\s•\-\*]/.test(line)
                 && (
-                    /^(airfare|accommodation|meals|sightseeing|transfers|other)/i.test(heading)
+                    /^(airfare|accommodation|meals|sightseeing|transfers|other|visa)/i.test(heading)
                     || (/^[A-Z0-9 &]+$/.test(heading) && heading.length < 48)
                 );
             if (isHeading && !/^•/.test(line)) {
@@ -7822,8 +7825,16 @@
         });
 
         if (!hasHeadings) {
-            // Flat list → Other
-            sections = { airfare: [], accommodation: [], meals: [], sightseeing: [], transfers: [], other: [] };
+            // Flat list → Other (visa line re-added under Visa below).
+            sections = {
+                airfare: [],
+                accommodation: [],
+                meals: [],
+                sightseeing: [],
+                transfers: [],
+                other: [],
+                visa: []
+            };
             lines.forEach(function (raw) {
                 var line = String(raw || '').replace(/^[\s•\-\*\d\.\)\(]+/, '').trim();
                 if (line) {
@@ -7835,7 +7846,7 @@
             });
         }
 
-        // Strip auto visa labels from body sections; re-add once under Other Inclusions.
+        // Strip auto visa labels from body sections; re-add once under Visa at the end.
         order.forEach(function (key) {
             sections[key] = (sections[key] || []).filter(function (item) {
                 return !isAutoTouristVisaLabel(item);
@@ -7843,7 +7854,7 @@
         });
         var visaLine = getAutoTouristVisaInclusionText();
         if (visaLine) {
-            sections.other.push(visaLine);
+            sections.visa.push(visaLine);
         }
 
         var html = '';
@@ -7946,32 +7957,109 @@
         });
     }
 
-    function applyAiInclusionsToEditor() {
+    function resolveAiInclusionsInsertHtml() {
         var edited = String($('#qAiInclResult').val() || '').trim();
-        var html = edited ? aiInclusionsEditableTextToHtml(edited) : pendingAiInclusionsHtml;
+        var pending = String(pendingAiInclusionsHtml || '').trim();
+        if (!edited && !pending) {
+            return '';
+        }
+        // Unedited generated list → keep original HTML (icons, headings, bullets).
+        if (edited && pending) {
+            var baseline = String(aiInclusionsHtmlToEditableText(pending) || '').replace(/\s+/g, ' ').trim();
+            var editedNorm = edited.replace(/\s+/g, ' ').trim();
+            if (baseline && editedNorm === baseline) {
+                return pending;
+            }
+        }
+        if (edited) {
+            var fromEdited = aiInclusionsEditableTextToHtml(edited);
+            if (fromEdited) {
+                return fromEdited;
+            }
+        }
+        return pending;
+    }
+
+    function commitAiInclusionsToEditor(html) {
+        html = String(html || '').trim();
+        if (!html) {
+            $('#qAiInclError').removeClass('d-none').text('Nothing to insert. Generate inclusions first.');
+            return false;
+        }
+
+        var $ta = $('#qed_inclusion');
+        if (!$ta.length) {
+            $('#qAiInclError').removeClass('d-none').text('Inclusions editor was not found.');
+            return false;
+        }
+
+        // Write through the same path as auto-sync so Summernote + textarea stay aligned.
+        writeInclusionEditorHtml($ta, html);
+        $ta.val(html);
+        try {
+            $ta.trigger('change');
+        } catch (e1) { /* ignore */ }
+
+        // Re-apply destination tourist visa (and strip AI duplicates) after insert.
+        scheduleSyncReturnAirfareInclusion(true);
+
+        // After sync settles, force textarea sync for save / preview / PDF payloads.
+        window.setTimeout(function () {
+            var synced = readSummernoteHtml($ta) || html;
+            $ta.val(synced);
+            try {
+                saveFormDraftToStorage();
+            } catch (e2) { /* ignore */ }
+        }, 220);
+
+        // Expand inclusion accordion so the user sees the result.
+        var $body = $('#qbody_inclusion');
+        if ($body.length && !$body.is(':visible')) {
+            $body.closest('.q-terms-item').find('.q-terms-item-head').trigger('click');
+        }
+
+        $('#qAiInclError').addClass('d-none').text('');
+        $('#qAiInclusionsModal').modal('hide');
+        if (typeof qCrmToast === 'function') {
+            qCrmToast('AI inclusions inserted into the Inclusions field.', 'success');
+        }
+        $('#qAlert').html('<div class="alert alert-success"><i class="fas fa-check-circle mr-1"></i> AI inclusions inserted into the Inclusions field.</div>');
+        try {
+            markAutoAiInclExclDone();
+            saveFormDraftToStorage();
+        } catch (e3) { /* ignore */ }
+        return true;
+    }
+
+    function applyAiInclusionsToEditor() {
+        var html = resolveAiInclusionsInsertHtml();
         if (!html) {
             $('#qAiInclError').removeClass('d-none').text('Nothing to insert. Generate inclusions first.');
             return;
         }
 
         var existing = (readSummernoteHtml($('#qed_inclusion')) || '').replace(/<[^>]*>/g, '').trim();
-        if (existing && !window.confirm('Replace the current Inclusions content with the AI list?')) {
+        if (!existing) {
+            commitAiInclusionsToEditor(html);
             return;
         }
 
-        setRichEditorValue('qed_inclusion', html);
-        // Re-apply destination tourist visa (and strip AI duplicates) after insert.
-        scheduleSyncReturnAirfareInclusion(true);
-        // Expand inclusion accordion so the user sees the result.
-        var $body = $('#qbody_inclusion');
-        if ($body.length && !$body.is(':visible')) {
-            $body.closest('.q-terms-item').find('.q-terms-item-head').trigger('click');
-        }
-        $('#qAiInclusionsModal').modal('hide');
-        $('#qAlert').html('<div class="alert alert-success"><i class="fas fa-check-circle mr-1"></i> AI inclusions inserted into the Inclusions field.</div>');
-        try {
-            saveFormDraftToStorage();
-        } catch (e) { /* ignore */ }
+        qCrmConfirm({
+            title: 'Replace inclusions?',
+            message: 'Are you sure you want to replace the existing inclusions with the AI-generated content?',
+            confirmText: 'Replace Inclusions',
+            cancelText: 'Cancel',
+            variant: 'warning',
+            icon: 'fas fa-magic'
+        }).then(function (ok) {
+            if (!ok) {
+                return;
+            }
+            // Let the confirm modal finish hiding before closing the AI modal (nested Bootstrap modals).
+            window.setTimeout(function () {
+                commitAiInclusionsToEditor(html);
+            }, 120);
+        });
     }
 
     /* ------------------------------------------------------------------ */
@@ -8183,6 +8271,10 @@
         }
 
         setRichEditorValue('qed_exclusion', html);
+        var $ta = $('#qed_exclusion');
+        if ($ta.length) {
+            $ta.val(html);
+        }
         var $body = $('#qbody_exclusion');
         if ($body.length && !$body.is(':visible')) {
             $body.closest('.q-terms-item').find('.q-terms-item-head').trigger('click');
@@ -8190,8 +8282,287 @@
         $('#qAiExclusionsModal').modal('hide');
         $('#qAlert').html('<div class="alert alert-success"><i class="fas fa-check-circle mr-1"></i> AI exclusions inserted into the Exclusions field. Inclusions were not changed.</div>');
         try {
+            markAutoAiInclExclDone();
             saveFormDraftToStorage();
         } catch (e) { /* ignore */ }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Automatic AI inclusions + exclusions (once per quotation)           */
+    /* ------------------------------------------------------------------ */
+    var qAutoAiInclExclState = {
+        running: false,
+        doneMemory: {}
+    };
+
+    function getQuotationAutoAiStorageKey() {
+        var qid = parseInt($('#q_id').val(), 10) || 0;
+        if (qid > 0) {
+            return 'mz_q_auto_ai_incl_excl:q:' + qid;
+        }
+        var lead = parseInt($('#q_lead_id').val(), 10) || 0;
+        if (lead > 0) {
+            return 'mz_q_auto_ai_incl_excl:lead:' + lead;
+        }
+        var draft = '';
+        try {
+            draft = String(window.sessionStorage.getItem('mz_q_draft_token') || '');
+            if (!draft) {
+                draft = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+                window.sessionStorage.setItem('mz_q_draft_token', draft);
+            }
+        } catch (e) {
+            draft = 'session';
+        }
+        return 'mz_q_auto_ai_incl_excl:draft:' + draft;
+    }
+
+    function isAutoAiInclExclDone() {
+        var key = getQuotationAutoAiStorageKey();
+        if (qAutoAiInclExclState.doneMemory[key]) {
+            return true;
+        }
+        try {
+            if (window.localStorage.getItem(key) === '1') {
+                qAutoAiInclExclState.doneMemory[key] = true;
+                return true;
+            }
+        } catch (e) { /* ignore */ }
+        return false;
+    }
+
+    function markAutoAiInclExclDone() {
+        var key = getQuotationAutoAiStorageKey();
+        qAutoAiInclExclState.doneMemory[key] = true;
+        try {
+            window.localStorage.setItem(key, '1');
+        } catch (e) { /* ignore */ }
+    }
+
+    function quotationAlreadyHasInclExclContent() {
+        var inclHtml = '';
+        var exclHtml = '';
+        try {
+            inclHtml = String(readSummernoteHtml($('#qed_inclusion')) || '');
+        } catch (e1) {
+            inclHtml = String($('#qed_inclusion').val() || '');
+        }
+        try {
+            exclHtml = String(readSummernoteHtml($('#qed_exclusion')) || '');
+        } catch (e2) {
+            exclHtml = String($('#qed_exclusion').val() || '');
+        }
+
+        // Prior AI-formatted insert — never overwrite automatically again.
+        if (/data-q-ai-inclusions/i.test(inclHtml) || /data-q-ai-exclusions/i.test(exclHtml)) {
+            return true;
+        }
+
+        // Ignore auto-synced airfare / hotel / meals / visa lines when deciding.
+        var cleanedIncl = inclHtml;
+        if (typeof stripAutoReturnAirfareHtml === 'function') {
+            cleanedIncl = stripAutoReturnAirfareHtml(cleanedIncl);
+        } else if (typeof stripAutoTouristVisaHtml === 'function') {
+            cleanedIncl = stripAutoTouristVisaHtml(cleanedIncl);
+        }
+        var remainingIncl = stripHtmlText(cleanedIncl);
+        var remainingExcl = stripHtmlText(exclHtml);
+
+        // Saved / manually typed content beyond the auto helpers.
+        return remainingIncl.length >= 40 || remainingExcl.length >= 40;
+    }
+
+    function hasEnoughContextForAutoAiInclExcl() {
+        var ctx = collectAiInclusionsContext();
+        var dest = ctx.tour && ctx.tour.destination ? String(ctx.tour.destination).trim() : '';
+        var nights = ctx.tour ? (parseInt(ctx.tour.nights, 10) || 0) : 0;
+        if (!dest || nights < 1) {
+            return false;
+        }
+        var hotels = (ctx.hotels || []).length;
+        var days = (ctx.itinerary || []).length;
+        var flights = (ctx.flights || []).length;
+        return hotels > 0 || days > 0 || flights > 0;
+    }
+
+    function showAutoAiInclExclOverlay(message) {
+        var $ov = $('#qAiAutoGenOverlay');
+        if (!$ov.length) {
+            return;
+        }
+        if (!$ov.parent().is('body')) {
+            $ov.appendTo('body');
+        }
+        if (message) {
+            $('#qAiAutoGenOverlayMsg').text(message);
+        }
+        $ov.prop('hidden', false).attr('aria-busy', 'true').addClass('is-on');
+    }
+
+    function hideAutoAiInclExclOverlay() {
+        var $ov = $('#qAiAutoGenOverlay');
+        if (!$ov.length) {
+            return;
+        }
+        $ov.removeClass('is-on').attr('aria-busy', 'false').prop('hidden', true);
+    }
+
+    function fetchAiInclusionsHtmlSilent() {
+        return new Promise(function (resolve, reject) {
+            var ctx = collectAiInclusionsContext();
+            var contextText = String(formatAiInclusionsContextText(ctx) || '').trim();
+            if (!contextText) {
+                reject(new Error('Not enough booking details yet.'));
+                return;
+            }
+            $.ajax({
+                url: absUrl('crm/ajax/ai_suggest_inclusions.php'),
+                type: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: JSON.stringify({
+                    context: ctx,
+                    context_text: contextText,
+                    notes: ''
+                })
+            }).done(function (res) {
+                if (res && res.success && res.inclusions_html) {
+                    resolve(String(res.inclusions_html));
+                    return;
+                }
+                reject(new Error((res && res.message) ? res.message : 'Could not generate inclusions.'));
+            }).fail(function (xhr) {
+                var msg = 'Could not generate inclusions.';
+                try {
+                    var j = JSON.parse(xhr.responseText);
+                    if (j && j.message) {
+                        msg = j.message;
+                    }
+                } catch (e) { /* ignore */ }
+                reject(new Error(msg));
+            });
+        });
+    }
+
+    function fetchAiExclusionsHtmlSilent() {
+        return new Promise(function (resolve, reject) {
+            var ctx = collectAiExclusionsContext();
+            var contextText = String(formatAiInclusionsContextText(ctx) || '').trim();
+            if (ctx.inclusions_text) {
+                contextText += '\n\n=== CURRENT INCLUSIONS (do not duplicate) ===\n' + ctx.inclusions_text;
+            }
+            if (!contextText && !(ctx.inclusions_text || '').trim()) {
+                reject(new Error('Not enough booking details for exclusions.'));
+                return;
+            }
+            $.ajax({
+                url: absUrl('crm/ajax/ai_suggest_exclusions.php'),
+                type: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                data: JSON.stringify({
+                    context: ctx,
+                    context_text: contextText,
+                    inclusions_text: ctx.inclusions_text || '',
+                    inclusions_html: ctx.inclusions_html || '',
+                    notes: ''
+                })
+            }).done(function (res) {
+                if (res && res.success && res.exclusions_html) {
+                    resolve(String(res.exclusions_html));
+                    return;
+                }
+                reject(new Error((res && res.message) ? res.message : 'Could not generate exclusions.'));
+            }).fail(function (xhr) {
+                var msg = 'Could not generate exclusions.';
+                try {
+                    var j = JSON.parse(xhr.responseText);
+                    if (j && j.message) {
+                        msg = j.message;
+                    }
+                } catch (e) { /* ignore */ }
+                reject(new Error(msg));
+            });
+        });
+    }
+
+    function writeRichEditorHtmlSilent(selector, html) {
+        var $ta = $(selector);
+        if (!$ta.length || !html) {
+            return false;
+        }
+        if (selector === '#qed_inclusion' && typeof writeInclusionEditorHtml === 'function') {
+            writeInclusionEditorHtml($ta, html);
+        } else if ($.fn.summernote && $ta.data('summernote')) {
+            $ta.summernote('code', html);
+        } else {
+            $ta.val(html);
+        }
+        $ta.val(html);
+        try {
+            $ta.trigger('change');
+        } catch (e) { /* ignore */ }
+        return true;
+    }
+
+    function maybeAutoGenerateInclusionsExclusions() {
+        if (qAutoAiInclExclState.running) {
+            return;
+        }
+        if (isAutoAiInclExclDone()) {
+            return;
+        }
+        if (quotationAlreadyHasInclExclContent()) {
+            markAutoAiInclExclDone();
+            return;
+        }
+        if (!hasEnoughContextForAutoAiInclExcl()) {
+            return;
+        }
+
+        qAutoAiInclExclState.running = true;
+        showAutoAiInclExclOverlay('AI is preparing professional lists from your quotation details…');
+
+        fetchAiInclusionsHtmlSilent().then(function (inclHtml) {
+            showAutoAiInclExclOverlay('Inserting inclusions, then generating exclusions…');
+            writeRichEditorHtmlSilent('#qed_inclusion', inclHtml);
+            pendingAiInclusionsHtml = inclHtml;
+            if (typeof scheduleSyncReturnAirfareInclusion === 'function') {
+                scheduleSyncReturnAirfareInclusion(true);
+            }
+            return new Promise(function (resolve) {
+                window.setTimeout(resolve, 280);
+            }).then(function () {
+                showAutoAiInclExclOverlay('Generating exclusions from your inclusions…');
+                return fetchAiExclusionsHtmlSilent();
+            });
+        }).then(function (exclHtml) {
+            writeRichEditorHtmlSilent('#qed_exclusion', exclHtml);
+            pendingAiExclusionsHtml = exclHtml;
+            markAutoAiInclExclDone();
+            try {
+                saveFormDraftToStorage();
+            } catch (e1) { /* ignore */ }
+            hideAutoAiInclExclOverlay();
+            qAutoAiInclExclState.running = false;
+            if (typeof qCrmToast === 'function') {
+                qCrmToast('Inclusions and exclusions generated from your quotation details.', 'success');
+            }
+            $('#qAlert').html(
+                '<div class="alert alert-success"><i class="fas fa-check-circle mr-1"></i> ' +
+                'AI inclusions and exclusions were generated automatically. You can refine them with AI Generate anytime.</div>'
+            );
+        }).catch(function (err) {
+            hideAutoAiInclExclOverlay();
+            qAutoAiInclExclState.running = false;
+            // Do not mark done on failure — allow retry on next visit to this step.
+            var msg = (err && err.message) ? err.message : 'Automatic AI generation failed.';
+            if (typeof qCrmToast === 'function') {
+                qCrmToast(msg + ' You can use AI Generate manually.', 'error');
+            }
+        });
     }
 
     function openFullItineraryModal() {
@@ -12079,12 +12450,12 @@
             flights_json: JSON.stringify(collectFlights()),
             hotels_json: JSON.stringify(collectHotelCategories()),
             itinerary_json: JSON.stringify(snapshotItinerary()),
-            inclusion: $('#qed_inclusion').val(),
-            exclusion: $('#qed_exclusion').val(),
-            payment_policy: $('#qed_payment_policy').val(),
-            cancellation_policy: $('#qed_cancellation_policy').val(),
-            terms_conditions: $('#qed_terms_conditions').val(),
-            other_details: $('#qed_other_details').val(),
+            inclusion: readSummernoteHtml($('#qed_inclusion')),
+            exclusion: readSummernoteHtml($('#qed_exclusion')),
+            payment_policy: readSummernoteHtml($('#qed_payment_policy')),
+            cancellation_policy: readSummernoteHtml($('#qed_cancellation_policy')),
+            terms_conditions: readSummernoteHtml($('#qed_terms_conditions')),
+            other_details: readSummernoteHtml($('#qed_other_details')),
             cost_sheet_json: JSON.stringify(costSheetObj),
             pricing_options: costSheetObj.options || [],
             active_option_id: costSheetObj.active_option_id || '',
@@ -16128,6 +16499,12 @@
                 initItineraryEditors();
                 refreshAllItineraryImagePreviews();
             }
+        }
+        if (step === 5) {
+            // First visit to Inclusions: auto-generate inclusions + exclusions once.
+            window.setTimeout(function () {
+                maybeAutoGenerateInclusionsExclusions();
+            }, 350);
         }
         if (step === 7) {
             if (!$('#qPricingSheetsHost .q-pricing-option-sheet').length) {

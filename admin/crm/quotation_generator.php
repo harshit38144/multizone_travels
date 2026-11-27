@@ -3863,6 +3863,71 @@ $qWizardSteps = [
             background: #2563eb;
         }
 
+        /* Automatic AI inclusions / exclusions loading overlay */
+        #qAiAutoGenOverlay.q-ai-auto-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1180;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(2px);
+        }
+
+        #qAiAutoGenOverlay.q-ai-auto-overlay.is-on {
+            display: flex;
+        }
+
+        #qAiAutoGenOverlay .q-ai-auto-overlay-card {
+            width: min(420px, 100%);
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.28);
+            padding: 1.55rem 1.45rem 1.4rem;
+            text-align: center;
+        }
+
+        #qAiAutoGenOverlay .q-ai-auto-spinner {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 0.95rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eef2ff;
+            color: #4f46e5;
+            font-size: 1.45rem;
+        }
+
+        #qAiAutoGenOverlay h5 {
+            margin: 0 0 0.4rem;
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        #qAiAutoGenOverlay p {
+            margin: 0;
+            font-size: 0.94rem;
+            color: #64748b;
+            line-height: 1.45;
+        }
+
+        [data-theme="dark"] #qAiAutoGenOverlay .q-ai-auto-overlay-card {
+            background: #1e293b;
+        }
+
+        [data-theme="dark"] #qAiAutoGenOverlay h5 {
+            color: #f8fafc;
+        }
+
+        [data-theme="dark"] #qAiAutoGenOverlay p {
+            color: #94a3b8;
+        }
+
         .q-crm-toast i {
             margin-top: 0.1rem;
         }
@@ -19703,6 +19768,14 @@ $qWizardSteps = [
     </div>
     <div id="qCrmToastWrap" aria-live="polite" aria-atomic="true"></div>
 
+    <div id="qAiAutoGenOverlay" class="q-ai-auto-overlay" aria-live="polite" aria-busy="false" hidden>
+        <div class="q-ai-auto-overlay-card" role="status">
+            <div class="q-ai-auto-spinner" aria-hidden="true"><i class="fas fa-spinner fa-spin"></i></div>
+            <h5>Generating inclusions &amp; exclusions</h5>
+            <p id="qAiAutoGenOverlayMsg">AI is preparing professional lists from your quotation details…</p>
+        </div>
+    </div>
+
     <div class="modal fade q-ai-incl-modal" id="qAiInclusionsModal" tabindex="-1" role="dialog" aria-labelledby="qAiInclusionsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
             <div class="modal-content">
@@ -20326,7 +20399,7 @@ $qWizardSteps = [
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="crm/assets/vendor/html2pdf.bundle.min.js?v=1"></script>
     <script src="crm/assets/airport_timezones.js?v=3"></script>
-    <script src="crm/assets/quotation_generator.js?v=417"></script>
+    <script src="crm/assets/quotation_generator.js?v=419"></script>
     <script src="crm/assets/quotation_flight_search.js?v=39"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=8"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

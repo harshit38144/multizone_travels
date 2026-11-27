@@ -1227,6 +1227,8 @@ function crmAiInclusionsSectionMeta(): array
         'sightseeing' => ['label' => 'Sightseeing & Activities', 'icon' => 'fas fa-ticket-alt'],
         'transfers' => ['label' => 'Transfers & Transportation', 'icon' => 'fas fa-shuttle-van'],
         'other' => ['label' => 'Other Inclusions', 'icon' => 'fas fa-clipboard-list'],
+        // Visa stays last so it appears at the end of the Inclusions list.
+        'visa' => ['label' => 'Visa', 'icon' => 'fas fa-passport'],
     ];
 }
 
@@ -1251,7 +1253,7 @@ function crmAiInclusionsFormatBulletHtml(string $text): string
 /**
  * Build categorized inclusions HTML (icon heading + bullets), matching quote format.
  *
- * @param array<string, mixed> $sections  keyed by airfare|accommodation|meals|sightseeing|transfers|other
+ * @param array<string, mixed> $sections  keyed by airfare|accommodation|meals|sightseeing|transfers|other|visa
  */
 function crmAiInclusionsSectionsToHtml(array $sections): string
 {
@@ -1345,6 +1347,8 @@ function crmAiNormalizeInclusionsSections(array $sections): array
         'other inclusions' => 'other',
         'misc' => 'other',
         'miscellaneous' => 'other',
+        'visa' => 'visa',
+        'tourist visa' => 'visa',
     ];
 
     $out = [
@@ -1354,6 +1358,7 @@ function crmAiNormalizeInclusionsSections(array $sections): array
         'sightseeing' => [],
         'transfers' => [],
         'other' => [],
+        'visa' => [],
     ];
 
     foreach ($sections as $key => $items) {
@@ -1557,6 +1562,7 @@ function crmAiInstantInclusions(array $context): array
         'sightseeing' => [],
         'transfers' => [],
         'other' => [],
+        'visa' => [],
     ];
 
     $dest = (string) ($ctx['tour']['destination'] ?? '');
@@ -1716,13 +1722,15 @@ function crmAiBuildInclusionsPrompt(array $context): string
     $prompt .= "    \"meals\": [\"01 Breakfast at ...\", \"02 Lunches at ...\"],\n";
     $prompt .= "    \"sightseeing\": [\"<strong>Attraction Name</strong> – short detail\", \"<strong>Tour Name with Lunch</strong>\"],\n";
     $prompt .= "    \"transfers\": [\"Airport → Hotel\", \"<strong>4 hours shopping en route</strong>\", \"Private transportation as mentioned in the itinerary.\"],\n";
-    $prompt .= "    \"other\": [\"<strong>DOCUMENT NAME</strong>\"]\n";
+    $prompt .= "    \"other\": [\"<strong>DOCUMENT NAME</strong>\"],\n";
+    $prompt .= "    \"visa\": [\"Dubai Tourist Visa\"]\n";
     $prompt .= "  },\n";
     $prompt .= "  \"notes\": \"optional note if data incomplete\"\n";
     $prompt .= "}\n\n";
     $prompt .= "SECTION RULES:\n";
-    $prompt .= "- Use ONLY these section keys: airfare, accommodation, meals, sightseeing, transfers, other.\n";
+    $prompt .= "- Use ONLY these section keys: airfare, accommodation, meals, sightseeing, transfers, other, visa.\n";
     $prompt .= "- Omit any section that has no supporting facts in BOOKING_DATA.\n";
+    $prompt .= "- Put tourist visa under \"visa\" only (never under \"other\"), as \"{Destination} Tourist Visa\" when required in BOOKING_DATA.\n";
     $prompt .= "- Do NOT invent airport transfers, visas, insurance, tips, shopping hours, restaurants, or sightseeing unless clearly present in the data.\n";
     $prompt .= "- Do NOT invent meals unless meal_plan / meal fields exist.\n";
     $prompt .= "- Airfare: prefer \"Return airfare Ex-{city}.\" when round-trip; add baggage in <em>(...)</em> only if present.\n";
