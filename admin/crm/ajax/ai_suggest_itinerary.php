@@ -20,6 +20,27 @@ $reusePrevious = (int) ($_POST['reuse_previous'] ?? $_GET['reuse_previous'] ?? 0
 
 $totalDays = $nights + 1;
 
+// Optional day headings from the AI Suggest modal (preserve exactly).
+$dayHeadings = [];
+$rawHeadings = $_POST['day_headings'] ?? $_GET['day_headings'] ?? null;
+if (is_string($rawHeadings) && $rawHeadings !== '') {
+    $decoded = json_decode($rawHeadings, true);
+    if (is_array($decoded)) {
+        $rawHeadings = $decoded;
+    }
+}
+if (is_array($rawHeadings)) {
+    foreach ($rawHeadings as $heading) {
+        if (is_array($heading)) {
+            $heading = (string) ($heading['title'] ?? $heading['heading'] ?? '');
+        }
+        $dayHeadings[] = trim((string) $heading);
+    }
+}
+if ($totalDays > 0) {
+    $dayHeadings = array_slice(array_pad($dayHeadings, $totalDays, ''), 0, $totalDays);
+}
+
 // Prefer a previously saved itinerary only when explicitly allowed (not for AI Generate modal).
 if (!$preferAi || $reusePrevious) {
     $previous = crmFindMatchingPreviousItinerary($conn, $destination, $nights, $excludeQuotationId);
@@ -56,7 +77,8 @@ $result = crmAiSuggestItinerary(
     $children,
     $startDate,
     $notes,
-    $contextBrief
+    $contextBrief,
+    $dayHeadings
 );
 
 if (!$result['ok']) {

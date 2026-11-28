@@ -635,6 +635,9 @@ function crmAiNormalizeItineraryDays(array $days, int $expectedDays, bool $prese
     return $out;
 }
 
+/**
+ * @param list<string> $dayHeadings Optional fixed titles from the AI Suggest modal.
+ */
 function crmAiBuildItineraryPrompt(
     string $destination,
     int $totalDays,
@@ -643,7 +646,8 @@ function crmAiBuildItineraryPrompt(
     int $children,
     string $startDate,
     string $notes,
-    string $contextBrief = ''
+    string $contextBrief = '',
+    array $dayHeadings = []
 ): string {
     $travelers = $adults . 'A' . ($children > 0 ? ('/' . $children . 'C') : '');
     $notes = trim(preg_replace('/\s+/', ' ', $notes));
@@ -668,11 +672,61 @@ function crmAiBuildItineraryPrompt(
     if ($notes !== '') {
         $prompt .= "Notes: {$notes}\n";
     }
-    $prompt .= "Schema: {\"days\":[{\"title\":\"...\",\"description\":\"<p>One paragraph...</p>\"}]}\n";
-    $prompt .= "Rules: exactly {$totalDays} days; day1 arrival+check-in; last day checkout+departure; middle days unique sightseeing for {$destination}; titles <50 chars; no prices/brand hotels; no duplicate activities.\n";
+
+    $hasHeadings = false;
+    foreach ($dayHeadings as $heading) {
+        if (trim((string) $heading) !== '') {
+            $hasHeadings = true;
+            break;
+        }
+    }
+    if ($hasHeadings) {
+        $prompt .= "Day headings (use EXACTLY as each day's title; do not rename/rephrase):\n";
+        for ($i = 0; $i < $totalDays; $i++) {
+            $heading = trim((string) ($dayHeadings[$i] ?? ''));
+            if ($heading === '') {
+                $heading = 'Day ' . ($i + 1);
+            }
+            if (strlen($heading) > 80) {
+                $heading = substr($heading, 0, 80) . '…';
+            }
+            $prompt .= 'Day ' . ($i + 1) . ': ' . $heading . "\n";
+        }
+        $prompt .= "Write ONE 60-65 word description paragraph per day based on that day's heading, destination, and context.\n";
+        $prompt .= "Schema: {\"days\":[{\"title\":\"EXACT heading\",\"description\":\"<p>One paragraph...</p>\"}]}\n";
+        $prompt .= "Rules: exactly {$totalDays} days; keep titles identical to the headings above; descriptions unique and relevant to {$destination}; no prices/brand hotels; no duplicate activities.\n";
+    } else {
+        $prompt .= "Schema: {\"days\":[{\"title\":\"...\",\"description\":\"<p>One paragraph...</p>\"}]}\n";
+        $prompt .= "Rules: exactly {$totalDays} days; day1 arrival+check-in; last day checkout+departure; middle days unique sightseeing for {$destination}; titles <50 chars; no prices/brand hotels; no duplicate activities.\n";
+    }
     $prompt .= crmAiItineraryParagraphRules() . "\n";
 
     return $prompt;
+}
+
+/**
+ * Force itinerary day titles to the user-provided headings (preserve exactly).
+ *
+ * @param list<array<string,mixed>> $itinerary
+ * @param list<string> $dayHeadings
+ * @return list<array<string,mixed>>
+ */
+function crmAiApplyDayHeadings(array $itinerary, array $dayHeadings): array
+{
+    if ($dayHeadings === []) {
+        return $itinerary;
+    }
+    foreach ($itinerary as $i => $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        $heading = trim((string) ($dayHeadings[$i] ?? ''));
+        if ($heading !== '') {
+            $itinerary[$i]['title'] = $heading;
+        }
+    }
+
+    return $itinerary;
 }
 
 function crmAiIsQuotaOrRateError(string $error): bool
@@ -865,6 +919,9 @@ function crmAiInstantItinerary(string $destination, int $totalDays, string $note
     ];
 }
 
+/**
+ * @param list<string> $dayHeadings Optional fixed titles from the AI Suggest modal.
+ */
 function crmAiSuggestItinerary(
     string $destination,
     int $nights,
@@ -872,7 +929,8 @@ function crmAiSuggestItinerary(
     int $children,
     string $startDate,
     string $notes,
-    string $contextBrief = ''
+    string $contextBrief = '',
+    array $dayHeadings = []
 ): array {
     $destination = trim($destination);
     if ($destination === '') {
@@ -888,9 +946,20 @@ function crmAiSuggestItinerary(
         return ['ok' => false, 'error' => 'Itinerary suggest supports up to 21 days (20 nights).'];
     }
 
+    $cleanHeadings = [];
+    for ($i = 0; $i < $totalDays; $i++) {
+        $cleanHeadings[] = trim((string) ($dayHeadings[$i] ?? ''));
+    }
+
     // Instant mode — no external API call (default for immediate results)
     if (!crmAiUseGemini()) {
-        return crmAiInstantItinerary($destination, $totalDays, $notes);
+        $instant = crmAiInstantItinerary($destination, $totalDays, $notes);
+        $instant['itinerary'] = crmAiApplyDayHeadings(
+            is_array($instant['itinerary'] ?? null) ? $instant['itinerary'] : [],
+            $cleanHeadings
+        );
+
+        return $instant;
     }
 
     $started = microtime(true);
@@ -902,7 +971,8 @@ function crmAiSuggestItinerary(
         $children,
         $startDate,
         $notes,
-        $contextBrief
+        $contextBrief,
+        $cleanHeadings
     );
     // Single optimized request for all days (lite model, capped tokens, no retry spam).
     $timeout = min(28, max(14, 10 + ($totalDays * 2)));
@@ -918,6 +988,10 @@ function crmAiSuggestItinerary(
         ]);
         if (crmAiIsQuotaOrRateError($result['error'] ?? '')) {
             $instant = crmAiInstantItinerary($destination, $totalDays, $notes);
+            $instant['itinerary'] = crmAiApplyDayHeadings(
+                is_array($instant['itinerary'] ?? null) ? $instant['itinerary'] : [],
+                $cleanHeadings
+            );
             $instant['message'] = 'Gemini quota reached — instant destination itinerary applied.';
             $instant['elapsed_ms'] = $elapsedMs;
             return $instant;
@@ -935,6 +1009,10 @@ function crmAiSuggestItinerary(
             'model' => (string) ($result['model'] ?? ''),
         ]);
         $instant = crmAiInstantItinerary($destination, $totalDays, $notes);
+        $instant['itinerary'] = crmAiApplyDayHeadings(
+            is_array($instant['itinerary'] ?? null) ? $instant['itinerary'] : [],
+            $cleanHeadings
+        );
         $instant['message'] = 'AI response invalid — instant destination itinerary applied.';
         $instant['elapsed_ms'] = $elapsedMs;
         return $instant;
@@ -947,12 +1025,15 @@ function crmAiSuggestItinerary(
         'model' => (string) ($result['model'] ?? ''),
     ]);
 
+    $normalized = crmAiNormalizeItineraryDays($daysRaw, $totalDays);
+    $normalized = crmAiApplyDayHeadings($normalized, $cleanHeadings);
+
     return [
         'ok' => true,
         'source' => 'ai',
         'model' => (string) ($result['model'] ?? ''),
         'elapsed_ms' => $elapsedMs,
-        'itinerary' => crmAiNormalizeItineraryDays($daysRaw, $totalDays),
+        'itinerary' => $normalized,
     ];
 }
 

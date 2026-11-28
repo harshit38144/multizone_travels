@@ -4026,16 +4026,129 @@ $qWizardSteps = [
         }
 
         .q-ai-incl-modal #qAiInclResult,
-        .q-ai-incl-modal #qAiInclNotes {
+        .q-ai-incl-modal #qAiInclNotes,
+        .q-ai-itin-modal #qAiItineraryNotes {
             border-radius: 10px;
             border-color: #e2e8f0;
             font-size: 0.94rem;
         }
 
         .q-ai-incl-modal #qAiInclResult:focus,
-        .q-ai-incl-modal #qAiInclNotes:focus {
+        .q-ai-incl-modal #qAiInclNotes:focus,
+        .q-ai-itin-modal #qAiItineraryNotes:focus {
             border-color: #818cf8;
             box-shadow: 0 0 0 0.15rem rgba(99, 102, 241, 0.2);
+        }
+
+        /* AI itinerary modal — fixed header/footer, scrollable day fields */
+        #qAiItineraryModal.q-ai-itin-modal .modal-dialog {
+            max-width: 640px;
+            max-height: min(92vh, 760px);
+            margin: 1rem auto;
+        }
+
+        #qAiItineraryModal.q-ai-itin-modal .modal-content {
+            max-height: min(92vh, 760px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #qAiItineraryModal.q-ai-itin-modal .modal-header,
+        #qAiItineraryModal.q-ai-itin-modal .modal-footer {
+            flex-shrink: 0;
+        }
+
+        #qAiItineraryModal.q-ai-itin-modal .modal-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .q-ai-itin-days-block {
+            margin-bottom: 0.95rem;
+        }
+
+        .q-ai-itin-days-hd {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 0.35rem 0.65rem;
+            margin-bottom: 0.55rem;
+            font-size: 0.92rem;
+            color: #0f172a;
+        }
+
+        .q-ai-itin-days-hd .text-muted {
+            font-size: 0.8rem;
+        }
+
+        .q-ai-itin-day-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            max-height: min(38vh, 320px);
+            overflow-y: auto;
+            padding: 0.55rem 0.6rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .q-ai-itin-day-row {
+            display: grid;
+            grid-template-columns: 7.25rem minmax(0, 1fr);
+            gap: 0.45rem;
+            align-items: center;
+        }
+
+        .q-ai-itin-day-row label {
+            margin: 0;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        .q-ai-itin-day-row .form-control {
+            height: 2.05rem;
+            border-radius: 8px;
+            border-color: #e2e8f0;
+            font-size: 0.88rem;
+            background: #fff;
+        }
+
+        .q-ai-itin-day-row .form-control:focus {
+            border-color: #818cf8;
+            box-shadow: 0 0 0 0.15rem rgba(99, 102, 241, 0.2);
+        }
+
+        .q-ai-itin-day-empty {
+            margin: 0;
+            padding: 0.55rem 0.25rem;
+            font-size: 0.86rem;
+            color: #9a3412;
+            text-align: center;
+        }
+
+        [data-theme="dark"] .q-ai-itin-day-fields {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .q-ai-itin-days-hd {
+            color: #f8fafc;
+        }
+
+        [data-theme="dark"] .q-ai-itin-day-row label {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .q-ai-itin-day-row .form-control {
+            background: #1e293b;
+            border-color: #334155;
+            color: #f8fafc;
         }
 
         .q-ai-incl-result {
@@ -19807,7 +19920,7 @@ $qWizardSteps = [
         </div>
     </div>
 
-    <div class="modal fade q-ai-incl-modal" id="qAiItineraryModal" tabindex="-1" role="dialog" aria-labelledby="qAiItineraryModalLabel" aria-hidden="true">
+    <div class="modal fade q-ai-incl-modal q-ai-itin-modal" id="qAiItineraryModal" tabindex="-1" role="dialog" aria-labelledby="qAiItineraryModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -19815,7 +19928,7 @@ $qWizardSteps = [
                         <div class="q-ai-incl-modal-icon"><i class="fas fa-magic"></i></div>
                         <div>
                             <h5 class="modal-title mb-0" id="qAiItineraryModalLabel">AI Suggest — Full Itinerary</h5>
-                            <p class="q-day-ai-modal-sub mb-0">Generate or improve all day titles and activities together. Images, meals and overnight stays are kept.</p>
+                            <p class="q-day-ai-modal-sub mb-0">Set day headings, then generate a ~60–65 word description for each day. Images, meals and overnight stays are kept.</p>
                         </div>
                     </div>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -19826,9 +19939,17 @@ $qWizardSteps = [
 
                     <div class="q-ai-incl-chips" id="qAiItineraryMeta" aria-label="Itinerary context summary"></div>
 
+                    <div class="q-ai-itin-days-block">
+                        <div class="q-ai-itin-days-hd">
+                            <strong>Day-wise headings</strong>
+                            <span class="text-muted font-weight-normal">Edit or enter a title for each day</span>
+                        </div>
+                        <div class="q-ai-itin-day-fields" id="qAiItineraryDayFields" aria-label="Day-wise itinerary headings"></div>
+                    </div>
+
                     <div class="form-group mb-0">
                         <label class="q-label" for="qAiItineraryNotes">Extra instructions <span class="text-muted font-weight-normal">(optional)</span></label>
-                        <textarea class="form-control" id="qAiItineraryNotes" rows="3" placeholder="e.g. Preferred travel pace, must-see attractions, family-friendly activities, avoid duplicate sightseeing..."></textarea>
+                        <textarea class="form-control" id="qAiItineraryNotes" rows="2" placeholder="e.g. Preferred travel pace, must-see attractions, family-friendly activities, avoid duplicate sightseeing..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer q-ai-incl-footer">
@@ -19847,7 +19968,7 @@ $qWizardSteps = [
                 <div class="modal-body">
                     <div class="q-ai-itin-confirm-icon" aria-hidden="true"><i class="fas fa-exclamation-triangle"></i></div>
                     <h5 class="q-ai-itin-confirm-title" id="qAiItineraryConfirmTitle">Replace Existing Itinerary?</h5>
-                    <p class="q-ai-itin-confirm-msg mb-0">Are you sure you want to replace the current day titles and activities with the AI-generated itinerary? Existing destination images, meal plans and overnight stays will be preserved.</p>
+                    <p class="q-ai-itin-confirm-msg mb-0">Are you sure you want to replace the current day descriptions with the AI-generated itinerary? Your day headings will be kept. Existing destination images, meal plans and overnight stays will be preserved.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light border" id="qAiItinConfirmCancel" data-dismiss="modal">Cancel</button>
@@ -20505,7 +20626,7 @@ $qWizardSteps = [
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     <script src="crm/assets/vendor/html2pdf.bundle.min.js?v=1"></script>
     <script src="crm/assets/airport_timezones.js?v=3"></script>
-    <script src="crm/assets/quotation_generator.js?v=426"></script>
+    <script src="crm/assets/quotation_generator.js?v=427"></script>
     <script src="crm/assets/quotation_flight_search.js?v=39"></script>
     <script src="crm/assets/quotation_itinerary_images.js?v=8"></script>
     <script src="crm/assets/quotation_supplier_mail.js?v=21"></script>

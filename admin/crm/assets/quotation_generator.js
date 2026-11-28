@@ -7271,6 +7271,14 @@
     /* ------------------------------------------------------------------ */
     /* AI itinerary suggest                                                */
     /* ------------------------------------------------------------------ */
+    function getAiItineraryTotalDays() {
+        var nights = parseInt($('#q_nights').val(), 10);
+        if (isNaN(nights) || nights < 0) {
+            nights = 0;
+        }
+        return nights > 0 ? (nights + 1) : 0;
+    }
+
     function refreshAiItineraryMeta() {
         var $meta = $('#qAiItineraryMeta');
         if (!$meta.length) {
@@ -7291,7 +7299,7 @@
         } else {
             chips.push('<span class="q-ai-chip is-warn"><i class="fas fa-exclamation-circle"></i>Set destination</span>');
         }
-        if (days > 0) {
+        if (nights >= 1) {
             chips.push('<span class="q-ai-chip"><i class="far fa-calendar-alt"></i>' + days + ' day' + (days !== 1 ? 's' : '') + ' / ' + nights + ' night' + (nights !== 1 ? 's' : '') + '</span>');
         } else {
             chips.push('<span class="q-ai-chip is-warn"><i class="fas fa-exclamation-circle"></i>Set nights</span>');
@@ -7302,36 +7310,107 @@
         $meta.html(chips.join(''));
     }
 
+    function renderAiItineraryDayHeadingFields() {
+        var $wrap = $('#qAiItineraryDayFields');
+        if (!$wrap.length) {
+            return;
+        }
+        var totalDays = getAiItineraryTotalDays();
+        var existing = [];
+        try {
+            existing = snapshotItinerary() || [];
+        } catch (eSnap) {
+            existing = [];
+        }
+        var prevValues = {};
+        $wrap.find('.js-ai-itin-day-heading').each(function () {
+            var idx = parseInt($(this).attr('data-day-index'), 10);
+            if (!isNaN(idx)) {
+                prevValues[idx] = String($(this).val() || '');
+            }
+        });
+
+        if (totalDays < 1) {
+            $wrap.html('<p class="q-ai-itin-day-empty">Set No of Nights on Guest &amp; Tour to load day heading fields.</p>');
+            return;
+        }
+
+        var html = '';
+        var i;
+        for (i = 0; i < totalDays; i++) {
+            var dayNo = i + 1;
+            var value = '';
+            if (Object.prototype.hasOwnProperty.call(prevValues, i) && String(prevValues[i] || '').trim() !== '') {
+                value = String(prevValues[i] || '');
+            } else if (existing[i] && existing[i].title) {
+                value = String(existing[i].title || '');
+            }
+            html += '<div class="q-ai-itin-day-row">'
+                + '<label for="qAiItinDayHeading' + dayNo + '">Day ' + dayNo + ' Heading</label>'
+                + '<input type="text" class="form-control js-ai-itin-day-heading" id="qAiItinDayHeading' + dayNo + '"'
+                + ' data-day-index="' + i + '" maxlength="120"'
+                + ' placeholder="e.g. Arrival in destination / Local sightseeing"'
+                + ' value="' + esc(value) + '">'
+                + '</div>';
+        }
+        $wrap.html(html);
+    }
+
+    function collectAiItineraryDayHeadings() {
+        var totalDays = getAiItineraryTotalDays();
+        var headings = [];
+        var i;
+        for (i = 0; i < totalDays; i++) {
+            var $input = $('#qAiItineraryDayFields .js-ai-itin-day-heading[data-day-index="' + i + '"]');
+            headings.push($input.length ? String($input.val() || '').trim() : '');
+        }
+        return headings;
+    }
+
     function resetAiItineraryModalUi() {
         $('#qAiItinError, #qAiItinSuccess').addClass('d-none').text('');
-        $('#qAiItinGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Itinerary');
+        if (!aiItineraryGenerateInFlight) {
+            $('#qAiItinGenerate').prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i> Generate Itinerary');
+        }
     }
 
     function openAiItineraryModal() {
         refreshAiItineraryMeta();
+        renderAiItineraryDayHeadingFields();
         $('#qAiItineraryNotes').val('');
         resetAiItineraryModalUi();
         $('#qAiItineraryModal').modal('show');
         window.setTimeout(function () {
-            $('#qAiItineraryNotes').trigger('focus');
+            var $first = $('#qAiItineraryDayFields .js-ai-itin-day-heading').first();
+            if ($first.length) {
+                $first.trigger('focus');
+            } else {
+                $('#qAiItineraryNotes').trigger('focus');
+            }
         }, 350);
     }
 
-    function mergeAIItineraryPreserveManual(aiDays, existingDays) {
+    function mergeAIItineraryPreserveManual(aiDays, existingDays, dayHeadings) {
         aiDays = Array.isArray(aiDays) ? aiDays : [];
         existingDays = Array.isArray(existingDays) ? existingDays : [];
+        dayHeadings = Array.isArray(dayHeadings) ? dayHeadings : [];
         // Prefer existing day count so AI does not invent extra days.
         var targetLen = existingDays.length > 0 ? existingDays.length : aiDays.length;
         if (targetLen < 1) {
             targetLen = aiDays.length;
+        }
+        if (dayHeadings.length > targetLen) {
+            targetLen = dayHeadings.length;
         }
         var out = [];
         var i;
         for (i = 0; i < targetLen; i++) {
             var ai = normalizeItineraryDay(aiDays[i] || {});
             var prev = normalizeItineraryDay(existingDays[i] || {});
+            var heading = String(dayHeadings[i] || '').trim();
             out.push({
-                title: String(ai.title || '').trim() || prev.title || '',
+                // Prefer modal headings; never invent a new title when the user provided one.
+                title: heading || prev.title || String(ai.title || '').trim() || '',
                 description: stripDayMetaFromDescription(ai.description || '') || prev.description || '',
                 // Keep manually configured media / stay / service choices.
                 image: prev.image || '',
@@ -7351,7 +7430,10 @@
         }
 
         var existing = snapshotItinerary();
-        var merged = mergeAIItineraryPreserveManual(itinerary, existing);
+        var headings = (info && Array.isArray(info.day_headings))
+            ? info.day_headings
+            : collectAiItineraryDayHeadings();
+        var merged = mergeAIItineraryPreserveManual(itinerary, existing, headings);
 
         $('#q_without_itinerary').prop('checked', false);
         syncTourCostOptUiFromMasters();
@@ -7365,7 +7447,7 @@
 
         var source = (info && info.source) ? info.source : 'instant';
         var fromPrevious = !!(info && info.from_previous);
-        var alertClass = fromPrevious ? 'alert-success' : 'alert-warning';
+        var alertClass = fromPrevious ? 'alert-success' : 'alert-success';
         var msg = '<div class="alert ' + alertClass + '">';
         if (fromPrevious) {
             msg += '<i class="fas fa-check-circle mr-1"></i> ';
@@ -7376,19 +7458,22 @@
                 ) + '</span>';
             }
         } else {
-            msg += '<span class="badge badge-danger mr-2"><i class="fas fa-exclamation-circle"></i> New suggestion</span> ';
+            msg += '<i class="fas fa-check-circle mr-1"></i> ';
             if (source === 'ai') {
-                msg += 'Applied AI-generated itinerary for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong> (not from a previous itinerary).';
+                msg += 'Applied AI day descriptions for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong>.';
             } else {
-                msg += 'Applied generated itinerary for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong> (not from a previous itinerary).';
+                msg += 'Applied generated day descriptions for <strong>' + esc(($('[name=destination]').val() || '').trim() || 'your destination') + '</strong>.';
             }
-            msg += ' Images, meals and overnight stays were preserved.';
+            msg += ' Your day headings were preserved. Images, meals and overnight stays were kept.';
         }
         if (info && info.message && fromPrevious) {
             msg += ' <small class="d-block mt-1 text-muted">' + esc(info.message) + '</small>';
         }
         msg += '</div>';
         $('#qAlert').html(msg);
+        try {
+            saveFormDraftToStorage();
+        } catch (eDraft) { /* ignore */ }
         try {
             var $workspace = $('.q-itin-workspace').first();
             if ($workspace.length) {
@@ -7480,6 +7565,24 @@
             return;
         }
 
+        // Ensure day fields match current tour duration before collect.
+        if ($('#qAiItineraryDayFields .js-ai-itin-day-heading').length !== totalDays) {
+            renderAiItineraryDayHeadingFields();
+        }
+
+        var dayHeadings = collectAiItineraryDayHeadings();
+        var blankHeading = dayHeadings.some(function (h) { return !String(h || '').trim(); });
+        if (blankHeading) {
+            $('#qAiItinError').removeClass('d-none').text('Please enter a heading for every day before generating.');
+            var $blank = $('#qAiItineraryDayFields .js-ai-itin-day-heading').filter(function () {
+                return !String($(this).val() || '').trim();
+            }).first();
+            if ($blank.length) {
+                $blank.trigger('focus');
+            }
+            return;
+        }
+
         var userNotes = ($('#qAiItineraryNotes').val() || '').trim();
         var contextBrief = buildAiItineraryContextBrief();
         var $btn = $('#qAiItinGenerate');
@@ -7501,6 +7604,7 @@
                 start_date: normalizeLegacyDateInput($('#q_tentative_date').val() || ''),
                 notes: userNotes,
                 context_brief: contextBrief,
+                day_headings: JSON.stringify(dayHeadings),
                 prefer_ai: 1,
                 exclude_quotation_id: parseInt($('#q_id').val(), 10) || 0
             }
@@ -7513,14 +7617,18 @@
                     is_new_suggestion: !!res.is_new_suggestion || !res.from_previous,
                     match_type: res.match_type || '',
                     match_label: res.match_label || '',
-                    match_id: res.match_id || 0
+                    match_id: res.match_id || 0,
+                    day_headings: dayHeadings
                 });
-                var okMsg = res.message || 'Itinerary generated and applied to day editors.';
+                var okMsg = res.message || 'Day descriptions generated and applied. Your headings were preserved.';
                 if (res.elapsed_ms) {
                     okMsg += ' (' + Math.round(res.elapsed_ms / 100) / 10 + 's)';
                 }
                 $('#qAiItinSuccess').removeClass('d-none').text(okMsg);
                 $('#qAiItineraryModal').modal('hide');
+                if (typeof qCrmToast === 'function') {
+                    qCrmToast('Itinerary descriptions applied to all day editors.', 'success');
+                }
             } else {
                 $('#qAiItinError').removeClass('d-none').text((res && res.message) ? res.message : 'Could not generate itinerary.');
             }
@@ -7559,11 +7667,16 @@
     }
 
     function requestAiItineraryGenerate() {
+        if (aiItineraryGenerateInFlight) {
+            return;
+        }
+
         var dest = ($('[name=destination]').val() || '').trim();
         var nights = parseInt($('#q_nights').val(), 10);
         if (isNaN(nights) || nights < 0) {
             nights = 0;
         }
+        var totalDays = nights + 1;
 
         $('#qAiItinError, #qAiItinSuccess').addClass('d-none').text('');
 
@@ -7573,6 +7686,21 @@
         }
         if (nights < 1) {
             $('#qAiItinError').removeClass('d-none').text('Please set No of Nights (at least 1) on the Guest & Tour step.');
+            return;
+        }
+
+        if ($('#qAiItineraryDayFields .js-ai-itin-day-heading').length !== totalDays) {
+            renderAiItineraryDayHeadingFields();
+        }
+        var dayHeadings = collectAiItineraryDayHeadings();
+        if (dayHeadings.some(function (h) { return !String(h || '').trim(); })) {
+            $('#qAiItinError').removeClass('d-none').text('Please enter a heading for every day before generating.');
+            var $blank = $('#qAiItineraryDayFields .js-ai-itin-day-heading').filter(function () {
+                return !String($(this).val() || '').trim();
+            }).first();
+            if ($blank.length) {
+                $blank.trigger('focus');
+            }
             return;
         }
 
@@ -7586,9 +7714,13 @@
 
     function initAISuggestItinerary() {
         refreshAiItineraryMeta();
+        renderAiItineraryDayHeadingFields();
 
         $(document).on('input change', '[name=destination], #q_nights, #q_adults, #q_children', function () {
             refreshAiItineraryMeta();
+            if ($('#qAiItineraryModal').hasClass('show') || $(this).is('#q_nights')) {
+                renderAiItineraryDayHeadingFields();
+            }
         });
 
         $('#qSuggestAIItinerary').on('click', function (e) {
@@ -7600,6 +7732,9 @@
 
         $('#qAiItinGenerate').on('click', function (e) {
             e.preventDefault();
+            if (aiItineraryGenerateInFlight) {
+                return;
+            }
             requestAiItineraryGenerate();
         });
 
